@@ -1,0 +1,38 @@
+{
+  "_about": "The camera and zoom, FIRST OPTION (Track F, exit criterion 7). Read by scripts/world/camera_controller.gd (and far_zoom by scripts/render/fog_layer.gd) through scripts/world/camera_data.gd. EVERY VALUE IS PROPOSED by Track F on 2026-10-09. The design doc leaves zoom range, pixels per world unit and rotation open (Open design details > Camera and scale) and records two of Alex's thoughts this file makes switchable: 'Visual scale on zoom-out is unresolved; may limit zoom-out and have players scroll the map' and 'An interactive overview map the player can set their view from'. ZOOM UNITS: Camera2D zoom, screen px per MAP px (the map is drawn in map px = metres x data/terrain/terrain.json scale.px_per_m: 2 is Alex's demo baseline and it is a live knob, 1-4). Zoom is in map px on purpose: the render's detail (trees, linework) is drawn in map px at every scale, so a zoom limit about legibility holds at any px_per_m; the zoom-out limit 'fit_map' and every margin in metres follow the scale. The arithmetic in the reasons is at 2 px/m and a 1280 x 720 view; nothing in code assumes either. No rotation: north stays up.",
+
+  "zoom": {
+    "min": { "value": "fit_map", "_proposed": true, "_reason": "'fit_map': the hard zoom-out limit is the whole map in the view (times fit_margin), whatever the map size and px_per_m -- with far_zoom.mode 'overview_topo' the far view IS the overview map. At 2 px/m a 5,000 m map in 720 px is zoom 0.072 (0.068 with the margin; 0.034 at 4 px/m). A number is a fixed limit" },
+    "fit_margin": { "value": 1.06, "_proposed": true, "_reason": "a little paper around the map at the fit_map limit" },
+    "max": { "value": 2.0, "_proposed": true, "_reason": "two screen px per world px: the ink linework is drawn for zoom 1 (the prototype's scale), so past 2 the baked map is visibly magnified" },
+    "start": { "value": 0.35, "_proposed": true, "_reason": "a planning view: at 2 px/m it is 1,830 x 1,030 m, a light fighter's turn at cruise (5 s x 100 m/s = 500 m) with room for the heavy fighter's 825 m at top speed, and trees are still 13 px" },
+    "wheel_step": { "value": 1.15, "_proposed": true, "_reason": "zoom factor per mouse wheel notch, about the cursor: 12 notches from planning zoom to the whole map at 2 px/m" },
+    "keys_step_per_s": { "value": 2.5, "_proposed": true, "_reason": "zoom factor per second while a zoom key is held (zoom_in / zoom_out keys)" }
+  },
+
+  "pan": {
+    "keys_px_per_s": { "value": 900, "_proposed": true, "_reason": "SCREEN px per second while a pan key is held, so a key pan feels the same at every zoom" },
+    "drag_buttons": { "value": ["middle", "right"], "_proposed": true, "_reason": "buttons that drag the map; the left button is left to the planner and the roster (Track U)" },
+    "keys": { "value": { "left": ["A", "Left"], "right": ["D", "Right"], "up": ["W", "Up"], "down": ["S", "Down"], "zoom_in": ["E", "Equal"], "zoom_out": ["Q", "Minus"] }, "_proposed": true, "_reason": "physical key names (OS.find_keycode_from_string); WASD and arrows pan, Q/E and -/= zoom about the view centre" },
+    "trackpad_px_per_unit": { "value": 16, "_proposed": true, "_reason": "screen px a trackpad two-finger pan moves per unit of its gesture delta" },
+    "map_margin_m": { "value": 300, "_proposed": true, "_reason": "how far past the map edge the view centre may go: enough to look at a plane that has just left the map (Track S: leaving is an event, not an error)" }
+  },
+
+  "follow": {
+    "smoothing_per_s": { "value": 8.0, "_proposed": true, "_reason": "follow-selected-unit eases the view toward the unit at this rate (exponential; 0 snaps). 8/s closes 90% of a gap in about 0.3 s" },
+    "break_on_pan": { "value": true, "_proposed": true, "_reason": "a manual pan or drag stops following, so the player can look away from a moving unit" }
+  },
+
+  "frame": {
+    "margin_px": { "value": 72, "_proposed": true, "_reason": "SCREEN px kept clear around a framed plan, so the end points and their markers are not under the window edge" },
+    "max_zoom": { "value": 1.0, "_proposed": true, "_reason": "frame-this-plan never zooms in past the prototype's scale, even for a one-step plan" },
+    "insets_px": { "value": { "left": 0, "top": 0, "right": 0, "bottom": 0 }, "_proposed": true, "_reason": "screen space the HUD covers, left out of framing. 0 here; Track A sets the roster sidebar's width (set_insets) when it mounts the interface" }
+  },
+
+  "far_zoom": {
+    "mode": { "value": "overview_topo", "decision": "fog-first-option", "_reason": "Alex 2026-10-09 accepted the lead's fog recommendation (the whole map as the contour overview when zoomed out). Was proposed: WHAT THE VIEW DOES AT FAR ZOOM (the design doc leaves it open; its proposal under UI and HUD is this one). 'overview_topo': below topo_below_zoom the topographic map shows everywhere -- the fog's map, the vision edges drawn on it -- so ink detail never shrinks into noise and the far view doubles as the overview map; the map view need not bake the full render out there. 'full_render': the full render at every zoom, and the hard zoom-out limit becomes full_render_min_zoom (Alex: 'may limit zoom-out and have players scroll the map')" },
+    "topo_below_zoom": { "value": 0.11, "_proposed": true, "_reason": "fully topographic at or below this zoom: a 38 px canopy is 4 px -- the render has turned to texture. At 2 px/m the view is then 5,800 x 3,270 m, the whole map's width: in practice 'zoomed out to the map'. With 1,500 m sight a whole vision circle (3,000 px across at 2 px/m) first fits a 720 px view at zoom 0.12, so the circles come into view as the overview fades in" },
+    "full_above_zoom": { "value": 0.16, "_proposed": true, "_reason": "fully the full render at or above this zoom (trees 6 px; at 2 px/m a 4,000 x 2,250 m view); between the two the topographic map fades in" },
+    "full_render_min_zoom": { "value": 0.12, "_proposed": true, "_reason": "the zoom-out limit when mode is 'full_render', the legibility floor (trees 4.5 px): at 2 px/m a 5,330 x 3,000 m view, nearly the whole map; at 4 px/m half of it, and the player scrolls for the rest" }
+  }
+}

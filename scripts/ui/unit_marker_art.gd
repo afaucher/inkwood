@@ -1,7 +1,15 @@
 extends RefCounted
 
-# The planes in ink, as the unit sheet draws them (reference/mockups/
-# unit_sheet.html), ported to the drawing layer and BAKED ONCE into textures:
+# The planes and the tank in ink, as the unit sheet draws them (reference/mockups/
+# unit_sheet.html), ported to the drawing layer and BAKED ONCE into textures.
+# THE TANK (Track F's line-of-sight shots, 2026-10-09): genTank / buildTank /
+# drawTankGround + drawTankUpper -> gen_tank / build_tank / draw_tank, on top of
+# the same pen and helpers, plus the few the tank needs that the planes did not
+# (rrect, hatchLines, accentPanel, stipple's `away`, a fill clipped to an outline).
+# The sheet draws a ground unit in two layers with its shadow between; here both
+# are one texture (the marker layer casts the shadow from art.mask, the footprint).
+# The tank's variant is unit_art.variant.tank when ui.json has it (it does not yet:
+# proposed, Track U to add) and 0, the sheet's default view, when it does not.
 #
 #   sheet                         here
 #   unitSeed(ui, v)               unit_seed(scene_seed, ui, v)
@@ -47,6 +55,7 @@ extends RefCounted
 # art_for() returns null; markers keep working without pixels.
 
 const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
+const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 const ValueNoise = preload("res://scripts/core/noise.gd")
 
@@ -57,6 +66,11 @@ const PLANES := {
 	"light_fighter": [0, "light"],
 	"heavy_fighter": [1, "heavy"],
 	"bomber": [2, "bomber"],
+}
+
+# silhouette id -> the sheet's UNITS index (feeds unitSeed). Ground units drawn so far.
+const TANKS := {
+	"tank": 3,
 }
 
 class Art:
@@ -109,6 +123,8 @@ class Ink:
 	var fill_shaded: Color
 	var glass_lit: Color
 	var glass_shaded: Color
+	var rock: Color         # ROCK: the track links' fill
+	var slope: Color        # slope(CREAM): a sloped plate away from the sun
 	var sd: Vector2         # shadowDir()
 	var light: Vector2      # LX, LY
 
@@ -142,16 +158,29 @@ static func can_bake() -> bool:
 static func is_plane(silhouette: String) -> bool:
 	return PLANES.has(silhouette)
 
+static func is_tank(silhouette: String) -> bool:
+	return TANKS.has(silhouette)
+
+# The sheet's variant index for a silhouette: ui.json unit_art.variant.<silhouette>;
+# a silhouette ui.json does not list yet (the tank) takes the sheet's default view, 0.
+static func _variant_of(st: RefCounted, silhouette: String) -> int:
+	var v: Variant = st.lookup("unit_art.variant." + silhouette)
+	if v is float or v is int:
+		return int(v)
+	if is_tank(silhouette):
+		return 0
+	return int(st.num("unit_art.variant." + silhouette))
+
 # The baked art for a silhouette in a side's accent at `ppm`, from the cache or
 # baked now (one InkCanvas frame). null when it cannot be drawn (headless, or a
 # silhouette the sheet has no generator for).
 static func art_for(st: RefCounted, silhouette: String, accent: Color, ppm: float) -> Art:
-	if not is_plane(silhouette):
+	if not (is_plane(silhouette) or is_tank(silhouette)):
 		return null
 	var lo: float = st.num("unit_art.min_bake_ppm")
 	var hi: float = st.num("unit_art.max_bake_ppm")
 	var q := snappedf(clampf(ppm, lo, hi), 0.01)
-	var variant := int(st.num("unit_art.variant." + silhouette))
+	var variant := _variant_of(st, silhouette)
 	var key := "%s|%d|%s|%.2f" % [silhouette, variant, accent.to_html(), q]
 	if _art.has(key):
 		return _art[key]
@@ -164,17 +193,22 @@ static func art_for(st: RefCounted, silhouette: String, accent: Color, ppm: floa
 # The sheet's model for a silhouette and variant: parameters and geometry, metres.
 static func model_for(st: RefCounted, silhouette: String, variant: int = -1) -> Model:
 	if variant < 0:
-		variant = int(st.num("unit_art.variant." + silhouette))
+		variant = _variant_of(st, silhouette)
 	var key := "%s|%d|%d" % [silhouette, variant, st.scene_seed]
 	if _models.has(key):
 		return _models[key]
-	var spec: Array = PLANES[silhouette]
 	var m := Model.new()
 	m.silhouette = silhouette
 	m.variant = variant
-	m.seed = unit_seed(st.scene_seed, int(spec[0]), variant)
-	m.p = gen_plane(str(spec[1]), Mulberry32.new(m.seed))
-	m.G = build_plane(m.p)
+	if is_tank(silhouette):
+		m.seed = unit_seed(st.scene_seed, int(TANKS[silhouette]), variant)
+		m.p = gen_tank(Mulberry32.new(m.seed))
+		m.G = build_tank(m.p)
+	else:
+		var spec: Array = PLANES[silhouette]
+		m.seed = unit_seed(st.scene_seed, int(spec[0]), variant)
+		m.p = gen_plane(str(spec[1]), Mulberry32.new(m.seed))
+		m.G = build_plane(m.p)
 	_models[key] = m
 	return m
 
@@ -661,8 +695,14 @@ static func _ink_path(g, V: View, ink: Ink, pts_m: PackedVector2Array, o: Dictio
 	pts = wobble(pts, closed, ink.wob * float(o.get("wob", 1.0)) * 1.05 * minf(1.0, per / 90.0), seed_value)
 	if o.has("fill"):
 		g.begin_path()
+		var clip: PackedVector2Array = o.get("clip", PackedVector2Array())
 		for part: PackedVector2Array in _fillable(pts, closed):
-			add_poly(g, part, closed)
+			if clip.size() >= 3:
+				# clipTo(outline): the fill only where it lies inside the outline
+				for piece: PackedVector2Array in Geometry2D.intersect_polygons(part, clip):
+					add_poly(g, piece, true)
+			else:
+				add_poly(g, part, closed)
 		g.fill_color = o["fill"]
 		g.fill()
 	var w := float(o.get("weight", 1.2))
@@ -760,6 +800,16 @@ static func stipple(g, ink: Ink, o: PackedVector2Array, opt: Dictionary) -> void
 	for _i in cnt:
 		var x := bb.position.x + rng.next() * bb.size.x
 		var y := bb.position.y + rng.next() * bb.size.y
+		if opt.has("away"):
+			# dots only on the side away from the detail light, from the dome's centre
+			var ac: Vector2 = opt["away"]
+			var adx := x - ac.x
+			var ady := y - ac.y
+			var ad := sqrt(adx * adx + ady * ady)
+			if ad == 0.0:
+				ad = 1.0
+			if (adx * ink.light.x + ady * ink.light.y) / ad > -0.15:
+				continue
 		if not half.is_empty():
 			var hc: Vector2 = half["c"]
 			var hn: Vector2 = half["n"]
@@ -959,6 +1009,232 @@ static func draw_plane(g, M: Model, V: View, ink: Ink, accent: Color) -> void:
 			{"alpha": 0.55, "weight": 0.6, "breaks": 0.2, "freq": 0.3})
 		_path(pn, circ(c, pr.sp, 12), {"fill": cream, "weight": 0.75})
 
+# --- the tank ---------------------------------------------------------------------------
+
+# rrect(cx, cy, w, h, r, n): a rounded rectangle, n steps a corner, metres.
+static func rrect(cx: float, cy: float, w: float, h: float, r: float, n: int = 3) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	var hx := w / 2.0
+	var hy := h / 2.0
+	var rr := minf(r, minf(hx, hy))
+	var corners: Array = [[cx + hx - rr, cy - hy + rr, -PI / 2.0], [cx + hx - rr, cy + hy - rr, 0.0],
+		[cx - hx + rr, cy + hy - rr, PI / 2.0], [cx - hx + rr, cy - hy + rr, PI]]
+	for c: Array in corners:
+		for k in n + 1:
+			var a: float = float(c[2]) + float(k) / float(n) * PI / 2.0
+			pts.append(Vector2(float(c[0]) + cos(a) * rr, float(c[1]) + sin(a) * rr))
+	return pts
+
+static func rect_p(x0: float, y0: float, x1: float, y1: float) -> PackedVector2Array:
+	return PackedVector2Array([Vector2(x0, y0), Vector2(x1, y0), Vector2(x1, y1), Vector2(x0, y1)])
+
+# genTank(rng): every draw in the sheet's order (the object literal's).
+static func gen_tank(rng: Mulberry32) -> Dictionary:
+	var p := {}
+	p.length = _r(rng, 5.6, 6.6)
+	p.width = _r(rng, 2.9, 3.3)
+	p.track_w = _r(rng, 0.5, 0.66)
+	p.glacis = _r(rng, 0.55, 0.95)
+	p.deck = _r(rng, 1.7, 2.1)
+	p.turret = _pick_w(rng, [["round", 0.34], ["cast", 0.33], ["welded", 0.33]])
+	p.turret_r = _r(rng, 1.0, 1.2)
+	p.turret_y = _r(rng, -0.55, -0.2)
+	p.gun_len = _r(rng, 2.8, 4.2)
+	p.gun_r = _r(rng, 0.075, 0.11)
+	p.muzzle_brake = rng.next() < 0.5
+	p.cupola = rng.next() < 0.8
+	p.stowage = int(floorf(rng.next() * 3.0))
+	p.hull_h = _r(rng, 1.5, 1.8)
+	p.turret_h = _r(rng, 0.75, 0.95)
+	p.rivets = rng.next() < 0.6
+	return p
+
+# buildTank(p): the geometry, metres, nose toward -y.
+static func build_tank(p: Dictionary) -> Dictionary:
+	var L: float = p.length
+	var W: float = p.width
+	var tw: float = p.track_w
+	var y0 := -L / 2.0
+	var G := {}
+	G.tracks = [rrect(W / 2.0 - tw / 2.0, 0.03, tw, L - 0.1, 0.2), rrect(-(W / 2.0 - tw / 2.0), 0.03, tw, L - 0.1, 0.2)]
+	var hx := W / 2.0 - tw * 0.86
+	var cf := 0.32
+	var cy: float = p.glacis * 0.55
+	G.hx = hx
+	G.trackGuides = [
+		PackedVector2Array([Vector2(W / 2.0 - tw / 2.0, -L / 2.0 + 0.25), Vector2(W / 2.0 - tw / 2.0, L / 2.0 - 0.2)]),
+		PackedVector2Array([Vector2(-(W / 2.0 - tw / 2.0), -L / 2.0 + 0.25), Vector2(-(W / 2.0 - tw / 2.0), L / 2.0 - 0.2)])]
+	G.hull = PackedVector2Array([Vector2(-hx + cf, y0), Vector2(hx - cf, y0), Vector2(hx, y0 + cy), Vector2(hx, L / 2.0 - 0.18),
+		Vector2(hx - 0.18, L / 2.0), Vector2(-hx + 0.18, L / 2.0), Vector2(-hx, L / 2.0 - 0.18), Vector2(-hx, y0 + cy)])
+	G.glacis = PackedVector2Array([Vector2(-hx + cf, y0), Vector2(hx - cf, y0), Vector2(hx, y0 + cy), Vector2(hx, y0 + p.glacis),
+		Vector2(-hx, y0 + p.glacis), Vector2(-hx, y0 + cy)])
+	G.glacisLine = PackedVector2Array([Vector2(-hx, y0 + p.glacis), Vector2(hx, y0 + p.glacis)])
+	var dy0: float = L / 2.0 - p.deck
+	G.deckLine = PackedVector2Array([Vector2(-hx + 0.1, dy0), Vector2(hx - 0.1, dy0)])
+	var gy0 := dy0 + 0.16
+	var gy1: float = gy0 + p.deck * 0.36
+	G.grilles = [rrect((-hx + 0.28 - 0.16) / 2.0, (gy0 + gy1) / 2.0, hx - 0.44, gy1 - gy0, 0.06),
+		rrect((hx - 0.28 + 0.16) / 2.0, (gy0 + gy1) / 2.0, hx - 0.44, gy1 - gy0, 0.06)]
+	G.panel = rect_p(-hx * 0.66, gy1 + 0.16, hx * 0.66, L / 2.0 - 0.28)   # accent zone: the air-recognition panel lashed across the engine deck
+	G.driver = rrect(-hx * 0.45, y0 + p.glacis + 0.36, 0.6, 0.46, 0.12)
+	G.bowMG = circ(Vector2(hx * 0.42, y0 + p.glacis * 0.62), 0.13, 10)
+	G.exhaust = [circ(Vector2(-hx * 0.62, L / 2.0 - 0.14), 0.12, 10), circ(Vector2(hx * 0.62, L / 2.0 - 0.14), 0.12, 10)]
+	var stow: Array = []
+	for k in int(p.stowage):
+		var sx := -1.0 if (k % 2) == 1 else 1.0
+		stow.append(rrect(sx * (W / 2.0 - tw / 2.0), (-L * 0.08) if k > 0 else (L * 0.16), tw * 0.84, 0.75, 0.06))
+	G.stow = stow
+	G.seams = [PackedVector2Array([Vector2(-hx + 0.2, y0 + p.glacis + 0.15), Vector2(-hx + 0.2, dy0 - 0.1)]),
+		PackedVector2Array([Vector2(hx - 0.2, y0 + p.glacis + 0.15), Vector2(hx - 0.2, dy0 - 0.1)])]
+	var tR: float = p.turret_r
+	var ty: float = p.turret_y
+	var T := PackedVector2Array()
+	if p.turret == "round":
+		T = circ(Vector2(0.0, ty), tR, 28)
+	elif p.turret == "cast":
+		for i in 28:
+			var a := float(i) / 28.0 * TAU
+			T.append(Vector2(cos(a) * tR * (1.0 + 0.07 * sin(a)), ty + sin(a) * tR * 1.1))
+	else:
+		T = PackedVector2Array([Vector2(-tR * 0.6, ty - tR), Vector2(tR * 0.6, ty - tR), Vector2(tR, ty - tR * 0.32), Vector2(tR, ty + tR * 0.72),
+			Vector2(tR * 0.74, ty + tR * 1.06), Vector2(-tR * 0.74, ty + tR * 1.06), Vector2(-tR, ty + tR * 0.72), Vector2(-tR, ty - tR * 0.32)])
+	G.turret = T
+	G.tc = Vector2(0.0, ty)
+	var front: float = ty - tR * 1.1 if p.turret == "cast" else ty - tR
+	G.mantlet = rrect(0.0, front - 0.1, 0.95, 0.42, 0.12)
+	var g0 := front - 0.28
+	var g1: float = front - p.gun_len
+	G.gun = rect_p(-p.gun_r, g1, p.gun_r, g0)
+	G.muzzle = rect_p(-p.gun_r * 1.8, g1 - 0.05, p.gun_r * 1.8, g1 + 0.32) if p.muzzle_brake else PackedVector2Array()
+	G.cupola = circ(Vector2(tR * 0.42, ty + tR * 0.34), 0.32, 16) if p.cupola else PackedVector2Array()
+	G.hatch = rrect(-tR * 0.4, ty + tR * 0.3, 0.48, 0.6, 0.1)
+	var foot := rect_p(-W / 2.0, y0, W / 2.0, L / 2.0)
+	G.base = foot
+	G.ext = [foot, G.gun, T]
+	# The footprint for the shadow mask: tracks, hull, turret and gun, unwobbled.
+	G.sil = [G.tracks[0], G.tracks[1], G.hull, T, G.gun]
+	return G
+
+# hatchLines(g, o, dir, sp, opt): parallel lines across an outline, clipped to it
+# (track links, grilles). `o` is in pixels, dir a unit vector in pixels.
+static func hatch_lines(g, ink: Ink, o: PackedVector2Array, dir: Vector2, sp: float, opt: Dictionary) -> void:
+	var rng: Mulberry32 = opt["rng"] if opt.has("rng") else Mulberry32.new(1)
+	if sp < 0.6:
+		return
+	var bb := _bbox(o)
+	var c := bb.position + bb.size * 0.5
+	var R := sqrt(bb.size.x * bb.size.x + bb.size.y * bb.size.y) / 2.0 + 1.0
+	var nx := -dir.y
+	var ny := dir.x
+	var skip: float = float(opt.get("skip", 0.0))
+	var jit: float = float(opt.get("jit", 0.0))
+	g.stroke_color = ink.ink
+	g.line_width = float(opt.get("weight", 0.55)) * ink.lw
+	g.global_alpha = float(opt.get("alpha", 0.5))
+	g.begin_path()
+	var d := -R
+	while d <= R:
+		if skip > 0.0 and rng.next() < skip:
+			d += sp
+			continue
+		var j := (rng.next() - 0.5) * jit
+		var px := c.x + nx * (d + j)
+		var py := c.y + ny * (d + j)
+		var seg := PackedVector2Array([Vector2(px - dir.x * R, py - dir.y * R), Vector2(px + dir.x * R, py + dir.y * R)])
+		for part: PackedVector2Array in Geometry2D.clip_polyline_with_polygon(seg, o):
+			if part.size() < 2:
+				continue
+			g.move_to(part[0].x, part[0].y)
+			for qi in range(1, part.size()):
+				g.line_to(part[qi].x, part[qi].y)
+		d += sp
+	g.stroke()
+	g.global_alpha = 1.0
+
+# accentPanel(pn, poly, side): the side's recognition panel with a lashing point at each corner.
+static func accent_panel(pn: Pen, poly_m: PackedVector2Array, accent: Color) -> void:
+	var o := _path(pn, poly_m, {"fill": accent, "weight": 0.75})
+	var g = pn.g
+	g.fill_color = pn.ink.ink
+	g.global_alpha = 0.8
+	if perim(o, true) > 14.0:
+		g.begin_path()
+		for q in pn.V.tps(poly_m):
+			g.move_to(q.x + 0.55, q.y)
+			g.arc(q.x, q.y, 0.55, 0.0, TAU)
+		g.fill()
+	g.global_alpha = 1.0
+
+# drawTankGround + drawTankUpper, one after the other onto one canvas.
+static func draw_tank(g, M: Model, V: View, ink: Ink, accent: Color) -> void:
+	_draw_tank_ground(g, M, V, ink, accent)
+	_draw_tank_upper(g, M, V, ink)
+
+static func _draw_tank_ground(g, M: Model, V: View, ink: Ink, accent: Color) -> void:
+	var G := M.G
+	var p := M.p
+	var pn := Pen.new(g, V, ink, M.seed + 5)
+	var ppm := V.ppm
+	var cream := ink.fill
+	var along := V.tv(Vector2(1.0, 0.0))
+	for t: PackedVector2Array in G.tracks:
+		var o := _path(pn, t, {"fill": ink.rock, "weight": 0.0})
+		hatch_lines(g, ink, o, along, maxf(1.5, 0.12 * ppm), {"alpha": 0.72, "weight": 0.6, "rng": _rng(pn), "jit": 0.25})   # track links
+		stroke_o(g, ink, o, 1.1)
+	if ppm > 6.0:
+		for t: PackedVector2Array in G.trackGuides:
+			_line(pn, t, {"alpha": 0.5, "weight": 0.5, "breaks": 0.2})
+	var hull_o := _path(pn, G.hull, {"fill": cream, "weight": 0.0})
+	var gn := V.tv(Vector2(0.0, -1.0))
+	if gn.dot(ink.sd) > 0.2:   # the sloped plate away from the sun
+		_path(pn, G.glacis, {"fill": ink.slope, "weight": 0.0, "clip": hull_o})
+	_line(pn, G.glacisLine, {"alpha": 0.7, "weight": 0.65, "breaks": 0.12})
+	_line(pn, G.deckLine, {"alpha": 0.6, "breaks": 0.15})
+	for gr: PackedVector2Array in G.grilles:
+		var o := _path(pn, gr, {"weight": 0.6, "alpha": 0.8})
+		hatch_lines(g, ink, o, along, maxf(1.5, 0.13 * ppm), {"alpha": 0.55, "weight": 0.5, "rng": _rng(pn)})
+	if p.rivets:
+		for sm: PackedVector2Array in G.seams:
+			rivets(g, ink, V, sm, _rng(pn))
+	_path(pn, G.driver, {"fill": cream, "weight": 0.65})
+	_path(pn, G.bowMG, {"fill": cream, "weight": 0.6})
+	for e: PackedVector2Array in G.exhaust:
+		_path(pn, e, {"fill": cream, "weight": 0.6})
+	edge_hatch(g, ink, hull_o, minf(4.0, 0.4 * ppm), _rng(pn))
+	accent_panel(pn, G.panel, accent)
+	stroke_o(g, ink, hull_o, 1.2)
+	for sw: PackedVector2Array in G.stow:
+		_path(pn, sw, {"fill": cream, "weight": 0.85})
+		if ppm > 8.0:
+			var cc := _cen(sw)
+			_line(pn, PackedVector2Array([Vector2(cc.x - 0.3, cc.y), Vector2(cc.x + 0.3, cc.y)]), {"alpha": 0.5})
+
+static func _draw_tank_upper(g, M: Model, V: View, ink: Ink) -> void:
+	var G := M.G
+	var p := M.p
+	var pn := Pen.new(g, V, ink, M.seed + 9)
+	var ppm := V.ppm
+	var cream := ink.fill
+	var t_o := _path(pn, G.turret, {"fill": cream, "weight": 0.0})
+	shade_side(g, t_o, V.tp(G.tc), ink.sd, ink.fill_shaded)   # shadeDome
+	stipple(g, ink, t_o, {"rng": _rng(pn), "density": 2.6, "away": V.tp(G.tc)})
+	edge_hatch(g, ink, t_o, minf(5.0, p.turret_r * 0.45 * ppm), _rng(pn))
+	stroke_o(g, ink, t_o, 1.2)
+	_path(pn, G.hatch, {"weight": 0.6, "alpha": 0.85})
+	if G.cupola.size() > 0:
+		_path(pn, G.cupola, {"fill": cream, "weight": 0.8})
+		if ppm > 9.0:
+			var cc := _cen(G.cupola)
+			_path(pn, circ(cc, 0.2, 12), {"weight": 0.5, "alpha": 0.7, "breaks": 0.25})
+	var m_o := _path(pn, G.mantlet, {"fill": cream, "weight": 0.0})
+	shade_side(g, m_o, _cen(m_o), ink.sd, ink.fill_shaded)
+	stroke_o(g, ink, m_o, 0.95)
+	var g_o := _path(pn, G.gun, {"fill": cream, "weight": 0.0})
+	shade_axis(g, ink, g_o, V, Vector2.ZERO, ink.fill_shaded)
+	stroke_o(g, ink, g_o, 0.9)
+	if G.muzzle.size() > 0:
+		_path(pn, G.muzzle, {"fill": cream, "weight": 0.85})
+
 # --- The bake ---------------------------------------------------------------------------
 
 static func ink_consts(st: RefCounted) -> Ink:
@@ -971,6 +1247,10 @@ static func ink_consts(st: RefCounted) -> Ink:
 	ink.fill_shaded = st.color("art_fill_shaded")
 	ink.glass_lit = st.color("art_glass_lit")
 	ink.glass_shaded = st.color("art_glass_shaded")
+	# ROCK is the palette's rock_fill; slope(CREAM) the object fill with the wall-slope
+	# share of the shadow tint mixed in (the prototype's mix(shadowCol, fill, .7)).
+	ink.rock = st.palette["rock_fill"]
+	ink.slope = UiStyle.mix8(st.palette["shadow"], st.palette["object_fill"], 1.0 - float(st.mixes["wall_slope_shadow_mix"]))
 	ink.sd = st.shadow_dir()
 	ink.light = st.detail_light
 	return ink
@@ -993,7 +1273,10 @@ static func _bake(st: RefCounted, M: Model, accent: Color, ppm: float) -> Art:
 	var ink := ink_consts(st)
 	var art_canvas = InkCanvas.new(size)
 	art_canvas.line_cap = "round"
-	draw_plane(art_canvas, M, V, ink, accent)
+	if is_tank(M.silhouette):
+		draw_tank(art_canvas, M, V, ink, accent)
+	else:
+		draw_plane(art_canvas, M, V, ink, accent)
 	# The "air" shadow mask: the silhouettes, unwobbled, filled as one.
 	var mask_canvas = InkCanvas.new(size)
 	mask_canvas.begin_path()

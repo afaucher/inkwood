@@ -1,0 +1,78 @@
+{
+  "_about": "Fog of war, FIRST OPTION (Track F, exit criterion 7: 'fog of war and zoom tried with a first option, to see how they look, without committing'). Read by scripts/render/fog_vision.gd, fog_topo.gd and fog_layer.gd through scripts/world/camera_data.gd. EVERY VALUE IS PROPOSED by Track F on 2026-10-09; none is a decision until Alex picks one (data/decisions/decisions.json). Alex's rule this implements (design doc decision log, 2026-10-09): 'a rough topographic map resolves to the full render near units; target markers drawn above both layers; terrain, trees and buildings block sight' -- the last clause is the switch vision.line_of_sight (none | terrain | terrain_trees, built 2026-10-09 as scripts/render/fog_viewshed.gd; buildings join the occluder grid later), left at 'none'. Record shape as data/terrain/terrain.json: {value, _proposed, _reason}. Colours are ROLES, never hexes (working rule 6): {base, toward?, t?, lift?, chroma?, alpha?} where base is a colour of data/params/render_defaults.json (paper, ink, object_fill, wall_fill, rock_fill, roof_lit, dirt, shadow = the chosen shadow tint, side_a, side_b), toward + t mixes toward another of them (sRGB, as the prototype's mix), lift moves OK lightness by that step and chroma scales OK chroma (the fill ramp, palette proposal), alpha is a number.",
+
+  "vision": {
+    "reveal": { "value": "player_sides", "_proposed": true, "_reason": "which units reveal the map. 'player_sides': every unit on a side that has at least one player-controlled unit (an AI wingman on the players' side would see for them); 'player_controlled': only units players give orders to. Alex: the player side's units reveal" },
+    "sight_range_scale": { "value": 1.0, "_proposed": true, "_reason": "a multiplier on each unit's own data/units/<type>.json sight_range_m (1 = the unit files' values, untouched). A knob to TRY shorter sight without editing Track S's files; fog_shot.gd renders one look at 0.3 for comparison" },
+    "line_of_sight": { "value": "none", "_proposed": true, "_reason": "THE SWITCH for Alex's 'terrain, trees and buildings block sight'. 'none': a radius per unit, nothing more (the first option). 'terrain': each revealing unit's circle is cut by its VIEWSHED over the terrain's height levels (scripts/render/fog_viewshed.gd): a unit in a valley sees the valley floor and the rims of the cliffs, not the plateaus beyond; a unit on a plateau sees far low ground but not the dead ground under its cliff. 'terrain_trees': the same with every tree canopy an opaque column from the ground to its crown, so groves hide what is behind them. Buildings join the same occluder grid when structures live in the terrain provider. Left at 'none' because it changes what the demo shows; FogVision.set_line_of_sight(mode) flips it at run time and fog_los_shot.gd renders all three" },
+    "eye_height_m": { "value": { "ground": 2.5, "sea": 6.0 }, "_proposed": true, "_reason": "metres above the surface a unit's eye (and its own top, as a target) sits, by the unit file's domain. 'ground': a tank 2.5 m, from the lead's brief. 'sea': a cruiser's bridge, a guess. 'air' is not here: an aircraft's height is its altitude band's (data/sim/altitude.json, absolute above sea level for the air bands), so the terrain is mostly below it. A target is judged by visible_from at this height, not by the ground mask under it" }
+  },
+
+  "viewshed": {
+    "cell_m": { "value": 8, "_proposed": true, "_reason": "the occluder grid's cell: the terrain's own marching-squares cell (data/terrain/terrain.json chunks.cell_m), which must divide chunk_m. A cell that a level boundary crosses is resolved exactly (cliff lips are found to a quarter of a metre), so the grid only decides which cells need that" },
+    "step_cells": { "value": 1.0, "_proposed": true, "_reason": "samples along each ray, in cells: one a cell. The profile is flat segments between steps, so a finer step only finds narrower features; 1 is 100 samples for 800 m" },
+    "ray_spacing_cells": { "value": 1.0, "_proposed": true, "_reason": "neighbouring rays are at most this many cells apart at full range (the lead's brief: one grid cell): 629 rays at 800 m. 2 halves the cost and makes the far edge blockier (16 m sectors at 800 m)" },
+    "eye_clear_m": { "value": 12, "_proposed": true, "_reason": "canopy within this distance of the eye does not block (only the ground does): a unit standing in a grove is not inside a solid tree. Roughly one canopy radius (median tree 9 m)" },
+    "rim_m": { "value": 0, "_proposed": true, "_reason": "metres of the near edge of anything ABOVE the eye that count as seen. From below you see a cliff face and the line of its lip, not its top, so the physical answer is 0 and the visible area ends cleanly at the cliff's foot or a grove's edge. fog_los_shot.gd rim=6 showed the alternative -- the lip lit up as a thin sliver, 6 m (under one cell) wide, with its own ink outline and hatching -- and it read as noise: detached slivers along every plateau and grove edge. A value above 0 keeps that look available" },
+    "canopy_radius_scale": { "value": 0.9, "_proposed": true, "_reason": "a tree blocks within its sprite radius (terrain tree r in px / px_per_m) times this: the scalloped crown averages 0.9 of its radius (ink_sprites' crown runs 0.8 to 1 r). The trunk's own cell always blocks" },
+    "map_margin_m": { "value": 1000, "_proposed": true, "_reason": "the occluder grid covers the map plus this much on every side (flat ground beyond the map), so a unit that has just left the map still sees; about one sight range" },
+    "exact_below_factor": { "value": 3, "_proposed": true, "_reason": "cliff lips are located exactly (bisected on Terrain.level_at) for an eye lower than this times the tallest ground (3 x 24 m = 72 m): a lip's position moves the edge of its dead ground by eye / (eye - lip height), 10.6 for a tank on the top, 1.25 for a plane at the low band (120 m) -- so planes take the cell as one block and cost 6 ms a viewshed instead of 43" },
+    "recompute_move_m": { "value": 8, "_proposed": true, "_reason": "a unit's viewshed is reused until it moves this far (one cell) or changes its eye height by recompute_height_m. A viewshed costs 6 ms (aircraft) to 45 ms (a ground unit among cliffs) in GDScript at 800 m, so the fog edge may trail a moving unit by up to this much" },
+    "budget_ms": { "value": 0, "_proposed": true, "_reason": "milliseconds of viewshed sweeping per update_from_world, shared by all units; 0 sweeps every shed whole, in one frame (a ground unit among cliffs costs 45-65 ms, an aircraft 6-12). With a budget (4 is about a quarter of a 60 Hz frame) a stale shed keeps being drawn while the new one is swept over a few frames, so a moving unit's fog edge trails it by one sweep instead of the game hitching. A unit with no shed yet is always swept whole" },
+    "recompute_height_m": { "value": 2, "_proposed": true, "_reason": "metres a unit's eye may rise or fall before its viewshed is recomputed: an altitude band change is 280 m, a climb through a step is smaller" }
+  },
+
+  "mask": {
+    "scale": { "value": 0.5, "_proposed": true, "_reason": "the vision mask is drawn every frame at this fraction of the screen's resolution; it is a clamped distance field, so half resolution still gives a smooth edge, and a quarter of the pixels to shade" },
+    "range_px": { "value": 72, "_proposed": true, "_reason": "the mask holds the signed distance to the vision edge, clamped to +/- this many SCREEN px (0.5 = on the edge). It must cover the widest edge effect (fog_layer.gd checks): the soft feather's half width plus its noise (40 + 24), the inked band plus wobble and line (30)" },
+    "max_circles": { "value": 64, "_proposed": true, "_reason": "vision circles drawn per frame; the shader's uniform array holds 64. The demo has two or three revealing units" }
+  },
+
+  "edge": {
+    "mode": { "value": "inked", "decision": "fog-first-option", "_reason": "Alex 2026-10-09 accepted the lead's fog recommendation (the inked edge). Was proposed: how the full render meets the topographic layer. 'inked': a hard cut on the vision circle with a hand-wobbled ink line on it and a band of ink hatching on the fog side that thins out (a cartographer's edge of the surveyed area). 'soft': a wide cross-fade with a noise-ragged edge, like a wash bleeding into the paper. fog_shot.gd renders both" },
+    "inked": {
+      "line_px": { "value": 1.5, "_proposed": true, "_reason": "SCREEN px: a map line keeps its width at every zoom. About the full render's heaviest pen line (wall edges at 1.15 x 0.8 px on the shadow side)" },
+      "line_role": { "value": { "base": "ink", "alpha": 0.9 }, "_proposed": true, "_reason": "the palette's ink, at the tree rings' near-full alpha" },
+      "wobble_px": { "value": 2.5, "_proposed": true, "_reason": "SCREEN px of hand wobble on the cut, the same order as the prototype's contour wobble at the default hand_wobble" },
+      "wobble_per_px": { "value": 0.018, "_proposed": true, "_reason": "noise frequency per screen px: one wave every ~55 px, anchored to the world so the line does not swim when the view pans" },
+      "band_px": { "value": 26, "_proposed": true, "_reason": "SCREEN px of hatching on the fog side of the line, its lines ending raggedly between 45% and 100% of this" },
+      "hatch_spacing_px": { "value": 4.0, "_proposed": true, "_reason": "SCREEN px between hatch lines; the terrain hachures' 3.5 px, a little looser so the band reads lighter than a scarp" },
+      "hatch_width_px": { "value": 0.9, "_proposed": true, "_reason": "SCREEN px, a hairline like the full render's ruts" },
+      "hatch_angle_deg": { "value": 45, "_proposed": true, "_reason": "the engraver's diagonal; screen space, the direction the detail light comes from (render_defaults linework.detail_light is top-left)" },
+      "hatch_role": { "value": { "base": "ink", "alpha": 0.55 }, "_proposed": true, "_reason": "ink at the prototype's hatch alpha (.5) step" }
+    },
+    "soft": {
+      "feather_px": { "value": 80, "_proposed": true, "_reason": "SCREEN px over which the full render fades into the topographic layer, centred on the vision circle; must stay within 2 x mask.range_px" },
+      "wobble_px": { "value": 16, "_proposed": true, "_reason": "SCREEN px of two-octave noise on the fade, so the edge is ragged like a wash, not a vignette" },
+      "wobble_per_px": { "value": 0.012, "_proposed": true, "_reason": "noise frequency per screen px, world-anchored" }
+    }
+  },
+
+  "topo": {
+    "paper_role": { "value": { "base": "paper", "lift": 0.06, "chroma": 0.4 }, "_proposed": true, "_reason": "the rough map's sheet: the paper lifted two fill-ramp steps and well under half as saturated, with none of the full render's tint, specks, fibres or grain. Since Alex chose contours for the full render too (terrain.json draw.style, 2026-10-09), the fog must read by what is missing (trees, shadows, texture) and by a paler, greyer sheet, on the same hue" },
+    "level_lift": { "value": 0.03, "_proposed": true, "_reason": "OK lightness step per height level on the map sheet (hypsometric tone on the paper ramp, as terrain.json's level fill does with 0.025): a touch stronger so the levels read at overview zoom with no shadows to help" },
+    "level_chroma": { "value": 0.85, "_proposed": true, "_reason": "chroma eased per level step, as terrain.json's level fill" },
+    "outside_role": { "value": { "base": "ink", "alpha": 0.08 }, "_proposed": true, "_reason": "IN THE OVERVIEW ONLY (scaled by the overview amount): a faint ink wash over the map outside vision, so on the far-zoom map the seen area is the clean part of the sheet. Ink, not a new hue. Outside vision at play zoom the sheet stays clean and pale" },
+    "lines": {
+      "role": { "value": { "base": "ink", "toward": "paper", "t": 0.35 }, "_proposed": true, "_reason": "contour ink faded a third of the way to paper: a printed map's brown line, lighter than the world's ink, and not the palette ink exactly, so the pen's shadow-side ribbon (ink only) leaves it an even line" },
+      "width_texels": { "value": 1.0, "_proposed": true, "_reason": "contour width in TEXELS of whichever level of detail is baked: each level is shown near 1:1 (lods), so a map line stays about one screen px at every zoom instead of vanishing when zoomed out" },
+      "offsets_m": { "value": [0.0], "_proposed": true, "_reason": "lines per level boundary, metres down the slope from the scarp top. ONE plain line at the top: the full render draws the scarp as three nested contours (Alex's pick), the rough map as one -- part of how the fog reads as the map and not the world. [0, 2.5, 5] gives the survey-map bundle instead" },
+      "alphas": { "value": [0.85], "_proposed": true, "_reason": "one per offset" },
+      "wobble_m": { "value": 0.35, "_proposed": true, "_reason": "metres of hand wobble on the contours, world-anchored value noise (terrain.json's contour wobble is about 0.15 m)" },
+      "wobble_per_m": { "value": 0.08, "_proposed": true, "_reason": "noise frequency per metre" }
+    },
+    "grid": {
+      "spacing_m": { "value": 500, "_proposed": true, "_reason": "a map grid, so the fog reads as THE MAP and the overview has a scale: ten squares across the 5,000 m map. 0 turns it off" },
+      "role": { "value": { "base": "ink", "toward": "paper", "t": 0.3, "alpha": 0.3 }, "_proposed": true, "_reason": "the contour ink, faint" },
+      "width_texels": { "value": 1.0, "_proposed": true, "_reason": "as the contours, in texels of the baked level of detail" }
+    },
+    "lods": { "value": [1.0, 0.25, 0.0625], "_proposed": true, "_reason": "baked texels per MAP px for each level of detail of the topographic chunks (at 2 px/m a 256 m chunk is 512 map px: 512, 128 and 32 texels). The layer shows the coarsest level that is still at least lod_ratio of the zoom, so the texture is never magnified more than 1/lod_ratio; the whole 5,000 m map at the coarsest is 400 chunks of 32 x 32 at 2 px/m (1.6 MB with mipmaps; 6 MB at 4 px/m). In map px, like the zoom, so the choice holds at any px_per_m" },
+    "lod_ratio": { "value": 0.75, "_proposed": true, "_reason": "see lods" },
+    "bakes_per_frame": { "value": 1, "_proposed": true, "_reason": "chunks the fog layer bakes per frame when nothing else bakes them (Track V's baker may take this over: fog_topo.gd's record_chunk is its provider entry). Recording is GDScript: measured ~1-1.5 ms a chunk at the two coarse levels and ~5-40 ms at the finest (the hand wobble's noise, plus Terrain's chunk geometry the first time a chunk is touched), so on the main thread the finest level hitches; V's worker-thread baker is the right home for it" },
+    "cache_chunks": { "value": 600, "_proposed": true, "_reason": "baked chunks kept across all levels before the farthest from the view are dropped: the whole map at the coarsest level plus a few screens of the finer ones" }
+  },
+
+  "overview": {
+    "vision_edge": { "value": true, "_proposed": true, "_reason": "when the far-zoom overview shows the topographic map everywhere (data/view/camera.json far_zoom), still draw the vision edge (line and hatching) and wash the outside, so the overview shows what the players see" }
+  }
+}

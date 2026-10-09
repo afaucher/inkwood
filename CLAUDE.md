@@ -63,7 +63,11 @@ and the motion planner over the World, mounted through `unit_ui.gd`
 worker threads under a camera, ground anchored to the world, scale
 switchable at runtime (`test_map_view`; a look:
 `scripts/render/map_view_shot.gd`). InkCanvas draws the shadow-side pen
-(`linework.pen`; `--parity` selects the prototype's even line).
+(`linework.pen`; `--parity` selects the prototype's even line). Fog of war and the
+camera: `scripts/render/fog_*.gd` (sight circles or a line-of-sight viewshed
+over terrain and trees, a topographic layer outside sight, an inked edge)
+and `scripts/world/camera_controller.gd` (`test_fog`, `test_viewshed`,
+`test_camera`; looks: `fog_shot.gd`, `fog_los_shot.gd`).
 
 **The target is the sandbox demo.** Its exit criteria are Alex's (design doc:
 Execution plan > Sandbox demo exit criteria) and the track plan with folder
