@@ -23,6 +23,9 @@ func _ready() -> void:
 		if args[i] == "--render-shot" and i + 1 < args.size():
 			_render_shot(args[i + 1])
 			return
+		if args[i] == "--render-scene" and i + 1 < args.size():
+			_render_scene(args, i)
+			return
 
 	# A sibling of the menu rather than a child of it, so hiding the menu to
 	# start a game leaves the build stamp on screen. Added here and not in the
@@ -136,6 +139,59 @@ func _render_shot(out_path: String) -> void:
 		get_tree().quit(1)
 		return
 	print("[render-shot] saved ", path)
+	get_tree().quit(0)
+
+# --- Render scene (windowed) -------------------------------------------------
+
+# --render-scene <seed> [<png>] [--no-grain] [--parity] [--paper-shader]:
+# generates the scene for <seed> at 1280x720 (scripts/world/scene_gen.gd) and
+# draws it with the port of the prototype's draw routines
+# (scripts/render/ink_renderer.gd), saves it -- by default to
+# tmp/render/scene_<seed>.png -- and quits 0. Same shape as --render-shot:
+# WINDOWED ONLY, the renderer LOADED rather than preloaded so a parse error in
+# scripts/render/ or scripts/world/ fails this run alone, exit code 1 on any
+# failure. Run it through render.ps1 -Scene <seed> / render.sh --scene <seed>.
+#   --no-grain      the grain pass off (the prototype's "Grain" toggle), for
+#                   comparing with a browser capture: its grain is Math.random
+#   --parity        parameters with a prototype_default in render_defaults.json
+#                   set back to it (shadow strength 0.92 instead of 0.44), so
+#                   the frame matches the prototype's own defaults
+#   --paper-shader  the paper tint from the GPU twin instead of GDScript fbm
+func _render_scene(args: PackedStringArray, at: int) -> void:
+	if DisplayServer.get_name() == "headless":
+		printerr("[render-scene] needs a windowed run: under --headless nothing is drawn")
+		get_tree().quit(1)
+		return
+	var seed_arg := args[at + 1]
+	if not seed_arg.is_valid_int():
+		printerr("[render-scene] the seed must be an integer, got '", seed_arg, "'")
+		get_tree().quit(1)
+		return
+	var seed_value := seed_arg.to_int()
+	var path := "tmp/render/scene_%d.png" % seed_value
+	if at + 2 < args.size() and not args[at + 2].begins_with("--"):
+		path = args[at + 2]
+	if path.is_relative_path():
+		path = ProjectSettings.globalize_path("res://").path_join(path)
+	var options := {"grain": not args.has("--no-grain"), "parity": args.has("--parity"),
+		"paper_shader": args.has("--paper-shader")}
+	var script: Resource = load("res://scripts/render/ink_renderer.gd")
+	if script == null or not (script as Script).can_instantiate():
+		printerr("[render-scene] scripts/render/ink_renderer.gd did not compile -- see the Parse Error above")
+		get_tree().quit(1)
+		return
+	var img: Variant = script.call("render_scene", seed_value, Vector2i(1280, 720), options)
+	if not img is Image:
+		printerr("[render-scene] the renderer returned no image")
+		get_tree().quit(1)
+		return
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	var err := (img as Image).save_png(path)
+	if err != OK:
+		printerr("[render-scene] could not write ", path, ": ", error_string(err))
+		get_tree().quit(1)
+		return
+	print("[render-scene] saved ", path)
 	get_tree().quit(0)
 
 # --- Headless entry point ----------------------------------------------------

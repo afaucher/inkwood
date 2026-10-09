@@ -116,7 +116,9 @@ godot.manifest        the pinned engine version -- the only place it is written
 godot_env.*           installs and verifies that engine into build/deps
 editor.* build.*      open the editor / gate + export;  test_runner.*  one test
 test_runner.*         one test by name;  import_check.*  stale-import guard
-render.*              a WINDOWED run that saves a frame (--render-shot); never a test
+render.*              a WINDOWED run that saves a frame: the drawing-layer demo (--render-shot)
+                      or a generated scene (-Scene <seed> / --scene <seed>: --render-scene,
+                      -Parity for the prototype's own defaults); never a test
 project.godot         autoloads in order: DebugSettings, SteamManager, NetworkManager
 scenes/main.tscn      the application shell: menu only, no world
 scripts/
@@ -210,9 +212,15 @@ Properties of Godot and PowerShell, not of that game. Entries marked
   2026-10-09); free resources in an explicit `discard()`, not a notification.
 - **`--script` runs still load the autoloads**, so Steam starts unless
   `INKWOOD_STEAM=off` (observed 2026-10-09; `render.*` sets it).
-- **`requestAnimationFrame` stops in a hidden browser tab**: the prototype's
-  capture page renders only while visible, so a capture taken from a
-  background tab is stale.
+- **A hidden browser tab or pane stops `requestAnimationFrame` AND
+  `ResizeObserver`** (observed 2026-10-09): the prototype's capture page
+  renders only while visible, so a capture from a background tab is stale or
+  a 300x150 canvas. Drive pages through setTimeout and render synchronously
+  (`tmp/render/make_nograin_page.js` did; a page can POST its own PNG to a
+  scratch server).
+- **Subagents share the one built-in browser** and navigate whichever tab is
+  active (observed twice 2026-10-09). Open your own tab, re-check the URL
+  before each capture, and never close a tab you did not open.
 - **Kill stragglers** if a run hangs: `taskkill //F //IM
   Godot_v4.7-stable_win64.exe` (Windows) or `pkill -f Godot_v` (Linux).
 - **A parse error in one script fails EVERY script that depends on it**
