@@ -464,6 +464,7 @@ func _vision() -> void:
 	check(v.set_line_of_sight(FogVision.LOS_TERRAIN), "terrain is a valid rule")
 	c0 = v.circles[0]
 	check(c0.has("shed"), "terrain: the circle has its shed")
+	var shed_terrain_v: FogViewshed.Shed = c0.get("shed")   # this FogVision's own settings, terrain only
 	check(not v.is_visible(hidden), "terrain: the point on the far plateau is hidden")
 	check(v.is_visible(site), "terrain: the tank's own ground is visible")
 	check(not v.target_visible(hidden.x, hidden.y, tank_agl), "terrain: an enemy tank on that plateau is hidden")
@@ -472,11 +473,16 @@ func _vision() -> void:
 	check(v.mask_circles(2.0, Transform2D.IDENTITY, 0.5).is_empty(), "terrain: the mask is not given the circle ...")
 	eq(v.los_circles().size(), 1, "... it is drawn as a shape")
 	# Trees too.
+	# vision.trees_block (Alex, 2026-10-09: false for now) gates the canopy:
+	# with it off, terrain_trees must behave exactly as terrain.
 	check(v.set_line_of_sight(FogVision.LOS_TREES), "terrain_trees is a valid rule")
-	check(v.engine().canopy, "terrain_trees: the engine's canopy switch is on")
+	eq(v.engine().canopy, v.trees_block, "terrain_trees: the engine's canopy switch follows vision.trees_block")
 	var shed_t: FogViewshed.Shed = v.circles[0].shed
 	var shed_g: FogViewshed.Shed = probe   # terrain only, same eye and range
-	check(shed_t.area_m2() < shed_g.area_m2(), "terrain_trees: the shed is smaller than terrain alone (%.0f against %.0f m2)" % [shed_t.area_m2(), shed_g.area_m2()])
+	if v.trees_block:
+		check(shed_t.area_m2() < shed_g.area_m2(), "terrain_trees: the shed is smaller than terrain alone (%.0f against %.0f m2)" % [shed_t.area_m2(), shed_g.area_m2()])
+	else:
+		near(shed_t.area_m2(), shed_terrain_v.area_m2(), 1e-6, "terrain_trees with trees_block off: the same shed as terrain alone")
 	# Back to none: the circle again.
 	check(v.set_line_of_sight(FogVision.LOS_NONE), "none again")
 	check(not v.circles[0].has("shed") and v.mask_circles(2.0, Transform2D.IDENTITY, 0.5).size() == 1, "none again: a plain circle")

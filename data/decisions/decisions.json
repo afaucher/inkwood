@@ -250,6 +250,26 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'add the callsigns'."
+    },
+    {
+      "id": "trees-do-not-block",
+      "date": "2026-10-09",
+      "area": "Fog of war, Line of sight",
+      "question": "Should tree canopies block line of sight?",
+      "board": "tmp/fog_los/ shots (los_c_terrain_trees, los_d2_plane_low_trees)",
+      "options": [
+        "trees block (terrain_trees)",
+        "trees do not block"
+      ],
+      "chosen": "trees do not block, for now",
+      "parameters": {
+        "vision.trees_block": false
+      },
+      "applied_to": [
+        "data/view/fog.json#vision.trees_block"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Let's disable trees blocking for now.' Line of sight itself stays off by default (vision.line_of_sight = none); terrain line of sight is a knob in the demo."
     }
   ]
 }

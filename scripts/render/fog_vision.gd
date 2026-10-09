@@ -63,6 +63,9 @@ var data: CameraData
 var reveal: String
 var sight_scale: float
 var line_of_sight: String
+# vision.trees_block: false makes terrain_trees behave as terrain (Alex, 2026-10-09:
+# trees do not block sight for now).
+var trees_block: bool
 var max_circles: int
 var eye_heights: Dictionary             # domain -> metres above the surface (not "air")
 var cell_m: float
@@ -103,6 +106,7 @@ func _init(fog_data: CameraData = null) -> void:
 	if not (sight_scale > 0.0):
 		_err("vision.sight_range_scale must be positive, got %s" % sight_scale)
 	line_of_sight = data.text("vision.line_of_sight")
+	trees_block = data.flag("vision.trees_block")
 	if not LOS_MODES.has(line_of_sight):
 		_err("vision.line_of_sight must be one of %s, not '%s'" % [LOS_MODES, line_of_sight])
 	eye_heights = data.dict("vision.eye_height_m")
@@ -150,11 +154,16 @@ func set_line_of_sight(mode: String) -> bool:
 		line_of_sight = mode
 		_sheds.clear()
 		if viewshed != null:
-			viewshed.canopy = (mode == LOS_TREES)
+			viewshed.canopy = _canopy_blocks()
 		for c: Dictionary in circles:
 			c.erase("shed")
 		_attach_sheds()
 	return true
+
+# Do tree canopies block sight? Only in terrain_trees mode, and only while the
+# data allows it.
+func _canopy_blocks() -> bool:
+	return line_of_sight == LOS_TREES and trees_block
 
 # Is line of sight on and able to work (it needs a terrain)?
 func los_on() -> bool:
@@ -165,7 +174,7 @@ func engine() -> FogViewshed:
 	if viewshed == null and terrain != null:
 		viewshed = FogViewshed.new(cell_m, step_cells, spacing_cells, eye_clear_m, rim_m, exact_below)
 		viewshed.attach_terrain(terrain, canopy_scale, margin_m)
-		viewshed.canopy = (line_of_sight == LOS_TREES)
+		viewshed.canopy = _canopy_blocks()
 		if not viewshed.ok():
 			errors.append_array(viewshed.errors)
 	return viewshed
