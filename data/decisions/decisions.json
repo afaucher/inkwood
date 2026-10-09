@@ -70,6 +70,33 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'I love the rest of the decisions. The accent colors are perfectly toned. Those might be useful colors to mirror in the HUD.' The pen line was left open (variants/pen-line/)."
+    },
+    {
+      "id": "pen-line",
+      "date": "2026-10-09",
+      "area": "Linework",
+      "question": "Should an ink line's width vary along it, and how?",
+      "board": "variants/pen-line/",
+      "options": [
+        "A even (today)",
+        "B tapered, hand pressure",
+        "C heavier on the shadow side",
+        "D broad nib"
+      ],
+      "chosen": "C",
+      "parameters": {
+        "mode": "shadow_side",
+        "lit_factor": 0.42,
+        "shadow_factor": 1.87,
+        "open_line_factor": 0.85,
+        "end_taper_px": 7,
+        "end_floor": 0.25
+      },
+      "applied_to": [
+        "data/params/render_defaults.json#linework.pen"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Shadow side looks the best.' Factor values are the board's; tuning them is a later board."
     }
   ]
 }

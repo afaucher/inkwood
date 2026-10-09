@@ -137,11 +137,11 @@ details.defs summary{cursor:pointer;padding:10px 12px;font-size:13px;font-weight
       <div class="ctl"><label for="lw">Line weight</label><output id="lwV"></output><input type="range" id="lw" min="0.5" max="2" step="0.05" value="0.8"></div>
       <div class="ctl"><label for="wob">Hand wobble</label><output id="wobV"></output><input type="range" id="wob" min="0" max="1.5" step="0.05" value="0.6"></div>
       <div class="ctl"><label for="stip">Stipple density</label><output id="stipV"></output><input type="range" id="stip" min="0" max="2.5" step="0.05" value="1"></div>
-      <h2 style="margin-top:14px">Pen line <span class="proposed">proposed</span></h2>
+      <h2 style="margin-top:14px">Pen line</h2>
       <div class="seg" id="pen" style="flex-wrap:wrap">
-        <button type="button" data-v="even" aria-pressed="true">Even (today)</button>
+        <button type="button" data-v="even" aria-pressed="false">Even (today)</button>
         <button type="button" data-v="taper" aria-pressed="false">Tapered</button>
-        <button type="button" data-v="light" aria-pressed="false">Shadow side</button>
+        <button type="button" data-v="light" aria-pressed="true">Shadow side</button>
         <button type="button" data-v="nib" aria-pressed="false">Broad nib</button>
       </div>
       <p class="note">How an ink line's width varies along it. Even: one width, as today. Tapered: hand pressure swells and thins the line and it tapers where the pen lands and lifts. Shadow side: outlines heavier on the edges facing away from the sun. Broad nib: width follows the stroke's direction.</p>
@@ -299,7 +299,7 @@ function pen(g,V,seed){
 // recorded as they are built, and an INK-coloured stroke is drawn as filled ribbons instead.
 // Shadow masks (black), slope tints and anything with an arc or rect in its path are untouched.
 // =====================================================================================
-P.pen="even";
+P.pen="light";  // Alex chose C, shadow side (variants/pen-line/)
 (()=>{
   const C=CanvasRenderingContext2D.prototype;
   const o={beginPath:C.beginPath,moveTo:C.moveTo,lineTo:C.lineTo,closePath:C.closePath,stroke:C.stroke,arc:C.arc,rect:C.rect,fill:C.fill};
