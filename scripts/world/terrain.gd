@@ -64,7 +64,11 @@ extends RefCounted
 # for the drawing layer.
 
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
-const ValueNoise = preload("res://scripts/core/noise.gd")
+# core/noise.gd's hash2 / fbm, BIT FOR BIT (scripts/tests/test_render_layer.gd checks it), inlined
+# and ~5x faster: every dart of every chunk calls fbm, which was about half of generation
+# (a cold view 1.25 s -> 0.49 s, measured 2026-10-09). Output is unchanged to the bit, so a
+# chunk is the same alone or among neighbours and the same as core/noise.gd gave (test_terrain).
+const ValueNoise = preload("res://scripts/render/fast_noise.gd")
 const Geometry = preload("res://scripts/core/geometry.gd")
 const RenderParams = preload("res://scripts/world/render_params.gd")
 const SceneGen = preload("res://scripts/world/scene_gen.gd")
