@@ -1,0 +1,26 @@
+{
+  "_about": "Altitude bands, bottom to top (scripts/sim/sim_rules.gd reads this; unit files name the bands they may use). ALL PROPOSED by Track S, 2026-10-09. The design doc's unit sheet asks for a 'height layer or altitude band' per unit and says height limits sight lines and engagement and that diving adds speed and can hide a plane behind mountains; it does not say how many bands there are or how high. The demo flies every plane in one band (Alex: altitude may be a fixed band for now), but the data shape carries it so shadows and, later, line of sight can use it.",
+  "_rules": "LIST ORDER IS VERTICAL ORDER: a climb is a move to a later entry, a dive to an earlier one. reference 'terrain' = the height is above the ground under the unit (ground and sea units ride the surface); 'sea_level' = an absolute height, so a ridge taller than the band can hide a plane. Cross-track constraint (proposed): Track T's highest terrain level plus its tallest trees must stay below the lowest air band, since the sim has no terrain collision yet.",
+  "bands": [
+    {
+      "id": "surface",
+      "reference": "terrain",
+      "height_m": { "value": 0, "_proposed": true, "_reason": "ground and sea units sit on whatever surface is under them; Track T's height_at(x, y) gives the actual height" }
+    },
+    {
+      "id": "low",
+      "reference": "sea_level",
+      "height_m": { "value": 120, "_proposed": true, "_reason": "nap of the earth: low enough that a hill or ridge can hide the plane (design doc, Height), above the trees" }
+    },
+    {
+      "id": "medium",
+      "reference": "sea_level",
+      "height_m": { "value": 400, "_proposed": true, "_reason": "above an island's ordinary terrain, inside light anti-aircraft range; the demo's fixed band" }
+    },
+    {
+      "id": "high",
+      "reference": "sea_level",
+      "height_m": { "value": 1000, "_proposed": true, "_reason": "above the island's tallest mountains, the band a bomber holds over defended targets" }
+    }
+  ]
+}

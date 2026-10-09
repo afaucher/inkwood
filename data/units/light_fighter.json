@@ -1,0 +1,28 @@
+{
+  "_about": "Light fighter (design doc, Initial unit roster: air). EVERY VALUE IS A PLACEHOLDER proposed by Track S on 2026-10-09 so the demo can fly; the unit design sheet and its variant boards replace them. Plausible for a WWII single-engine fighter (Spitfire, Bf 109, A6M class) at true scale. Record shape: data/units/_schema.json.",
+  "id": "light_fighter",
+  "name": "Light fighter",
+  "domain": "air",
+  "size_m": { "value": 9, "_proposed": true, "_reason": "Track S brief: a fighter about 9 m across (Bf 109 9.9 m span); the design doc's Scale section uses about 10 m for a fighter" },
+  "actions_per_turn": { "value": 5, "_proposed": true, "_reason": "the most agile type gets the most decision points (design doc: faster units generally get more actions); 5 steps of 1 s in a 5 s turn" },
+  "health": { "value": 3, "_proposed": true, "_reason": "light and fragile: the fewest pips of the three aircraft (Steambirds-style role trade-off)" },
+  "sight_range_m": { "value": 1500, "_proposed": true, "_reason": "about 15 s of flight at cruise ahead; unused until Track F's vision rule" },
+  "drawing": { "silhouette": "light_fighter" },
+  "envelope": {
+    "speed_min_mps": { "value": 45, "_proposed": true, "_reason": "stall about 160 km/h, typical of WWII single-engine fighters (140-170 km/h)" },
+    "speed_cruise_mps": { "value": 100, "_proposed": true, "_reason": "360 km/h, a fighter's ordinary cruise" },
+    "speed_max_mps": { "value": 160, "_proposed": true, "_reason": "575 km/h level, a Spitfire or Bf 109 at low altitude" },
+    "dive_speed_max_mps": { "value": 190, "_proposed": true, "_reason": "about 685 km/h; WWII fighters dived well past level top speed" },
+    "accel_mps2": { "value": 4, "_proposed": true, "_reason": "cruise to top speed in 15 s (3 turns), stall to top in about 29 s (6 turns): 'several turns to reach top speed'" },
+    "decel_mps2": { "value": 5, "_proposed": true, "_reason": "slows a little faster than it accelerates (drag helps, no airbrakes): 5 m/s per 1 s step" },
+    "reverse_from_stop": { "value": false, "_proposed": true, "_reason": "aircraft cannot reverse" },
+    "turn_rate_curve_dps": { "value": [[45, 30], [100, 20], [160, 12]], "_proposed": true, "_reason": "about 20 deg/s at cruise (an 18 s circle, WWII sustained-turn territory), tighter when slow as Alex asked, 12 deg/s at top speed" },
+    "turn_bleed_mps2": { "value": 7, "_proposed": true, "_reason": "more than its 4 m/s^2 of thrust: a full-rate turn at full power still loses 3 m/s every second, so a hard 180 at top speed ends near cruise" },
+    "turn_bleed_exponent": { "value": 2, "_proposed": true, "_reason": "induced drag grows with the square of the load factor: a half-rate turn costs a quarter" },
+    "altitude_bands": { "value": ["low", "medium", "high"], "_proposed": true, "_reason": "every air band in data/sim/altitude.json" },
+    "start_band": { "value": "medium", "_proposed": true, "_reason": "the demo's fixed band" },
+    "bands_per_step": { "value": 1, "_proposed": true, "_reason": "one band per step keeps a climb a deliberate, visible choice" },
+    "climb_speed_cost_mps": { "value": 25, "_proposed": true, "_reason": "a climb trades speed for height: a quarter of cruise per band" },
+    "dive_speed_gain_mps": { "value": 20, "_proposed": true, "_reason": "less than the climb costs, so a climb-and-dive loses energy overall" }
+  }
+}

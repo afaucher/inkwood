@@ -1,0 +1,28 @@
+{
+  "_about": "Bomber (design doc, Initial unit roster: air; turret guns engage on their own, the bomb drop is manual -- specials are deferred for the demo). EVERY VALUE IS A PLACEHOLDER proposed by Track S on 2026-10-09; the unit design sheet and its variant boards replace them. Plausible for a WWII twin-engine medium bomber (B-25, He 111 class) at true scale. Not in the demo, which flies fighters. Record shape: data/units/_schema.json.",
+  "id": "bomber",
+  "name": "Bomber",
+  "domain": "air",
+  "size_m": { "value": 20, "_proposed": true, "_reason": "medium bomber span: B-25 20.6 m, He 111 22.6 m" },
+  "actions_per_turn": { "value": 3, "_proposed": true, "_reason": "slowest and least agile aircraft: the fewest decision points; 3 steps of 1.67 s in a 5 s turn" },
+  "health": { "value": 8, "_proposed": true, "_reason": "built to take hits: the most pips of the three aircraft" },
+  "sight_range_m": { "value": 1200, "_proposed": true, "_reason": "slower, so it needs less look-ahead; unused until Track F's vision rule" },
+  "drawing": { "silhouette": "bomber" },
+  "envelope": {
+    "speed_min_mps": { "value": 50, "_proposed": true, "_reason": "stall about 180 km/h when loaded" },
+    "speed_cruise_mps": { "value": 85, "_proposed": true, "_reason": "about 305 km/h, a medium bomber's cruise" },
+    "speed_max_mps": { "value": 120, "_proposed": true, "_reason": "about 430 km/h, B-25 class" },
+    "dive_speed_max_mps": { "value": 140, "_proposed": true, "_reason": "not built to dive: a little past top speed" },
+    "accel_mps2": { "value": 2, "_proposed": true, "_reason": "heavy: cruise to top in about 18 s (3-4 turns)" },
+    "decel_mps2": { "value": 3, "_proposed": true, "_reason": "heavy and slippery: slow to shed speed" },
+    "reverse_from_stop": { "value": false, "_proposed": true, "_reason": "aircraft cannot reverse" },
+    "turn_rate_curve_dps": { "value": [[50, 14], [85, 10], [120, 6]], "_proposed": true, "_reason": "half the light fighter's rate: a 36 s circle at cruise" },
+    "turn_bleed_mps2": { "value": 4, "_proposed": true, "_reason": "twice its 2 m/s^2 of thrust: a bomber that turns hard slows down" },
+    "turn_bleed_exponent": { "value": 2, "_proposed": true, "_reason": "induced drag grows with the square of the load factor" },
+    "altitude_bands": { "value": ["low", "medium", "high"], "_proposed": true, "_reason": "every air band in data/sim/altitude.json" },
+    "start_band": { "value": "high", "_proposed": true, "_reason": "a bomber holds height over defended targets" },
+    "bands_per_step": { "value": 1, "_proposed": true, "_reason": "one band per step keeps a climb a deliberate, visible choice" },
+    "climb_speed_cost_mps": { "value": 35, "_proposed": true, "_reason": "the most mass to lift; a climb from near stall is refused" },
+    "dive_speed_gain_mps": { "value": 20, "_proposed": true, "_reason": "less than the climb costs, so a climb-and-dive loses energy overall" }
+  }
+}

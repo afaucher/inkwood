@@ -1,0 +1,28 @@
+{
+  "_about": "Heavy fighter (design doc, Initial unit roster: air). EVERY VALUE IS A PLACEHOLDER proposed by Track S on 2026-10-09 so the demo can fly; the unit design sheet and its variant boards replace them. Plausible for a WWII twin-engine fighter (P-38, Bf 110, Beaufighter class) at true scale: about as fast as the light fighter, heavier and less agile. Record shape: data/units/_schema.json.",
+  "id": "heavy_fighter",
+  "name": "Heavy fighter",
+  "domain": "air",
+  "size_m": { "value": 16, "_proposed": true, "_reason": "twin-engine fighter span: P-38 15.8 m, Bf 110 16.3 m" },
+  "actions_per_turn": { "value": 4, "_proposed": true, "_reason": "fast but less agile than the light fighter: one decision point fewer; 4 steps of 1.25 s in a 5 s turn" },
+  "health": { "value": 5, "_proposed": true, "_reason": "between the light fighter and the bomber" },
+  "sight_range_m": { "value": 1500, "_proposed": true, "_reason": "same as the light fighter; unused until Track F's vision rule" },
+  "drawing": { "silhouette": "heavy_fighter" },
+  "envelope": {
+    "speed_min_mps": { "value": 50, "_proposed": true, "_reason": "stall about 180 km/h, heavier wing loading than the light fighter" },
+    "speed_cruise_mps": { "value": 105, "_proposed": true, "_reason": "about 380 km/h; long-range twins cruised a little faster" },
+    "speed_max_mps": { "value": 165, "_proposed": true, "_reason": "about 595 km/h, P-38 class at low altitude" },
+    "dive_speed_max_mps": { "value": 200, "_proposed": true, "_reason": "heavy aircraft gain speed fast in a dive" },
+    "accel_mps2": { "value": 3.5, "_proposed": true, "_reason": "two engines but more mass: cruise to top in about 17 s (3-4 turns)" },
+    "decel_mps2": { "value": 4.5, "_proposed": true, "_reason": "more momentum to shed than the light fighter" },
+    "reverse_from_stop": { "value": false, "_proposed": true, "_reason": "aircraft cannot reverse" },
+    "turn_rate_curve_dps": { "value": [[50, 22], [105, 15], [165, 9]], "_proposed": true, "_reason": "three quarters of the light fighter's rate at each point: a 24 s circle at cruise" },
+    "turn_bleed_mps2": { "value": 6, "_proposed": true, "_reason": "above its 3.5 m/s^2 of thrust, so a sustained hard turn costs speed" },
+    "turn_bleed_exponent": { "value": 2, "_proposed": true, "_reason": "induced drag grows with the square of the load factor" },
+    "altitude_bands": { "value": ["low", "medium", "high"], "_proposed": true, "_reason": "every air band in data/sim/altitude.json" },
+    "start_band": { "value": "medium", "_proposed": true, "_reason": "the demo's fixed band" },
+    "bands_per_step": { "value": 1, "_proposed": true, "_reason": "one band per step keeps a climb a deliberate, visible choice" },
+    "climb_speed_cost_mps": { "value": 30, "_proposed": true, "_reason": "more mass to lift than the light fighter" },
+    "dive_speed_gain_mps": { "value": 22, "_proposed": true, "_reason": "heavier aircraft gain a little more in a dive; still less than the climb costs" }
+  }
+}

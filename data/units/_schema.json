@@ -1,0 +1,57 @@
+{
+  "_about": "The unit record: what every data/units/<id>.json carries. scripts/sim/unit_def.gd VALIDATES EACH FILE AGAINST THIS at load: a field listed here and missing from a file is a load error, never a default; a field in a file and not listed here is a load error too (it catches a misspelt key that would otherwise be ignored). Files starting with '_' are not units. The SHAPE is PROPOSED by Track S, 2026-10-09; the design doc's unit design sheet (Execution plan > Design work > Unit design sheets) lists what a full sheet holds, and the fields not here yet (weapons, engagement parameters, specials, armor, shadow behaviour, card contents) come with combat and the unit sheets.",
+  "conventions": {
+    "units": "Metres, seconds, metres per second, metres per second squared. Angles are DEGREES in data and radians at runtime (unit_def.gd converts).",
+    "frame": "World x to the right, y DOWN (the prototype's canvas and Godot 2D). A heading of 0 points along +x; a positive turn is clockwise on screen (a right turn); the direction of motion is Vector2(cos(heading), sin(heading)).",
+    "value_record": "Every tunable is a value record. While it is a placeholder: {\"value\": v, \"_proposed\": true, \"_reason\": \"one line\"}. Once a variant board or Alex sets it: {\"value\": v, \"decision\": \"<id in data/decisions/decisions.json>\"}. A record with neither is a load error, so no number can enter the game without saying where it came from (working rules 2 and 3). Plain fields (kind text or enum) are identity, not tuning, and are not records.",
+    "keys_starting_with_underscore": "Comments. Allowed anywhere, ignored by the loader."
+  },
+  "kinds": {
+    "text": "a plain string",
+    "enum": "a plain string from 'values'",
+    "number": "a value record holding a number >= 'min' (and <= 'max' where given)",
+    "integer": "a value record holding a whole number >= 'min'",
+    "bool": "a value record holding true or false",
+    "curve": "a value record holding [[speed_mps, value], ...]: at least one point, speeds strictly increasing, values >= 0. Read by straight-line interpolation between points and held flat beyond the first and last point.",
+    "band_list": "a value record holding a non-empty list of band ids from data/sim/altitude.json, no repeats",
+    "band": "a value record holding one band id from data/sim/altitude.json",
+    "section": "an object whose own fields are listed under 'fields'"
+  },
+  "fields": {
+    "id": { "kind": "text", "about": "Unit type id; must equal the file name without .json. The World's units refer to it as their 'type'." },
+    "name": { "kind": "text", "about": "Display name, from the design doc's Initial unit roster." },
+    "domain": { "kind": "enum", "values": ["air", "ground", "sea"], "about": "From the Initial unit roster table." },
+    "size_m": { "kind": "number", "min": 0, "unit": "m", "about": "Largest planform dimension: wingspan for aircraft, length for tanks and ships. Drawing scale and, later, hit size." },
+    "actions_per_turn": { "kind": "integer", "min": 1, "about": "Steps per turn: the number of points on the unit's motion curve each turn. data/sim/turn.json splits turn_seconds into this many equal steps." },
+    "health": { "kind": "integer", "min": 1, "about": "Hit points; the unit card's pips. Carried, unused until combat." },
+    "sight_range_m": { "kind": "number", "min": 0, "unit": "m", "about": "Vision radius for fog of war. Carried, unused until Track F's first vision rule reads it." },
+    "drawing": {
+      "kind": "section",
+      "about": "How the unit is drawn. Carried, unused by the simulation.",
+      "fields": {
+        "silhouette": { "kind": "text", "about": "Silhouette id for the drawing layer; chosen from a variant board (design doc, Unit design sheets)." }
+      }
+    },
+    "envelope": {
+      "kind": "section",
+      "about": "The performance envelope (scripts/sim/envelope.gd). Each step the player picks a point; the envelope decides which points are reachable from the unit's state at the start of the step. Inertia: speed changes at most accel/decel per second, heading at most the turn rate at the step's starting speed, and turning and climbing cost speed.",
+      "fields": {
+        "speed_min_mps": { "kind": "number", "min": -1000, "unit": "m/s", "about": "Slowest the unit flies or moves. Aircraft: stall speed (a plane never falls below it from above it; no stall rule yet). Ground and sea: 0, or negative for the fastest reverse." },
+        "speed_cruise_mps": { "kind": "number", "min": 0, "unit": "m/s", "about": "The unit's normal speed: where a new unit starts unless placed otherwise, and what the dumb AI flies at." },
+        "speed_max_mps": { "kind": "number", "min": 0, "unit": "m/s", "about": "Top speed in level flight or on the level." },
+        "dive_speed_max_mps": { "kind": "number", "min": 0, "unit": "m/s", "about": "Never-exceed speed: a dive may carry the unit past speed_max_mps up to this; above speed_max it then sheds speed at its full deceleration. Equal to speed_max_mps for units that cannot dive." },
+        "accel_mps2": { "kind": "number", "min": 0, "unit": "m/s^2", "about": "Largest speed GAIN per second at full power. Per step it is accel x step_dt -- a rate, not a per-step figure, so a change to turn length or actions per turn does not silently change how hard a unit accelerates." },
+        "decel_mps2": { "kind": "number", "min": 0, "unit": "m/s^2", "about": "Largest speed LOSS per second (throttle back, drag, brakes)." },
+        "reverse_from_stop": { "kind": "bool", "about": "Ships and tanks: true means speed cannot cross zero within a step; the unit must come to a stop, then may reverse (design doc, Motion and inertia: ships can reverse once stopped). Aircraft: false." },
+        "turn_rate_curve_dps": { "kind": "curve", "unit": "[m/s, deg/s]", "about": "Largest heading change per second as a function of the speed at the start of the step (absolute speed when reversing). Planes: high at low speed, low at high speed (a tighter turn when slow). Ships: 0 at 0 speed, rising with way on (a rudder needs flow). Tanks: one flat point (pivot steering)." },
+        "turn_bleed_mps2": { "kind": "number", "min": 0, "unit": "m/s^2", "about": "Speed lost per second while turning at the full available rate, subtracted from both ends of the step's speed window. Planes lose speed in turns (design doc, Motion and inertia)." },
+        "turn_bleed_exponent": { "kind": "number", "min": 0, "about": "Bleed for a partial turn is turn_bleed_mps2 x (turn used / turn available)^exponent. 2 tracks induced drag, which grows with the square of the load factor: gentle turns are nearly free, hard turns bite." },
+        "altitude_bands": { "kind": "band_list", "about": "The bands this unit may occupy, from data/sim/altitude.json. Aircraft: air bands. Ground and sea: [\"surface\"]." },
+        "start_band": { "kind": "band", "about": "Band a new unit starts in unless placed otherwise; must be one of altitude_bands." },
+        "bands_per_step": { "kind": "integer", "min": 0, "about": "Most bands the unit may climb or dive in one step. 0 for units that cannot change band." },
+        "climb_speed_cost_mps": { "kind": "number", "min": 0, "unit": "m/s per band", "about": "Speed lost per band climbed in a step. A climb the unit cannot afford without falling below speed_min_mps is refused (the band stays)." },
+        "dive_speed_gain_mps": { "kind": "number", "min": 0, "unit": "m/s per band", "about": "Speed gained per band dived in a step; diving adds speed (design doc, Height). May carry the unit up to dive_speed_max_mps." }
+      }
+    }
+  }
+}

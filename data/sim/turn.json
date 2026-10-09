@@ -1,0 +1,29 @@
+{
+  "_about": "Turn constants for the simulation (scripts/sim/sim_rules.gd reads this). ALL PROPOSED by Track S, 2026-10-09: the design doc leaves turn length open (Game concept > Turn length and action counts: 'Still to decide: how long a turn is'). Every tunable is a value record: {value, _proposed, _reason} until a decision replaces _proposed with a decision id from data/decisions/decisions.json.",
+  "turn_seconds": {
+    "value": 5,
+    "_proposed": true,
+    "_reason": "Steambirds resolves 'a couple of seconds' per turn; 5 s lets a fighter at cruise turn ~100 degrees per turn, so a full circle takes about four turns and a minute of flight is 12 turns"
+  },
+  "step_rule": {
+    "value": "fixed_per_type",
+    "_proposed": true,
+    "_reason": "the design doc's own proposal (Turn length and action counts): a fixed span of simulated time, split into each unit type's actions_per_turn equal steps; step_dt = turn_seconds / actions_per_turn"
+  },
+  "map_bounds_m": {
+    "value": { "x": 0, "y": 0, "width": 5000, "height": 5000 },
+    "_proposed": true,
+    "_reason": "the smallest round square that holds the exit criterion's minute of flight with full turns for every air unit; arithmetic in _derivation. Origin top-left, x right, y down, metres, like the prototype's canvas"
+  },
+  "_derivation": [
+    "Exit criterion 5 (Alex): 'a map big enough to fly the planes around for a minute and complete full turns without leaving it'. Read here (proposed) as one minute of SIMULATED flight at cruise speed.",
+    "Per air unit, from its data/units/<id>.json envelope: cruise radius r_c = v_cruise / turn_rate(v_cruise); top-speed radius r_max = v_max / turn_rate(v_max).",
+    "A minute at cruise is P = 60 s x v_cruise of path, flown as a racetrack lap: two half-turns at r_c (one full turn, 2 pi r_c) and two straights S = (P - 2 pi r_c) / 2. The lap's long side is S + 2 r_c.",
+    "Room to turn away from an edge met at full speed is one top-speed radius at each end, so the side must be at least S + 2 r_c + 2 r_max.",
+    "light_fighter: r_c = 100 / 20 deg/s = 286.5 m; full turn 1,800 m (18 s); S = (6,000 - 1,800) / 2 = 2,100 m; long side 2,673 m; r_max = 160 / 12 deg/s = 763.9 m; side >= 4,200.8 m.",
+    "heavy_fighter: r_c = 105 / 15 deg/s = 401.1 m; full turn 2,520 m (24 s); S = (6,300 - 2,520) / 2 = 1,890 m; long side 2,692.1 m; r_max = 165 / 9 deg/s = 1,050.4 m; side >= 4,793.0 m.",
+    "bomber: r_c = 85 / 10 deg/s = 487.0 m; full turn 3,060 m (36 s); S = (5,100 - 3,060) / 2 = 1,020 m; long side 1,994.0 m; r_max = 120 / 6 deg/s = 1,145.9 m; side >= 4,285.9 m.",
+    "Worst case heavy_fighter, 4,793 m: rounded up to a 5,000 m square. scripts/tests/test_unit_defs.gd recomputes this from the unit files, so retuning a plane faster or less agile fails the gate until the map grows with it.",
+    "SCALE NOTE (an open question, not decided here): the design doc leaves pixels per world unit open (Open design details > Camera and scale). If the prototype's 38 px canopy is a ~10 m tree (about 3.8 px/m), this map is about 19,000 px across and a fighter at cruise moves about 1,900 px per turn."
+  ]
+}

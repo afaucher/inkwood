@@ -1,12 +1,12 @@
 # Unit definitions
 
-Empty until execution-plan component 4 (unit data model) lands. One file per
-unit type, named after the design doc's initial roster: `light_fighter`,
-`heavy_fighter`, `bomber`, `tank`, `anti_aircraft_battery`, `small_cruiser`,
-plus `radio_tower` as the example static unit.
+One JSON file per unit type, read at runtime by `scripts/sim/unit_def.gd`.
+The record is described in `_schema.json`. A missing or mistyped field is
+an error at load, never a default that lives in code.
 
-Each file carries what the design doc's unit design sheet lists (role,
-silhouette variant, size, height layer, speed and actions per turn, engagement
-envelope and parameters, specials with uses and reload, health and armor, sight,
-shadow behaviour, card contents). The sheet values come from variant boards and
-are recorded in `data/decisions/decisions.json` before they are written here.
+Values marked `"_proposed": true` are placeholders: Track S picked them
+(2026-10-09) to plausible WWII-era figures, each with a one-line reason in
+the file. None is a decision until Alex makes it one (see
+`data/decisions/decisions.json`). `test_unit_defs` checks every file here
+and recomputes the map-size rule in `data/sim/turn.json`, so a retune that
+outgrows the map fails the gate.

@@ -45,9 +45,13 @@ own output. Scene generation (`scripts/world/`: the prototype's newScene, the
 structures' geometry, the spatial hash and collision) is ported and
 `test_scene_gen` checks the whole default scene against the prototype's.
 
-In progress (2026-10-09, toward render parity with the prototype): the
-drawing layer in `scripts/render/` and the line-for-line port of the
-prototype's draw routines onto it.
+The prototype's draw routines are ported onto the drawing layer in
+`scripts/render/` and match the browser visually (2026-10-09:
+`test_render_layer`, `render.* -Scene <seed> -Parity`). The simulation core
+is in `scripts/sim/`: unit definitions from `data/units/`, the motion
+envelope with inertia, the World (plan, ready-up, resolve) and a dumb AI,
+headless and deterministic (`test_unit_defs`, `test_envelope`,
+`test_turn_loop`, `test_world_api`).
 
 **The target is the sandbox demo.** Its exit criteria are Alex's (design doc:
 Execution plan > Sandbox demo exit criteria) and the track plan with folder

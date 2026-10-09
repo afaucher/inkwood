@@ -1,0 +1,8 @@
+{
+  "_about": "The demo's dumb AI (scripts/sim/ai_dumb.gd): fly straight at cruise speed; when within a margin of the map edge, turn toward the map centre. That is the whole behaviour (exit criterion 2: 'the AI may be as dumb as it likes, but it flies on its own'). The design doc's real Enemy AI (patrol, engage, disengage; component 14) replaces it. PROPOSED by Track S, 2026-10-09.",
+  "edge_margin_turn_radii": {
+    "value": 1.5,
+    "_proposed": true,
+    "_reason": "turning back from an edge met head-on needs one turn radius of forward room; half a radius more covers the speed the turn has not yet bled off. In radii, not metres, so a bomber's wide turn gets a wide margin"
+  }
+}
