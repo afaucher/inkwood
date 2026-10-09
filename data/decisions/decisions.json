@@ -134,6 +134,26 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: '1-7 look good'. The scale is a starting value: the demo exposes it as a live knob so Alex can decide by flying. Items 8 (how height reads in ink) and 9 (terrain level fills vs object fills) are still open."
+    },
+    {
+      "id": "height-in-ink",
+      "date": "2026-10-09",
+      "area": "Terrain, Linework",
+      "question": "How does height read in ink on the full render?",
+      "board": "variants/height-in-ink/",
+      "options": [
+        "A hachures",
+        "B contours"
+      ],
+      "chosen": "B",
+      "parameters": {
+        "draw.style": "contours"
+      },
+      "applied_to": [
+        "data/terrain/terrain.json#draw.style"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'I strongly prefer the contours visually but I am not sure what they are signaling.' Open with it: what line breaks mean, and whether height steps are passable to ground units."
     }
   ]
 }

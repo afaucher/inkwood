@@ -1,0 +1,23 @@
+{
+  "id": "height-in-ink",
+  "date": "2026-10-09",
+  "area": "Terrain, Linework",
+  "question": "How does height read in ink on the full render?",
+  "source": "scripts/render/terrain_shot.gd, seed 20261009, same view; data/terrain/terrain.json draw.style switched",
+  "seed": 20261009,
+  "options": [
+    {
+      "name": "A",
+      "style": "hachures",
+      "file": "tmp/terrain/terrain_20261009.png"
+    },
+    {
+      "name": "B",
+      "style": "contours",
+      "file": "tmp/terrain/terrain_20261009_contours.png"
+    }
+  ],
+  "sheet": "board.png (crop x 0-560, y 150-600 at 1.25x)",
+  "chosen": "B",
+  "chosen_by": "Alex, 2026-10-09 ('I strongly prefer the contours visually')"
+}

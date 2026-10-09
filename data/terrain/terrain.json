@@ -51,7 +51,7 @@
   },
 
   "draw": {
-    "style": { "value": "hachures", "_proposed": true, "_reason": "FIRST OPTION for the open question 'how height reads in ink (contours, hachures or shading)': one contour at the scarp top plus hachures down the slope. 'contours' draws two or three nested contours instead, so a board can show both" },
+    "style": { "value": "contours", "decision": "height-in-ink", "_reason": "Alex 2026-10-09 strongly prefers contours visually (variants/height-in-ink/). What the line breaks should signal is still open; hachures stay available as the other value. Was proposed: FIRST OPTION for the open question 'how height reads in ink (contours, hachures or shading)': one contour at the scarp top plus hachures down the slope. 'contours' draws two or three nested contours instead, so a board can show both" },
     "level_fill": {
       "ok_lightness_step": { "value": 0.025, "_proposed": true, "_reason": "each level's paper is the paper lifted by one fill-ramp step in OK lightness (palette proposal: lightness is a ramp off paper, never a new hue). 0.025 is under the wall fill's +0.033, so level 2 (+0.05) still sits below the trees' object fill (+0.078)" },
       "chroma_scale_per_step": { "value": 0.85, "_proposed": true, "_reason": "chroma eased as the fill lightens, as the prototype's fills do (paper C 0.048 to wall fill 0.040)" }

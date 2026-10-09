@@ -1,0 +1,26 @@
+{
+  "id": "level-fills",
+  "date": "2026-10-09",
+  "area": "Palette, Terrain",
+  "question": "Terrain levels get lighter with height; on the top level the ground is lighter than the wall and rock fills. How do object fills relate to the ground they stand on?",
+  "source": "tmp/measure/boards_8_9.py: OKLCH steps from data/params/render_defaults.json palette and data/terrain/terrain.json level steps (+0.025 L, chroma x0.85 per level)",
+  "options": [
+    {
+      "name": "today",
+      "ground_step_L": 0.025,
+      "fills": "fixed"
+    },
+    {
+      "name": "1",
+      "ground_step_L": 0.025,
+      "fills": "step up with the ground (+0.025 L, chroma x0.85 per level)"
+    },
+    {
+      "name": "2",
+      "ground_step_L": 0.012,
+      "fills": "fixed"
+    }
+  ],
+  "sheet": "board.png",
+  "chosen": null
+}
