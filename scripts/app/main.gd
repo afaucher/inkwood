@@ -20,6 +20,9 @@ func _ready() -> void:
 		if args[i] == "--run-test" and i + 1 < args.size():
 			_run_test(args[i + 1])
 			return
+		if args[i] == "--render-shot" and i + 1 < args.size():
+			_render_shot(args[i + 1])
+			return
 
 	# A sibling of the menu rather than a child of it, so hiding the menu to
 	# start a game leaves the build stamp on screen. Added here and not in the
@@ -99,6 +102,41 @@ func _set_status(text: String) -> void:
 	if status_label != null:
 		status_label.text = text
 	print("[Main] ", text)
+
+# --- Render shot (windowed) --------------------------------------------------
+
+# --render-shot <png>: draws the drawing layer's 1280x720 demo frame
+# (scripts/render/demo_frame.gd) and saves it, then quits 0. Run it through
+# render.ps1 / render.sh. WINDOWED ONLY: --headless swaps in a dummy renderer
+# that produces no pixels at all, so this is never a test. The demo is LOADED
+# here, not preloaded, so a parse error in scripts/render/ fails this run alone
+# instead of breaking main.gd and with it every test in the gate.
+func _render_shot(out_path: String) -> void:
+	if DisplayServer.get_name() == "headless":
+		printerr("[render-shot] needs a windowed run: under --headless nothing is drawn")
+		get_tree().quit(1)
+		return
+	var path := out_path
+	if path.is_relative_path():
+		path = ProjectSettings.globalize_path("res://").path_join(path)
+	var script: Resource = load("res://scripts/render/demo_frame.gd")
+	if script == null or not (script as Script).can_instantiate():
+		printerr("[render-shot] scripts/render/demo_frame.gd did not compile -- see the Parse Error above")
+		get_tree().quit(1)
+		return
+	var img: Variant = script.call("render", Vector2i(1280, 720))
+	if not img is Image:
+		printerr("[render-shot] the demo frame returned no image")
+		get_tree().quit(1)
+		return
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	var err := (img as Image).save_png(path)
+	if err != OK:
+		printerr("[render-shot] could not write ", path, ": ", error_string(err))
+		get_tree().quit(1)
+		return
+	print("[render-shot] saved ", path)
+	get_tree().quit(0)
 
 # --- Headless entry point ----------------------------------------------------
 

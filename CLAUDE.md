@@ -47,8 +47,13 @@ structures' geometry, the spatial hash and collision) is ported and
 
 In progress (2026-10-09, toward render parity with the prototype): the
 drawing layer in `scripts/render/` and the line-for-line port of the
-prototype's draw routines onto it. Not built: the variant board tool, the unit
-data model, terrain, the turn loop, networking beyond what the template brings.
+prototype's draw routines onto it.
+
+**The target is the sandbox demo.** Its exit criteria are Alex's (design doc:
+Execution plan > Sandbox demo exit criteria) and the track plan with folder
+ownership is `docs/proposals/demo-plan.md`. Work on a track stays inside the
+folders it owns and reads other tracks' data, not their code. The variant
+board tool and networking beyond the template are not part of the demo.
 
 ## Running tests
 
@@ -111,11 +116,15 @@ godot.manifest        the pinned engine version -- the only place it is written
 godot_env.*           installs and verifies that engine into build/deps
 editor.* build.*      open the editor / gate + export;  test_runner.*  one test
 test_runner.*         one test by name;  import_check.*  stale-import guard
+render.*              a WINDOWED run that saves a frame (--render-shot); never a test
 project.godot         autoloads in order: DebugSettings, SteamManager, NetworkManager
 scenes/main.tscn      the application shell: menu only, no world
 scripts/
-  app/main.gd         menu, session wiring, the --run-test entry point
-  core/               ported utilities (RNG, noise, geometry) -- pure, no nodes
+  app/main.gd         menu, session wiring, the --run-test / --render-shot entry points
+  core/               ported utilities (RNG, noise, geometry, V8 math) -- pure, no nodes
+  world/              scene generation (the prototype's newScene), structures, params
+  render/             the drawing layer: InkCanvas (Canvas-2D-like), shadow pass,
+                      paper, grain, shaders; the demo frame
   debug/              DebugSettings autoload: the knob registry
   net/                SteamManager and NetworkManager autoloads
   ui/                 build_version.gd (the corner build stamp)
@@ -191,6 +200,19 @@ Properties of Godot and PowerShell, not of that game. Entries marked
   code. An `if` around an assertion is a silent skip.
 - **`FileAccess.store_line` buffers** *(inherited)*: a file being written may
   read back as 0 lines until it is flushed or closed.
+- **Transparent viewports hold PREMULTIPLIED colour** (measured 2026-10-09 in
+  the drawing layer): a texture read back from one must be composited as
+  premultiplied, or edges darken.
+- **The GPU's 8-bit store does not round to nearest** (measured 2026-10-09:
+  values up to .55 above a half went down). A shader or resolve that must land
+  on an exact level rounds itself before writing.
+- **A RefCounted's own methods cannot be called during PREDELETE** (observed
+  2026-10-09); free resources in an explicit `discard()`, not a notification.
+- **`--script` runs still load the autoloads**, so Steam starts unless
+  `INKWOOD_STEAM=off` (observed 2026-10-09; `render.*` sets it).
+- **`requestAnimationFrame` stops in a hidden browser tab**: the prototype's
+  capture page renders only while visible, so a capture taken from a
+  background tab is stale.
 - **Kill stragglers** if a run hangs: `taskkill //F //IM
   Godot_v4.7-stable_win64.exe` (Windows) or `pkill -f Godot_v` (Linux).
 - **A parse error in one script fails EVERY script that depends on it**
@@ -249,7 +271,7 @@ is made in BOTH twins; `tar_pack.ps1` is the one Windows-only helper, because
 - **Shell scripts must be committed executable.** The repo has
   `core.filemode=false` on Windows, so the first `git add` records 100644 and
   `./build.sh` fails on Linux. At the first commit:
-  `git add --chmod=+x build.sh editor.sh godot_env.sh import_check.sh test_runner.sh`.
+  `git add --chmod=+x build.sh editor.sh godot_env.sh import_check.sh test_runner.sh render.sh`.
 - **Never `git checkout --` a file with uncommitted work in it.** Copy the file
   aside for an A/B and copy it back.
 - The fixed scene seed is **20261009** (the prototype's), so Godot and browser
