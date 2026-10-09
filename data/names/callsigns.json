@@ -1,0 +1,109 @@
+{
+  "_about": "Callsign pools per side and unit type (Alex 2026-10-09, decision callsigns). Side A speaks RAF-style slang, side B a clipped, German-flavoured voice; both lean on boilers and brass. A scenario assigns callsigns from these pools; the roster shows the callsign first and the type under it. Glosses are for the design doc, not shown in game.",
+  "side_a": {
+    "light_fighter": [
+      "Wizard",
+      "Tally-Ho",
+      "Gremlin",
+      "Brass Kite"
+    ],
+    "heavy_fighter": [
+      "Boilerplate",
+      "Twin Kettle",
+      "Bang-On"
+    ],
+    "bomber": [
+      "Big Crate",
+      "Wizard Prang",
+      "Coal Scuttle"
+    ],
+    "tank": [
+      "Tin Lizzie",
+      "Iron Mule"
+    ],
+    "anti_aircraft_battery": [
+      "Archie",
+      "Pom-Pom"
+    ],
+    "small_cruiser": [
+      "Old Smoky",
+      "Tin Can"
+    ],
+    "radio_tower": [
+      "Sparks",
+      "Chatterbox"
+    ]
+  },
+  "side_b": {
+    "light_fighter": [
+      "Pauke",
+      "Horrido",
+      "Schwalbe",
+      "Funke"
+    ],
+    "heavy_fighter": [
+      "Kesselpauke",
+      "Zwilling",
+      "Donnerkeil"
+    ],
+    "bomber": [
+      "Kirchturm",
+      "Dampfwalze",
+      "Kaffeekanne"
+    ],
+    "tank": [
+      "Blechbüchse",
+      "Ackergaul"
+    ],
+    "anti_aircraft_battery": [
+      "Vierling",
+      "Igel"
+    ],
+    "small_cruiser": [
+      "Alte Dame",
+      "Rauchfang"
+    ],
+    "radio_tower": [
+      "Plaudertasche",
+      "Horchposten"
+    ]
+  },
+  "glosses": {
+    "Wizard": "RAF slang: excellent",
+    "Tally-Ho": "RAF call on sighting the enemy",
+    "Gremlin": "the imp blamed for engine faults",
+    "Brass Kite": "'kite': RAF slang for an aircraft",
+    "Boilerplate": "armour plate crossed with a boiler",
+    "Twin Kettle": "two engines on the boil",
+    "Bang-On": "exactly right",
+    "Big Crate": "'crate': a well-worn aircraft",
+    "Wizard Prang": "a successful raid",
+    "Coal Scuttle": "feeds the boiler",
+    "Tin Lizzie": "the Model T's nickname",
+    "Iron Mule": "a slow, stubborn hauler",
+    "Archie": "British slang for anti-aircraft fire",
+    "Pom-Pom": "the naval AA gun's nickname",
+    "Old Smoky": "coal smoke",
+    "Tin Can": "US Navy slang for a small warship",
+    "Sparks": "the radio operator's nickname",
+    "Chatterbox": "never stops talking",
+    "Pauke": "kettledrum; 'Pauke, Pauke!' was the attack call",
+    "Horrido": "the hunter's cry for a kill",
+    "Schwalbe": "swallow",
+    "Funke": "spark",
+    "Kesselpauke": "kettledrum, literally 'boiler drum'",
+    "Zwilling": "twin",
+    "Donnerkeil": "thunderbolt",
+    "Kirchturm": "church steeple, the radio code word for altitude",
+    "Dampfwalze": "steamroller",
+    "Kaffeekanne": "coffee pot",
+    "Blechbüchse": "tin can",
+    "Ackergaul": "plough horse",
+    "Vierling": "a four-barrelled flak mount",
+    "Igel": "hedgehog",
+    "Alte Dame": "old lady",
+    "Rauchfang": "chimney flue",
+    "Plaudertasche": "chatterbox",
+    "Horchposten": "listening post"
+  }
+}

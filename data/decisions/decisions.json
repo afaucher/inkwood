@@ -201,6 +201,55 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex first chose C (mixed cliffs and slopes), then: 'Actually, I take that back. Lets do A.' Also: 'draw the lines unbroken for now'. Ramps come with roads and ground units. On ramps: 'The shadows are much more complex with ramps. I don't want to do them less then 100% when we add them.'"
+    },
+    {
+      "id": "fog-first-option",
+      "date": "2026-10-09",
+      "area": "Fog of war, Camera",
+      "question": "Sight range, fog edge and the far-zoom view for the demo's first fog option",
+      "board": "tmp/fog/ shots (Track F)",
+      "options": [
+        "sight 1,500 / ~800 / 450 m",
+        "edge inked / soft",
+        "far zoom overview_topo / full render"
+      ],
+      "chosen": "~800 m sight, inked edge, overview_topo",
+      "parameters": {
+        "sight_range_m": {
+          "light_fighter": 800,
+          "heavy_fighter": 800,
+          "bomber": 650
+        },
+        "edge.mode": "inked",
+        "far_zoom.mode": "overview_topo"
+      },
+      "applied_to": [
+        "data/units/*.json#sight_range_m",
+        "data/view/fog.json#edge.mode",
+        "data/view/camera.json#far_zoom.mode"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'go with your fog recommendations'. Asked with it: show line of sight occluded, e.g. a tank's view inside a valley."
+    },
+    {
+      "id": "callsigns",
+      "date": "2026-10-09",
+      "area": "Units, Names",
+      "question": "Unit callsigns",
+      "board": "none (lists in chat)",
+      "options": [
+        "side A RAF-style slang list",
+        "side B German-flavoured list"
+      ],
+      "chosen": "both lists as proposed",
+      "parameters": {
+        "file": "data/names/callsigns.json"
+      },
+      "applied_to": [
+        "data/names/callsigns.json"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'add the callsigns'."
     }
   ]
 }

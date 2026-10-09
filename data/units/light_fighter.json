@@ -6,7 +6,7 @@
   "size_m": { "value": 9, "_proposed": true, "_reason": "Track S brief: a fighter about 9 m across (Bf 109 9.9 m span); the design doc's Scale section uses about 10 m for a fighter" },
   "actions_per_turn": { "value": 5, "decision": "demo-baseline", "_reason": "Alex 2026-10-09 accepted this as the demo baseline. Was proposed: the most agile type gets the most decision points (design doc: faster units generally get more actions); 5 steps of 1 s in a 5 s turn" },
   "health": { "value": 3, "_proposed": true, "_reason": "light and fragile: the fewest pips of the three aircraft (Steambirds-style role trade-off)" },
-  "sight_range_m": { "value": 1500, "_proposed": true, "_reason": "about 15 s of flight at cruise ahead; unused until Track F's vision rule" },
+  "sight_range_m": { "value": 800, "decision": "fog-first-option", "_reason": "Alex 2026-10-09 accepted the lead's fog recommendation (about 800 m so sight edges show at play zoom). Was proposed: about 15 s of flight at cruise ahead; unused until Track F's vision rule" },
   "drawing": { "silhouette": "light_fighter" },
   "envelope": {
     "speed_min_mps": { "value": 45, "_proposed": true, "_reason": "stall about 160 km/h, typical of WWII single-engine fighters (140-170 km/h)" },
