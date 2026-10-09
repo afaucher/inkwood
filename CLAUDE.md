@@ -55,7 +55,10 @@ headless and deterministic (`test_unit_defs`, `test_envelope`,
 three height levels from thresholded fbm, generated per chunk from (seed,
 chunk) alone, groves per level, `height_at` / `level_at`; drawn with
 hachures and height-respecting shadows by `scripts/render/terrain_*.gd`
-(`test_terrain`; a look: `scripts/render/terrain_shot.gd`).
+(`test_terrain`; a look: `scripts/render/terrain_shot.gd`). The unit interface is in
+`scripts/ui/`: inked plane markers with altitude shadows, the roster sidebar
+and the motion planner over the World, mounted through `unit_ui.gd`
+(`test_ui_roster`, `test_motion_planner`; a look: `scripts/ui/ui_shot.gd`).
 
 **The target is the sandbox demo.** Its exit criteria are Alex's (design doc:
 Execution plan > Sandbox demo exit criteria) and the track plan with folder
@@ -237,6 +240,9 @@ Properties of Godot and PowerShell, not of that game. Entries marked
   runner as separate commands.
 - **A windowed `SceneTree` script (`--script`) can render offscreen** with
   `force_draw` from `_initialize()` (observed 2026-10-09; the shot scripts do).
+- **A `--script` run whose script fails to compile does not quit**: headless or
+  windowed, the process idles until killed (observed 2026-10-09). Give shot
+  scripts a timeout, and read the .err output when one seems to hang.
 - **Kill stragglers** if a run hangs: `taskkill //F //IM
   Godot_v4.7-stable_win64.exe` (Windows) or `pkill -f Godot_v` (Linux).
 - **A parse error in one script fails EVERY script that depends on it**
