@@ -13,5 +13,28 @@
     "status": "proposed | chosen by Alex | logged in design doc",
     "notes": "optional"
   },
-  "decisions": []
+  "decisions": [
+    {
+      "id": "shadow-strength",
+      "date": "2026-10-09",
+      "area": "Shadows",
+      "question": "How transparent should cast shadows be? (Alex: shadows need to be softer, meaning more transparent)",
+      "board": "variants/shadow-strength/",
+      "options": [
+        "A 92% (prototype default)",
+        "B 76%",
+        "C 60%",
+        "D 44%"
+      ],
+      "chosen": "D",
+      "parameters": {
+        "shadow_strength": 0.44
+      },
+      "applied_to": [
+        "data/params/render_defaults.json#parameters.shadow_strength"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'default to D for now'. Open follow-up raised with it: whether shadows should darken as the sun climbs (a sun-elevation coupling); not decided."
+    }
+  ]
 }

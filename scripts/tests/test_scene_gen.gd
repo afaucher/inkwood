@@ -42,6 +42,16 @@ const MAX_LISTED := 25
 # last-bit noise this exists to forgive and a million times smaller than any
 # difference that moves a pixel.
 const TOLERANCE := 1e-9
+# The prototype's P names checked against the fixture, and their keys under
+# parameters in data/params/render_defaults.json (the full mapping is in the
+# header of scripts/world/render_params.gd).
+const P_DATA_KEYS := {
+	"brush": "brush_size", "density": "density", "treeSize": "canopy_size",
+	"sizeVar": "size_variation", "height": "tree_height", "sunAz": "sun_direction",
+	"elev": "sun_elevation", "shadowStr": "shadow_strength", "lw": "line_weight",
+	"wob": "hand_wobble", "grain": "paper_grain", "wallW": "wall_width",
+	"wallH": "wall_height", "houseSize": "house_size",
+}
 
 var _compared := 0
 var _mismatched := 0
@@ -115,9 +125,18 @@ func setup(_main) -> void:
 		finish()
 		return
 	var fp: Dictionary = fx["P"]
-	for k: String in ["brush", "density", "treeSize", "sizeVar", "height", "sunAz", "elev", "shadowStr",
-			"lw", "wob", "grain", "wallW", "wallH", "houseSize"]:
-		exact(P.get(k), fp[k], "P.%s" % k)
+	# A parameter a variant board has since tuned keeps the prototype's value
+	# beside the chosen one, as "prototype_default" (data/decisions/decisions.json
+	# names the board). The fixture is the PROTOTYPE's P, so a tuned entry is
+	# checked through that field and P carries the chosen value.
+	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(RenderParams.DEFAULT_PATH))
+	var prm: Dictionary = (data as Dictionary).get("parameters", {}) if data is Dictionary else {}
+	for k: String in P_DATA_KEYS:
+		var entry: Dictionary = prm.get(P_DATA_KEYS[k], {})
+		if entry.has("prototype_default"):
+			exact(float(entry["prototype_default"]), fp[k], "parameters.%s.prototype_default (P.%s is the tuned %s)" % [P_DATA_KEYS[k], k, P.get(k)])
+		else:
+			exact(P.get(k), fp[k], "P.%s" % k)
 	exact(float(P.rings), fp["rings"], "P.rings")
 	eq(P.collide, fp["collide"], "P.collide")
 	eq(P.shadowCol, Color.html(str(fp["shadowCol"])), "P.shadowCol")

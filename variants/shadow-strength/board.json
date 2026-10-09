@@ -1,0 +1,24 @@
+{
+  "id": "shadow-strength",
+  "date": "2026-10-09",
+  "area": "Shadows",
+  "question": "How transparent should cast shadows be? (Alex, 2026-10-09: shadows need to be softer, meaning more transparent)",
+  "source": "reference/port_check/prototype_capture.html (the prototype, DPR 1, 1280x720), Shadow strength slider set per option; nothing else changed",
+  "seed": 20261009,
+  "parameter": "data/params/render_defaults.json#parameters.shadow_strength (prototype P.shadowStr; slider min 0.2, max 1, step 0.02)",
+  "held_constant": {
+    "shadow_tint": "steel #3D6C8F",
+    "sun_azimuth_deg": 315,
+    "sun_elevation_deg": 46,
+    "grain": "one buildGrain() per page load, so identical across options"
+  },
+  "options": [
+    { "name": "A", "shadow_strength": 0.92, "file": "strength_92.png", "note": "current default" },
+    { "name": "B", "shadow_strength": 0.76, "file": "strength_76.png" },
+    { "name": "C", "shadow_strength": 0.60, "file": "strength_60.png" },
+    { "name": "D", "shadow_strength": 0.44, "file": "strength_44.png" }
+  ],
+  "sheet": "board.png (2x2 full frames at half size, then a 1:1 crop of x 760-1080, y 120-390 from each)",
+  "chosen": "D",
+  "chosen_by": "Alex, 2026-10-09 ('default to D for now')"
+}
