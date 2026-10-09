@@ -10,7 +10,9 @@ extends "res://scripts/test_support/test_case.gd"
 # double -- because "the same seed draws the same scene" is a property of those
 # two and nothing else, and a printed decimal can agree while the bits do not.
 # Geometry is compared to 1e-3 px: Vector2 stores float32 in a standard Godot
-# build (see geometry.gd), so a bit match there is not on offer.
+# build (see geometry.gd), so a bit match there is not on offer. The float64
+# variants the scene generator uses (catmull_rom_f64, chaikin_f64,
+# resample_f64) ARE compared bit for bit, against the same prototype output.
 #
 # The sample is also PRINTED, so the .log shows the values side by side with
 # what node printed when the fixture was made.
@@ -146,6 +148,19 @@ func setup(_main) -> void:
 			near_point(road[i], [e["x"], e["y"]], "road[%d]" % i)
 	print("road: %d samples, first %s, last %s" % [road.size(), road[0], road[road.size() - 1]])
 
+	# --- catmull-rom in float64: BIT FOR BIT --------------------------------------
+	# The scene generator places against the road (roadDist, the house), so its
+	# float64 variant must match the prototype exactly, not to a tolerance. The
+	# control points come in as bytes, like every other exact input.
+	var road64 := Geometry.catmull_rom_f64(_pairs(road_fx["control_bits"]), float(road_fx["spacing"]))
+	if eq(road64.size() / 2, int(road_fx["count"]), "road (f64) sample count"):
+		for e in road_fx["samples"]:
+			var i: int = int(e["i"])
+			exact_bits(road64[i * 2], e["xbits"], "road64[%d].x" % i)
+			exact_bits(road64[i * 2 + 1], e["ybits"], "road64[%d].y" % i)
+	print("road (f64): %d samples, first (%s, %s), last (%s, %s)" % [road64.size() / 2,
+		_fmt([road64[0]]), _fmt([road64[1]]), _fmt([road64[road64.size() - 2]]), _fmt([road64[road64.size() - 1]])])
+
 	# --- chaikin + resample (a freehand wall), open and closed ----------------
 	var wall_fx: Dictionary = fx["wall"]
 	var src := to_points(wall_fx["src"])
@@ -159,7 +174,40 @@ func setup(_main) -> void:
 				near_point(pts[i], [e["x"], e["y"]], "%s wall[%d]" % [mode, i])
 		print("%s wall: %d points, first %s, last %s" % [mode, pts.size(), pts[0], pts[pts.size() - 1]])
 
+	# --- chaikin + resample in float64: BIT FOR BIT --------------------------------
+	# Freehand walls (structures.gd, gen.type "free") go through these, and their
+	# points feed sDist, a placement decision. resample measures with
+	# JsMath.hypot, V8's; with sqrt(x*x + y*y) this check fails.
+	var src64 := _pairs(wall_fx["src_bits"])
+	for mode in ["open", "closed"]:
+		var closed: bool = mode == "closed"
+		var pts64 := Geometry.resample_f64(Geometry.chaikin_f64(Geometry.chaikin_f64(Geometry.resample_f64(src64, 6.0, closed), closed), closed), 3.0, closed)
+		var want: Dictionary = wall_fx[mode]
+		if eq(pts64.size() / 2, int(want["count"]), "%s wall (f64) point count" % mode):
+			for e in want["samples"]:
+				var i: int = int(e["i"])
+				exact_bits(pts64[i * 2], e["xbits"], "%s wall64[%d].x" % [mode, i])
+				exact_bits(pts64[i * 2 + 1], e["ybits"], "%s wall64[%d].y" % [mode, i])
+		print("%s wall (f64): %d points, first (%s, %s), last (%s, %s)" % [mode, pts64.size() / 2,
+			_fmt([pts64[0]]), _fmt([pts64[1]]), _fmt([pts64[pts64.size() - 2]]), _fmt([pts64[pts64.size() - 1]])])
+
 	finish()
+
+# Points given as 32 hex digits each (x then y) to a flat PackedFloat64Array.
+static func _pairs(rows: Array) -> PackedFloat64Array:
+	var out := PackedFloat64Array()
+	for r in rows:
+		var b: PackedByteArray = str(r).hex_decode()
+		out.append(b.decode_double(0))
+		out.append(b.decode_double(8))
+	return out
+
+func exact_bits(actual: float, expected_bits: Variant, label: String) -> bool:
+	var want := str(expected_bits)
+	var ok := bits(actual) == want
+	if not ok:
+		fail("%s -- prototype %s (%s), port %s (%s)" % [label, String.num(_f64(want), 17), want, String.num(actual, 17), bits(actual)])
+	return ok
 
 # 17 significant digits, trailing zeros dropped -- what prototype_sample.js
 # prints with toPrecision(17), so the two logs read digit for digit. Godot's `%`

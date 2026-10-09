@@ -39,12 +39,16 @@ ready-up are modelled on Alex's Robo Rally clone `goto` (also a sibling).
 Built (execution plan components 1 and 2): the project skeleton, the Steam and
 ENet session layer from Bridge to Friendship (Join connects to the first global
 Steam lobby it finds), the headless test gate, and the prototype's utilities
-ported as-is -- `scripts/core/mulberry32.gd`, `noise.gd`, `geometry.gd` -- with
-`test_port_utils` checking them against the prototype's own output.
+ported as-is -- `scripts/core/mulberry32.gd`, `noise.gd`, `geometry.gd`,
+`js_math.gd` -- with `test_port_utils` checking them against the prototype's
+own output. Scene generation (`scripts/world/`: the prototype's newScene, the
+structures' geometry, the spatial hash and collision) is ported and
+`test_scene_gen` checks the whole default scene bit for bit.
 
-Not built: everything from component 3 on (variant board tool, unit data model,
-terrain, the render port, the turn loop, networking beyond what the template
-brings) and no art generation. Do not start those without a review.
+In progress (2026-10-09, toward render parity with the prototype): the
+drawing layer in `scripts/render/` and the line-for-line port of the
+prototype's draw routines onto it. Not built: the variant board tool, the unit
+data model, terrain, the turn loop, networking beyond what the template brings.
 
 ## Running tests
 
@@ -83,10 +87,23 @@ Tests live in `scripts/tests/*.gd`, one file per test, and are run by name:
 `reference/port_check/prototype_sample.js` runs the prototype's own functions
 (sliced out of the HTML, not retyped) under node and writes
 `expected_seed_20261009.json`; `test_port_utils` recomputes the sample in
-GDScript and compares RNG and noise **bit for bit** and geometry to 1e-3 px
-(Vector2 is float32 in a standard build). Re-run the script only when the
-prototype changes. Do not swap the RNG or the noise for engine ones: the same
-seed must draw the same scene as the browser.
+GDScript and compares RNG, noise and the float64 geometry **bit for bit**, and
+the Vector2 geometry to 1e-3 px (Vector2 is float32 in a standard build).
+`prototype_scene.js` does the same for the whole default scene
+(`expected_scene_20261009.json`, checked by `test_scene_gen`). Re-run the
+scripts only when the prototype changes. Do not swap the RNG or the noise for
+engine ones: the same seed must draw the same scene as the browser.
+
+- **Anything that feeds a placement decision runs in float64 and uses
+  `JsMath`** (`scripts/core/js_math.gd`: V8's fdlibm `hypot`, `sin`, `cos`,
+  `atan2`, `round`). Godot's own trig differs from V8's in the last bit, and
+  that last bit moves objects (observed 2026-10-09: the engine's sin/cos/atan2
+  give 3 scene mismatches, `sqrt(x*x+y*y)` for hypot gives 541). Vector2 and
+  engine math are for drawing, past the boundary where placement is settled.
+- The fixtures record what NODE computes. Chrome's V8 takes sin/cos/atan2 from
+  a different library and differs from node in the last bit on a few percent
+  of inputs (measured 2026-10-09); for seed 20261009 that is three house
+  doubles and no placement change. See `reference/README.md`.
 
 ## Layout
 
@@ -132,6 +149,10 @@ Properties of Godot and PowerShell, not of that game. Entries marked
 - **`load()` on a script with a parse error returns a NON-null resource on 4.7**
   (observed 2026-10-09, proved with a deliberately broken test). A `== null`
   guard never fires; `main.gd` checks `can_instantiate()` as well.
+- **Inside a script that defines a static `sin`, an unqualified `sin(x)` calls
+  the ENGINE's built-in, not the script's own.** Observed 2026-10-09 in
+  `js_math.gd`; its helpers use private names for this reason. The same holds
+  for any name that shadows a global function.
 - **Godot's float parser is not correctly rounded past 15 significant digits**
   -- literals, `to_float()` and `JSON.parse_string` alike (observed 2026-10-09:
   `0.09642319823615253` and `123.45678901234567` land one ulp off through all
@@ -249,6 +270,11 @@ is made in BOTH twins; `tar_pack.ps1` is the one Windows-only helper, because
   would need float64 pair arrays or a double-precision engine build (not an
   official download, so it would break the engine pin).
 - Variant boards: commit the rendered sheets, or only each board's `board.json`?
+- Which "browser" is the reference for bit-exactness: node's fdlibm trig (what
+  the fixtures and `JsMath` match today; reproducible, no browser needed) or
+  Chrome's (would need Chromium's trig ported and fixtures made in a headless
+  Chrome). Proposed: node, unless a seed ever shows a placement flip between
+  the two.
 - Steam during tests: the runners do not set `INKWOOD_STEAM=off`, so every
   headless test initialises Steam against a running client (`[Steam] ready:
   ...` in the logs, appid 480). Bridge to Friendship behaves the same.
