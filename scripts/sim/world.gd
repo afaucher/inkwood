@@ -115,7 +115,8 @@ func remove_player(player: String) -> void:
 	ready.erase(player)
 
 # spec: {type, side, controller ("player" | "ai"), x, y, heading (rad)} plus
-# optional id (default "<type>_<n>"), speed (default the type's cruise) and
+# optional id (default "<type>_<n>"), callsign (default none; a scenario takes
+# it from data/names/callsigns.json), speed (default the type's cruise) and
 # altitude_band (default the type's start band) -- defaults that come from the
 # unit's data, not from code. Returns the new unit's id, or "" on error.
 func add_unit(spec: Dictionary) -> String:
@@ -151,6 +152,7 @@ func add_unit(spec: Dictionary) -> String:
 
 	var u := Unit.new()
 	u.id = id
+	u.callsign = str(spec.get("callsign", ""))
 	u.type = type_id
 	u.def = def
 	u.side = side

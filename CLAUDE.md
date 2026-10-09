@@ -69,7 +69,8 @@ over terrain and trees, a topographic layer outside sight, an inked edge)
 and `scripts/world/camera_controller.gd` (`test_fog`, `test_viewshed`,
 `test_camera`; looks: `fog_shot.gd`, `fog_los_shot.gd`).
 
-**The target is the sandbox demo.** Its exit criteria are Alex's (design doc:
+**The sandbox demo plays** (2026-10-09): Local starts it, `test_sandbox` drives
+12 turns through it, and `build.ps1` exports it. **It was the target.** Its exit criteria are Alex's (design doc:
 Execution plan > Sandbox demo exit criteria) and the track plan with folder
 ownership is `docs/proposals/demo-plan.md`. Work on a track stays inside the
 folders it owns and reads other tracks' data, not their code. The variant
@@ -143,6 +144,9 @@ project.godot         autoloads in order: DebugSettings, SteamManager, NetworkMa
 scenes/main.tscn      the application shell: menu only, no world
 scripts/
   app/main.gd         menu, session wiring, the --run-test / --render-shot entry points
+  app/sandbox*.gd     the playable sandbox: Local builds World, Terrain, MapView, camera,
+                      fog and UnitUI from data/scenarios/sandbox.json; F2 knob panel;
+                      demo_shot.gd saves a shot per exit criterion
   core/               ported utilities (RNG, noise, geometry, V8 math) -- pure, no nodes
   world/              scene generation (the prototype's newScene), structures, params
   render/             the drawing layer: InkCanvas (Canvas-2D-like), shadow pass,

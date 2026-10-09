@@ -82,6 +82,23 @@ func num(path: String) -> float:
 	_err_once("num:" + path, "ui.json has no number at '%s'" % path)
 	return 0.0
 
+# Sets a number of ui.json at run time, by dotted path: a HOST KNOB, not a way
+# around the data (Track A: marker.true_scale follows the plane-size knob and
+# the zoom; marker.playback_speed the playback knob). The path must already
+# exist and hold a number. Returns whether it was set.
+func set_num(path: String, value: float) -> bool:
+	var parts := path.split(".")
+	var cur: Variant = ui
+	for i in parts.size() - 1:
+		if not (cur is Dictionary) or not (cur as Dictionary).has(parts[i]):
+			return false
+		cur = (cur as Dictionary)[parts[i]]
+	var key := parts[parts.size() - 1]
+	if not (cur is Dictionary) or not ((cur as Dictionary).get(key) is float or (cur as Dictionary).get(key) is int):
+		return false
+	(cur as Dictionary)[key] = value
+	return true
+
 func flag(path: String) -> bool:
 	var v: Variant = lookup(path)
 	if v is bool:

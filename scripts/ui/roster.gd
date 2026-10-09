@@ -58,8 +58,9 @@ func ordered_ids() -> Array[String]:
 			out.append(id)
 	return out
 
-# What each row shows, as data (the test reads this): id, name, type, speed
-# (m/s), band, planned, steps, side, selected.
+# What each row shows, as data (the test reads this): id, name (the unit's
+# callsign, else its id made readable), type, speed (m/s), band, planned,
+# steps, side, selected.
 func rows() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var playing := playback != null and bool(playback.is_playing())
@@ -73,7 +74,7 @@ func rows() -> Array[Dictionary]:
 				planned += 1
 		out.append({
 			"id": id,
-			"name": display_name(id),
+			"name": unit_name(u),
 			"type": u.def.name,
 			"speed": float(pose["speed"]),
 			"band": str(pose["altitude_band"]),
@@ -84,8 +85,14 @@ func rows() -> Array[Dictionary]:
 		})
 	return out
 
-# A unit's name on the roster (proposed): its id, made readable -- "p1" -> "P1",
-# "light_fighter_2" -> "Light fighter 2". Callsigns are a later decision.
+# A unit's name on the roster: its callsign (Alex 2026-10-09, data/names/
+# callsigns.json) when it has one, else its id made readable.
+static func unit_name(u: Object) -> String:
+	var cs := str(u.get("callsign")) if u.get("callsign") != null else ""
+	return cs if cs != "" else display_name(str(u.id))
+
+# A unit's id made readable (the fallback name) -- "p1" -> "P1",
+# "light_fighter_2" -> "Light fighter 2".
 static func display_name(id: String) -> String:
 	var s := id.replace("_", " ").strip_edges()
 	if s.length() <= 3:

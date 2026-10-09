@@ -1,0 +1,46 @@
+{
+  "_about": "The sandbox demo scenario (Track A, 2026-10-09). EVERYTHING HERE IS PROPOSED except what a record cites as Alex's: the seed (the prototype's), the two sides' colours and callsign pools (Alex 2026-10-09; data/names/callsigns.json), the map scale and the planes-at-their-own-scale rule (decision demo-baseline). Read by scripts/app/sandbox.gd through scripts/app/sandbox_scenario.gd. Units are in metres on the 5,000 m map (data/sim/turn.json); heading 0 points along +x (east), positive is clockwise on screen. A unit's callsign is either a string or \"pool\": the first one of its side's and type's pool in data/names/callsigns.json that no earlier unit of the scenario took.",
+
+  "id": "sandbox",
+  "seed": 20261009,
+  "local_player": "local",
+
+  "sides": {
+    "_about": "Scenario side -> the World's side name (the interface's accent table in data/ui/ui.json knows allies and axis) and the callsign pool (data/names/callsigns.json). side_a is brick red, side_b slate blue (Alex).",
+    "side_a": { "world_side": "allies", "callsign_pool": "side_a" },
+    "side_b": { "world_side": "axis", "callsign_pool": "side_b" }
+  },
+
+  "units": [
+    {
+      "type": "light_fighter", "side": "side_a", "controller": "player", "callsign": "pool",
+      "x": 2850.0, "y": 2470.0, "heading": 0.0, "altitude_band": "medium",
+      "_proposed": true,
+      "_reason": "Player plane 1 (exit criterion 2). Starts a little west of the plateau that begins about 3,200 m east, heading east, so the first turn's carry-on flight crosses a scarp and its trees (criterion 4) in the first screen."
+    },
+    {
+      "type": "heavy_fighter", "side": "side_a", "controller": "player", "callsign": "pool",
+      "x": 2790.0, "y": 2590.0, "heading": 0.06, "altitude_band": "medium",
+      "_proposed": true,
+      "_reason": "Player plane 2: the heavier type, about 120 m south of plane 1 and a little behind, so two different silhouettes fly side by side."
+    },
+    {
+      "type": "bomber", "side": "side_b", "controller": "ai", "callsign": "pool",
+      "x": 3380.0, "y": 2700.0, "heading": -1.9, "altitude_band": "medium",
+      "_proposed": true,
+      "_reason": "The AI plane (exit criteria 2 and 7): about 600 m from the players, inside their 800 m sight, flying north-west across their path so the first turn shows all three. It flies on by itself (data/sim/ai_dumb.json)."
+    }
+  ],
+
+  "view": {
+    "_about": "How the sandbox shows this scenario. Each can be flipped at run time from the knob panel (F2) or INKWOOD_<KEY> (scripts/debug/debug_settings.gd); these are the values the knobs call \"data\".",
+    "fog": { "value": true, "_proposed": true, "_reason": "Fog of war is exit criterion 7; on by default so the demo shows it, switchable to compare" },
+    "plane_px": { "value": 36, "_proposed": true, "_reason": "The assembly brief: planes are drawn at their own scale, a light fighter about 36 px across at zoom 1 whatever the map scale (decision demo-baseline: planes_drawn_at_own_scale). The heavy fighter and the bomber follow in proportion to their size_m" },
+    "plane_min_px": { "value": 14, "_proposed": true, "_reason": "A light fighter never draws smaller than this on screen, so the planes stay findable when the view is zoomed out to follow a minute of flight; the other types scale with it" },
+    "start_zoom_max": { "value": 0.9, "_proposed": true, "_reason": "The opening view frames the players' planes and the first turn's carry-on flight; it does not zoom in past this, so the whole first turn is on screen" },
+    "start_pad_m": { "value": 110, "_proposed": true, "_reason": "A margin round every plane and its carry-on end in the opening view, so no plane sits on the edge of the free area" },
+    "start_look_ahead_turns": { "value": 1, "_proposed": true, "_reason": "The opening view frames this many turns of carry-on flight beyond each plane, so the first screen shows where the planes are going" },
+    "track_sample_s": { "value": 0.25, "_proposed": true, "_reason": "Tracks (the flown path of each plane, drawn for the whole game) are sampled from each turn's history this often" },
+    "track_line_px": { "value": 1.6, "_proposed": true, "_reason": "Track line width on screen; ink in the unit's side colour" }
+  }
+}

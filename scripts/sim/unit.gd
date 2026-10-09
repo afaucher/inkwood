@@ -25,6 +25,10 @@ const CONTROLLER_PLAYER := "player"
 const CONTROLLER_AI := "ai"
 
 var id: String = ""
+# The unit's callsign ("Wizard"), optional: a scenario assigns it from the
+# pools in data/names/callsigns.json. The roster shows it first, with the type
+# under it; "" means none, and the UI falls back to the id.
+var callsign: String = ""
 var type: String = ""          # the unit type id: data/units/<type>.json
 var def: UnitDef = null
 var side: String = ""
@@ -56,6 +60,7 @@ func apply_state(s: Dictionary) -> void:
 func to_dict() -> Dictionary:
 	return {
 		"id": id,
+		"callsign": callsign,
 		"type": type,
 		"side": side,
 		"controller": controller,

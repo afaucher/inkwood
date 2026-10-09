@@ -15,8 +15,8 @@ extends "res://scripts/test_support/test_case.gd"
 #      empties the plan
 #   6. drag: begin / drag / end plans one step that follows the pointer; a
 #      screen press through the host mapping lands the same at any scale
-#   7. Ready commits the local player and locks the plan; pressed again it
-#      withdraws
+#   7. Ready commits the local player; editing the plan takes the Ready back
+#      (Alex 2026-10-09); pressed again, Ready withdraws
 #   8. the turn plays: with the AI in, Ready resolves; the markers animate
 #      along the histories (World.sample) and the next turn begins
 
@@ -171,8 +171,13 @@ func setup(_main) -> void:
 	# 7. Ready.
 	check(not pl.ready_up(), "Ready alone does not make everyone ready (the AI has not planned)")
 	check(w.is_ready("local"), "Ready commits the local player")
-	check(not pl.can_plan(), "a readied player's plans are locked")
-	check(pl.place_point(Vector2(1600.0, 2400.0)).is_empty(), "no step can be placed while ready")
+	# Alex 2026-10-09: editing after Ready takes the Ready back (it used to lock the plan).
+	check(pl.can_plan(), "a readied player's plans are still open to edit")
+	check(not pl.place_point(Vector2(1600.0, 2400.0)).is_empty(), "a step can be placed while ready")
+	check(not w.is_ready("local"), "and placing it took the Ready back")
+	check(pl.undo(), "drop that step again")
+	check(not pl.ready_up(), "Ready again")
+	check(w.is_ready("local"), "the player is ready")
 	check(ui.orders.press_button("ready"), "the orders card's Ready, pressed again")
 	check(not w.is_ready("local"), "withdraws")
 	check(pl.can_plan(), "and plans open again")

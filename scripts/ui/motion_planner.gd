@@ -31,6 +31,15 @@ extends Node2D
 #
 # Every change goes through World.plan_step, which validates the step against
 # the unit's envelope and returns the clamped state; nothing here moves a unit.
+#
+# TWO RULES FROM ALEX (2026-10-09), added by Track A:
+#   * A step that ends outside the map is REFUSED: the plan stays as it was, the
+#     call returns {}, and a small cross and "off the map" show where the point
+#     was asked for (refused_world / refused_ms). Uses the out_of_bounds field of
+#     the states plan_step returns. A unit already outside the map may plan its
+#     way back.
+#   * Editing a plan after Ready TAKES THE READY BACK (the player is un-readied
+#     and the edit is made), so the last Ready always plays the turn.
 
 signal plan_edited(unit_id: String)
 
@@ -45,6 +54,11 @@ var mapping: UiMapping = null
 var selection: RefCounted = null
 var style: UiStyle = null
 var local_player: String = "local"
+
+# The last refused point (metres) and when (msec ticks): drawn for a moment.
+var refused_world := Vector2.INF
+var refused_ms: int = -100000
+const REFUSED_SHOW_MS := 1600
 
 var _drag_index: int = -1
 var _paths: Dictionary = {}         # unit id -> Array of [PackedVector2Array world pts, planned: bool]
@@ -72,16 +86,22 @@ func set_mapping(host_mapping: Variant) -> void:
 func unit_id() -> String:
 	return selection.unit_id if selection != null else ""
 
-# Whether a unit takes orders from this control: the planning phase, a
-# player-controlled unit, and the local player not yet readied up.
+# Whether a unit takes orders from this control: the planning phase and a
+# player-controlled unit. A readied player may still edit: the edit takes the
+# Ready back (see the header).
 func can_plan(id: String = "") -> bool:
 	if id == "":
 		id = unit_id()
 	if world == null or id == "" or not world.units.has(id):
 		return false
-	if world.phase != World.PHASE_PLANNING or world.is_ready(local_player):
+	if world.phase != World.PHASE_PLANNING:
 		return false
 	return world.units[id].controller == World.CONTROLLER_PLAYER
+
+# An edit is being made: a readied local player is un-readied.
+func _reopen() -> void:
+	if world != null and world.phase == World.PHASE_PLANNING and world.is_ready(local_player):
+		world.withdraw(local_player)
 
 # Steps with an explicit request: the last non-empty request + 1.
 func planned_count(id: String = "") -> int:
@@ -180,7 +200,27 @@ func _plan_point(k: int, world_pt: Vector2) -> Dictionary:
 	var plan: Array = world.units[id].plan
 	if k < plan.size() and (plan[k] as Dictionary).has("altitude_band"):
 		req["altitude_band"] = (plan[k] as Dictionary)["altitude_band"]
+	return _commit_step(id, k, req, world_pt)
+
+# World.plan_step with the map rule: a plan with a PLANNED step that ends
+# outside the map is put back as it was and {} comes back. `asked` is where the
+# step was asked for (metres), for the refusal mark.
+func _commit_step(id: String, k: int, req: Dictionary, asked: Vector2) -> Dictionary:
+	var before: Array = (world.units[id].plan as Array).duplicate(true)
 	var s := world.plan_step(id, k, req)
+	if s.is_empty():
+		return s
+	if not bool(world.units[id].out_of_bounds):
+		for st: Dictionary in world.planned_states(id):
+			if bool(st["planned"]) and bool(st["out_of_bounds"]):
+				world.clear_plan(id)
+				for i in before.size():
+					if not (before[i] as Dictionary).is_empty():
+						world.plan_step(id, i, before[i])
+				refused_world = asked
+				refused_ms = Time.get_ticks_msec()
+				return {}
+	_reopen()
 	plan_edited.emit(id)
 	return s
 
@@ -191,9 +231,9 @@ func set_step_band(k: int, band: String) -> Dictionary:
 	var plan: Array = world.units[id].plan
 	var req: Dictionary = (plan[k] as Dictionary).duplicate(true) if k < plan.size() else {}
 	req["altitude_band"] = band
-	var s := world.plan_step(id, k, req)
-	plan_edited.emit(id)
-	return s
+	var u = world.units[id]
+	var at := Vector2(float(u.x), float(u.y))
+	return _commit_step(id, k, req, at)
 
 # Climb (+1), level (0) or dive (-1) on the last placed step, one band, as far
 # as the unit's own bands go. {} when no step is placed yet.
@@ -229,6 +269,7 @@ func undo() -> bool:
 	if not can_plan(id) or n == 0:
 		return false
 	var keep: Array = (world.units[id].plan as Array).slice(0, n - 1).duplicate(true)
+	_reopen()
 	world.clear_plan(id)
 	for i in keep.size():
 		world.plan_step(id, i, keep[i])
@@ -240,6 +281,7 @@ func clear() -> void:
 	var id := unit_id()
 	if not can_plan(id):
 		return
+	_reopen()
 	world.clear_plan(id)
 	_drag_index = -1
 	plan_edited.emit(id)
@@ -367,6 +409,7 @@ func _draw() -> void:
 		_draw_fan()
 	_draw_curve(sel, 1.0)
 	_draw_clamps(sel)
+	_draw_refused()
 
 func _fade(c: Color, k: float) -> Color:
 	return Color(c.r, c.g, c.b, c.a * k)
@@ -450,6 +493,18 @@ func _draw_ghosts(id: String) -> void:
 			var off: Vector2 = -style.shadow_dir() * (art.extent_m * ppm + 6.0 if art != null else 14.0)
 			UiInk.text(self, font, sp + off + Vector2(-4.0, 0.0), label.strip_edges(), small, ink)
 		prev_band = band
+
+# The mark for a step refused for leaving the map: a cross where it was asked
+# for, with a short caption, for REFUSED_SHOW_MS.
+func _draw_refused() -> void:
+	if not refused_world.is_finite() or Time.get_ticks_msec() - refused_ms > REFUSED_SHOW_MS:
+		return
+	var col: Color = style.color("clamp")
+	var p: Vector2 = mapping.world_to_screen(refused_world)
+	var x := 5.0
+	draw_line(p + Vector2(-x, -x), p + Vector2(x, x), col, 1.6, true)
+	draw_line(p + Vector2(-x, x), p + Vector2(x, -x), col, 1.6, true)
+	UiInk.text(self, style.font(true), p + Vector2(9.0, 4.0), "off the map", style.num("fonts.small_px"), col)
 
 func _draw_clamps(id: String) -> void:
 	var st := states(id)

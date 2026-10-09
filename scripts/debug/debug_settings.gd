@@ -42,6 +42,90 @@ const OPTIONS := {
 		"default": 0,
 		"help": "Per-event print for peer connect/disconnect. Turned ON automatically when you HOST a networked session -- the default stays off so the gate stays quiet.",
 	},
+	"autostart": {
+		"section": "Diagnostics",
+		"label": "Autostart",
+		"choices": ["off", "local", "local_shot"],
+		"default": 0,
+		"help": "'local' presses the menu's Local button at launch; 'local_shot' also saves one frame of the running sandbox (INKWOOD_SHOT_OUT, else user://autostart.png) once it is playable, and quits. For checking an exported build without a tool that drives the window.",
+	},
+	# --- Sandbox knobs (Track A; the F2 panel shows them) ---------------------------
+	# Index 0 is always "data": whatever the data files say (data/scenarios/
+	# sandbox.json view, data/terrain/terrain.json, data/view/*.json,
+	# render_defaults.json), so no default is written twice. INKWOOD_<KEY>=<choice
+	# name> sets one from the command line. All view-only.
+	"map_scale": {
+		"section": "Sandbox",
+		"label": "Map scale (px per m)",
+		"choices": ["data", "1", "2", "3", "4"],
+		"default": 0,
+		"view_only": true,
+		"help": "Map pixels per metre, live: the map is redrawn (8-11 s) with no restart. data = data/terrain/terrain.json (2, Alex's starting value).",
+	},
+	"plane_size": {
+		"section": "Sandbox",
+		"label": "Plane size (px)",
+		"choices": ["data", "true", "24", "36", "54", "72"],
+		"default": 0,
+		"view_only": true,
+		"help": "How big a light fighter draws at zoom 1 whatever the map scale, in px; 'true' draws planes at the map's own scale. The other types follow in proportion. data = scenario view.plane_px.",
+	},
+	"fog": {
+		"section": "Sandbox",
+		"label": "Fog of war",
+		"choices": ["data", "on", "off"],
+		"default": 0,
+		"view_only": true,
+		"help": "The fog layer and the hiding of units outside sight. data = scenario view.fog.",
+	},
+	"fog_edge": {
+		"section": "Sandbox",
+		"label": "Fog edge",
+		"choices": ["data", "inked", "soft"],
+		"default": 0,
+		"view_only": true,
+		"help": "How the edge of sight is drawn. data = data/view/fog.json edge.mode (inked, Alex's choice).",
+	},
+	"line_of_sight": {
+		"section": "Sandbox",
+		"label": "Line of sight",
+		"choices": ["data", "none", "terrain"],
+		"default": 0,
+		"view_only": true,
+		"help": "What blocks sight: nothing, or terrain. Trees do not block sight for now (Alex 2026-10-09: data/view/fog.json vision.trees_block is false, so terrain_trees would behave as terrain and is not offered). data = data/view/fog.json vision.line_of_sight (none).",
+	},
+	"pen": {
+		"section": "Sandbox",
+		"label": "Pen line",
+		"choices": ["data", "even", "shadow_side"],
+		"default": 0,
+		"view_only": true,
+		"help": "Ink line width along a stroke; the map is redrawn after a change. data = render_defaults.json linework.pen.mode (shadow_side, Alex's choice).",
+	},
+	"far_zoom": {
+		"section": "Sandbox",
+		"label": "Far zoom",
+		"choices": ["data", "overview_topo", "full_render"],
+		"default": 0,
+		"view_only": true,
+		"help": "What the map shows fully zoomed out: the topographic overview, or the full render with zoom-out limited. data = data/view/camera.json far_zoom.mode.",
+	},
+	"tree_pool": {
+		"section": "Sandbox",
+		"label": "Tree pool",
+		"choices": ["data", "off", "on"],
+		"default": 0,
+		"view_only": true,
+		"help": "Shared tree sprites instead of one per tree (changes the look; the map is redrawn). data = render_defaults.json map_view.tree_pool.enabled.",
+	},
+	"playback_speed": {
+		"section": "Sandbox",
+		"label": "Turn playback speed",
+		"choices": ["data", "1", "2", "4", "8"],
+		"default": 0,
+		"view_only": true,
+		"help": "Turn-seconds played per real second when a turn resolves. data = data/ui/ui.json marker.playback_speed.",
+	},
 }
 
 var _values: Dictionary = {}

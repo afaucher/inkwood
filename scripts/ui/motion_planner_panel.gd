@@ -162,7 +162,7 @@ func _draw() -> void:
 	var line2 := "pick one on the map or in the roster"
 	if id != "" and world.units.has(id):
 		var u = world.units[id]
-		UiInk.text(self, italic, Vector2(0.0, 26.0), "%s · %s" % [Roster.display_name(id), u.def.name], detail, soft,
+		UiInk.text(self, italic, Vector2(0.0, 26.0), "%s · %s" % [Roster.unit_name(u), u.def.name], detail, soft,
 			HORIZONTAL_ALIGNMENT_RIGHT, size.x - pad)
 		var n := int(u.def.actions_per_turn)
 		var placed: int = planner.planned_count(id)
@@ -174,7 +174,7 @@ func _draw() -> void:
 			line2 = "orders open when it ends"
 		elif world.is_ready(local_player):
 			line1 = "%d of %d steps planned" % [placed, n]
-			line2 = "ready: plans are locked"
+			line2 = "ready: change a plan to take it back"
 		elif u.controller != World.CONTROLLER_PLAYER:
 			line1 = "not under player orders"
 			line2 = ""
