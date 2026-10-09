@@ -154,6 +154,29 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'I strongly prefer the contours visually but I am not sure what they are signaling.' Open with it: what line breaks mean, and whether height steps are passable to ground units."
+    },
+    {
+      "id": "level-fills",
+      "date": "2026-10-09",
+      "area": "Palette, Terrain",
+      "question": "How do object fills relate to the ground level they stand on?",
+      "board": "variants/level-fills/",
+      "options": [
+        "today: ground +0.025 L per level, fills fixed",
+        "1: fills step up with the ground",
+        "2: smaller ground steps, fills fixed"
+      ],
+      "chosen": "today",
+      "parameters": {
+        "draw.level_fill.ok_lightness_step": 0.025,
+        "draw.level_fill.chroma_scale_per_step": 0.85,
+        "object_fills": "fixed"
+      },
+      "applied_to": [
+        "data/terrain/terrain.json#draw.level_fill"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'For ground level fill - I actually like the current look the most.' Accepted with it: on the top level, wall and rock fills sit slightly darker than the ground (-0.018 / -0.011 L)."
     }
   ]
 }

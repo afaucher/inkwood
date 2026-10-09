@@ -22,5 +22,6 @@
     }
   ],
   "sheet": "board.png",
-  "chosen": null
+  "chosen": "today",
+  "chosen_by": "Alex, 2026-10-09 ('I actually like the current look the most')"
 }
