@@ -2,18 +2,18 @@
   "_about": "Turn constants for the simulation (scripts/sim/sim_rules.gd reads this). ALL PROPOSED by Track S, 2026-10-09: the design doc leaves turn length open (Game concept > Turn length and action counts: 'Still to decide: how long a turn is'). Every tunable is a value record: {value, _proposed, _reason} until a decision replaces _proposed with a decision id from data/decisions/decisions.json.",
   "turn_seconds": {
     "value": 5,
-    "_proposed": true,
-    "_reason": "Steambirds resolves 'a couple of seconds' per turn; 5 s lets a fighter at cruise turn ~100 degrees per turn, so a full circle takes about four turns and a minute of flight is 12 turns"
+    "decision": "demo-baseline",
+    "_reason": "Alex 2026-10-09 accepted this as the demo baseline. Was proposed: Steambirds resolves 'a couple of seconds' per turn; 5 s lets a fighter at cruise turn ~100 degrees per turn, so a full circle takes about four turns and a minute of flight is 12 turns"
   },
   "step_rule": {
     "value": "fixed_per_type",
-    "_proposed": true,
-    "_reason": "the design doc's own proposal (Turn length and action counts): a fixed span of simulated time, split into each unit type's actions_per_turn equal steps; step_dt = turn_seconds / actions_per_turn"
+    "decision": "demo-baseline",
+    "_reason": "Alex 2026-10-09 accepted this as the demo baseline. Was proposed: the design doc's own proposal (Turn length and action counts): a fixed span of simulated time, split into each unit type's actions_per_turn equal steps; step_dt = turn_seconds / actions_per_turn"
   },
   "map_bounds_m": {
     "value": { "x": 0, "y": 0, "width": 5000, "height": 5000 },
-    "_proposed": true,
-    "_reason": "the smallest round square that holds the exit criterion's minute of flight with full turns for every air unit; arithmetic in _derivation. Origin top-left, x right, y down, metres, like the prototype's canvas"
+    "decision": "demo-baseline",
+    "_reason": "Alex 2026-10-09 accepted this as the demo baseline. Was proposed: the smallest round square that holds the exit criterion's minute of flight with full turns for every air unit; arithmetic in _derivation. Origin top-left, x right, y down, metres, like the prototype's canvas"
   },
   "_derivation": [
     "Exit criterion 5 (Alex): 'a map big enough to fly the planes around for a minute and complete full turns without leaving it'. Read here (proposed) as one minute of SIMULATED flight at cruise speed.",

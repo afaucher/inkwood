@@ -4,7 +4,7 @@
   "name": "Bomber",
   "domain": "air",
   "size_m": { "value": 20, "_proposed": true, "_reason": "medium bomber span: B-25 20.6 m, He 111 22.6 m" },
-  "actions_per_turn": { "value": 3, "_proposed": true, "_reason": "slowest and least agile aircraft: the fewest decision points; 3 steps of 1.67 s in a 5 s turn" },
+  "actions_per_turn": { "value": 3, "decision": "demo-baseline", "_reason": "Alex 2026-10-09 accepted this as the demo baseline. Was proposed: slowest and least agile aircraft: the fewest decision points; 3 steps of 1.67 s in a 5 s turn" },
   "health": { "value": 8, "_proposed": true, "_reason": "built to take hits: the most pips of the three aircraft" },
   "sight_range_m": { "value": 1200, "_proposed": true, "_reason": "slower, so it needs less look-ahead; unused until Track F's vision rule" },
   "drawing": { "silhouette": "bomber" },

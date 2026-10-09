@@ -2,7 +2,7 @@
   "_about": "Terrain parameters for Track T (scripts/world/terrain.gd generates from them, scripts/render/terrain_draw.gd and terrain_shadows.gd draw from them). EVERY VALUE IS PROPOSED by Track T on 2026-10-09: the design doc leaves the form of height, how height reads in ink, map size and pixels per world unit open (Open design details: Camera and scale, World generation, Terrain and biomes). Record shape as in data/sim/turn.json: {value, _proposed, _reason} until a decision in data/decisions/decisions.json replaces _proposed with its id. World units are METRES; drawing converts with scale.px_per_m. Tree sizes, collision radii, line weights, ink, paper and the sun stay in data/params/render_defaults.json (read through RenderParams); this file only adds what terrain needs.",
 
   "scale": {
-    "px_per_m": { "value": 4, "_proposed": true, "_reason": "PLACEHOLDER, NOT A PICK (the scale is Alex's open question; the report gives three options with their arithmetic). 4 px/m is option A, true scale at the prototype's tree scale: the prototype's 38 px canopy is then a 9.5 m crown, a mature broadleaf, and a 256 m chunk is a 1024 px texture" }
+    "px_per_m": { "value": 2, "decision": "demo-baseline", "_reason": "Alex 2026-10-09 accepted this as the demo baseline. Was proposed: PLACEHOLDER, NOT A PICK (the scale is Alex's open question; the report gives three options with their arithmetic). 4 px/m is option A, true scale at the prototype's tree scale: the prototype's 38 px canopy is then a 9.5 m crown, a mature broadleaf, and a 256 m chunk is a 1024 px texture" }
   },
 
   "map": {

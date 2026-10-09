@@ -97,6 +97,43 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Shadow side looks the best.' Factor values are the board's; tuning them is a later board."
+    },
+    {
+      "id": "demo-baseline",
+      "date": "2026-10-09",
+      "area": "Simulation, Scale, Turns",
+      "question": "The sandbox demo's baseline: map scale, turn length, steps, stalls, map edge, ready-up, empty plans, the minute of flight",
+      "board": "none (a recommendation table in chat; the scale options came from Track T's and Track S's arithmetic)",
+      "options": [
+        "the lead's recommendation per item"
+      ],
+      "chosen": "as recommended",
+      "parameters": {
+        "px_per_m": 2,
+        "scale_is_live_knob": true,
+        "planes_drawn_at_own_scale": true,
+        "turn_seconds": 5,
+        "step_rule": "fixed_per_type",
+        "actions_per_turn": {
+          "light_fighter": 5,
+          "heavy_fighter": 4,
+          "bomber": 3
+        },
+        "stalls": "none in the demo; later a stall may cost an altitude band",
+        "map_edge": "the planner refuses a step that ends outside the map; the AI turns back on its own",
+        "ready_up": "editing a plan after Ready un-readies that player; the turn plays when the last player is ready",
+        "empty_plan": "the plane flies on straight at its current speed",
+        "minute_of_flight": "a simulated minute (about 12 turns), which sizes the map at 5,000 m"
+      },
+      "applied_to": [
+        "data/terrain/terrain.json#scale.px_per_m",
+        "data/sim/turn.json#turn_seconds",
+        "data/sim/turn.json#step_rule",
+        "data/sim/turn.json#map_bounds_m",
+        "data/units/*.json#actions_per_turn"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: '1-7 look good'. The scale is a starting value: the demo exposes it as a live knob so Alex can decide by flying. Items 8 (how height reads in ink) and 9 (terrain level fills vs object fills) are still open."
     }
   ]
 }
