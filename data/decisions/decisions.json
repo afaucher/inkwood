@@ -189,16 +189,18 @@
         "B every step a slope, crossed anywhere slower",
         "C mixed: some edges cliffs, some slopes"
       ],
-      "chosen": "C",
+      "chosen": "A",
       "parameters": {
-        "rule": "cliffs are impassable to ground units, slopes passable; contour spacing signals which (tight = cliff, wide = slope); gaps in contour lines will mark ramps through cliffs",
-        "contour_breaks_now": "none: lines drawn unbroken until gaps carry meaning"
+        "rule": "every height step is a cliff: impassable to ground units, crossed only at ramps or roads",
+        "contours": "tightly packed at every step (a cliff); a gap in the lines marks a ramp",
+        "contour_breaks_now": "none: lines drawn unbroken until ramps exist",
+        "ramp_shadows": "when ramps are added, their shadows must be complete and correct (a ramp is a sloped surface: its shadow varies along it and meets the cliff's); no partial version"
       },
       "applied_to": [
         "data/terrain/terrain.json#draw.contours.break_thresholds"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'C, and draw the lines unbroken for now.' The generator change (varying slope widths, a passability query) is handed to Track T. Ramps come with roads and ground units."
+      "notes": "Alex first chose C (mixed cliffs and slopes), then: 'Actually, I take that back. Lets do A.' Also: 'draw the lines unbroken for now'. Ramps come with roads and ground units. On ramps: 'The shadows are much more complex with ramps. I don't want to do them less then 100% when we add them.'"
     }
   ]
 }
