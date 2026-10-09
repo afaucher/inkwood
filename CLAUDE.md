@@ -27,6 +27,12 @@ ready-up are modelled on Alex's Robo Rally clone `goto` (also a sibling).
    generation**, not a copy of Might of Merchants. The prototype
    (`reference/inkwood-renderer.html`) is the reference implementation for the
    generators and the look.
+6. **Every art choice includes the palette.** Any decision about a drawn thing
+   is judged beside the things it will sit with (the swatch row), and asks how
+   the palette stays one palette: hue is reserved for paper, ink, shadow and
+   accents; lightness is a ramp off paper; material is linework. No hex
+   literal in draw code once the style layer exists -- colours are roles in
+   data. See `docs/proposals/palette-architecture.md`.
 
 ## What exists and what does not
 
