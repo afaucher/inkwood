@@ -7,6 +7,7 @@ extends RefCounted
 #
 #   g.beginPath()  g.moveTo  g.lineTo  g.closePath  g.arc  g.rect
 #   g.fill()  g.stroke()  g.fillRect  g.drawImage(img, x, y, w, h)
+#   g.drawImage(img, sx, sy, sw, sh, x, y, w, h)          (draw_image_region)
 #   g.lineWidth  g.lineCap  g.strokeStyle  g.fillStyle  g.globalAlpha
 #   g.save  g.restore  g.translate  g.rotate  g.scale  g.setTransform
 #
@@ -21,16 +22,29 @@ extends RefCounted
 #       g.begin_path(); g.arc(0, 0, 5, 0, TAU); g.fill_color = cream; g.fill(); g.stroke())
 #
 # or hold one:  var g = InkCanvas.new(size)  ...  var img := g.finish_image()
-# and render many in ONE engine frame with InkCanvas.render_all([g1, g2, ...]).
+# and render many in ONE engine frame with InkCanvas.render_all([g1, g2, ...]),
+# or without forcing a frame: InkCanvas.submit([...]) now, then collect_image()
+# on each once the engine has drawn a frame (RenderingServer.frame_post_draw).
 #
 # --- HOW IT DRAWS ------------------------------------------------------------
 #
-# GEOMETRY IS TESSELLATED HERE, IN GDSCRIPT, into device-space triangles, and
-# each fill / stroke / drawImage becomes one canvas item on a private
-# RenderingServer viewport. No nodes, no scene tree, no _draw(): the frame is
-# drawn synchronously with RenderingServer.force_draw() and read back with
-# texture_2d_get(). The same calls make the same triangles, and the same
-# triangles rasterize to the same pixels -- deterministic.
+# GEOMETRY IS TESSELLATED HERE, IN GDSCRIPT, into device-space triangles. Each
+# fill / stroke / drawImage is RECORDED as plain data; nothing touches the
+# RenderingServer until the canvas is rendered (render_all / submit). So a
+# canvas can be recorded on a worker thread (WorkerThreadPool) and rendered on
+# the main thread -- the map view's chunk baker does exactly that. At render
+# time each recorded call becomes canvas items on a private viewport. No nodes,
+# no scene tree, no _draw(). The same calls make the same triangles, and the
+# same triangles rasterize to the same pixels -- deterministic.
+#
+# BATCHED SUBMISSION: consecutive paint calls that composite directly (opaque
+# or unable to overlap themselves: fillRect, a dot, an opaque fill) are merged
+# into ONE canvas item with per-vertex colours, and consecutive drawImage calls
+# of one texture (an atlas page of sprites) into one item of textured
+# triangles. Triangles within one item are blended in submission order exactly
+# as separate items are, so the pixels do not change; a ground with 20,000
+# specks, or a chunk with 400 trees, costs one item instead of thousands.
+# An AtlasTexture draws as its region of its atlas.
 #
 # ANTIALIASING IS SUPERSAMPLING: the viewport is SSAA x the canvas size, the
 # triangles rasterize aliased at that size, and a second viewport box-filters
@@ -59,6 +73,35 @@ extends RefCounted
 # hairline measures coverage along the minor axis instead, which makes 45-degree
 # lines about 30% lighter than horizontal ones. Which one a given browser uses
 # depends on whether it accelerates that canvas.
+#
+# THE PEN (data/params/render_defaults.json linework.pen; Alex 2026-10-09,
+# decision pen-line, option C "shadow side"). Every INK stroke goes through it
+# without the caller asking: a stroke whose colour is the palette's ink and
+# whose path has no arc() or rect() in it is drawn as a filled RIBBON whose
+# width varies along it, instead of an even line:
+#   closed subpath   width factor lit + (shadow - lit) x max(0, n . s): n the
+#                    outward normal (from the sign of the subpath's signed
+#                    area), s the shadow direction -- heavy on the edges that
+#                    face away from the sun, thin on the lit side;
+#   open subpath     open_line_factor, and both ends taper with smoothstep over
+#                    min(end_taper_px, end_taper_max_fraction x length) down to
+#                    end_floor of the width. A run between two breaks is its own
+#                    subpath, so it tapers too. Closed loops have no ends.
+# Width = lineWidth x factor (lineWidth already carries line weight x element
+# multiplier). The reference is ribbon() in reference/mockups/unit_sheet.html
+# ("THE PEN LINE"); one difference, deliberate: the ribbon is built in DEVICE
+# space, so the shadow side is the WORLD's (a canvas is assumed world-aligned --
+# sprites are drawn unrotated into the world, so a rotated prop's outline is
+# still heavy on its true shadow side). Where the ribbon is thinner than one
+# device pixel it is the hairline rule again: one pixel wide, alpha x width.
+# Its pieces are merged in a canvas group (each subsample keeps the ribbon's
+# own alpha; overlaps at sharp turns never darken). Shadow masks (black), the
+# wall slope tone and other tints are not ink and are untouched; so are arcs
+# (barrels, pebbles, stipple) and rects (crates), as in the reference.
+#   Mode "even" is the prototype's line (pen_mode "even"; --parity selects it
+#   through linework.pen.prototype_default). The config is read once from data;
+#   InkCanvas.configure_pen(P) follows a RenderParams (sun azimuth, ink) and
+#   set_pen_mode(mode) switches it for every canvas recorded afterwards.
 #
 # PREMULTIPLIED ALPHA. A transparent viewport accumulates premultiplied colour
 # under Godot's MIX blend (measured: 50% green over transparent reads back
@@ -95,6 +138,7 @@ const ARC_TOLERANCE := 0.02
 const MAX_TARGET_PX := 16384
 
 const _SELF_PATH := "res://scripts/render/ink_canvas.gd"
+const PARAMS_PATH := "res://data/params/render_defaults.json"
 
 # Textures from render_to_texture() are premultiplied; composite them as such.
 # COLOR arrives as texture x vertex colour, and the vertex colour is
@@ -102,6 +146,18 @@ const _SELF_PATH := "res://scripts/render/ink_canvas.gd"
 const _PREMUL_SHADER := """
 shader_type canvas_item;
 render_mode unshaded, blend_premul_alpha;
+"""
+
+# The pen ribbon's body inside its canvas group: each fragment REPLACES what is
+# under it (premultiplied, as the group's backbuffer holds), so where a
+# ribbon's own triangles overlap the subsample keeps the ribbon's alpha
+# instead of compounding it -- the union a Canvas nonzero fill gives.
+const _RIBBON_SHADER := """
+shader_type canvas_item;
+render_mode unshaded, blend_disabled;
+void fragment() {
+	COLOR = vec4(COLOR.rgb * COLOR.a, COLOR.a);
+}
 """
 
 # The SSAA resolve: average each F x F block of the supersampled target. Both
@@ -125,6 +181,9 @@ void fragment() {
 	COLOR = floor(acc / float(F * F) * 255.0 + 0.5) / 255.0;
 }
 """
+
+# Recorded operations.
+enum { _OP_TRIS, _OP_IMAGES }
 
 # --- Canvas state (the subset the prototype sets) ------------------------------
 
@@ -155,6 +214,18 @@ var _paths: Array[PackedVector2Array] = []
 var _closed: Array[bool] = []
 var _cur := PackedVector2Array()
 var _cur_closed := false
+# The current path has an arc() or rect() in it (the pen leaves such strokes even).
+var _path_odd := false
+
+# The recording: [_OP_TRIS, tris, colors, group_alpha (< 0: direct), ribbon]
+# or [_OP_IMAGES, texture, material (Material or a built-in key String),
+# nearest, points, uvs, colors] -- textured quads in DEVICE space, two
+# triangles each; consecutive image draws with the same texture, material
+# and filter extend the same op (one canvas item). Direct triangle paints are
+# merged into _batch_tris / _batch_cols until something else is recorded.
+var _ops: Array = []
+var _batch_tris := PackedVector2Array()
+var _batch_cols := PackedColorArray()
 
 var _vp_hi: RID
 var _vp_lo: RID
@@ -163,40 +234,24 @@ var _canvas_lo: RID
 var _items: Array[RID] = []
 var _keep: Array = []  # textures and materials the items point at, alive until drawn
 var _next_index := 0
+var _active := false
 var _done := false
 
 static var _materials: Dictionary = {}
+static var _pen: Dictionary = {}
+static var _pen_mutex := Mutex.new()
 
 func _init(canvas_size: Vector2i, supersample: int = SSAA_DEFAULT) -> void:
 	size = Vector2i(maxi(1, canvas_size.x), maxi(1, canvas_size.y))
 	ssaa = maxi(1, supersample)
 	while ssaa > 1 and maxi(size.x, size.y) * ssaa > MAX_TARGET_PX:
 		ssaa -= 1
-	_vp_hi = _make_viewport(size * ssaa)
-	_canvas_hi = RenderingServer.canvas_create()
-	RenderingServer.viewport_attach_canvas(_vp_hi, _canvas_hi)
-	if ssaa > 1:
-		# Callers draw in canvas pixels; the viewport scales them up.
-		RenderingServer.viewport_set_canvas_transform(_vp_hi, _canvas_hi,
-			Transform2D.IDENTITY.scaled(Vector2(ssaa, ssaa)))
-		_vp_lo = _make_viewport(size)
-		_canvas_lo = RenderingServer.canvas_create()
-		RenderingServer.viewport_attach_canvas(_vp_lo, _canvas_lo)
-		var resolve := RenderingServer.canvas_item_create()
-		RenderingServer.canvas_item_set_parent(resolve, _canvas_lo)
-		RenderingServer.canvas_item_set_material(resolve, _material("box%d" % ssaa, _BOX_SHADER % ssaa).get_rid())
-		RenderingServer.canvas_item_add_texture_rect(resolve, Rect2(Vector2.ZERO, Vector2(size)),
-			RenderingServer.viewport_get_texture(_vp_hi))
-		_items.append(resolve)
-		# A child viewport is drawn before its parent in the same frame, so the
-		# resolve reads a finished supersampled target.
-		RenderingServer.viewport_set_parent_viewport(_vp_hi, _vp_lo)
 
 # A canvas dropped without being rendered gives its RenderingServer objects
-# back here. Inline rather than a call to _free(): during PREDELETE a
-# RefCounted's own methods can no longer be called (observed 2026-10-09:
-# "Attempt to call function '_free' in base 'null instance'", and the RIDs
-# leaked), while its members can still be read.
+# back here (if it ever made any: recording makes none). Inline rather than a
+# call to _free(): during PREDELETE a RefCounted's own methods can no longer be
+# called (observed 2026-10-09: "Attempt to call function '_free' in base 'null
+# instance'", and the RIDs leaked), while its members can still be read.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE and not _done:
 		_done = true
@@ -210,6 +265,7 @@ func _notification(what: int) -> void:
 
 # Draws every canvas in ONE engine frame and returns their images, in order.
 # Each canvas is spent afterwards. Images are RGBA8, premultiplied alpha.
+# MAIN THREAD ONLY (it creates the RenderingServer objects and forces a frame).
 static func render_all(canvases: Array) -> Array[Image]:
 	for c in canvases:
 		c._activate()
@@ -218,6 +274,41 @@ static func render_all(canvases: Array) -> Array[Image]:
 	for c in canvases:
 		out.append(c._collect())
 	return out
+
+# The asynchronous form of render_all, for a caller that must not force a
+# frame (the map view, mid-game): submit() creates the canvases' viewports now
+# and the engine draws them with its next frame; after that frame
+# (RenderingServer.frame_post_draw) collect_image() on each reads it back and
+# spends it. Main thread only.
+static func submit(canvases: Array) -> void:
+	for c in canvases:
+		c._activate()
+
+func collect_image() -> Image:
+	assert(_active and not _done, "InkCanvas.collect_image: submit() it first, and collect once")
+	return _collect()
+
+# Reads a submitted canvas back WITHOUT STALLING: call after the frame that
+# drew it; `callback` receives the Image (RGBA8, premultiplied) a frame or two
+# later, on the main thread, and the canvas is spent. collect_image() and
+# render_all() read back synchronously, which waits for every frame the GPU
+# has in flight -- measured 2026-10-09: 100-300 ms of main thread per read-back
+# while chunks bake, against ~0 for this. Falls back to the synchronous read
+# where there is no RenderingDevice (the Compatibility renderer).
+func collect_async(callback: Callable) -> void:
+	assert(_active and not _done, "InkCanvas.collect_async: submit() it first, and collect once")
+	var vp := _vp_lo if _vp_lo.is_valid() else _vp_hi
+	var rd := RenderingServer.get_rendering_device()
+	var rd_tex := RenderingServer.texture_get_rd_texture(RenderingServer.viewport_get_texture(vp)) if rd != null else RID()
+	if rd == null or not rd_tex.is_valid() or rd.texture_get_format(rd_tex).format != RenderingDevice.DATA_FORMAT_R8G8B8A8_UNORM:
+		callback.call(_collect())
+		return
+	var w := size.x
+	var h := size.y
+	var me := self  # alive until the pixels arrive
+	rd.texture_get_data_async(rd_tex, 0, func(data: PackedByteArray) -> void:
+		me._free()
+		callback.call(Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, data)))
 
 # The prototype's offscreen canvas: a fresh canvas of `canvas_size`, handed to
 # `draw` (which receives this canvas), rendered and read back.
@@ -239,6 +330,19 @@ func finish_texture() -> ImageTexture:
 func discard() -> void:
 	if not _done:
 		_free()
+
+# How many canvas items the recording will make (direct paints and image
+# draws merge), and how many of them are canvas groups (a translucent paint
+# that can overlap itself): for measuring -- a group is the costly kind.
+func op_count() -> int:
+	return _ops.size() + (1 if not _batch_tris.is_empty() else 0)
+
+func group_count() -> int:
+	var n := 0
+	for op: Array in _ops:
+		if op[0] == _OP_TRIS and float(op[3]) >= 0.0:
+			n += 1
+	return n
 
 # --- State: save / restore and the transform ------------------------------------
 
@@ -290,6 +394,7 @@ func begin_path() -> void:
 	_closed.clear()
 	_cur = PackedVector2Array()
 	_cur_closed = false
+	_path_odd = false
 
 func move_to(x: float, y: float) -> void:
 	_flush()
@@ -312,6 +417,7 @@ func arc(cx: float, cy: float, r: float, a0: float, a1: float, anticlockwise: bo
 	if r < 0.0:
 		push_error("InkCanvas.arc: negative radius %s (Canvas throws IndexSizeError)" % str(r))
 		return
+	_path_odd = true
 	var sweep: float
 	if not anticlockwise:
 		sweep = TAU if a1 - a0 >= TAU else fposmod(a1 - a0, TAU)
@@ -329,6 +435,7 @@ func arc(cx: float, cy: float, r: float, a0: float, a1: float, anticlockwise: bo
 # rect(x, y, w, h): a closed four-point subpath; the next lineTo starts at (x, y).
 func rect(x: float, y: float, w: float, h: float) -> void:
 	_flush()
+	_path_odd = true
 	_cur.push_back(_xf * Vector2(x, y))
 	_cur.push_back(_xf * Vector2(x + w, y))
 	_cur.push_back(_xf * Vector2(x + w, y + h))
@@ -352,15 +459,19 @@ func fill() -> void:
 		_paint(tris, fill_color, alpha, pieces > 1)
 
 # stroke(): every subpath with round joins and line_cap ends, line_width in
-# user units. A device width <= 1 px is Skia's hairline (see the header).
+# user units. A device width <= 1 px is Skia's hairline (see the header). An
+# ink stroke goes through the pen (see the header) unless the pen is "even".
 func stroke() -> void:
 	var alpha := stroke_color.a * global_alpha
+	if alpha <= 0.0:
+		return
+	if not _path_odd and _pen_applies(stroke_color):
+		_stroke_pen(alpha)
+		return
 	var w := line_width * _scale()
 	if w <= 1.0:
 		alpha *= w
 		w = 1.0
-	if alpha <= 0.0:
-		return
 	var hw := w * 0.5
 	var round_cap := line_cap != "butt"
 	var tris := PackedVector2Array()
@@ -368,7 +479,26 @@ func stroke() -> void:
 		_stroke_into(tris, _paths[i], _closed[i], hw, round_cap)
 	_stroke_into(tris, _cur, _cur_closed, hw, round_cap)
 	if not tris.is_empty():
-		_paint(tris, stroke_color, alpha, true)
+		_paint(tris, stroke_color, alpha, not _single_segment())
+
+# The path is one open two-point segment (a fibre, a tick): its quad and its
+# two end caps meet only along edges, so it cannot overlap itself and needs no
+# canvas group to composite once -- the pixels are the same, at a fraction of
+# the cost (a ground has ~1,700 fibres).
+func _single_segment() -> bool:
+	var n := 0
+	var only := PackedVector2Array()
+	for p in _paths:
+		if not p.is_empty():
+			n += 1
+			only = p
+	if not _cur.is_empty():
+		n += 1
+		only = _cur
+	if n != 1:
+		return false
+	var closed := _cur_closed if not _cur.is_empty() else _closed[_paths.size() - 1]
+	return _dedupe(only, closed).size() == 2 and not closed
 
 # fillRect(x, y, w, h) in fill_color x global_alpha. Leaves the path alone.
 func fill_rect(x: float, y: float, w: float, h: float) -> void:
@@ -426,7 +556,16 @@ func draw_image(texture: Texture2D, x: float, y: float, w: float, h: float) -> v
 	if global_alpha <= 0.0 or texture == null:
 		return
 	var ga := global_alpha
-	_image_item(texture, Rect2(x, y, w, h), _material("premul", _PREMUL_SHADER), Color(ga, ga, ga, ga))
+	_image_op(texture, Rect2(x, y, w, h), Rect2(), "premul", Color(ga, ga, ga, ga))
+
+# drawImage(image, sx, sy, sw, sh, x, y, w, h): the source rectangle (texels)
+# of `texture` into the destination rectangle -- one sprite out of an atlas.
+func draw_image_region(texture: Texture2D, sx: float, sy: float, sw: float, sh: float,
+		x: float, y: float, w: float, h: float) -> void:
+	if global_alpha <= 0.0 or texture == null or sw <= 0.0 or sh <= 0.0:
+		return
+	var ga := global_alpha
+	_image_op(texture, Rect2(x, y, w, h), Rect2(sx, sy, sw, sh), "premul", Color(ga, ga, ga, ga))
 
 # A textured rect under the current transform, shaded by `material` instead of
 # the premultiplied composite. COLOR arrives as texture x (1, 1, 1, global_alpha).
@@ -434,7 +573,209 @@ func draw_image(texture: Texture2D, x: float, y: float, w: float, h: float) -> v
 func draw_image_with_material(texture: Texture2D, x: float, y: float, w: float, h: float, material: Material) -> void:
 	if texture == null:
 		return
-	_image_item(texture, Rect2(x, y, w, h), material, Color(1.0, 1.0, 1.0, global_alpha))
+	_image_op(texture, Rect2(x, y, w, h), Rect2(), material, Color(1.0, 1.0, 1.0, global_alpha))
+
+# The same from a source rectangle of `texture` (an atlas region).
+func draw_image_region_with_material(texture: Texture2D, src: Rect2, dest: Rect2, material: Material) -> void:
+	if texture == null or not src.has_area():
+		return
+	_image_op(texture, dest, src, material, Color(1.0, 1.0, 1.0, global_alpha))
+
+# --- The pen --------------------------------------------------------------------
+
+# The pen as configured: mode, lit, shadow, open, taper_px, taper_frac, floor,
+# ink (Color), shadow_dir (Vector2, unit, world/device space). Read from data
+# on first use; thread-safe to read once loaded.
+static func pen_config() -> Dictionary:
+	if _pen.is_empty():
+		_pen_mutex.lock()
+		if _pen.is_empty():
+			_pen = _load_pen()
+		_pen_mutex.unlock()
+	return _pen
+
+# Overrides any of pen_config()'s keys for every canvas recorded afterwards.
+static func configure_pen(overrides: Dictionary) -> void:
+	var cfg := pen_config().duplicate()
+	cfg.merge(overrides, true)
+	_pen = cfg
+
+static func set_pen_mode(mode: String) -> void:
+	configure_pen({"mode": mode})
+
+static func pen_mode() -> String:
+	return str(pen_config().get("mode", "even"))
+
+# What a cached sprite drawn with the pen depends on: "" for the even pen, else
+# the mode and the shadow direction. Sprite caches add it to their keys.
+static func pen_key() -> String:
+	var cfg := pen_config()
+	if str(cfg.get("mode", "even")) == "even":
+		return ""
+	var sd: Vector2 = cfg.get("shadow_dir", Vector2.ZERO)
+	return "%s@%.4f,%.4f" % [cfg.get("mode"), sd.x, sd.y]
+
+# Follows a RenderParams: its ink colour and its sun (the shadow direction is
+# the prototype's shadowDir(): (sunAz + 90) degrees). Duck-typed: any object
+# with INK (Color) and sunAz (float).
+static func configure_pen_from(P: Object) -> void:
+	var az := (float(P.get("sunAz")) + 90.0) * PI / 180.0
+	configure_pen({"ink": P.get("INK"), "shadow_dir": Vector2(cos(az), sin(az))})
+
+# Width factors along one subpath for the "shadow_side" pen (1.0 everywhere for
+# "even"): the pen's rule, as a pure function of DEVICE-space points, so it can
+# be checked headless. `taper_scale` is device px per user px (the tapers are
+# given in user px).
+static func pen_factors(pts: PackedVector2Array, closed: bool, cfg: Dictionary, taper_scale: float = 1.0) -> PackedFloat64Array:
+	var n := pts.size()
+	var out := PackedFloat64Array()
+	out.resize(n)
+	if str(cfg.get("mode", "even")) != "shadow_side":
+		out.fill(1.0)
+		return out
+	var s := PackedFloat64Array()
+	s.resize(n)
+	s[0] = 0.0
+	for i in range(1, n):
+		s[i] = s[i - 1] + pts[i].distance_to(pts[i - 1])
+	var L := s[n - 1] + (pts[0].distance_to(pts[n - 1]) if closed else 0.0)
+	var outward := 1.0
+	if closed:
+		var A := 0.0
+		for i in n:
+			var p := pts[i]
+			var q := pts[(i + 1) % n]
+			A += p.x * q.y - q.x * p.y
+		outward = -1.0 if A > 0.0 else 1.0  # the left normal points inward when the signed area is positive
+	var sd: Vector2 = cfg.get("shadow_dir", Vector2(1, 0))
+	var lit := float(cfg.get("lit", 0.42))
+	var shadow := float(cfg.get("shadow", 1.87))
+	var openf := float(cfg.get("open", 0.85))
+	var floor_f := float(cfg.get("floor", 0.25))
+	var Tl := minf(float(cfg.get("taper_px", 7.0)) * taper_scale, L * float(cfg.get("taper_frac", 0.4)))
+	if Tl <= 0.0:
+		Tl = 1.0  # JS: (Tl||1)
+	for i in n:
+		var a := pts[(i - 1 + n) % n] if closed else pts[maxi(0, i - 1)]
+		var b := pts[(i + 1) % n] if closed else pts[mini(n - 1, i + 1)]
+		var t := b - a
+		var l := t.length()
+		if l == 0.0:
+			l = 1.0
+		t /= l
+		if closed:
+			var d := (-t.y * sd.x + t.x * sd.y) * outward  # + where the edge faces away from the sun
+			out[i] = lit + (shadow - lit) * maxf(0.0, d)
+		else:
+			var e := _smooth(minf(s[i], L - s[i]) / Tl)  # 0 at a pen landing or lift
+			out[i] = openf * (floor_f + (1.0 - floor_f) * e)
+	return out
+
+static func _smooth(t: float) -> float:
+	if t <= 0.0:
+		return 0.0
+	if t >= 1.0:
+		return 1.0
+	return t * t * (3.0 - 2.0 * t)
+
+func _pen_applies(c: Color) -> bool:
+	var cfg := pen_config()
+	if str(cfg.get("mode", "even")) == "even":
+		return false
+	var ink: Color = cfg.get("ink", Color(0, 0, 0, 0))
+	return c.r8 == ink.r8 and c.g8 == ink.g8 and c.b8 == ink.b8
+
+# Ribbons for every subpath of the current path, painted as one call.
+func _stroke_pen(alpha: float) -> void:
+	var cfg := pen_config()
+	var sc := _scale()
+	var base := line_width * sc
+	var tris := PackedVector2Array()
+	var cols := PackedColorArray()
+	var all_opaque := true
+	var subs: Array = []
+	for i in _paths.size():
+		subs.append([_paths[i], _closed[i]])
+	subs.append([_cur, _cur_closed])
+	var ink := Color(stroke_color.r, stroke_color.g, stroke_color.b, 1.0)
+	for sub: Array in subs:
+		var pts := _dedupe_pen(sub[0], sub[1])
+		var closed: bool = sub[1] and pts.size() > 2
+		var n := pts.size()
+		if n < 2:
+			continue
+		var f := pen_factors(pts, closed, cfg, sc)
+		var left := PackedVector2Array()
+		var right := PackedVector2Array()
+		var al := PackedFloat32Array()
+		left.resize(n)
+		right.resize(n)
+		al.resize(n)
+		for i in n:
+			var a := pts[(i - 1 + n) % n] if closed else pts[maxi(0, i - 1)]
+			var b := pts[(i + 1) % n] if closed else pts[mini(n - 1, i + 1)]
+			var t := (b - a).normalized()
+			var nrm := Vector2(-t.y, t.x)
+			var w := base * f[i]
+			var hw := maxf(w, 1.0) * 0.5           # under a pixel: the hairline rule
+			var a_i := alpha * minf(w, 1.0)
+			if a_i < 1.0:
+				all_opaque = false
+			left[i] = pts[i] + nrm * hw
+			right[i] = pts[i] - nrm * hw
+			al[i] = a_i
+		var segs := n if closed else n - 1
+		for i in segs:
+			var j := (i + 1) % n
+			var ci := Color(ink.r, ink.g, ink.b, al[i])
+			var cj := Color(ink.r, ink.g, ink.b, al[j])
+			tris.push_back(left[i]); tris.push_back(left[j]); tris.push_back(right[j])
+			cols.push_back(ci); cols.push_back(cj); cols.push_back(cj)
+			tris.push_back(left[i]); tris.push_back(right[j]); tris.push_back(right[i])
+			cols.push_back(ci); cols.push_back(cj); cols.push_back(ci)
+	if tris.is_empty():
+		return
+	if all_opaque or tris.size() == 6:  # opaque, or one two-point ribbon: cannot overlap itself
+		_record_direct(tris, cols)
+	else:
+		_flush_batch()
+		_ops.append([_OP_TRIS, tris, cols, 1.0, true])
+
+# The reference's ribbon() point cleanup: drop points within 1e-3 of the one
+# before, and a closing point that repeats the first.
+static func _dedupe_pen(src: PackedVector2Array, closed: bool) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for q in src:
+		if out.is_empty() or out[out.size() - 1].distance_to(q) > 1e-3:
+			out.push_back(q)
+	if closed and out.size() > 2 and out[0].distance_to(out[out.size() - 1]) < 1e-3:
+		out.remove_at(out.size() - 1)
+	return out
+
+static func _load_pen() -> Dictionary:
+	var cfg := {"mode": "even", "lit": 0.42, "shadow": 1.87, "open": 0.85, "taper_px": 7.0,
+		"taper_frac": 0.4, "floor": 0.25, "ink": Color8(0x3d, 0x32, 0x26), "shadow_dir": Vector2(cos(PI * 0.75), sin(PI * 0.75))}
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(PARAMS_PATH)) if FileAccess.file_exists(PARAMS_PATH) else null
+	if not (raw is Dictionary):
+		push_error("InkCanvas: %s did not load; the pen stays even" % PARAMS_PATH)
+		return cfg
+	var root: Dictionary = raw
+	var pen: Dictionary = (root.get("linework", {}) as Dictionary).get("pen", {})
+	var keys := {"mode": "mode", "lit_factor": "lit", "shadow_factor": "shadow", "open_line_factor": "open",
+		"end_taper_px": "taper_px", "end_taper_max_fraction": "taper_frac", "end_floor": "floor"}
+	for k: String in keys:
+		if pen.has(k):
+			cfg[keys[k]] = pen[k] if k == "mode" else float(pen[k])
+		else:
+			push_error("InkCanvas: linework.pen.%s missing in %s" % [k, PARAMS_PATH])
+	var ink: Variant = (root.get("palette", {}) as Dictionary).get("ink")
+	if ink is String and Color.html_is_valid(ink):
+		cfg["ink"] = Color.html(ink)
+	var sun: Variant = ((root.get("parameters", {}) as Dictionary).get("sun_direction", {}) as Dictionary).get("default")
+	if sun is float or sun is int:
+		var az := (float(sun) + 90.0) * PI / 180.0
+		cfg["shadow_dir"] = Vector2(cos(az), sin(az))
+	return cfg
 
 # --- Internals: tessellation -----------------------------------------------------
 
@@ -570,7 +911,86 @@ static func _fan(tris: PackedVector2Array, c: Vector2, start: Vector2, sweep: fl
 		tris.push_back(c); tris.push_back(c + prev); tris.push_back(c + nxt)
 		prev = nxt
 
-# --- Internals: the RenderingServer side ------------------------------------------
+# --- Internals: recording ------------------------------------------------------------
+
+# One paint call. Translucent and possibly self-overlapping -> canvas group, so
+# the call's coverage is composited exactly once (see the header). Otherwise
+# it joins the running batch of direct paints.
+func _paint(tris: PackedVector2Array, color: Color, alpha: float, may_overlap: bool) -> void:
+	assert(not _active, "InkCanvas: drawing on a canvas that was already rendered")
+	if alpha < 1.0 and may_overlap:
+		_flush_batch()
+		var cols := PackedColorArray([Color(color.r, color.g, color.b, 1.0)])
+		_ops.append([_OP_TRIS, tris, cols, alpha, false])
+	else:
+		var cols := PackedColorArray()
+		cols.resize(tris.size())
+		cols.fill(Color(color.r, color.g, color.b, alpha))
+		_record_direct(tris, cols)
+
+func _record_direct(tris: PackedVector2Array, cols: PackedColorArray) -> void:
+	_batch_tris.append_array(tris)
+	_batch_cols.append_array(cols)
+
+func _flush_batch() -> void:
+	if not _batch_tris.is_empty():
+		_ops.append([_OP_TRIS, _batch_tris, _batch_cols, -1.0, false])
+		_batch_tris = PackedVector2Array()
+		_batch_cols = PackedColorArray()
+
+# One textured quad: `dest` (user space, under the current transform) shows
+# `src` (texels of `texture`; zero size: all of it). An AtlasTexture is drawn
+# as its region of its atlas, so a sprite packed in an atlas page draws like
+# a texture of its own. The quad is stored in device space with its UVs, so
+# consecutive draws of the same texture share one canvas item.
+func _image_op(texture: Texture2D, dest: Rect2, src: Rect2, material: Variant, modulate: Color) -> void:
+	assert(not _active, "InkCanvas: drawing on a canvas that was already rendered")
+	if texture is AtlasTexture and (texture as AtlasTexture).atlas != null:
+		var at := texture as AtlasTexture
+		var region := at.region
+		if src.has_area():
+			src = Rect2(region.position + src.position, src.size)
+		else:
+			src = region
+		texture = at.atlas
+	var full := Vector2(texture.get_width(), texture.get_height())
+	if not src.has_area():
+		src = Rect2(Vector2.ZERO, full)
+	var magnify := _scale() * maxf(absf(dest.size.x) / src.size.x, absf(dest.size.y) / src.size.y)
+	var nearest := ssaa > 1 and magnify <= 1.0001
+	var p0 := _xf * dest.position
+	var p1 := _xf * Vector2(dest.end.x, dest.position.y)
+	var p2 := _xf * dest.end
+	var p3 := _xf * Vector2(dest.position.x, dest.end.y)
+	var u0 := src.position / full
+	var u2 := src.end / full
+	var u1 := Vector2(u2.x, u0.y)
+	var u3 := Vector2(u0.x, u2.y)
+	var op: Array
+	if not _ops.is_empty() and _batch_tris.is_empty():
+		var last: Array = _ops[_ops.size() - 1]
+		if last[0] == _OP_IMAGES and last[1] == texture and typeof(last[2]) == typeof(material) and last[2] == material and last[3] == nearest:
+			op = last
+	if op.is_empty():
+		_flush_batch()
+		op = [_OP_IMAGES, texture, material, nearest, PackedVector2Array(), PackedVector2Array(), PackedColorArray()]
+		_ops.append(op)
+	# Taken out of the op while appending so the arrays are not shared (no copy per draw).
+	var pts: PackedVector2Array = op[4]
+	var uvs: PackedVector2Array = op[5]
+	var cols: PackedColorArray = op[6]
+	op[4] = null
+	op[5] = null
+	op[6] = null
+	pts.append_array(PackedVector2Array([p0, p1, p2, p0, p2, p3]))
+	uvs.append_array(PackedVector2Array([u0, u1, u2, u0, u2, u3]))
+	for _k in 6:
+		cols.push_back(modulate)
+	op[4] = pts
+	op[5] = uvs
+	op[6] = cols
+
+# --- Internals: the RenderingServer side (main thread) ------------------------------
 
 static func _material(key: String, code: String) -> ShaderMaterial:
 	if not _materials.has(key):
@@ -588,8 +1008,6 @@ static func _make_viewport(px: Vector2i) -> RID:
 	RenderingServer.viewport_set_disable_3d(vp, true)
 	RenderingServer.viewport_set_clear_mode(vp, RenderingServer.VIEWPORT_CLEAR_ALWAYS)
 	RenderingServer.viewport_set_update_mode(vp, RenderingServer.VIEWPORT_UPDATE_ALWAYS)
-	# Inactive until its own render: force_draw() draws every ACTIVE viewport,
-	# and a half-recorded canvas has no business in someone else's frame.
 	RenderingServer.viewport_set_active(vp, false)
 	return vp
 
@@ -605,41 +1023,103 @@ func _new_item(parent: RID = RID()) -> RID:
 	_items.append(item)
 	return item
 
-# One paint call. Translucent and possibly self-overlapping -> canvas group, so
-# the call's coverage is composited exactly once (see the header).
-func _paint(tris: PackedVector2Array, color: Color, alpha: float, may_overlap: bool) -> void:
-	assert(not _done, "InkCanvas: drawing on a canvas that was already rendered")
-	var item := _new_item()
-	if alpha < 1.0 and may_overlap:
-		RenderingServer.canvas_item_set_canvas_group_mode(item,
-			RenderingServer.CANVAS_GROUP_MODE_TRANSPARENT, 0.0, true, 0.0, false)
-		RenderingServer.canvas_item_set_self_modulate(item, Color(1.0, 1.0, 1.0, alpha))
-		var body := _new_item(item)
-		RenderingServer.canvas_item_add_triangle_array(body, PackedInt32Array(), tris,
-			PackedColorArray([Color(color.r, color.g, color.b, 1.0)]))
-	else:
-		RenderingServer.canvas_item_add_triangle_array(item, PackedInt32Array(), tris,
-			PackedColorArray([Color(color.r, color.g, color.b, alpha)]))
-
-func _image_item(texture: Texture2D, dest: Rect2, material: Material, modulate: Color) -> void:
-	assert(not _done, "InkCanvas: drawing on a canvas that was already rendered")
-	var item := _new_item()
-	RenderingServer.canvas_item_set_transform(item, _xf)
-	RenderingServer.canvas_item_set_material(item, material.get_rid())
-	var magnify := _scale() * maxf(absf(dest.size.x) / float(texture.get_width()),
-		absf(dest.size.y) / float(texture.get_height()))
-	var nearest := ssaa > 1 and magnify <= 1.0001
-	RenderingServer.canvas_item_set_default_texture_filter(item,
-		RenderingServer.CANVAS_ITEM_TEXTURE_FILTER_NEAREST if nearest else RenderingServer.CANVAS_ITEM_TEXTURE_FILTER_LINEAR)
-	RenderingServer.canvas_item_add_texture_rect(item, dest, texture.get_rid(), false, modulate)
-	_keep.append(texture)
-	_keep.append(material)
-
+# Creates the viewports and replays the recording into canvas items, then
+# makes the viewports active for the next drawn frame.
 func _activate() -> void:
-	assert(not _done, "InkCanvas: rendered twice")
+	_begin_activation()
+	_continue_activation(1 << 62)
+
+var _op_i := 0
+
+# submit() in pieces, for a caller with a frame budget: begin_submit() makes
+# the (inactive) viewports, submit_some(usec) turns recorded calls into canvas
+# items for about that long and returns true once all are in and the canvas
+# is active -- it is then drawn with the next frame. A page of 60 tree sprites
+# is ~4,000 canvas items, ~50 ms at once.
+func begin_submit() -> void:
+	_begin_activation()
+
+func submit_some(budget_usec: int) -> bool:
+	return _continue_activation(budget_usec)
+
+func _begin_activation() -> void:
+	assert(not _active and not _done, "InkCanvas: rendered twice")
+	_flush_batch()
+	_active = true
+	_op_i = 0
+	_vp_hi = _make_viewport(size * ssaa)
+	_canvas_hi = RenderingServer.canvas_create()
+	RenderingServer.viewport_attach_canvas(_vp_hi, _canvas_hi)
+	if ssaa > 1:
+		# Callers draw in canvas pixels; the viewport scales them up.
+		RenderingServer.viewport_set_canvas_transform(_vp_hi, _canvas_hi,
+			Transform2D.IDENTITY.scaled(Vector2(ssaa, ssaa)))
+		_vp_lo = _make_viewport(size)
+		_canvas_lo = RenderingServer.canvas_create()
+		RenderingServer.viewport_attach_canvas(_vp_lo, _canvas_lo)
+		var resolve := RenderingServer.canvas_item_create()
+		RenderingServer.canvas_item_set_parent(resolve, _canvas_lo)
+		RenderingServer.canvas_item_set_material(resolve, _material("box%d" % ssaa, _BOX_SHADER % ssaa).get_rid())
+		RenderingServer.canvas_item_add_texture_rect(resolve, Rect2(Vector2.ZERO, Vector2(size)),
+			RenderingServer.viewport_get_texture(_vp_hi))
+		_items.append(resolve)
+		# A child viewport is drawn before its parent in the same frame, so the
+		# resolve reads a finished supersampled target.
+		RenderingServer.viewport_set_parent_viewport(_vp_hi, _vp_lo)
+
+func _continue_activation(budget_usec: int) -> bool:
+	var t0 := Time.get_ticks_usec()
+	while _op_i < _ops.size():
+		var op: Array = _ops[_op_i]
+		_op_i += 1
+		if op[0] == _OP_TRIS:
+			_submit_tris(op)
+		else:
+			_submit_images(op)
+		if Time.get_ticks_usec() - t0 > budget_usec:
+			return _op_i >= _ops.size() and _finish_activation()
+	return _finish_activation()
+
+func _finish_activation() -> bool:
+	_ops.clear()
+	# ONCE, not ALWAYS: a submitted canvas waits a frame or more for its
+	# read-back, and an ALWAYS viewport would be drawn again every one of those
+	# frames (measured: a sprite page's read-back went from ~190 ms to 1 s+
+	# when collected four frames late).
+	RenderingServer.viewport_set_update_mode(_vp_hi, RenderingServer.VIEWPORT_UPDATE_ONCE)
 	RenderingServer.viewport_set_active(_vp_hi, true)
 	if _vp_lo.is_valid():
+		RenderingServer.viewport_set_update_mode(_vp_lo, RenderingServer.VIEWPORT_UPDATE_ONCE)
 		RenderingServer.viewport_set_active(_vp_lo, true)
+	return true
+
+func _submit_tris(op: Array) -> void:
+	var tris: PackedVector2Array = op[1]
+	var cols: PackedColorArray = op[2]
+	var group_alpha: float = op[3]
+	var item := _new_item()
+	if group_alpha >= 0.0:
+		RenderingServer.canvas_item_set_canvas_group_mode(item,
+			RenderingServer.CANVAS_GROUP_MODE_TRANSPARENT, 0.0, true, 0.0, false)
+		RenderingServer.canvas_item_set_self_modulate(item, Color(1.0, 1.0, 1.0, group_alpha))
+		var body := _new_item(item)
+		if op[4]:
+			RenderingServer.canvas_item_set_material(body, _material("ribbon", _RIBBON_SHADER).get_rid())
+		RenderingServer.canvas_item_add_triangle_array(body, PackedInt32Array(), tris, cols)
+	else:
+		RenderingServer.canvas_item_add_triangle_array(item, PackedInt32Array(), tris, cols)
+
+func _submit_images(op: Array) -> void:
+	var texture: Texture2D = op[1]
+	var material: Material = op[2] if op[2] is Material else _material(str(op[2]), _PREMUL_SHADER)
+	var item := _new_item()
+	RenderingServer.canvas_item_set_material(item, material.get_rid())
+	RenderingServer.canvas_item_set_default_texture_filter(item,
+		RenderingServer.CANVAS_ITEM_TEXTURE_FILTER_NEAREST if op[3] else RenderingServer.CANVAS_ITEM_TEXTURE_FILTER_LINEAR)
+	RenderingServer.canvas_item_add_triangle_array(item, PackedInt32Array(), op[4], op[6], op[5],
+		PackedInt32Array(), PackedFloat32Array(), texture.get_rid())
+	_keep.append(texture)
+	_keep.append(material)
 
 func _collect() -> Image:
 	var vp := _vp_lo if _vp_lo.is_valid() else _vp_hi
@@ -656,3 +1136,6 @@ func _free() -> void:
 		if rid.is_valid():
 			RenderingServer.free_rid(rid)
 	_keep.clear()
+	_ops.clear()
+	_batch_tris = PackedVector2Array()
+	_batch_cols = PackedColorArray()

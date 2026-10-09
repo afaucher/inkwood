@@ -58,7 +58,12 @@ hachures and height-respecting shadows by `scripts/render/terrain_*.gd`
 (`test_terrain`; a look: `scripts/render/terrain_shot.gd`). The unit interface is in
 `scripts/ui/`: inked plane markers with altitude shadows, the roster sidebar
 and the motion planner over the World, mounted through `unit_ui.gd`
-(`test_ui_roster`, `test_motion_planner`; a look: `scripts/ui/ui_shot.gd`).
+(`test_ui_roster`, `test_motion_planner`; a look: `scripts/ui/ui_shot.gd`). The map view is
+`scripts/render/map_view.gd`: the static map baked into chunk textures on
+worker threads under a camera, ground anchored to the world, scale
+switchable at runtime (`test_map_view`; a look:
+`scripts/render/map_view_shot.gd`). InkCanvas draws the shadow-side pen
+(`linework.pen`; `--parity` selects the prototype's even line).
 
 **The target is the sandbox demo.** Its exit criteria are Alex's (design doc:
 Execution plan > Sandbox demo exit criteria) and the track plan with folder
@@ -243,6 +248,17 @@ Properties of Godot and PowerShell, not of that game. Entries marked
 - **A `--script` run whose script fails to compile does not quit**: headless or
   windowed, the process idles until killed (observed 2026-10-09). Give shot
   scripts a timeout, and read the .err output when one seems to hang.
+- **`RenderingServer.texture_2d_get` stalls on every frame in flight**
+  (measured 2026-10-09: ~190 ms per sprite page). Use
+  `RenderingDevice.texture_get_data_async` for read-backs.
+- **A viewport left at UPDATE_ALWAYS redraws until it is freed**; bake
+  viewports use UPDATE_ONCE (2026-10-09).
+- **A CanvasGroup costs a render pass over its whole render target**, so
+  many groups on one large target are very slow (2026-10-09: the ground's
+  1,743 fibre groups per chunk).
+- **GDScript slows down past about 8 worker threads** (2026-10-09: 256 tree
+  sprites in 131 ms on 8 threads, 840 ms on 31). The baker caps at 8.
+- **`Texture2DRD` refuses a viewport's texture** (2026-10-09).
 - **Kill stragglers** if a run hangs: `taskkill //F //IM
   Godot_v4.7-stable_win64.exe` (Windows) or `pkill -f Godot_v` (Linux).
 - **A parse error in one script fails EVERY script that depends on it**

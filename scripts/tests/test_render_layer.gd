@@ -30,7 +30,15 @@ extends "res://scripts/test_support/test_case.gd"
 #   4. GRAIN DETERMINISM: same seed, same bytes; another seed, other bytes.
 #   5. THE PARITY SWITCH: apply_prototype_defaults puts every parameter that
 #      carries a prototype_default back to it (the game frame uses the data
-#      default; a parity frame the prototype's).
+#      default; a parity frame the prototype's), the pen included.
+#   6. THE PEN (linework.pen, Alex's "shadow side"): on a circle, either
+#      winding, the width factor is shadow_factor where the outline faces
+#      away from the sun and lit_factor where it faces it; an open line's ends
+#      taper to end_floor of its middle; an INK stroke is drawn as a ribbon
+#      and a black (mask) stroke is not; "even" leaves every stroke even.
+#   7. FAST NOISE: scripts/render/fast_noise.gd gives exactly core/noise.gd's
+#      values (the drawing layer uses it for speed; the RNG draw counts above
+#      depend on it being exact).
 
 const RenderParams = preload("res://scripts/world/render_params.gd")
 const SceneGen = preload("res://scripts/world/scene_gen.gd")
@@ -43,6 +51,8 @@ const InkGround = preload("res://scripts/render/ink_ground.gd")
 const InkRenderer = preload("res://scripts/render/ink_renderer.gd")
 const Paper = preload("res://scripts/render/paper.gd")
 const Grain = preload("res://scripts/render/grain.gd")
+const ValueNoise = preload("res://scripts/core/noise.gd")
+const FastNoise = preload("res://scripts/render/fast_noise.gd")
 
 const FIXTURE := "res://reference/port_check/expected_render_20261009.json"
 const SEED := 20261009
@@ -68,6 +78,8 @@ func setup(_main) -> void:
 	_check_paper(fx.get("paper", {}))
 	_check_grain()
 	_check_parity_switch()
+	_check_pen()
+	_check_fast_noise()
 	print("test_render_layer: checks ran in %.0f ms" % ((Time.get_ticks_usec() - t0) / 1000.0))
 	finish()
 
@@ -268,3 +280,79 @@ func _check_parity_switch() -> void:
 		check(lines.size() >= 1, "apply_prototype_defaults reports what it changed")
 	else:
 		near(q.shadowStr, float(entry.get("default", NAN)), 0.0, "no prototype_default: a parity frame keeps the default")
+
+# --- 6. the pen ------------------------------------------------------------------------
+
+func _check_pen() -> void:
+	var cfg: Dictionary = InkCanvas.pen_config().duplicate()
+	check(cfg.has("lit") and cfg.has("shadow") and cfg.has("open") and cfg.has("floor"), "pen config read from linework.pen")
+	cfg["mode"] = "shadow_side"
+	var sd := Vector2(1.0, 1.0).normalized()
+	cfg["shadow_dir"] = sd
+	for winding: float in [1.0, -1.0]:
+		var pts := PackedVector2Array()
+		for i in 72:
+			var a := winding * float(i) * TAU / 72.0
+			pts.push_back(Vector2(cos(a), sin(a)) * 20.0)
+		var f := InkCanvas.pen_factors(pts, true, cfg)
+		var away := 0
+		var toward := 0
+		for i in pts.size():
+			if pts[i].normalized().dot(sd) > pts[away].normalized().dot(sd):
+				away = i
+			if pts[i].normalized().dot(sd) < pts[toward].normalized().dot(sd):
+				toward = i
+		check(f[away] > f[toward], "pen: a circle (winding %+d) is heavier on its shadow side (%.3f) than its lit side (%.3f)" % [winding, f[away], f[toward]])
+		near(f[away], float(cfg.shadow), 0.01, "pen: the shadow-side factor is shadow_factor")
+		near(f[toward], float(cfg.lit), 1e-6, "pen: the lit-side factor is lit_factor")
+	var line := PackedVector2Array()
+	for i in 41:
+		line.push_back(Vector2(float(i), 0.0))
+	var g := InkCanvas.pen_factors(line, false, cfg)
+	check(g[0] < g[20] and g[40] < g[20], "pen: an open line's ends (%.3f, %.3f) are thinner than its middle (%.3f)" % [g[0], g[40], g[20]])
+	near(g[20], float(cfg.open), 1e-9, "pen: an open line's middle is open_line_factor")
+	near(g[0], float(cfg.open) * float(cfg.floor), 1e-9, "pen: an open line's end is end_floor of it")
+	# The stroke routine applies it to ink and only to ink, with no opt-in.
+	var was := InkCanvas.pen_mode()
+	InkCanvas.set_pen_mode("shadow_side")
+	var ink: Color = InkCanvas.pen_config().ink
+	var c := InkCanvas.new(Vector2i(64, 64), 1)
+	c.stroke_color = ink
+	c.global_alpha = 0.6
+	c.begin_path()
+	for p in line:
+		c.line_to(p.x + 10.0, 20.0 + p.y)
+	c.stroke()
+	check(_last_ribbon(c), "pen: an ink stroke is drawn as a ribbon")
+	c.stroke_color = Color.BLACK
+	c.stroke()
+	check(not _last_ribbon(c), "pen: a black (shadow mask) stroke is not")
+	InkCanvas.set_pen_mode("even")
+	c.stroke_color = ink
+	c.stroke()
+	check(not _last_ribbon(c), "pen: mode even leaves ink strokes even")
+	c.discard()
+	InkCanvas.set_pen_mode(was)
+
+static func _last_ribbon(c: InkCanvas) -> bool:
+	c._flush_batch()
+	var op: Array = c._ops[c._ops.size() - 1]
+	return op[0] == InkCanvas._OP_TRIS and bool(op[4])
+
+# --- 7. fast noise --------------------------------------------------------------------------
+
+func _check_fast_noise() -> void:
+	var rng := Mulberry32.new(SEED + 3)
+	var bad := 0
+	for _i in 3000:
+		var x := (rng.next() - 0.5) * 2e5
+		var y := (rng.next() - 0.5) * 2e5
+		var sd := int((rng.next() - 0.5) * 4.2e9)
+		if FastNoise.vnoise(x, y, sd) != ValueNoise.vnoise(x, y, sd):
+			bad += 1
+		if FastNoise.fbm(x * 0.01, y * 0.01, sd, 4) != ValueNoise.fbm(x * 0.01, y * 0.01, sd, 4):
+			bad += 1
+		var i := int((rng.next() - 0.5) * 4.2e9)
+		if FastNoise.hash2(i, -i, sd) != ValueNoise.hash2(i, -i, sd):
+			bad += 1
+	eq(bad, 0, "fast_noise.gd equals core/noise.gd bit for bit (9000 samples, negative and huge inputs)")

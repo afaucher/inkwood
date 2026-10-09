@@ -34,7 +34,8 @@ extends RefCounted
 
 const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
-const ValueNoise = preload("res://scripts/core/noise.gd")
+# The prototype's vnoise / fbm, bit for bit, inlined for speed (fast_noise.gd; checked against core/noise.gd).
+const ValueNoise = preload("res://scripts/render/fast_noise.gd")
 const RenderParams = preload("res://scripts/world/render_params.gd")
 const Structures = preload("res://scripts/world/structures.gd")
 

@@ -32,7 +32,8 @@ extends RefCounted
 
 const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
-const ValueNoise = preload("res://scripts/core/noise.gd")
+# The prototype's vnoise / fbm, bit for bit, inlined for speed (fast_noise.gd; checked against core/noise.gd).
+const ValueNoise = preload("res://scripts/render/fast_noise.gd")
 const RenderParams = preload("res://scripts/world/render_params.gd")
 const Paper = preload("res://scripts/render/paper.gd")
 const Grain = preload("res://scripts/render/grain.gd")
@@ -80,9 +81,15 @@ static func build_ground(size: Vector2i, roadPts: Array, P: RenderParams, paper_
 # buildGround's drawing, onto `g`: the paper tint, specks and fibres, dirt
 # stipple patches, then drawRoad. rng / road_rng are mulberry32(4242) and
 # mulberry32(77) unless a test hands its own in.
+#   xf            the canvas transform for the ground's own (0..W, 0..H) frame
+#                 (the prototype's identity; a scaled bake passes its scale)
+#   noise_origin  where (0, 0) of that frame is in the WORLD, for the dirt
+#                 field's noise -- so a chunk of a larger map continues its
+#                 neighbours' dirt patches (the prototype: the origin)
 static func draw_ground(g: InkCanvas, W: float, H: float, roadPts: Array, P: RenderParams, paper: Texture2D,
-		rng: Mulberry32 = null, road_rng: Mulberry32 = null) -> void:
-	g.set_transform(1, 0, 0, 1, 0, 0)  # g.setTransform(DPR,0,0,DPR,0,0) -- DPR is 1
+		rng: Mulberry32 = null, road_rng: Mulberry32 = null, xf: Transform2D = Transform2D.IDENTITY,
+		noise_origin: Vector2 = Vector2.ZERO) -> void:
+	g.set_transform_matrix(xf)  # g.setTransform(DPR,0,0,DPR,0,0) -- DPR is 1
 	g.global_alpha = 1.0
 	if P.L.paper:
 		# The 1/3-res tint, upscaled and cropped to W x H by Paper.build already.
@@ -115,7 +122,7 @@ static func draw_ground(g: InkCanvas, W: float, H: float, roadPts: Array, P: Ren
 		for _i in darts:
 			var x := rng.next() * W
 			var y := rng.next() * H
-			var f := ValueNoise.fbm(x * 0.011, y * 0.011, 91, 3)
+			var f := ValueNoise.fbm((x + noise_origin.x) * 0.011, (y + noise_origin.y) * 0.011, 91, 3)
 			if f < 0.58 or rng.next() > (f - 0.58) * 4.0:  # || short-circuits: no draw when f < .58
 				continue
 			g.global_alpha = 0.15 + rng.next() * 0.25

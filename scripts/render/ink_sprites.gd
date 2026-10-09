@@ -8,7 +8,9 @@ extends RefCounted
 #   tracePath(g,pts)                         trace_path(g, pts)
 #   drawLobe(g,L,rng)                        draw_lobe(g, L, rng, P)
 #   buildTreeSprite(t)                       build_tree_sprite(t, P, rng = null) -> InkCanvas (unrendered)
+#                                            draw_tree_sprite(g, t, P, at, rng = null): onto any canvas (an atlas)
 #   buildPropSprite(p)                       build_prop_sprite(p, P, rng = null) -> InkCanvas (unrendered)
+#                                            draw_prop_sprite(g, p, P, at, rng = null)
 #
 # The builders return the canvas UNRENDERED and set `half` on the object, so
 # the caller (ink_renderer.gd, syncTree / syncProp) can render every sprite of
@@ -41,7 +43,8 @@ extends RefCounted
 
 const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
-const ValueNoise = preload("res://scripts/core/noise.gd")
+# The prototype's vnoise / fbm, bit for bit, inlined for speed (fast_noise.gd; checked against core/noise.gd).
+const ValueNoise = preload("res://scripts/render/fast_noise.gd")
 const RenderParams = preload("res://scripts/world/render_params.gd")
 
 # --- scallop contour: |sin| bumps give rounded lobes with inward cusps ----------
@@ -158,11 +161,23 @@ static func draw_lobe(g: InkCanvas, L: Dictionary, rng: Mulberry32, P: RenderPar
 # first, then a crown lobe on top. The canvas is 2*half square with the origin
 # at its centre; t.half is set here, t.sprite by the caller once it renders.
 static func build_tree_sprite(t: Dictionary, P: RenderParams, rng: Mulberry32 = null) -> InkCanvas:
-	var r: float = t.r
-	var half := ceili(r * 1.3 + 4.0)
+	var half := tree_half(t)
 	var size := half * 2
 	var g := InkCanvas.new(Vector2i(size, size))  # c.width=c.height=Math.ceil(size*DPR) -- DPR is 1
-	g.set_transform(1, 0, 0, 1, half, half)  # g.setTransform(DPR,0,0,DPR,half*DPR,half*DPR)
+	draw_tree_sprite(g, t, P, Vector2(half, half), rng)
+	return g
+
+# const half=Math.ceil(r*1.3+4)
+static func tree_half(t: Dictionary) -> int:
+	return ceili(float(t.r) * 1.3 + 4.0)
+
+# buildTreeSprite's drawing, onto any canvas with the sprite's centre at `at`
+# (canvas px) -- its own canvas, or a cell of a shared atlas page (the map
+# view's chunk baker). Sets t.half and returns it.
+static func draw_tree_sprite(g: InkCanvas, t: Dictionary, P: RenderParams, at: Vector2, rng: Mulberry32 = null) -> int:
+	var r: float = t.r
+	var half := tree_half(t)
+	g.set_transform(1, 0, 0, 1, at.x, at.y)  # g.setTransform(DPR,0,0,DPR,half*DPR,half*DPR)
 	g.line_cap = "round"  # g.lineJoin="round"; g.lineCap="round";
 	if rng == null:
 		rng = Mulberry32.new(t.seed)  # const rng=mulberry32(t.seed)
@@ -185,7 +200,7 @@ static func build_tree_sprite(t: Dictionary, P: RenderParams, rng: Mulberry32 = 
 	for L in lobes:
 		draw_lobe(g, L, rng, P)
 	t.half = half  # t.sprite=c; t.half=half;  (sprite: set by the caller after rendering)
-	return g
+	return half
 
 # --- props ------------------------------------------------------------------------
 
@@ -193,10 +208,20 @@ static func build_tree_sprite(t: Dictionary, P: RenderParams, rng: Mulberry32 = 
 # (box, inner box, diagonal) or a rock (a 7-gon in rock fill with a crack and
 # three unrotated hatch strokes). Only the rock draws from its rng.
 static func build_prop_sprite(p: Dictionary, P: RenderParams, rng: Mulberry32 = null) -> InkCanvas:
-	var s: float = p.s
-	var half := ceili(s * 1.9 + 3.0)
+	var half := prop_half(p)
 	var g := InkCanvas.new(Vector2i(half * 2, half * 2))  # c.width=c.height=Math.ceil(half*2*DPR) -- DPR is 1
-	g.set_transform(1, 0, 0, 1, half, half)  # g.setTransform(DPR,0,0,DPR,half*DPR,half*DPR)
+	draw_prop_sprite(g, p, P, Vector2(half, half), rng)
+	return g
+
+# const half=Math.ceil(s*1.9+3)
+static func prop_half(p: Dictionary) -> int:
+	return ceili(float(p.s) * 1.9 + 3.0)
+
+# buildPropSprite's drawing, centred at `at` on any canvas (see draw_tree_sprite).
+static func draw_prop_sprite(g: InkCanvas, p: Dictionary, P: RenderParams, at: Vector2, rng: Mulberry32 = null) -> int:
+	var s: float = p.s
+	var half := prop_half(p)
+	g.set_transform(1, 0, 0, 1, at.x, at.y)  # g.setTransform(DPR,0,0,DPR,half*DPR,half*DPR)
 	g.rotate(p.rot)
 	g.line_cap = "round"  # g.lineJoin="round"; g.lineCap="round";
 	g.stroke_color = P.INK
@@ -252,7 +277,7 @@ static func build_prop_sprite(p: Dictionary, P: RenderParams, rng: Mulberry32 = 
 		g.move_to(v[0].x * 0.55, v[0].y * 0.55)
 		g.line_to(v[3].x * 0.2, v[3].y * 0.2)
 		g.stroke()
-		g.set_transform(1, 0, 0, 1, half, half)  # g.setTransform(DPR,0,0,DPR,half*DPR,half*DPR) -- drops the rotation
+		g.set_transform(1, 0, 0, 1, at.x, at.y)  # g.setTransform(DPR,0,0,DPR,half*DPR,half*DPR) -- drops the rotation
 		g.global_alpha = 0.6
 		g.begin_path()
 		for i in 3:
@@ -262,4 +287,4 @@ static func build_prop_sprite(p: Dictionary, P: RenderParams, rng: Mulberry32 = 
 		g.stroke()
 		g.global_alpha = 1.0
 	p.half = half  # p.sprite=c; p.half=half;  (sprite: set by the caller after rendering)
-	return g
+	return half

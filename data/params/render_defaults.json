@@ -78,5 +78,37 @@
     "prop_collision_radius": 1.25,
     "canopy_shadow_stretch_max": 2.4,
     "prop_mix": { "rock": 0.5, "barrel": 0.3, "crate": 0.2 }
+  },
+  "map_view": {
+    "_about": "The map view (Track V, scripts/render/map_view.gd and chunk_*.gd): the static map baked into chunk textures under a camera. EVERY VALUE IS PROPOSED by Track V (2026-10-09); none is a decision. Scale is NOT here: px_per_m is Track T's (data/terrain/terrain.json scale.px_per_m).",
+    "_proposed": true,
+    "provider": { "value": "terrain", "choices": ["terrain", "scene"], "_reason": "terrain = Track T's levels, hachures and groves (scripts/world/terrain.gd); scene = the prototype's scene generator per chunk (forts, houses, props, trees, no terrain), the stand-in" },
+    "chunk_px": { "value": 1024, "_reason": "one power-of-two texture per chunk (4 MB RGBA8, 5.3 MB with mipmaps); the baker's tiling, independent of the provider's own generation cells" },
+    "prefetch_chunks": { "value": 1, "_reason": "chunks baked beyond the view on every side, so a pan at a fighter's turn speed (~380 px/s at 4 px/m) meets baked ground" },
+    "keep_chunks": { "value": 3, "_reason": "chunks further than this from the view are dropped first when the cache is full" },
+    "max_cached_chunks": { "value": 64, "_reason": "about 340 MB of chunk textures; a 1280x720 view at zoom 0.5 shows 12 chunks" },
+    "max_jobs": { "value": 8, "_reason": "chunks in the bake pipeline at once: most of a job's time is waiting (for the terrain generator's lane, for sprites, for a frame), so more jobs keep the worker threads busy; each holds its 4096 px supersampled render targets only for the frame or two they render" },
+    "max_worker_tasks": { "value": 8, "_reason": "worker threads the baker uses at once: GDScript scales to about 8 threads and then slows down (measured on 32: 256 tree sprites in 820 ms serial, 131 ms on 8, 475 ms on 16, 840 ms on 31)" },
+    "collect_delay_frames": { "value": 0, "_reason": "extra frames between drawing a baked canvas and asking for its pixels. The read-back is asynchronous, so 0; a synchronous read-back (a renderer without a RenderingDevice) waits for every frame in flight -- a sprite page cost ~190 ms of main thread the next frame, ~25 ms four frames later" },
+    "bake_budget_ms": { "value": 6, "_reason": "main-thread time the baker may take per frame (recording runs on worker threads and is not counted)" },
+    "sprite_batch": { "value": 24, "_reason": "sprites recorded per worker task; each sprite is its own small canvas (a canvas group costs a render pass over its whole target, so shared atlas pages were ~70x dearer on the GPU)" },
+    "sprite_cache_max": { "value": 16000, "_reason": "sprites kept across chunks, least recently used dropped first: about 50 chunks' worth of trees" },
+    "zoom": { "min": 0.25, "max": 2.0, "start": 1.0, "wheel_step": 1.15, "_proposed": true, "_reason": "placeholders until Track F sets the zoom limits; 0.25 shows about 5 x 3 chunks" },
+    "pan": { "keys_px_per_s": 1200, "edge_px": 10, "edge": true, "_proposed": true, "_reason": "WASD / arrows, the screen edges, or a middle- or right-button drag" },
+    "tree_pool": {
+      "enabled": false,
+      "variants": 16,
+      "bucket_px": 0.5,
+      "_proposed": true,
+      "_reason": "OFF: CHANGES THE LOOK. One sprite per (radius bucket, variant) shared by every tree in it, instead of one sprite per tree: about 55 buckets x 16 variants, so tree sprite cost stops growing with the map. No rotation or mirroring (a sprite's lit side and shadow-side pen are baked in world orientation). Off until Alex has seen the side-by-side."
+    },
+    "standin": {
+      "fort_chance": 0.08,
+      "house_chance": 0.3,
+      "prop_cluster_chance": 0.25,
+      "struct_margin_px": 24,
+      "_proposed": true,
+      "_reason": "the scene provider only: per chunk, the chance of the prototype's fort, of a house and of a prop cluster; structures stay this far inside their chunk so none crosses a border"
+    }
   }
 }

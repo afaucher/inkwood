@@ -31,10 +31,10 @@ extends RefCounted
 #
 # PARITY vs GAME VALUES: the frame uses data/params/render_defaults.json as it
 # stands -- including decisions taken since the prototype (shadow_strength
-# 0.44, Alex 2026-10-09). A parity render ("parity": true) sets every
-# parameter that carries a `prototype_default` back to it (today only
-# shadow_strength -> 0.92), so the frame can be compared with the browser
-# prototype at its own defaults.
+# 0.44 and the shadow-side pen, Alex 2026-10-09). A parity render ("parity":
+# true) sets every parameter that carries a `prototype_default` back to it
+# (shadow_strength -> 0.92, linework.pen -> "even"), so the frame can be
+# compared with the browser prototype at its own defaults.
 
 const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
 const ShadowPass = preload("res://scripts/render/shadow_pass.gd")
@@ -100,8 +100,8 @@ func _ground_key() -> String:
 # sprite when its key changed. Returns the canvas to render, or null.
 func sync_tree(t: Dictionary) -> InkCanvas:
 	gen.sync_tree(t)  # t.r=...; t.h=...;
-	# const key=t.r.toFixed(1)+"|"+P.rings+"|"+P.wob+"|"+P.lw;
-	var key := "%.1f|%d|%s|%s" % [t.r, P.rings, str(P.wob), str(P.lw)]
+	# const key=t.r.toFixed(1)+"|"+P.rings+"|"+P.wob+"|"+P.lw;  (+ the pen, which the prototype lacks)
+	var key := "%.1f|%d|%s|%s" % [t.r, P.rings, str(P.wob), str(P.lw)] + InkCanvas.pen_key()
 	if key != t.get("key", ""):
 		t.key = key
 		return InkSprites.build_tree_sprite(t, P)  # buildTreeSprite(t)
@@ -109,7 +109,7 @@ func sync_tree(t: Dictionary) -> InkCanvas:
 
 # function syncProp(p){const key=String(P.lw); if(key!==p.key){p.key=key; buildPropSprite(p);}}
 func sync_prop(p: Dictionary) -> InkCanvas:
-	var key := str(P.lw)
+	var key := str(P.lw) + InkCanvas.pen_key()
 	if key != p.get("key", ""):
 		p.key = key
 		return InkSprites.build_prop_sprite(p, P)
@@ -120,13 +120,15 @@ func sync_prop(p: Dictionary) -> InkCanvas:
 # past the one the sprite was drawn for.
 func sync_struct(s: Dictionary) -> InkCanvas:
 	Structures.sync_struct(s, P)
-	if s.key != s.get("sprite_key", ""):
-		s.sprite_key = s.key
+	var key: String = s.key + InkCanvas.pen_key()
+	if key != s.get("sprite_key", ""):
+		s.sprite_key = key
 		return InkStructs.build_struct_sprite(s, P)
 	return null
 
 # Every object whose key changed gets a fresh sprite, rendered in batches.
 func sync_all() -> void:
+	InkCanvas.configure_pen_from(P)  # the pen's shadow side follows P.sunAz
 	var t0 := Time.get_ticks_usec()
 	var owners: Array[Dictionary] = []
 	var canvases: Array = []
@@ -348,6 +350,12 @@ static func apply_prototype_defaults(P: RenderParams) -> Array[String]:
 	var out: Array[String] = []
 	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(P.source_path))
 	var prm: Dictionary = (raw as Dictionary).get("parameters", {}) if raw is Dictionary else {}
+	# linework.pen.prototype_default: the prototype's even line (the pen is InkCanvas's, global)
+	var pen: Dictionary = ((raw as Dictionary).get("linework", {}) as Dictionary).get("pen", {}) if raw is Dictionary else {}
+	if pen.has("prototype_default"):
+		var was_pen := InkCanvas.pen_mode()
+		InkCanvas.set_pen_mode(str(pen.prototype_default))
+		out.append("pen %s -> %s (linework.pen.prototype_default)" % [was_pen, InkCanvas.pen_mode()])
 	for key: String in prm:
 		var entry: Variant = prm[key]
 		if not (entry is Dictionary and (entry as Dictionary).has("prototype_default") and NAMES.has(key)):
