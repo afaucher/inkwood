@@ -51,7 +51,11 @@ The prototype's draw routines are ported onto the drawing layer in
 is in `scripts/sim/`: unit definitions from `data/units/`, the motion
 envelope with inertia, the World (plan, ready-up, resolve) and a dumb AI,
 headless and deterministic (`test_unit_defs`, `test_envelope`,
-`test_turn_loop`, `test_world_api`).
+`test_turn_loop`, `test_world_api`). Terrain is in `scripts/world/terrain*.gd`:
+three height levels from thresholded fbm, generated per chunk from (seed,
+chunk) alone, groves per level, `height_at` / `level_at`; drawn with
+hachures and height-respecting shadows by `scripts/render/terrain_*.gd`
+(`test_terrain`; a look: `scripts/render/terrain_shot.gd`).
 
 **The target is the sandbox demo.** Its exit criteria are Alex's (design doc:
 Execution plan > Sandbox demo exit criteria) and the track plan with folder
@@ -225,6 +229,14 @@ Properties of Godot and PowerShell, not of that game. Entries marked
 - **Subagents share the one built-in browser** and navigate whichever tab is
   active (observed twice 2026-10-09). Open your own tab, re-check the URL
   before each capture, and never close a tab you did not open.
+- **`pass` is a reserved word**: `var pass` is a parse error (observed
+  2026-10-09).
+- **After dot-sourcing `godot_env.ps1`, `powershell` is no longer on that
+  session's PATH** (`Normalize-ProcessPath`), so calling the test runner in
+  the same command fails (observed 2026-10-09). Run the import and the
+  runner as separate commands.
+- **A windowed `SceneTree` script (`--script`) can render offscreen** with
+  `force_draw` from `_initialize()` (observed 2026-10-09; the shot scripts do).
 - **Kill stragglers** if a run hangs: `taskkill //F //IM
   Godot_v4.7-stable_win64.exe` (Windows) or `pkill -f Godot_v` (Linux).
 - **A parse error in one script fails EVERY script that depends on it**

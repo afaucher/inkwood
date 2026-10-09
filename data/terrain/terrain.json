@@ -1,0 +1,91 @@
+{
+  "_about": "Terrain parameters for Track T (scripts/world/terrain.gd generates from them, scripts/render/terrain_draw.gd and terrain_shadows.gd draw from them). EVERY VALUE IS PROPOSED by Track T on 2026-10-09: the design doc leaves the form of height, how height reads in ink, map size and pixels per world unit open (Open design details: Camera and scale, World generation, Terrain and biomes). Record shape as in data/sim/turn.json: {value, _proposed, _reason} until a decision in data/decisions/decisions.json replaces _proposed with its id. World units are METRES; drawing converts with scale.px_per_m. Tree sizes, collision radii, line weights, ink, paper and the sun stay in data/params/render_defaults.json (read through RenderParams); this file only adds what terrain needs.",
+
+  "scale": {
+    "px_per_m": { "value": 4, "_proposed": true, "_reason": "PLACEHOLDER, NOT A PICK (the scale is Alex's open question; the report gives three options with their arithmetic). 4 px/m is option A, true scale at the prototype's tree scale: the prototype's 38 px canopy is then a 9.5 m crown, a mature broadleaf, and a 256 m chunk is a 1024 px texture" }
+  },
+
+  "map": {
+    "bounds_source": { "value": "res://data/sim/turn.json", "_proposed": true, "_reason": "Track S owns the map size (exit criterion 5 is a flight rule; its _derivation sizes the map from the planes' envelopes). Terrain reads map_bounds_m.value from that file so the two can never disagree" },
+    "fallback_bounds_m": { "value": { "x": 0, "y": 0, "width": 5000, "height": 5000 }, "_proposed": true, "_reason": "used only when bounds_source is missing or has no map_bounds_m; the same 5000 m square Track S proposed" }
+  },
+
+  "chunks": {
+    "chunk_m": { "value": 256, "_proposed": true, "_reason": "a chunk is generated from (seed, chunk x, chunk y) alone; 256 m is 1024 px at 4 px/m, one power-of-two texture for Track V's baked map view, and a 5000 m map is 20 x 20 chunks" },
+    "cell_m": { "value": 8, "_proposed": true, "_reason": "marching-squares grid: 32 x 32 cells a chunk. Fine enough for the smallest octave of the height noise (about 30 m), coarse enough that a chunk's field is 1089 noise samples" }
+  },
+
+  "height": {
+    "noise_per_m": { "value": 0.004, "_proposed": true, "_reason": "fbm lattice every 250 m: plateaus a few hundred metres across, so a 320 x 180 m view at zoom 1 often has a scarp in it and a 5 km map has a few dozen uplands" },
+    "octaves": { "value": 4, "_proposed": true, "_reason": "down to a ~30 m lattice: ragged enough edges for bays and spurs, no detail finer than the 8 m grid resolves" },
+    "seed_offset": { "value": 101, "_proposed": true, "_reason": "height noise seed = scene seed % 9973 + 101, the prototype's own way of deriving a field seed (its grove field is seed % 9973 + 3), so the height and grove fields are independent" },
+    "thresholds": { "value": [0.56, 0.66], "_proposed": true, "_reason": "fbm >= 0.56 is upland (level 1), >= 0.66 is the high top (level 2). Two thresholds give the required two levels plus a cheap third; about a third of the map is upland and a tenth of that is high ground" },
+    "level_heights_m": { "value": [0, 12, 24], "_proposed": true, "_reason": "one level per threshold plus the low ground. 12 m is a clear escarpment that casts a shadow about twice a tree's (46 px against ~24 px at 46 degrees, 4 px/m); 24 m for the top. Track S's constraint holds: 24 m plus the tallest tree (~14 m) stays under the 120 m low air band" }
+  },
+
+  "boundary": {
+    "chaikin_passes": { "value": 2, "_proposed": true, "_reason": "as the prototype smooths a freehand wall: two passes turn the marching-squares polyline into a hand-drawn curve" },
+    "resample_m": { "value": 1, "_proposed": true, "_reason": "4 px between contour points at 4 px/m, close to the prototype's 3 px road and wall sampling" }
+  },
+
+  "scarp": {
+    "width_m": { "value": 5, "_proposed": true, "_reason": "the scarp is drawn as a band on the low side of the level boundary (the boundary is its top edge); 5 m (20 px) holds a row of hachures without eating the low ground" }
+  },
+
+  "vegetation": {
+    "dart_area_px": { "value": 75, "_proposed": true, "_reason": "the prototype's dart count, W*H/75 darts per stage, per chunk" },
+    "density_noise_per_px": { "value": 0.006, "_proposed": true, "_reason": "the prototype's grove field, fbm(x*.006, y*.006, ...), in world pixels so groves run on across chunk borders" },
+    "density_octaves": { "value": 3, "_proposed": true, "_reason": "the prototype's" },
+    "density_seed_offset": { "value": 3, "_proposed": true, "_reason": "the prototype's seed % 9973 + 3" },
+    "levels": {
+      "value": [
+        { "threshold": 0.5, "gain": 3.2 },
+        { "threshold": 0.53, "gain": 3.2 },
+        { "threshold": 0.56, "gain": 3.0 }
+      ],
+      "_proposed": true,
+      "_reason": "one entry per level, the prototype's rule `f < threshold || rng() > (f - threshold) * gain` with its own .5 and 3.2 on the low ground; the upland a little sparser and the top sparser again, so the levels differ in texture as well as tone"
+    },
+    "clearance_below_cr": { "value": 0.5, "_proposed": true, "_reason": "a tree on the low side of a scarp keeps its trunk off the slope: its centre stays scarp width + 0.5 x its collision radius from the boundary, so the hachures read" },
+    "clearance_above_cr": { "value": 0.25, "_proposed": true, "_reason": "a tree on top may stand at the edge with its canopy overhanging the slope, as trees on a bluff do; only its trunk keeps a quarter of its collision radius back" }
+  },
+
+  "draw": {
+    "style": { "value": "hachures", "_proposed": true, "_reason": "FIRST OPTION for the open question 'how height reads in ink (contours, hachures or shading)': one contour at the scarp top plus hachures down the slope. 'contours' draws two or three nested contours instead, so a board can show both" },
+    "level_fill": {
+      "ok_lightness_step": { "value": 0.025, "_proposed": true, "_reason": "each level's paper is the paper lifted by one fill-ramp step in OK lightness (palette proposal: lightness is a ramp off paper, never a new hue). 0.025 is under the wall fill's +0.033, so level 2 (+0.05) still sits below the trees' object fill (+0.078)" },
+      "chroma_scale_per_step": { "value": 0.85, "_proposed": true, "_reason": "chroma eased as the fill lightens, as the prototype's fills do (paper C 0.048 to wall fill 0.040)" }
+    },
+    "contour": {
+      "weight": { "value": "wall_edges", "_proposed": true, "_reason": "a line-weight multiplier NAMED from render_defaults.json linework, so terrain shares the one weight table: a scarp top is an earthwork edge, 1.15 x" },
+      "alpha": { "value": 0.9, "_proposed": true, "_reason": "nearly full ink, like the tree rings' .88" },
+      "wobble": { "value": 0.5, "_proposed": true, "_reason": "fraction of the prototype's road-rut wobble, (noise - .5) * 2.6 * (.35 + hand wobble): about +/- 0.6 px at the default hand wobble" },
+      "wobble_noise_per_px": { "value": 0.03, "_proposed": true, "_reason": "the rut wobble's frequency (.09 per 3 px sample)" }
+    },
+    "hachures": {
+      "spacing_px": { "value": 3.5, "_proposed": true, "_reason": "dense enough to read as a tone band at zoom 1, open enough that single strokes still show" },
+      "long": { "value": 1.0, "_proposed": true, "_reason": "long strokes run the full scarp width" },
+      "short": { "value": 0.55, "_proposed": true, "_reason": "alternating long and short strokes, the cartographer's escarpment sign" },
+      "length_jitter": { "value": 0.3, "_proposed": true, "_reason": "noise-driven length spread, so the foot of the scarp is ragged rather than ruled" },
+      "angle_jitter": { "value": 0.18, "_proposed": true, "_reason": "radians of noise-driven lean, a hand's inconsistency" },
+      "weight": { "value": "road_ruts", "_proposed": true, "_reason": "named linework multiplier: the prototype's lightest ground line, 0.8 x" },
+      "alpha": { "value": 0.75, "_proposed": true, "_reason": "lighter than the contour so the edge reads first" },
+      "shape": { "value": "wedge", "_proposed": true, "_reason": "'wedge' tapers each stroke from the top (a filled sliver, the design doc's wanted tapered stroke); 'stroke' is a plain hairline" },
+      "wedge_width_px": { "value": 1.3, "_proposed": true, "_reason": "base width of a wedge; it tapers to 15% of this at the foot" },
+      "break_noise_per_px": { "value": 0.015, "_proposed": true, "_reason": "the prototype's broken-line noise frequency (rut lines, .045 per 3 px sample)" },
+      "break_threshold": { "value": 0.25, "_proposed": true, "_reason": "skip a stroke where that noise is under .25 (the ruts use .3), so the band has gaps like a pen lifting" }
+    },
+    "contours": {
+      "count": { "value": 3, "_proposed": true, "_reason": "the alternative style: the scarp top plus two lines down the slope" },
+      "spacing_scarp": { "value": 0.5, "_proposed": true, "_reason": "lines every half scarp width, so the last one is the scarp foot" },
+      "alphas": { "value": [0.9, 0.6, 0.4], "_proposed": true, "_reason": "fading down the slope" },
+      "break_thresholds": { "value": [0.0, 0.2, 0.3], "_proposed": true, "_reason": "the top line is unbroken, the lower ones break like the wall crest lines" },
+      "break_noise_per_px": { "value": 0.015, "_proposed": true, "_reason": "the same broken-line frequency as the hachures (the prototype's rut lines)" },
+      "weight": { "value": "road_ruts", "_proposed": true, "_reason": "named linework multiplier for the lines below the top one" }
+    }
+  },
+
+  "shadow": {
+    "lee_dot_min": { "value": -0.05, "_proposed": true, "_reason": "a boundary segment casts a prism only when its down-slope normal faces at most this far toward the sun; sun-facing segments would only sweep over the upland itself, which the receiver cut removes anyway" }
+  }
+}
