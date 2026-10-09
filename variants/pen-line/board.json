@@ -1,0 +1,48 @@
+{
+  "id": "pen-line",
+  "date": "2026-10-09",
+  "area": "Linework",
+  "question": "Should an ink line's width vary along it, and how? (the design doc's still-to-build shared stroke routine with width variation and tapered ends)",
+  "source": "reference/mockups/unit_sheet.html with its Pen line switch; seed 20261009; shadows 0.44; everything else at the sheet's defaults",
+  "seed": 20261009,
+  "options": [
+    {
+      "name": "A",
+      "pen": "even",
+      "about": "today: one width along the whole stroke",
+      "files": [
+        "roster_even.png",
+        "strip_even.png"
+      ]
+    },
+    {
+      "name": "B",
+      "pen": "taper",
+      "about": "hand pressure: width swells and thins along the stroke (noise of arc length, 0.62-1.37 x) and tapers over up to 7 px where the pen lands and lifts, including at every break",
+      "files": [
+        "roster_taper.png",
+        "strip_taper.png"
+      ]
+    },
+    {
+      "name": "C",
+      "pen": "light",
+      "about": "shadow side: a closed outline is 0.42 x on edges facing the sun and up to 1.87 x on edges facing away; open lines 0.85 x with tapered ends",
+      "files": [
+        "roster_light.png",
+        "strip_light.png"
+      ]
+    },
+    {
+      "name": "D",
+      "pen": "nib",
+      "about": "broad nib held at 45 degrees: width 0.28-1.58 x by stroke direction, tapered ends",
+      "files": [
+        "roster_nib.png",
+        "strip_nib.png"
+      ]
+    }
+  ],
+  "sheet": "board.png (crops: light fighter and anti-aircraft battery at 1.55 x, tree and house at the prototype's size at 3 x)",
+  "chosen": null
+}

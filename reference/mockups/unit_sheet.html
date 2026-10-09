@@ -137,6 +137,14 @@ details.defs summary{cursor:pointer;padding:10px 12px;font-size:13px;font-weight
       <div class="ctl"><label for="lw">Line weight</label><output id="lwV"></output><input type="range" id="lw" min="0.5" max="2" step="0.05" value="0.8"></div>
       <div class="ctl"><label for="wob">Hand wobble</label><output id="wobV"></output><input type="range" id="wob" min="0" max="1.5" step="0.05" value="0.6"></div>
       <div class="ctl"><label for="stip">Stipple density</label><output id="stipV"></output><input type="range" id="stip" min="0" max="2.5" step="0.05" value="1"></div>
+      <h2 style="margin-top:14px">Pen line <span class="proposed">proposed</span></h2>
+      <div class="seg" id="pen" style="flex-wrap:wrap">
+        <button type="button" data-v="even" aria-pressed="true">Even (today)</button>
+        <button type="button" data-v="taper" aria-pressed="false">Tapered</button>
+        <button type="button" data-v="light" aria-pressed="false">Shadow side</button>
+        <button type="button" data-v="nib" aria-pressed="false">Broad nib</button>
+      </div>
+      <p class="note">How an ink line's width varies along it. Even: one width, as today. Tapered: hand pressure swells and thins the line and it tapers where the pen lands and lifts. Shadow side: outlines heavier on the edges facing away from the sun. Broad nib: width follows the stroke's direction.</p>
     </section>
 
     <section class="ctlgroup">
@@ -277,6 +285,71 @@ function pen(g,V,seed){
     path:(pts,o={})=>inkPath(g,pts,Object.assign({V,seed:next()},o)),
     line:(pts,o={})=>inkPath(g,pts,Object.assign({V,seed:next(),closed:false,weight:.55,alpha:.6},o))};
 }
+
+// =====================================================================================
+// THE PEN LINE (proposed; for Alex's question of 2026-10-09). The design doc's still-to-build
+// "shared stroke routine with width variation, tapered ends" (Ink line renderer), as a knob:
+//   even   today's line: one width along the whole stroke
+//   taper  a hand's pressure: the width swells and thins along the stroke (noise of arc
+//          length) and tapers to a point where the pen lands and lifts, including at breaks
+//   light  the old engraver's rule: an outline is heavier on the edges that face away from
+//          the sun (the shadow side) and thin on the lit side, which models form with line alone
+//   nib    a broad nib held at 45 degrees: the width follows the stroke's direction
+// Every ink stroke on the sheet ends in ctx.stroke(), so the pen is applied there: subpaths are
+// recorded as they are built, and an INK-coloured stroke is drawn as filled ribbons instead.
+// Shadow masks (black), slope tints and anything with an arc or rect in its path are untouched.
+// =====================================================================================
+P.pen="even";
+(()=>{
+  const C=CanvasRenderingContext2D.prototype;
+  const o={beginPath:C.beginPath,moveTo:C.moveTo,lineTo:C.lineTo,closePath:C.closePath,stroke:C.stroke,arc:C.arc,rect:C.rect,fill:C.fill};
+  const probe=document.createElement("canvas").getContext("2d"); probe.strokeStyle=INK; const INK_N=probe.strokeStyle;
+  C.beginPath=function(){this.__sp=[]; this.__odd=false; return o.beginPath.call(this);};
+  C.moveTo=function(x,y){(this.__sp||(this.__sp=[])).push({pts:[[x,y]],closed:false}); return o.moveTo.call(this,x,y);};
+  C.lineTo=function(x,y){const sp=this.__sp||(this.__sp=[]); if(!sp.length) sp.push({pts:[],closed:false}); sp[sp.length-1].pts.push([x,y]); return o.lineTo.call(this,x,y);};
+  C.closePath=function(){const sp=this.__sp; if(sp&&sp.length) sp[sp.length-1].closed=true; return o.closePath.call(this);};
+  C.arc=function(...a){this.__odd=true; return o.arc.apply(this,a);};
+  C.rect=function(...a){this.__odd=true; return o.rect.apply(this,a);};
+  C.stroke=function(...a){
+    if(P.pen==="even"||a.length||this.__odd||!this.__sp||!this.__sp.length||this.strokeStyle!==INK_N) return o.stroke.apply(this,a);
+    const sp=this.__sp, fs=this.fillStyle; this.fillStyle=this.strokeStyle;
+    for(const s of sp) ribbon(this,s.pts,s.closed,this.lineWidth);
+    this.fillStyle=fs;
+    // put the caller's path back, in case it fills or strokes it again
+    o.beginPath.call(this); for(const s of sp){s.pts.forEach((p,i)=>i?o.lineTo.call(this,p[0],p[1]):o.moveTo.call(this,p[0],p[1])); if(s.closed) o.closePath.call(this);}
+  };
+  const smooth=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
+  function ribbon(g,raw,closed,base){
+    const pts=[]; for(const p of raw){const q=pts[pts.length-1]; if(!q||Math.hypot(p[0]-q[0],p[1]-q[1])>1e-3) pts.push(p);}
+    if(closed&&pts.length>2){const a=pts[0],b=pts[pts.length-1]; if(Math.hypot(a[0]-b[0],a[1]-b[1])<1e-3) pts.pop();}
+    const n=pts.length; if(n<2) return;
+    const s=[0]; for(let i=1;i<n;i++) s.push(s[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+    const L=s[n-1]+(closed?Math.hypot(pts[0][0]-pts[n-1][0],pts[0][1]-pts[n-1][1]):0);
+    let A=0; if(closed) for(let i=0;i<n;i++){const p=pts[i],q=pts[(i+1)%n]; A+=p[0]*q[1]-q[0]*p[1];}
+    const out=A>0?-1:1;                       // the left normal points inward when the signed area is positive
+    const sd=shadowDir(), seed=((pts[0][0]*131+pts[0][1]*71)|0), nib=-Math.PI/4;
+    const Tl=Math.min(7,L*.4), left=[], right=[];
+    for(let i=0;i<n;i++){
+      const a=closed?pts[(i-1+n)%n]:pts[Math.max(0,i-1)], b=closed?pts[(i+1)%n]:pts[Math.min(n-1,i+1)];
+      let tx=b[0]-a[0], ty=b[1]-a[1]; const l=Math.hypot(tx,ty)||1; tx/=l; ty/=l;
+      const nx=-ty, ny=tx;
+      const end=closed?1:smooth(Math.min(s[i],L-s[i])/(Tl||1));   // 0 at a pen landing or lift
+      let f=1;
+      if(P.pen==="taper") f=(.62+.75*vnoise(s[i]*.045,9.3,seed))*(.12+.88*end)*1.1;
+      else if(P.pen==="light"){
+        const d=(nx*sd[0]+ny*sd[1])*out;      // + where the edge faces away from the sun
+        f=(closed?.42+1.45*Math.max(0,d):.85)*(.25+.75*end);
+      } else if(P.pen==="nib") f=(.28+1.3*Math.abs(Math.sin(Math.atan2(ty,tx)-nib)))*(.3+.7*end);
+      const w=base*f/2;
+      left.push([pts[i][0]+nx*w,pts[i][1]+ny*w]); right.push([pts[i][0]-nx*w,pts[i][1]-ny*w]);
+    }
+    o.beginPath.call(g);
+    left.forEach((p,i)=>i?o.lineTo.call(g,p[0],p[1]):o.moveTo.call(g,p[0],p[1]));
+    if(closed){o.closePath.call(g); for(let i=n-1;i>=0;i--) (i===n-1?o.moveTo:o.lineTo).call(g,right[i][0],right[i][1]); o.closePath.call(g);}
+    else{for(let i=n-1;i>=0;i--) o.lineTo.call(g,right[i][0],right[i][1]); o.closePath.call(g);}
+    o.fill.call(g,"nonzero");
+  }
+})();
 
 // ---------- materials: all linework ----------
 function clipTo(g,o,fn){g.save();g.beginPath();addPoly(g,o,true);g.clip();fn();g.restore();}
@@ -1318,6 +1391,7 @@ function seg(id,fn){
 }
 seg("side",v=>{P.side=v; requestRender();});
 seg("view",v=>{P.view=v; requestRender();});
+seg("pen",v=>{P.pen=v; renderAll();});  // drawn at once: a hidden tab never runs requestAnimationFrame
 const vlist=document.getElementById("variantList");
 function buildVariantList(){
   vlist.innerHTML="";

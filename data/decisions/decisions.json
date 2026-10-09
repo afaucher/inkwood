@@ -6,10 +6,16 @@
     "area": "the design doc area, e.g. Trees, Shadows, Walls, UI",
     "question": "what was being decided, in one line",
     "board": "variants/<id>/ -- the board the choice was made from; its seed and parameter sets are in that folder's board.json",
-    "options": ["the 3-6 variant names shown"],
+    "options": [
+      "the 3-6 variant names shown"
+    ],
     "chosen": "a variant name, 'blend of A and B', or 'new round'",
-    "parameters": { "the exact values chosen": "..." },
-    "applied_to": ["data/params/render_defaults.json#parameters.canopy_size"],
+    "parameters": {
+      "the exact values chosen": "..."
+    },
+    "applied_to": [
+      "data/params/render_defaults.json#parameters.canopy_size"
+    ],
     "status": "proposed | chosen by Alex | logged in design doc",
     "notes": "optional"
   },
@@ -35,6 +41,35 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'default to D for now'. Open follow-up raised with it: whether shadows should darken as the sun climbs (a sun-elevation coupling); not decided."
+    },
+    {
+      "id": "unit-sheet-choices",
+      "date": "2026-10-09",
+      "area": "Units, Palette",
+      "question": "The unit art mockup's proposals: side colours, where each side's colour goes, and how far a plane's shadow sits from it",
+      "board": "reference/mockups/unit_sheet.html (a mockup sheet, not a variant board)",
+      "options": [
+        "as proposed on the sheet"
+      ],
+      "chosen": "as proposed",
+      "parameters": {
+        "side_a": "#A45A4E",
+        "side_b": "#4E72AC",
+        "accent_zones": {
+          "aircraft": "wing roundels",
+          "tank": "engine-deck recognition panel",
+          "anti_aircraft_battery": "ground panel in the pit",
+          "small_cruiser": "quarterdeck panel",
+          "radio_tower": "hut roof panel"
+        },
+        "aircraft_shadow_altitude_scale": 0.01
+      },
+      "applied_to": [
+        "data/params/render_defaults.json#palette.accents",
+        "data/params/render_defaults.json#parameters.aircraft_shadow_altitude_scale"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'I love the rest of the decisions. The accent colors are perfectly toned. Those might be useful colors to mirror in the HUD.' The pen line was left open (variants/pen-line/)."
     }
   ]
 }
