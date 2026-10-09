@@ -1,0 +1,1391 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Inkwood Unit Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: the paper sheet is the stage (roster above, true-scale strip below); the prototype's tool palette sits beside it (below it on phones).
+   UI chrome tokens are the prototype's own (reference/inkwood-renderer.html). The paper inside the canvases is a fixed world, independent of theme. */
+:root{
+  --bg:#e5e9eb; --panel:#f2f4f5; --fg:#1c2630; --muted:#56646f; --line:#c8d0d5;
+  --accent:#3d6c8f; --accent-fg:#ffffff; --chip:rgba(28,38,48,.8); --chip-fg:#f2f4f5;
+  --paper:#d9ccaa; --side-a:#a45a4e; --side-b:#4e72ac;
+  --f-display:"IM Fell English SC","Iowan Old Style",Georgia,serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11171c; --panel:#182027; --fg:#e1e6ea; --muted:#93a1ac; --line:#2a3640;
+    --accent:#86b0cf; --accent-fg:#0d151b; --chip:rgba(9,14,18,.82); --chip-fg:#e1e6ea; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11171c; --panel:#182027; --fg:#e1e6ea; --muted:#93a1ac; --line:#2a3640;
+  --accent:#86b0cf; --accent-fg:#0d151b; --chip:rgba(9,14,18,.82); --chip-fg:#e1e6ea; color-scheme:dark;
+}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+.app{display:flex;flex-direction:column;min-height:100%}
+.app>*{min-width:0}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 14px;padding-block:10px;padding-inline:16px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-family:var(--f-display);font-weight:400;font-size:24px;line-height:1.1;margin:0;letter-spacing:.01em;text-wrap:balance}
+header p{margin:0;color:var(--muted);font-size:12.5px}
+.sheet{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;padding-block:16px 28px;padding-inline:16px;min-width:0;align-content:start}
+.board{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0}
+.board-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px}
+h2{margin:0;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.board-head p{margin:0;font-size:12.5px;color:var(--muted);max-width:68ch}
+.paperbox{background:var(--paper);border:1px solid var(--line);border-radius:4px;overflow:hidden;min-width:0}
+.paperbox canvas{display:block}
+#roster{cursor:pointer}
+.strip-wrap{overflow-x:auto;overscroll-behavior-x:contain}
+.panel{padding-block:14px 28px;padding-inline:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px 22px;background:var(--panel);align-content:start;border-top:1px solid var(--line)}
+section.ctlgroup{display:grid;gap:10px;min-width:0;align-content:start}
+.ctl{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:baseline}
+.ctl label{font-size:13.5px}
+.ctl output{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ctl input[type=range]{grid-column:1/-1;width:100%;margin:2px 0 0;accent-color:var(--accent);height:24px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{flex:1;min-width:0;border:0;background:transparent;color:var(--fg);font:500 13px var(--f-body);padding:8px 6px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.seg.small button{padding:5px 4px;font-size:12.5px}
+.sw{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.25);flex:none}
+.sw.a{background:var(--side-a)} .sw.b{background:var(--side-b)}
+.vrow{display:grid;grid-template-columns:minmax(0,1fr) 120px;align-items:center;gap:8px;font-size:13px}
+.vlist{display:grid;gap:6px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;border:1px solid var(--line);background:transparent;color:var(--fg);font:500 13px var(--f-body);padding:9px 12px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.note{font-size:12px;color:var(--muted);margin:0}
+.chip{display:inline-block;background:var(--chip);color:var(--chip-fg);font-family:var(--f-mono);font-size:11.5px;padding:4px 8px;border-radius:4px;font-variant-numeric:tabular-nums}
+.seedrow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.status{font-size:12px;color:var(--muted);min-height:1.2em;margin:0}
+.proposed{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 4px;margin-left:4px}
+details.defs{border:1px solid var(--line);border-radius:6px;background:var(--panel);min-width:0}
+details.defs summary{cursor:pointer;padding:10px 12px;font-size:13px;font-weight:500}
+.defs-body{padding-inline:12px;padding-block:0 12px;overflow-x:auto;display:grid;gap:12px}
+.defs-body h3{margin:0;font-size:12.5px;font-weight:600}
+.defs-body table{border-collapse:collapse;font-family:var(--f-mono);font-size:11.5px;font-variant-numeric:tabular-nums}
+.defs-body td{padding:1px 14px 1px 0;white-space:nowrap;vertical-align:top}
+.defs-body td:first-child{color:var(--muted)}
+.defs-body .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px 20px}
+@media (min-width:980px){
+  .app{display:grid;grid-template-columns:minmax(0,1fr) 340px;grid-template-rows:auto 1fr}
+  header{grid-column:1/-1}
+  .panel{grid-template-columns:1fr;border-top:0;border-left:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);align-self:start;max-height:100dvh;overflow-y:auto}
+}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+</style>
+
+<div class="app">
+  <header>
+    <h1>Inkwood Unit Sheet</h1>
+    <p>The initial roster in the prototype's ink · every outline is data in metres</p>
+  </header>
+
+  <main class="sheet">
+    <section class="board" aria-labelledby="hRoster">
+      <div class="board-head"><h2 id="hRoster">Roster</h2><p>Each unit is fitted to its cell; the inked bar under it is 10 m. Aircraft fly at the altitude knob's height, so their shadows sit apart. Tap a unit for its next variant.</p></div>
+      <div class="paperbox"><canvas id="roster" role="img" aria-label="Unit roster drawn in ink: light fighter, heavy fighter, bomber, tank, anti-aircraft battery, radio tower, small cruiser, and a light fighter in both side colours"></canvas></div>
+    </section>
+
+    <section class="board" aria-labelledby="hStrip">
+      <div class="board-head"><h2 id="hStrip">True scale</h2><p>Every unit at one pixels-per-metre, beside the prototype's tree (19 px canopy) and house (28 px), which keep their own pixel size. The pixels-per-metre knob changes only this strip. It scrolls sideways when it is wider than the screen.</p></div>
+      <div class="paperbox strip-wrap"><canvas id="strip" role="img" aria-label="All units at one scale beside a tree and a house, with a phone-width bracket and a battleship-length bar"></canvas></div>
+    </section>
+
+    <details class="defs" id="defs">
+      <summary>Unit definitions in metres (the chosen variant of each unit)</summary>
+      <div class="defs-body"><p class="note">Fractions (nose, wing_at, canopy_at and the like) are fractions of the unit's length; angles are degrees; everything else is metres or a count. These are the numbers each silhouette is built from.</p><div class="grid" id="defsBody"></div></div>
+    </details>
+  </main>
+
+  <aside class="panel" aria-label="Controls">
+    <section class="ctlgroup">
+      <h2>Seed</h2>
+      <div class="seedrow"><span class="chip" id="seedChip">seed 20261009</span></div>
+      <div class="actions">
+        <button type="button" class="btn primary" id="newSeed">New seed</button>
+        <button type="button" class="btn" id="resetSeed">Project seed</button>
+        <button type="button" class="btn" id="savePng">Save PNG</button>
+      </div>
+      <p class="status" id="status" aria-live="polite"></p>
+    </section>
+
+    <section class="ctlgroup">
+      <h2>Roster view</h2>
+      <div class="seg" id="view">
+        <button type="button" data-v="roster" aria-pressed="true">Chosen variants</button>
+        <button type="button" data-v="variants" aria-pressed="false">All variants</button>
+      </div>
+      <div class="vlist" id="variantList"></div>
+    </section>
+
+    <section class="ctlgroup">
+      <h2>Sides <span class="proposed">proposed</span></h2>
+      <div class="seg" id="side">
+        <button type="button" data-v="A" aria-pressed="true"><span class="sw a"></span>Side A</button>
+        <button type="button" data-v="B" aria-pressed="false"><span class="sw b"></span>Side B</button>
+      </div>
+      <p class="note">One accent per side, on one zone only: wing roundels, a recognition panel on the tank's engine deck, the battery's ground panel, the cruiser's quarterdeck and the tower hut's roof. Proposed: brick red <span style="font-family:var(--f-mono)">#A45A4E</span> oklch(0.551 0.100 30) and slate blue <span style="font-family:var(--f-mono)">#4E72AC</span> oklch(0.551 0.100 260), equal lightness and chroma. The last roster cell shows both.</p>
+    </section>
+
+    <section class="ctlgroup">
+      <h2>Ink</h2>
+      <div class="ctl"><label for="lw">Line weight</label><output id="lwV"></output><input type="range" id="lw" min="0.5" max="2" step="0.05" value="0.8"></div>
+      <div class="ctl"><label for="wob">Hand wobble</label><output id="wobV"></output><input type="range" id="wob" min="0" max="1.5" step="0.05" value="0.6"></div>
+      <div class="ctl"><label for="stip">Stipple density</label><output id="stipV"></output><input type="range" id="stip" min="0" max="2.5" step="0.05" value="1"></div>
+    </section>
+
+    <section class="ctlgroup">
+      <h2>Light</h2>
+      <div class="ctl"><label for="sunAz">Sun direction</label><output id="sunAzV"></output><input type="range" id="sunAz" min="0" max="359" step="1" value="315"></div>
+      <div class="ctl"><label for="elev">Sun elevation</label><output id="elevV"></output><input type="range" id="elev" min="12" max="85" step="1" value="46"></div>
+    </section>
+
+    <section class="ctlgroup">
+      <h2>Scale and altitude</h2>
+      <div class="ctl"><label for="ppm">Pixels per metre (true-scale strip)</label><output id="ppmV"></output><input type="range" id="ppm" min="1" max="8" step="0.1" value="3.8"></div>
+      <div class="ctl"><label for="alt">Aircraft altitude</label><output id="altV"></output><input type="range" id="alt" min="0" max="2000" step="10" value="600"></div>
+      <div class="ctl"><label for="altScale">Altitude drawn as shadow height <span class="proposed">proposed</span></label><output id="altScaleV"></output><input type="range" id="altScale" min="0.002" max="0.03" step="0.001" value="0.01"></div>
+      <p class="note">A true 600 m altitude would throw a plane's shadow 580 m away. Proposed: draw the shadow as if the plane flew at a fixed fraction of its altitude, so the gap still grows with height and shrinks as it descends.</p>
+    </section>
+  </aside>
+</div>
+
+<script>
+(() => {
+"use strict";
+// =====================================================================================
+// Palette: the prototype's constants, verbatim. The map is a fixed paper world,
+// independent of UI theme. Draw code below names ROLES (fill, shade, slope, glass,
+// accent), never a new hue: hue is reserved for paper, ink, shadow and accents.
+// =====================================================================================
+const PAPER=[217,204,170], CREAM="#efe6cd", ROCK="#e4d9bd", INK="#3d3226", DIRT="#5d5140", WALL="#e2d7ba", ROOF="#ebe5d2";
+const FIBRE="#f4ecd6";
+const LX=-Math.SQRT1_2, LY=-Math.SQRT1_2;   // fixed "drawing light" for interior detail (top-left)
+const DPR=Math.min(2, window.devicePixelRatio||1);
+const TAU=Math.PI*2, SEED0=20261009;
+// PROPOSED side accents: same OKLCH lightness (0.551) and chroma (0.100), hue 30 and 260.
+const ACCENT={A:{hex:"#a45a4e",name:"brick red",oklch:"oklch(0.551 0.100 30)"},B:{hex:"#4e72ac",name:"slate blue",oklch:"oklch(0.551 0.100 260)"}};
+
+const P={seed:SEED0,lw:.8,wob:.6,stip:1,ppm:3.8,sunAz:315,elev:46,shadowStr:.44, /* Alex 2026-10-09, variants/shadow-strength (the prototype used .92) */shadowCol:"#3d6c8f",
+  alt:600,altScale:.01,side:"A",view:"roster",grain:.55,rings:3,treeSize:19,houseSize:28,variant:[0,0,0,0,0,0,0]};
+
+// ---------- random + noise (prototype, verbatim) ----------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function hash2(i,j,s){let h=(Math.imul(i,374761393)+Math.imul(j,668265263)+Math.imul(s,1442695041))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return(h>>>0)/4294967296;}
+function vnoise(x,y,s){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+  const a=hash2(xi,yi,s),b=hash2(xi+1,yi,s),c=hash2(xi,yi+1,s),d=hash2(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;}
+function fbm(x,y,s,o){let v=0,a=.5,f=1,n=0;for(let i=0;i<o;i++){v+=a*vnoise(x*f,y*f,s+i*17);n+=a;a*=.5;f*=2.03;}return v/n;}
+
+// ---------- prototype helpers, verbatim ----------
+const hexRGB=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const mix=(a,b,t)=>{const pa=hexRGB(a),pb=hexRGB(b);return `rgb(${pa.map((v,i)=>Math.round(v+(pb[i]-v)*t))})`;};
+function shadowDir(){const az=(P.sunAz+90)*Math.PI/180; return [Math.cos(az),Math.sin(az)];}
+function hull(pts){
+  const p=pts.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]), cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lo=[],up=[];
+  for(const q of p){while(lo.length>=2&&cross(lo[lo.length-2],lo[lo.length-1],q)<=0)lo.pop();lo.push(q);}
+  for(let i=p.length-1;i>=0;i--){const q=p[i];while(up.length>=2&&cross(up[up.length-2],up[up.length-1],q)<=0)up.pop();up.push(q);}
+  up.pop();lo.pop();return lo.concat(up);
+}
+function addPoly(g,p,closed){g.moveTo(p[0][0],p[0][1]);for(let i=1;i<p.length;i++)g.lineTo(p[i][0],p[i][1]);if(closed)g.closePath();}
+function resample(src,step,closed){
+  const pts=closed?src.concat([src[0]]):src, out=[pts[0]]; let acc=0;
+  for(let i=1;i<pts.length;i++){
+    let [ax,ay]=pts[i-1]; const [bx,by]=pts[i]; let seg=Math.hypot(bx-ax,by-ay);
+    while(acc+seg>=step){const t=(step-acc)/seg; ax+=(bx-ax)*t; ay+=(by-ay)*t; out.push([ax,ay]); seg=Math.hypot(bx-ax,by-ay); acc=0;}
+    acc+=seg;
+  }
+  if(!closed){const e=pts[pts.length-1], l=out[out.length-1]; if(Math.hypot(e[0]-l[0],e[1]-l[1])>step*.3) out.push(e);}
+  else if(out.length>2){const l=out[out.length-1]; if(Math.hypot(l[0]-out[0][0],l[1]-out[0][1])<step*.5) out.pop();}
+  return out;
+}
+
+// ---------- colour roles (palette-architecture: fills are the paper ramp, shading is a mix toward the one shadow tint) ----------
+const shade=f=>mix(P.shadowCol,f,.58);   // as the prototype's shaded roof half: shadow mixed 42% in
+const slope=f=>mix(P.shadowCol,f,.70);   // as the prototype's wall slope: shadow mixed 30% in
+const glassLit=()=>slope(ROOF), glassShade=()=>shade(ROOF);   // PROPOSED role: canopy glass reuses the two shade steps
+const accent=side=>ACCENT[side].hex;
+const sunL=()=>1/Math.tan(P.elev*Math.PI/180);
+const stretchMax=()=>Math.min(2.4,1+sunL()*.3);               // the prototype's canopy-shadow stretch
+const altVis=()=>P.alt*P.altScale;                              // PROPOSED: metres of drawn shadow height per metre of altitude
+// No stretch for a plane: under parallel sunlight a flat wing's shadow on flat ground is its own size and
+// shape, only offset. (The canopy stretch is for a tall rounded crown; on a plane it made the shadow ~17% long.)
+const planeStretch=()=>1;
+
+// =====================================================================================
+// The ink pipeline. Silhouettes are point lists in METRES; a view maps them to pixels;
+// the pen (wobble, breaks, weights, alphas) works in pixels, as the prototype's does.
+// =====================================================================================
+function view(x,y,ppm,rot){return {x,y,ppm,rot,c:Math.cos(rot),s:Math.sin(rot)};}
+function tp(V,p){const x=p[0]*V.ppm,y=p[1]*V.ppm;return [V.x+x*V.c-y*V.s,V.y+x*V.s+y*V.c];}
+function tv(V,d){return [d[0]*V.c-d[1]*V.s,d[0]*V.s+d[1]*V.c];}
+const tps=(V,pts)=>pts.map(p=>tp(V,p));
+function subdivide(pts,closed,step){
+  const out=[], n=pts.length, lim=closed?n:n-1;
+  for(let i=0;i<lim;i++){const a=pts[i],b=pts[(i+1)%n],k=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/step));
+    for(let j=0;j<k;j++){const t=j/k;out.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);}}
+  if(!closed) out.push(pts[n-1].slice(0,2));
+  return out;
+}
+function perim(pts,closed){let s=0;for(let i=1;i<pts.length;i++)s+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+  if(closed&&pts.length>1){const a=pts[pts.length-1],b=pts[0];s+=Math.hypot(b[0]-a[0],b[1]-a[1]);}return s;}
+// hand wobble: each contour point is pushed along its normal by value noise of arc length.
+// Closed contours sample the noise on a circle (as scallop() does) so there is no seam.
+function wobble(pts,closed,amp,seed){
+  const n=pts.length; if(amp<=0||n<3) return pts;
+  const per=perim(pts,closed)||1, R=per*.055/TAU, out=[]; let s=0;
+  for(let i=0;i<n;i++){
+    if(i) s+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+    const a=closed?pts[(i-1+n)%n]:pts[Math.max(i-1,0)], b=closed?pts[(i+1)%n]:pts[Math.min(i+1,n-1)];
+    const tx=b[0]-a[0],ty=b[1]-a[1],l=Math.hypot(tx,ty)||1,nx=-ty/l,ny=tx/l;
+    const v=closed?vnoise(Math.cos(s/per*TAU)*R+7,Math.sin(s/per*TAU)*R+7,seed):vnoise(s*.055,1.7,seed);
+    const d=(v*2-1)*amp; out.push([pts[i][0]+nx*d,pts[i][1]+ny*d]);
+  }
+  return out;
+}
+// broken lines: the pen lifts where a noise value along the stroke falls under the threshold
+function strokePts(g,pts,closed,breaks,seed,freq){
+  g.beginPath();
+  if(!breaks){addPoly(g,pts,closed);g.stroke();return;}
+  let pen=false,s=0; const n=pts.length, lim=closed?n+1:n;
+  for(let k=0;k<lim;k++){const p=pts[k%n]; if(k){const q=pts[(k-1)%n]; s+=Math.hypot(p[0]-q[0],p[1]-q[1]);}
+    if(vnoise(s*(freq||.07),4.1,seed+3)<breaks){pen=false;continue;}
+    if(!pen){g.moveTo(p[0],p[1]);pen=true;} else g.lineTo(p[0],p[1]);}
+  g.stroke();
+}
+// inkPath(g, pointsInMetres, {V, closed, fill, weight (x line weight), alpha, breaks, wob, seed}) -> the inked pixel contour
+function inkPath(g,ptsM,o){
+  const V=o.V, closed=o.closed!==false;
+  let pts=subdivide(tps(V,ptsM),closed,o.step||2.4);
+  const per=perim(pts,closed);
+  pts=wobble(pts,closed,P.wob*(o.wob??1)*1.05*Math.min(1,per/90),o.seed|0);
+  if(o.fill){g.beginPath();addPoly(g,pts,closed);g.fillStyle=o.fill;g.fill();}
+  const w=o.weight??1.2;
+  if(w>0){g.strokeStyle=INK;g.lineWidth=w*P.lw;g.globalAlpha=o.alpha??1;strokePts(g,pts,closed,o.breaks||0,(o.seed|0)+11,o.freq);g.globalAlpha=1;}
+  return pts;
+}
+function strokeO(g,pts,w,alpha){g.strokeStyle=INK;g.lineWidth=w*P.lw;g.globalAlpha=alpha??1;g.beginPath();addPoly(g,pts,true);g.stroke();g.globalAlpha=1;}
+// a pen per drawn unit: deterministic seeds, a fresh rng per material so one knob never reshuffles another
+function pen(g,V,seed){
+  let k=0; const next=()=>(seed+(++k)*7919)|0;
+  return {g,V,r:()=>mulberry32(next()),
+    path:(pts,o={})=>inkPath(g,pts,Object.assign({V,seed:next()},o)),
+    line:(pts,o={})=>inkPath(g,pts,Object.assign({V,seed:next(),closed:false,weight:.55,alpha:.6},o))};
+}
+
+// ---------- materials: all linework ----------
+function clipTo(g,o,fn){g.save();g.beginPath();addPoly(g,o,true);g.clip();fn();g.restore();}
+function cen(o){let x=0,y=0;for(const p of o){x+=p[0];y+=p[1];}return[x/o.length,y/o.length];}
+function bbox(o){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const p of o){if(p[0]<x0)x0=p[0];if(p[1]<y0)y0=p[1];if(p[0]>x1)x1=p[0];if(p[1]>y1)y1=p[1];}return[x0,y0,x1,y1];}
+// shaded half: fill the part of the outline on the side (p-c).n > 0, exactly as a roof half is shaded
+function shadeSide(g,o,c,n,col){
+  clipTo(g,o,()=>{const B=5000,t=[-n[1],n[0]];g.beginPath();
+    g.moveTo(c[0]+t[0]*B,c[1]+t[1]*B);g.lineTo(c[0]+t[0]*B+n[0]*B,c[1]+t[1]*B+n[1]*B);
+    g.lineTo(c[0]-t[0]*B+n[0]*B,c[1]-t[1]*B+n[1]*B);g.lineTo(c[0]-t[0]*B,c[1]-t[1]*B);g.closePath();g.fillStyle=col;g.fill();});
+}
+// a cylinder lying along the unit's axis (fuselage, nacelle, barrel): the half whose normal points away from the sun, split on the spine
+function shadeAxis(g,o,V,cx,col,axisLocal){
+  const ax=axisLocal||[0,1], n=tv(V,[ax[1],-ax[0]]), sd=shadowDir(), d=n[0]*sd[0]+n[1]*sd[1], nn=d>=0?n:[-n[0],-n[1]];
+  shadeSide(g,o,tp(V,cx),nn,col); return nn;
+}
+// a dome or vertical cylinder (turret, funnel): the half facing away from the sun
+function shadeDome(g,o,c,col){shadeSide(g,o,c,shadowDir(),col);}
+// lateral direction away from the detail light, for stipple on a long body
+function awayN(V,axisLocal){const ax=axisLocal||[0,1], n=tv(V,[ax[1],-ax[0]]);return n[0]*LX+n[1]*LY>0?[-n[0],-n[1]]:n;}
+// stipple (drawLobe's dots: radius .45, alpha .55), either on the side away from the light or as an even field (canvas)
+function stipple(g,o,opt){
+  const rng=opt.rng, [x0,y0,x1,y1]=bbox(o), cnt=Math.round((x1-x0)*(y1-y0)*opt.density/100*P.stip);
+  if(cnt<1) return;
+  clipTo(g,o,()=>{g.fillStyle=INK; g.globalAlpha=opt.alpha??.55;
+    for(let i=0;i<cnt;i++){const x=x0+rng()*(x1-x0), y=y0+rng()*(y1-y0);
+      if(opt.away){const dx=x-opt.away[0],dy=y-opt.away[1],d=Math.hypot(dx,dy)||1; if((dx*LX+dy*LY)/d>-.15) continue;}
+      if(opt.half){const d=(x-opt.half.c[0])*opt.half.n[0]+(y-opt.half.c[1])*opt.half.n[1]; if(d<opt.half.min) continue;}
+      g.beginPath(); g.arc(x,y,opt.r??.45,0,TAU); g.fill();}
+    g.globalAlpha=1;});
+}
+// the prototype's slope hatching: short strokes inward from edges that face away from the sun (alpha .5)
+function edgeHatch(g,o,len,rng,every){
+  const [sdx,sdy]=shadowDir(), c=cen(o), n=o.length, ev=every||2;
+  if(len<1.2) return;
+  g.strokeStyle=INK; g.lineWidth=.55*P.lw; g.globalAlpha=.5; g.beginPath();
+  for(let i=0;i<n;i+=ev){
+    const a=o[(i-1+n)%n], b=o[(i+1)%n], tx=b[0]-a[0], ty=b[1]-a[1], l=Math.hypot(tx,ty)||1; let nx=-ty/l, ny=tx/l;
+    if((o[i][0]-c[0])*nx+(o[i][1]-c[1])*ny<0){nx=-nx;ny=-ny;}
+    const f=nx*sdx+ny*sdy; if(f<.2||rng()>.85) continue;
+    const ln=len*(.28+rng()*.3)*Math.min(1,f+.3); g.moveTo(o[i][0],o[i][1]); g.lineTo(o[i][0]-nx*ln,o[i][1]-ny*ln);
+  }
+  g.stroke(); g.globalAlpha=1;
+}
+// parallel hatch across a clipped region (track links, grilles, lattice, funnel mouths)
+function hatchLines(g,o,dir,sp,opt){
+  opt=opt||{}; const rng=opt.rng||mulberry32(1), [x0,y0,x1,y1]=bbox(o), c=[(x0+x1)/2,(y0+y1)/2], R=Math.hypot(x1-x0,y1-y0)/2+1, nx=-dir[1], ny=dir[0];
+  if(sp<.6) return;
+  clipTo(g,o,()=>{g.strokeStyle=INK;g.lineWidth=(opt.weight??.55)*P.lw;g.globalAlpha=opt.alpha??.5;g.beginPath();
+    for(let d=-R;d<=R;d+=sp){ if(opt.skip&&rng()<opt.skip) continue; const j=(rng()-.5)*(opt.jit||0), px=c[0]+nx*(d+j), py=c[1]+ny*(d+j);
+      g.moveTo(px-dir[0]*R,py-dir[1]*R); g.lineTo(px+dir[0]*R,py+dir[1]*R);}
+    g.stroke(); g.globalAlpha=1;});
+}
+// rivet dot rows along a seam, spaced in pen pixels; only where the drawing is big enough to carry them
+function rivets(g,V,ptsM,rng,sp){
+  if(V.ppm<7) return; sp=sp||2.6; const pts=tps(V,ptsM); g.fillStyle=INK; g.globalAlpha=.6; let acc=sp*.5;
+  for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],l=Math.hypot(b[0]-a[0],b[1]-a[1]); let t=acc;
+    while(t<l){ if(rng()>.1){g.beginPath(); g.arc(a[0]+(b[0]-a[0])*t/l,a[1]+(b[1]-a[1])*t/l,.45,0,TAU); g.fill();} t+=sp;}
+    acc=t-l;}
+  g.globalAlpha=1;
+}
+// deck planking: long lines along the hull with butt-joint gaps (the house's plank strokes, run lengthwise)
+function planks(g,o,V,rng){
+  const ax=tv(V,[0,1]), nx=-ax[1], ny=ax[0], [x0,y0,x1,y1]=bbox(o), c=[(x0+x1)/2,(y0+y1)/2], R=Math.hypot(x1-x0,y1-y0)/2+2, sp=2.3;
+  clipTo(g,o,()=>{g.strokeStyle=INK;g.lineWidth=.5*P.lw;g.globalAlpha=.4;g.beginPath();
+    for(let d=-R;d<=R;d+=sp){ let t=-R+rng()*20;
+      while(t<R){const len=10+rng()*26; if(rng()<.78){const px=c[0]+nx*d+ax[0]*t, py=c[1]+ny*d+ax[1]*t; g.moveTo(px,py); g.lineTo(px+ax[0]*len,py+ax[1]*len);} t+=len+1.6;}}
+    g.stroke(); g.globalAlpha=1;});
+}
+// trodden earth: the prototype's dirt stipple (DIRT squares at .15-.40)
+function dirt(g,o,rng,density){
+  const [x0,y0,x1,y1]=bbox(o), cnt=Math.round((x1-x0)*(y1-y0)/100*density*P.stip);
+  clipTo(g,o,()=>{g.fillStyle=DIRT; for(let i=0;i<cnt;i++){const x=x0+rng()*(x1-x0),y=y0+rng()*(y1-y0); g.globalAlpha=.15+rng()*.25; const s=.6+rng()*.8; g.fillRect(x,y,s,s);} g.globalAlpha=1;});
+}
+
+// ---------- shape helpers (metres) ----------
+const R2=v=>Math.round(v*100)/100;
+const rnd=rng=>(a,b)=>R2(a+rng()*(b-a));
+function pickW(rng,opts){const u=rng();let acc=0;for(const [v,w] of opts){acc+=w;if(u<acc)return v;}return opts[opts.length-1][0];}
+const circ=(cx,cy,r,n)=>{n=n||20;return Array.from({length:n},(_,i)=>{const a=i/n*TAU;return[cx+Math.cos(a)*r,cy+Math.sin(a)*r];});};
+const ellipse=(cx,cy,rx,ry,n)=>{n=n||24;return Array.from({length:n},(_,i)=>{const a=i/n*TAU;return[cx+Math.cos(a)*rx,cy+Math.sin(a)*ry];});};
+const rectP=(x0,y0,x1,y1)=>[[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
+function rrect(cx,cy,w,h,r,n){
+  n=n||3; const pts=[],hx=w/2,hy=h/2; r=Math.min(r,hx,hy);
+  const corner=(x,y,a0)=>{for(let k=0;k<=n;k++){const a=a0+k/n*Math.PI/2;pts.push([x+Math.cos(a)*r,y+Math.sin(a)*r]);}};
+  corner(cx+hx-r,cy-hy+r,-Math.PI/2); corner(cx+hx-r,cy+hy-r,0); corner(cx-hx+r,cy+hy-r,Math.PI/2); corner(cx-hx+r,cy-hy+r,Math.PI);
+  return pts;
+}
+function place(pts,cx,cy,a){const c=Math.cos(a),s=Math.sin(a);return pts.map(p=>[cx+p[0]*c-p[1]*s,cy+p[0]*s+p[1]*c]);}
+function offsetPoly(pts,d){ // inset a smooth convex outline by d metres along vertex normals
+  const n=pts.length, c=cen(pts);
+  return pts.map((p,i)=>{const a=pts[(i-1+n)%n],b=pts[(i+1)%n],tx=b[0]-a[0],ty=b[1]-a[1],l=Math.hypot(tx,ty)||1;let nx=-ty/l,ny=tx/l;
+    if((p[0]-c[0])*nx+(p[1]-c[1])*ny>0){nx=-nx;ny=-ny;} return [p[0]+nx*d,p[1]+ny*d];});
+}
+
+// =====================================================================================
+// SILHOUETTES ARE DATA. Each unit: gen(rng) -> parameters (metres, degrees, counts, fractions);
+// build(params) -> geometry in metres. Local frame: origin at the unit's centre, x to starboard,
+// y aft, the unit heads toward -y. A view rotates and scales it onto the paper.
+// =====================================================================================
+
+// ---------- aircraft ----------
+function bodyProfile(w,nose,tailW,maxAt,noseR){ // half-width along t (0 = nose, 1 = tail)
+  return t=>{ if(t<nose){const u=t/nose;return w/2*(noseR+(1-noseR)*Math.sqrt(1-(1-u)*(1-u)));}
+    if(t<=maxAt) return w/2; const u=(t-maxAt)/(1-maxAt), sm=u*u*(3-2*u); return w/2+(tailW/2-w/2)*sm;};
+}
+function bodyPoly(len,y0,hw,n,cx){
+  const out=[], r0=hw(0), r1=hw(1);
+  for(let k=1;k<6;k++){const a=Math.PI+k/6*Math.PI;out.push([cx+Math.cos(a)*r0,y0+Math.sin(a)*r0*1.1]);}
+  for(let i=0;i<=n;i++){const t=i/n;out.push([cx+hw(t),y0+t*len]);}
+  for(let k=1;k<6;k++){const a=k/6*Math.PI;out.push([cx+Math.cos(a)*r1,y0+len+Math.sin(a)*r1]);}
+  for(let i=n;i>=0;i--){const t=i/n;out.push([cx-hw(t),y0+t*len]);}
+  return out;
+}
+function wingFn(s,yLE,cr,ct,sweep,ellip){ // chord blends a trapezoid and an ellipse; the quarter-chord line carries the sweep
+  return u=>{const ctr=cr+(ct-cr)*u, cel=Math.max(ct*.4,cr*Math.sqrt(Math.max(0,1-u*u))), c=ctr+(cel-ctr)*ellip, le=yLE+sweep*u+(cr-c)*.25; return {x:u*s,le,c,te:le+c};};
+}
+function wingPoly(at,tipRound){
+  const n=16, le=[],te=[];
+  for(let i=0;i<=n;i++){const q=at(i/n); le.push([q.x,q.le]); te.push([q.x,q.te]);}
+  const t=at(1), cy=(t.le+t.te)/2, ry=(t.te-t.le)/2, rx=ry*(.3+.7*tipRound), cap=[];
+  for(let k=1;k<6;k++){const a=-Math.PI/2+k/6*Math.PI; cap.push([t.x+Math.cos(a)*rx, cy+Math.sin(a)*ry]);}
+  const right=le.concat(cap,te.reverse()), left=right.map(p=>[-p[0],p[1]]).reverse();
+  return right.concat(left);
+}
+function genPlane(kind,rng){
+  const R=rnd(rng), b=pr=>rng()<pr;
+  if(kind==="light") return {span:R(8.6,10.2),length:R(7.6,9.0),fuse_w:R(1.0,1.25),nose:R(.1,.16),tail_w:R(.2,.3),body_max:R(.36,.44),
+    root_chord:R(1.9,2.4),tip_chord:R(.85,1.3),wing_at:R(.24,.31),sweep:R(.05,.5),ellip:b(.34)?R(.6,1):R(0,.25),tip_round:R(.4,1),
+    tail_span:R(2.8,3.6),tail_root:R(.85,1.15),tail_tip:R(.45,.7),engines:1,prop_dia:R(2.8,3.3),
+    canopy_at:R(.36,.44),canopy_len:R(1.5,2.1),canopy_w:R(.55,.7),wing_guns:b(.5)?2:4,nose_guns:0,frames:2+Math.floor(rng()*3),rivets:b(.7),
+    booms:false,twin_fin:false,glazed_nose:false,dorsal:false,tail_gun:false};
+  if(kind==="heavy"){const booms=b(.34); return {span:R(11.2,13),length:R(9.5,11.4),fuse_w:R(1.2,1.5),nose:R(.14,.2),tail_w:R(.25,.35),body_max:R(.38,.48),
+    root_chord:R(2.4,3.0),tip_chord:R(1.0,1.4),wing_at:R(.3,.36),sweep:R(.1,.5),ellip:R(0,.3),tip_round:R(.3,.9),
+    tail_span:R(4.2,5.2),tail_root:R(1.0,1.3),tail_tip:R(.55,.8),engines:2,nac_at:R(.3,.38),nac_len:R(3.6,4.6),nac_w:R(.85,1.05),prop_dia:R(3.0,3.4),
+    canopy_at:R(.2,.28),canopy_len:R(2.4,3.4),canopy_w:R(.6,.75),wing_guns:0,nose_guns:b(.5)?2:4,frames:3+Math.floor(rng()*3),rivets:b(.6),
+    booms,twin_fin:booms||b(.3),glazed_nose:false,dorsal:false,tail_gun:false};}
+  const engines=pickW(rng,[[2,.55],[3,.25],[4,.2]]);
+  return {span:R(19,21.5),length:R(15,17.5),fuse_w:R(1.7,2.1),nose:R(.12,.18),tail_w:R(.35,.5),body_max:R(.5,.6),
+    root_chord:R(3.4,4.2),tip_chord:R(1.4,2.0),wing_at:R(.3,.36),sweep:R(.1,.6),ellip:R(0,.2),tip_round:R(.3,.8),
+    tail_span:R(6.4,7.6),tail_root:R(1.5,1.9),tail_tip:R(.9,1.2),engines,nac_at:R(.26,.34),nac_len:R(4.4,5.4),nac_w:R(1.3,1.6),prop_dia:R(3.2,3.6),
+    canopy_at:R(.18,.24),canopy_len:R(1.8,2.4),canopy_w:R(.9,1.1),wing_guns:0,nose_guns:0,frames:4+Math.floor(rng()*4),rivets:b(.6),
+    booms:false,twin_fin:b(.5),glazed_nose:engines!==3&&b(.8),glaze_len:R(1.4,2.0),dorsal:b(.7),dorsal_at:R(.4,.48),dorsal_dir:R(60,120),tail_gun:b(.6)};
+}
+function buildPlane(p){
+  const L=p.length,s=p.span/2,y0=-L/2,G={y0},mir=q=>q.map(v=>[-v[0],v[1]]);
+  const noseEng=p.engines===1||p.engines===3, bodyL=p.booms?L*.62:L;
+  const hw=bodyProfile(p.fuse_w,p.nose,p.booms?p.fuse_w*.5:p.tail_w,p.body_max,noseEng?.42:p.glazed_nose?.32:.24);
+  G.hw=hw; G.bodyL=bodyL; G.fus=bodyPoly(bodyL,y0,hw,30,0);
+  const ctip=p.tip_chord*(1-.6*p.ellip), rx=ctip/2*(.3+.7*p.tip_round), sw=s-rx, yLE=y0+p.wing_at*L;
+  const at=wingFn(sw,yLE,p.root_chord,p.tip_chord,p.sweep,p.ellip); G.wing=wingPoly(at,p.tip_round);
+  const band=(fn,u0,u1,f0)=>{const a=[],b=[];for(let i=0;i<=8;i++){const q=fn(u0+(u1-u0)*i/8);a.push([q.x,q.le+q.c*f0]);b.push([q.x,q.te]);}return a.concat(b.reverse());};
+  const lineAt=(u0,u1,f,n)=>Array.from({length:(n||6)+1},(_,i)=>{const q=at(u0+(u1-u0)*i/(n||6));return[q.x,q.le+q.c*f];});
+  const ail=band(at,.56,.93,.72); G.ailerons=[ail,mir(ail)];                 // fabric-covered: canvas stipple
+  const ur=Math.min(.4,(p.fuse_w/2+.06)/sw);
+  const fl=lineAt(ur,.52,.74); G.flaps=[fl,mir(fl)];
+  const sp=lineAt(ur,.9,.3,8); G.spars=[sp,mir(sp)];
+  G.ribs=[]; for(let i=0;i<=p.frames;i++){const u=ur+.06+(.88-ur-.06)*i/p.frames, q=at(u), f1=u>.56&&u<.93?.7:.72;   // chordwise panel seams
+    for(const sx of[1,-1]) G.ribs.push([[sx*q.x,q.le+q.c*.07],[sx*q.x,q.le+q.c*f1]]);}
+  G.nacs=[]; G.props=[];
+  if(noseEng) G.props.push({c:[0,y0-hw(0)*1.1-.1],d:p.prop_dia,sp:Math.max(.17,p.fuse_w*.19)});
+  const us=p.engines===2||p.engines===3?[p.nac_at]:p.engines===4?[p.nac_at*.72,p.nac_at*1.5]:[];
+  for(const u of us){const q=at(u), front=q.le-p.nac_len*.42, len=p.booms?L/2-front+.1:p.nac_len, w=p.nac_w;
+    const nh=bodyProfile(w,.2/(len/p.nac_len),p.booms?w*.5:w*.22,p.booms?.25:.42,.46);
+    for(const sx of[1,-1]){G.nacs.push({poly:bodyPoly(len,front,nh,20,sx*q.x),x:sx*q.x,front,len,hw:nh});
+      G.props.push({c:[sx*q.x,front-nh(0)*1.1-.08],d:p.prop_dia,sp:w*.2});}}
+  let tS=p.tail_span/2, tY=y0+L-p.tail_root-.2;
+  if(p.booms){tS=at(us[0]).x+.45; tY=L/2-p.tail_root-.15;}
+  const tat=wingFn(tS*.95,tY,p.tail_root,p.booms?p.tail_root*.92:p.tail_tip,p.booms?0:.22,p.booms?0:.3);
+  G.tail=wingPoly(tat,.5);
+  const el=band(tat,p.booms?.04:.12,.9,.62); G.elevators=[el,mir(el)];
+  const fin=(cx,ya,yb,w)=>{const r=[],l=[];for(let i=0;i<=8;i++){const t=i/8,h=w*(t<.25?Math.sqrt(t/.25):1-(t-.25)/.75*.55);r.push([cx+h,ya+(yb-ya)*t]);l.push([cx-h,ya+(yb-ya)*t]);}return r.concat(l.reverse());};
+  G.fins=[];
+  if(p.booms) for(const n of G.nacs) G.fins.push(fin(n.x,tY-p.tail_root*.3,L/2+.25,Math.max(.14,p.nac_w*.17)));
+  else if(p.twin_fin) for(const sx of[1,-1]) G.fins.push(fin(sx*tS*.95,tY-p.tail_root*.32,tY+p.tail_root*1.08,.17));
+  else G.fins.push(fin(0,tY-p.tail_root*.5,y0+bodyL+hw(1)*.7,Math.max(.12,p.tail_w*.34)));
+  const cy0=y0+p.canopy_at*L, cl=p.canopy_len, ch=t=>p.canopy_w/2*Math.pow(Math.sin(Math.PI*Math.pow(t,.8)),.55);
+  const cr=[],cll=[]; for(let i=0;i<=12;i++){const t=i/12;cr.push([ch(t),cy0+cl*t]);cll.push([-ch(t),cy0+cl*t]);}
+  G.canopy=cr.concat(cll.reverse()); G.canopyFrames=[.34,.64].map(f=>{const h=ch(f)*.96,y=cy0+cl*f;return[[-h,y],[h,y]];});
+  if(p.glazed_nose){const tg=p.glaze_len/bodyL, r0=hw(0), gp=[];
+    for(let k=1;k<6;k++){const a=Math.PI+k/6*Math.PI;gp.push([Math.cos(a)*r0,y0+Math.sin(a)*r0*1.1]);}
+    for(let i=0;i<=6;i++){const t=tg*i/6;gp.push([hw(t),y0+t*bodyL]);}
+    for(let i=6;i>=0;i--){const t=tg*i/6;gp.push([-hw(t),y0+t*bodyL]);}
+    G.glaze=gp; G.glazeFrames=[[[0,y0-r0*1.05],[0,y0+tg*bodyL]]].concat([.4,.75].map(f=>{const t=tg*f,h=hw(t)*.95;return[[-h,y0+t*bodyL],[h,y0+t*bodyL]];}));}
+  G.turrets=[];
+  if(p.dorsal) G.turrets.push({c:[0,y0+p.dorsal_at*L],r:p.fuse_w*.3,dir:p.dorsal_dir*Math.PI/180,gun:1.4});
+  if(p.tail_gun) G.turrets.push({c:[0,y0+bodyL-.1],r:Math.max(.3,p.tail_w*.8),dir:Math.PI/2,gun:1.0});
+  G.guns=[];
+  if(p.wing_guns){const ug=p.wing_guns===2?[.4]:[.34,.44]; for(const u of ug){const q=at(u); for(const sx of[1,-1]) G.guns.push([[sx*q.x,q.le+.25],[sx*q.x,q.le-.5]]);}}
+  if(p.nose_guns){const xs=p.nose_guns===2?[-.14,.14]:[-.3,-.1,.1,.3]; for(const x of xs) G.guns.push([[x,y0+.4],[x,y0-.55]]);}
+  const qr=at(.66); G.roundels=[1,-1].map(sx=>({c:[sx*qr.x,qr.le+qr.c*.46],r:qr.c*.36}));
+  G.frames=[]; if(noseEng) G.frames.push(p.nose+.05);
+  for(let k=1;k<=p.frames;k++) G.frames.push(.14+k/(p.frames+1)*.8);
+  G.exh=[]; if(noseEng) for(let k=0;k<3;k++){const t=p.nose*.9+.028*k*(10/L), y=y0+t*bodyL; for(const sx of[1,-1]) G.exh.push([[sx*hw(t)*.98,y],[sx*(hw(t)+.14),y+.24]]);}
+  G.sil=[G.wing,G.tail,G.fus,...G.nacs.map(n=>n.poly),...G.fins];
+  G.ext=G.sil.concat(G.props.map(pr=>[[pr.c[0]-pr.d/2,pr.c[1]],[pr.c[0]+pr.d/2,pr.c[1]]]));
+  G.shadows=[{layer:"air",kind:"plane",polys:G.sil}];
+  return G;
+}
+function drawPlane(g,I){
+  const {M,V,side}=I, G=M.G, p=M.p, pn=pen(g,V,M.seed+3), ppm=V.ppm;
+  // wings and tailplane: flat surfaces take the object fill; fabric control surfaces take a canvas stipple field
+  const wing=pn.path(G.wing,{fill:CREAM,weight:0});
+  for(const a of G.ailerons) stipple(g,tps(V,a),{rng:pn.r(),density:6,r:.45});
+  for(const a of G.ailerons) pn.line(a.slice(0,9),{alpha:.7,weight:.6});
+  for(const f of G.flaps) pn.line(f,{alpha:.55,breaks:.25});
+  if(ppm>6) for(const r of G.ribs) pn.line(r,{alpha:.4,weight:.5,breaks:.3,freq:.12});
+  if(p.rivets) for(const s of G.spars) rivets(g,V,s,pn.r());
+  strokeO(g,wing,1.2);
+  for(const r of G.roundels) roundel(pn,r.c,r.r,side);
+  const tail=pn.path(G.tail,{fill:CREAM,weight:0});
+  for(const e of G.elevators){stipple(g,tps(V,e),{rng:pn.r(),density:6,r:.45}); pn.line(e.slice(0,9),{alpha:.7,weight:.55});}
+  strokeO(g,tail,1.1);
+  // nacelles and booms: cylinders, shaded half on the side away from the sun
+  for(const nc of G.nacs){const o=pn.path(nc.poly,{fill:CREAM,weight:0});
+    shadeAxis(g,o,V,[nc.x,0],shade(CREAM));
+    stipple(g,o,{rng:pn.r(),density:2.8,half:{c:tp(V,[nc.x,0]),n:awayN(V),min:p.nac_w*.18*ppm}});
+    edgeHatch(g,o,Math.min(5,p.nac_w*.5*ppm),pn.r());
+    const yc=nc.front+.8, h=nc.hw(.8/nc.len)*.92; pn.line([[nc.x-h,yc],[nc.x+h,yc]],{alpha:.6});
+    strokeO(g,o,1.1);}
+  // fuselage
+  const fus=pn.path(G.fus,{fill:CREAM,weight:0});
+  shadeAxis(g,fus,V,[0,0],shade(CREAM));
+  stipple(g,fus,{rng:pn.r(),density:2.8,half:{c:tp(V,[0,0]),n:awayN(V),min:p.fuse_w*.16*ppm}});
+  edgeHatch(g,fus,Math.min(6,p.fuse_w*.5*ppm),pn.r());
+  if(p.fuse_w*ppm>5) for(const t of G.frames){const y=G.y0+t*G.bodyL, h=G.hw(t)*.9;
+    pn.line([[-h,y],[h,y]],{alpha:.55,breaks:.18}); if(p.rivets) rivets(g,V,[[-h,y+.14],[h,y+.14]],pn.r());}
+  for(const e of G.exh) pn.line(e,{alpha:.8,weight:.7});
+  strokeO(g,fus,1.2);
+  for(const f of G.fins) pn.path(f,{fill:CREAM,weight:.9});
+  // glass: canopy and glazed nose take the two shade steps of the roof fill
+  if(G.glaze){const o=pn.path(G.glaze,{fill:glassLit(),weight:0}); shadeAxis(g,o,V,[0,0],glassShade());
+    if(ppm>5) for(const f of G.glazeFrames) pn.line(f,{alpha:.7,weight:.5}); strokeO(g,o,.85);}
+  const can=pn.path(G.canopy,{fill:glassLit(),weight:0}); shadeAxis(g,can,V,[0,0],glassShade());
+  if(p.canopy_w*ppm>5) for(const f of G.canopyFrames) pn.line(f,{alpha:.75,weight:.5});
+  strokeO(g,can,.85);
+  for(const t of G.turrets){const o=pn.path(circ(t.c[0],t.c[1],t.r,16),{fill:glassLit(),weight:0}); shadeDome(g,o,tp(V,t.c),glassShade()); strokeO(g,o,.8);
+    const dx=Math.cos(t.dir),dy=Math.sin(t.dir); for(const off of[-.09,.09]) pn.line([[t.c[0]-dy*off+dx*t.r*.3,t.c[1]+dx*off+dy*t.r*.3],[t.c[0]-dy*off+dx*t.gun,t.c[1]+dx*off+dy*t.gun]],{alpha:.85,weight:.7});}
+  for(const gseg of G.guns) pn.line(gseg,{alpha:.85,weight:.7});
+  // propellers: a spinning disc seen edge-on is one thin broken line; spinner on top
+  for(const pr of G.props){pn.line([[pr.c[0]-pr.d/2,pr.c[1]],[pr.c[0]+pr.d/2,pr.c[1]]],{alpha:.55,weight:.6,breaks:.2,freq:.3});
+    pn.path(circ(pr.c[0],pr.c[1],pr.sp,12),{fill:CREAM,weight:.75});}
+}
+function roundel(pn,c,r,side){
+  const rp=r*pn.V.ppm; if(rp<.7) return;
+  pn.path(circ(c[0],c[1],r,24),{fill:accent(side),weight:Math.min(.85,rp*.3)});
+  if(rp>2.4) pn.path(circ(c[0],c[1],r*.4,16),{fill:CREAM,weight:Math.min(.6,rp*.12)});
+}
+function accentPanel(pn,poly,side){
+  const o=pn.path(poly,{fill:accent(side),weight:.75});
+  const g=pn.g; g.fillStyle=INK; g.globalAlpha=.8;               // lashing points at the corners
+  if(perim(o,true)>14) for(const q of tps(pn.V,poly)){g.beginPath();g.arc(q[0],q[1],.55,0,TAU);g.fill();}
+  g.globalAlpha=1;
+}
+
+// ---------- tank ----------
+function genTank(rng){const R=rnd(rng);return{length:R(5.6,6.6),width:R(2.9,3.3),track_w:R(.5,.66),glacis:R(.55,.95),deck:R(1.7,2.1),
+  turret:pickW(rng,[["round",.34],["cast",.33],["welded",.33]]),turret_r:R(1.0,1.2),turret_y:R(-.55,-.2),gun_len:R(2.8,4.2),gun_r:R(.075,.11),
+  muzzle_brake:rng()<.5,cupola:rng()<.8,stowage:Math.floor(rng()*3),hull_h:R(1.5,1.8),turret_h:R(.75,.95),rivets:rng()<.6};}
+function buildTank(p){
+  const L=p.length,W=p.width,tw=p.track_w,y0=-L/2,G={};
+  G.tracks=[1,-1].map(sx=>rrect(sx*(W/2-tw/2),.03,tw,L-.1,.2));
+  const hx=W/2-tw*.86, cf=.32, cy=p.glacis*.55; G.hx=hx;
+  G.trackGuides=[1,-1].map(sx=>[[sx*(W/2-tw/2),-L/2+.25],[sx*(W/2-tw/2),L/2-.2]]);
+  G.hull=[[-hx+cf,y0],[hx-cf,y0],[hx,y0+cy],[hx,L/2-.18],[hx-.18,L/2],[-hx+.18,L/2],[-hx,L/2-.18],[-hx,y0+cy]];
+  G.glacis=[[-hx+cf,y0],[hx-cf,y0],[hx,y0+cy],[hx,y0+p.glacis],[-hx,y0+p.glacis],[-hx,y0+cy]];
+  G.glacisLine=[[-hx,y0+p.glacis],[hx,y0+p.glacis]];
+  const dy0=L/2-p.deck; G.deckLine=[[-hx+.1,dy0],[hx-.1,dy0]];
+  const gy0=dy0+.16, gy1=gy0+p.deck*.36;
+  G.grilles=[rrect((-hx+.28-.16)/2,(gy0+gy1)/2,hx-.44,gy1-gy0,.06),rrect((hx-.28+.16)/2,(gy0+gy1)/2,hx-.44,gy1-gy0,.06)];
+  G.panel=rectP(-hx*.66,gy1+.16,hx*.66,L/2-.28);      // accent zone: air-recognition panel lashed across the engine deck
+  G.driver=rrect(-hx*.45,y0+p.glacis+.36,.6,.46,.12); G.bowMG=circ(hx*.42,y0+p.glacis*.62,.13,10);
+  G.exhaust=[circ(-hx*.62,L/2-.14,.12,10),circ(hx*.62,L/2-.14,.12,10)];
+  G.stow=[]; for(let k=0;k<p.stowage;k++){const sx=k%2?-1:1; G.stow.push(rrect(sx*(W/2-tw/2),k?-L*.08:L*.16,tw*.84,.75,.06));}
+  G.seams=[[[-hx+.2,y0+p.glacis+.15],[-hx+.2,dy0-.1]],[[hx-.2,y0+p.glacis+.15],[hx-.2,dy0-.1]]];
+  const tR=p.turret_r, ty=p.turret_y; let T;
+  if(p.turret==="round") T=circ(0,ty,tR,28);
+  else if(p.turret==="cast") T=Array.from({length:28},(_,i)=>{const a=i/28*TAU;return[Math.cos(a)*tR*(1+.07*Math.sin(a)),ty+Math.sin(a)*tR*1.1];});
+  else T=[[-tR*.6,ty-tR],[tR*.6,ty-tR],[tR,ty-tR*.32],[tR,ty+tR*.72],[tR*.74,ty+tR*1.06],[-tR*.74,ty+tR*1.06],[-tR,ty+tR*.72],[-tR,ty-tR*.32]];
+  G.turret=T; G.tc=[0,ty];
+  const front=p.turret==="cast"?ty-tR*1.1:ty-tR;
+  G.mantlet=rrect(0,front-.1,.95,.42,.12);
+  const g0=front-.28, g1=front-p.gun_len;
+  G.gun=rectP(-p.gun_r,g1,p.gun_r,g0);
+  G.muzzle=p.muzzle_brake?rectP(-p.gun_r*1.8,g1-.05,p.gun_r*1.8,g1+.32):null;
+  G.cupola=p.cupola?circ(tR*.42,ty+tR*.34,.32,16):null;
+  G.hatch=rrect(-tR*.4,ty+tR*.3,.48,.6,.1);
+  const foot=rectP(-W/2,y0,W/2,L/2); G.base=foot;
+  G.ext=[foot,G.gun,T];
+  G.shadows=[{layer:"ground",kind:"prism",polys:[foot],h:p.hull_h},
+    {layer:"upper",kind:"prism",polys:[T,G.mantlet],h:p.hull_h+p.turret_h,b:p.hull_h,base:"base"},
+    {layer:"upper",kind:"float",polys:[G.gun].concat(G.muzzle?[G.muzzle]:[]),h:p.hull_h+p.turret_h*.55,b:p.hull_h,base:"base"}];
+  return G;
+}
+function drawTankGround(g,I){
+  const {M,V,side}=I, G=M.G, p=M.p, pn=pen(g,V,M.seed+5), ppm=V.ppm, sd=shadowDir();
+  for(const t of G.tracks){const o=pn.path(t,{fill:ROCK,weight:0});
+    hatchLines(g,o,tv(V,[1,0]),Math.max(1.5,.12*ppm),{alpha:.72,weight:.6,rng:pn.r(),jit:.25});   // track links
+    strokeO(g,o,1.1);}
+  if(ppm>6) for(const t of G.trackGuides) pn.line(t,{alpha:.5,weight:.5,breaks:.2});
+  const hullO=pn.path(G.hull,{fill:CREAM,weight:0});
+  const gn=tv(V,[0,-1]); if(gn[0]*sd[0]+gn[1]*sd[1]>.2) clipTo(g,hullO,()=>pn.path(G.glacis,{fill:slope(CREAM),weight:0}));  // sloped plate away from the sun
+  pn.line(G.glacisLine,{alpha:.7,weight:.65,breaks:.12});
+  pn.line(G.deckLine,{alpha:.6,breaks:.15});
+  for(const gr of G.grilles){const o=pn.path(gr,{weight:.6,alpha:.8}); hatchLines(g,o,tv(V,[1,0]),Math.max(1.5,.13*ppm),{alpha:.55,weight:.5,rng:pn.r()});}
+  if(p.rivets) for(const s of G.seams) rivets(g,V,s,pn.r());
+  pn.path(G.driver,{fill:CREAM,weight:.65}); pn.path(G.bowMG,{fill:CREAM,weight:.6});
+  for(const e of G.exhaust) pn.path(e,{fill:CREAM,weight:.6});
+  edgeHatch(g,hullO,Math.min(4,.4*ppm),pn.r());
+  accentPanel(pn,G.panel,side);
+  strokeO(g,hullO,1.2);
+  for(const s of G.stow){const o=pn.path(s,{fill:CREAM,weight:.85}); if(ppm>8) pn.line([[cen(s)[0]-.3,cen(s)[1]],[cen(s)[0]+.3,cen(s)[1]]],{alpha:.5});}
+}
+function drawTankUpper(g,I){
+  const {M,V}=I, G=M.G, p=M.p, pn=pen(g,V,M.seed+9), ppm=V.ppm;
+  const tO=pn.path(G.turret,{fill:CREAM,weight:0});
+  shadeDome(g,tO,tp(V,G.tc),shade(CREAM));
+  stipple(g,tO,{rng:pn.r(),density:2.6,away:tp(V,G.tc)});
+  edgeHatch(g,tO,Math.min(5,p.turret_r*.45*ppm),pn.r());
+  strokeO(g,tO,1.2);
+  const hO=pn.path(G.hatch,{weight:.6,alpha:.85});
+  if(G.cupola){const c=pn.path(G.cupola,{fill:CREAM,weight:.8}); if(ppm>9) pn.path(circ(cen(G.cupola)[0],cen(G.cupola)[1],.2,12),{weight:.5,alpha:.7,breaks:.25});}
+  const mO=pn.path(G.mantlet,{fill:CREAM,weight:0}); shadeDome(g,mO,cen(mO),shade(CREAM)); strokeO(g,mO,.95);
+  const gO=pn.path(G.gun,{fill:CREAM,weight:0}); shadeAxis(g,gO,V,[0,0],shade(CREAM)); strokeO(g,gO,.9);
+  if(G.muzzle) pn.path(G.muzzle,{fill:CREAM,weight:.85});
+}
+
+// ---------- anti-aircraft battery ----------
+function genAA(rng){const R=rnd(rng);return{radius:R(3.7,4.3),band:R(.8,1.1),gap_deg:R(32,48),gap_dir_deg:R(70,115),guns:pickW(rng,[[1,.34],[2,.33],[4,.33]]),
+  barrel_len:R(2.2,3.2),elev_deg:R(38,62),gun_az_deg:R(-135,-45),mount_r:R(1.0,1.3),crates:2+Math.floor(rng()*3),bag_h:R(1.0,1.25),bag_len:R(.5,.65)};}
+function buildAA(p){
+  const G={}, d2r=Math.PI/180, rc=p.radius-p.band/2, gap=p.gap_deg*d2r, gd=p.gap_dir_deg*d2r;
+  const a0=gd+gap/2, a1=gd+TAU-gap/2, n=Math.ceil((a1-a0)*rc/.25);
+  G.ring=Array.from({length:n+1},(_,i)=>{const a=a0+(a1-a0)*i/n;return[Math.cos(a)*rc,Math.sin(a)*rc];});
+  G.inner=circ(0,0,p.radius-p.band,40); G.outer=circ(0,0,p.radius,40);
+  G.mount=circ(0,0,p.mount_r,28);
+  const az=p.gun_az_deg*d2r, el=p.elev_deg*d2r, len=p.barrel_len*Math.cos(el);   // barrels drawn foreshortened by their elevation
+  G.cradle=place(rrect(.12,0,1.2,.84,.16),0,0,az);
+  const sh=[],shi=[]; for(let i=0;i<=8;i++){const a=-.95+1.9*i/8;sh.push([Math.cos(a)*1.0,Math.sin(a)*1.0]);shi.push([Math.cos(a)*.86,Math.sin(a)*.86]);}
+  G.shield=place(sh.concat(shi.reverse()),0,0,az);
+  const offs=p.guns===1?[0]:p.guns===2?[-.2,.2]:[-.42,-.14,.14,.42];
+  G.barrels=offs.map(o=>place(rectP(.45,o-.06,.45+len,o+.06),0,0,az));
+  G.hiders=offs.map(o=>place(rectP(.45+len-.24,o-.09,.45+len,o+.09),0,0,az));
+  G.seats=[-1,1].map(s=>place(circ(-.32,s*.62,.17,10),0,0,az));
+  G.crates=[]; for(let k=0;k<p.crates;k++){const a=az+Math.PI+.7+k*.42, r=p.radius-p.band-.5; G.crates.push({c:[Math.cos(a)*r,Math.sin(a)*r],a});}
+  const pa=az+Math.PI-.75, pr=(p.radius-p.band)*.56;
+  G.panel=place(rectP(-.7,-.38,.7,.38),Math.cos(pa)*pr,Math.sin(pa)*pr,pa+Math.PI/2);   // accent zone: ground recognition panel
+  G.ext=[G.outer];
+  const zp=1.35, zt=zp+p.barrel_len*Math.sin(el);
+  G.shadows=[{layer:"ground",kind:"band",h:p.bag_h,polys:[G.outer]},
+    {layer:"upper",kind:"prism",polys:[G.cradle,G.shield],h:1.55,b:0},
+    {layer:"upper",kind:"line",w:.13,minPx:.9,lines:offs.map(o=>{const q0=place([[.45,o]],0,0,az)[0],q1=place([[.45+len,o]],0,0,az)[0];return[[q0[0],q0[1],zp],[q1[0],q1[1],zt]];})}];
+  return G;
+}
+function prepAA(I){const {M,V}=I, p=M.p; const c=resample(tps(V,M.G.ring),3,false); I.band=bandGeom(c,p.band/2*V.ppm,(M.seed%99991)+17,false,true); I.band.h=p.bag_h*V.ppm;}
+function drawAAGround(g,I){
+  const {M,V,side}=I, G=M.G, p=M.p, pn=pen(g,V,M.seed+5), ppm=V.ppm;
+  dirt(g,tps(V,G.inner),pn.r(),3.2);                              // trodden pit floor
+  drawBand(g,I.band,{fill:WALL,bag:p.bag_len*ppm});              // the sandbag ring: the prototype's wall band, coursed
+  for(const c of G.crates){const s=.3, box=place(rectP(-s,-s*.75,s,s*.75),c.c[0],c.c[1],c.a+Math.PI/2), ins=place(rectP(-s*.6,-s*.45,s*.6,s*.45),c.c[0],c.c[1],c.a+Math.PI/2);
+    pn.path(box,{fill:CREAM,weight:.95}); if(ppm>9){pn.path(ins,{weight:.7,alpha:.8}); pn.line([ins[0],ins[2]],{weight:.7,alpha:.8});}}
+  accentPanel(pn,G.panel,side);
+}
+function drawAAUpper(g,I){
+  const {M,V}=I, G=M.G, p=M.p, pn=pen(g,V,M.seed+9), ppm=V.ppm;
+  pn.path(G.mount,{fill:CREAM,weight:1.0});
+  if(ppm>6) pn.path(circ(0,0,p.mount_r*.78,24),{weight:.55,alpha:.6,breaks:.22});
+  for(const s of G.seats) pn.path(s,{fill:CREAM,weight:.6});
+  const cO=pn.path(G.cradle,{fill:CREAM,weight:0}); shadeDome(g,cO,tp(V,[0,0]),shade(CREAM)); stipple(g,cO,{rng:pn.r(),density:1.6,away:tp(V,[0,0])}); strokeO(g,cO,1.0);
+  const sO=pn.path(G.shield,{fill:CREAM,weight:0}); edgeHatch(g,sO,Math.min(3,.25*ppm),pn.r(),1); strokeO(g,sO,.9);
+  for(let i=0;i<G.barrels.length;i++){pn.path(G.barrels[i],{fill:CREAM,weight:.8}); pn.path(G.hiders[i],{fill:CREAM,weight:.75});}
+}
+
+// the prototype's wallGeom, fed a centreline in pixels (here: the sandbag ring)
+function bandGeom(pts,hw,seed,closed,caps){
+  const n=pts.length,nrm=[],Lp=[],Rp=[], k=Math.min(1,hw/6);   // edge noise eased on narrow bands
+  for(let i=0;i<n;i++){
+    const a=closed?pts[(i-1+n)%n]:pts[Math.max(i-1,0)], b=closed?pts[(i+1)%n]:pts[Math.min(i+1,n-1)];
+    const tx=b[0]-a[0],ty=b[1]-a[1],l=Math.hypot(tx,ty)||1,nx=-ty/l,ny=tx/l;
+    const eL=(vnoise(i*.18,1.3,seed)*2-1)*P.wob*1.3*k, eR=(vnoise(i*.18,5.1,seed)*2-1)*P.wob*1.3*k;
+    nrm.push([nx,ny]); Lp.push([pts[i][0]+nx*(hw+eL),pts[i][1]+ny*(hw+eL)]); Rp.push([pts[i][0]-nx*(hw+eR),pts[i][1]-ny*(hw+eR)]);
+  }
+  const cap=(i,startAng)=>{const c=[];for(let q=1;q<8;q++){const a=startAng-q*Math.PI/8;c.push([pts[i][0]+Math.cos(a)*hw,pts[i][1]+Math.sin(a)*hw]);}return c;};
+  let outline,edges,capsArr=[];
+  if(closed){outline=[Lp,Rp];edges=[{p:Lp,closed:true},{p:Rp,closed:true}];}
+  else if(caps){const a0=Math.atan2(nrm[n-1][1],nrm[n-1][0]),a1=Math.atan2(nrm[0][1],nrm[0][0]),ce=cap(n-1,a0),cs=cap(0,a1+Math.PI);
+    const loop=Lp.concat(ce,Rp.slice().reverse(),cs); outline=[loop]; edges=[{p:loop,closed:true}]; capsArr=[ce.concat([Lp[n-1],Rp[n-1]]),cs.concat([Lp[0],Rp[0]])];}
+  else{outline=[Lp.concat(Rp.slice().reverse())];edges=[{p:Lp,closed:false},{p:Rp,closed:false}];}
+  return {pts,nrm,L:Lp,R:Rp,hw,outline,edges,caps:capsArr,closed,seed};
+}
+// the prototype's drawWall; sandbag courses (staggered joints) replace the double crest line
+function drawBand(g,s,o){
+  const rng=mulberry32(s.seed),{pts,nrm,L:Lp,R:Rp,hw}=s,n=pts.length,[sdx,sdy]=shadowDir(),lim=s.closed?n:n-1, fillC=o.fill||WALL;
+  g.lineJoin="round"; g.lineCap="round";
+  g.beginPath(); s.outline.forEach(q=>addPoly(g,q,true)); g.fillStyle=fillC; g.fill("evenodd");
+  g.strokeStyle=mix(P.shadowCol,fillC,.7); g.lineWidth=hw*.7; g.lineCap="butt"; g.globalAlpha=.6;
+  for(const side of [1,-1]){
+    g.beginPath(); let penDown=false;
+    for(let k=0;k<=lim;k++){
+      const i=k%n, fx=nrm[i][0]*side, fy=nrm[i][1]*side;
+      if(fx*sdx+fy*sdy<.2){penDown=false;continue;}
+      const x=pts[i][0]+fx*hw*.55, y=pts[i][1]+fy*hw*.55;
+      if(!penDown){g.moveTo(x,y);penDown=true;} else g.lineTo(x,y);
+    }
+    g.stroke();
+  }
+  g.globalAlpha=1; g.lineCap="round";
+  g.fillStyle=INK;
+  for(let i=0;i<n;i++)for(let k=0;k<3;k++){
+    const t=rng()*2-1; if(rng()>(.25+Math.abs(t)*.6)*P.stip) continue;
+    g.globalAlpha=.18+rng()*.25; g.fillRect(pts[i][0]+nrm[i][0]*t*hw*.95,pts[i][1]+nrm[i][1]*t*hw*.95,.8,.8);
+  }
+  g.strokeStyle=INK; g.lineWidth=.55*P.lw; g.globalAlpha=.5;
+  for(const side of [1,-1]){
+    const E=side>0?Lp:Rp; g.beginPath();
+    for(let i=0;i<n;i+=2){
+      const fx=nrm[i][0]*side, fy=nrm[i][1]*side, f=fx*sdx+fy*sdy;
+      if(f<.2||rng()>.85) continue;
+      const len=hw*(.28+rng()*.3)*Math.min(1,f+.3); g.moveTo(E[i][0],E[i][1]); g.lineTo(E[i][0]-fx*len,E[i][1]-fy*len);
+    }
+    g.stroke();
+  }
+  if(o.bag&&o.bag>=3){   // two courses of bags, joints staggered by half a bag
+    g.globalAlpha=.6; g.lineWidth=.55*P.lw; g.beginPath(); let acc=0;
+    for(let i=1;i<n;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+      for(const [side,off] of [[1,0],[-1,.5]]){ if(Math.floor(acc/o.bag+off)!==Math.floor((acc+d)/o.bag+off)){
+        const x=pts[i][0],y=pts[i][1]; g.moveTo(x+nrm[i][0]*side*hw*.1,y+nrm[i][1]*side*hw*.1); g.lineTo(x+nrm[i][0]*side*hw*.9,y+nrm[i][1]*side*hw*.9);}}
+      acc+=d;}
+    g.stroke();
+  }
+  g.globalAlpha=.5; g.lineWidth=.65*P.lw; g.beginPath(); let penDown=false;   // the seam between the courses: a broken crest line
+  for(let k=0;k<=lim;k++){
+    const i=k%n; if(vnoise(k*.06,2,s.seed+3)<.22){penDown=false;continue;}
+    const off=(vnoise(k*.15,8,s.seed)-.5)*P.wob*1.2*Math.min(1,hw/6), x=pts[i][0]+nrm[i][0]*off, y=pts[i][1]+nrm[i][1]*off;
+    if(!penDown){g.moveTo(x,y);penDown=true;} else g.lineTo(x,y);
+  }
+  g.stroke();
+  g.globalAlpha=1; g.lineWidth=1.15*P.lw; g.beginPath(); s.edges.forEach(e=>addPoly(g,e.p,e.closed)); g.stroke();
+}
+
+// ---------- small cruiser ----------
+function genCruiser(rng){const R=rnd(rng);return{length:R(112,128),beam:R(12,14.2),bow:R(.26,.34),stern:pickW(rng,[["transom",.5],["round",.5]]),
+  turrets_fwd:pickW(rng,[[1,.3],[2,.7]]),turrets_aft:pickW(rng,[[1,.5],[2,.5]]),turret_r:R(3.4,4.2),barrels:pickW(rng,[[2,.6],[3,.4]]),barrel_len:R(8.5,11.5),
+  super_len:R(16,24),super_w:R(7,9),funnels:pickW(rng,[[1,.45],[2,.55]]),funnel_len:R(6,8),funnel_w:R(3.6,4.6),boats:2+Math.floor(rng()*3),
+  secondaries:pickW(rng,[[0,.3],[2,.4],[4,.3]]),freeboard:R(4.4,5.6),mainmast:rng()<.7};}
+function buildCruiser(p){
+  const L=p.length,B=p.beam,G={},y=t=>-L/2+t*L;
+  const hb=t=>{ if(t<p.bow){const u=t/p.bow;return B/2*Math.pow(Math.sin(u*Math.PI/2),.78);}
+    const ts=.86; if(t<=ts) return B/2; const u=(t-ts)/(1-ts);
+    return p.stern==="transom"?B/2*(1-.2*u*u):B/2*Math.sqrt(Math.max(0,1-u*u*.85));};
+  const n=60, Rs=[], Ls=[], cap=[];
+  for(let i=0;i<=n;i++){const t=i/n;Rs.push([hb(t),y(t)]);}
+  if(p.stern==="round"){const r1=hb(1);for(let k=1;k<8;k++){const a=k/8*Math.PI;cap.push([Math.cos(a)*r1,L/2+Math.sin(a)*r1*.8]);}}
+  for(let i=n;i>=1;i--){const t=i/n;Ls.push([-hb(t),y(t)]);}
+  G.hull=Rs.concat(cap,Ls); G.deck=offsetPoly(G.hull,.6);
+  const fw=p.turrets_fwd===2?[.16,.235]:[.18], af=p.turrets_aft===2?[.775,.85]:[.84];
+  const gh=r=>{const o=[];for(let k=0;k<=10;k++){const a=-Math.PI/2+k/10*Math.PI;o.push([r*.25+Math.cos(a)*r*.85,Math.sin(a)*r*.92]);}
+    o.push([-r*.75,r*.92],[-r*.95,r*.7],[-r*.95,-r*.7],[-r*.75,-r*.92]);return o;};
+  G.turrets=[];
+  const addT=(t,dir,sup)=>{const c=[0,y(t)], r=p.turret_r, a=dir, bars=[];
+    for(let k=0;k<p.barrels;k++){const off=(k-(p.barrels-1)/2)*.95; bars.push(place(rectP(r*.85,off-.22,r*.85+p.barrel_len,off+.22),c[0],c[1],a));}
+    G.turrets.push({c,poly:place(gh(r),c[0],c[1],a),bars,ears:[1,-1].map(s=>place(rectP(-r*.55,s*r*.9-s*.05,-r*.15,s*r*1.08),c[0],c[1],a)),sup});};
+  fw.forEach((t,i)=>addT(t,-Math.PI/2,i===1)); af.forEach((t,i)=>addT(t,Math.PI/2,i===0&&af.length===2));
+  // superstructure fitted between the forward and after turrets
+  const s0=y(fw[fw.length-1])+p.turret_r+3, s1=y(af[0])-p.turret_r-3;
+  const need=p.super_len+p.funnels*(p.funnel_len+3)+(p.mainmast?8:0)+2, k=Math.min(1,(s1-s0)/need), sL=p.super_len*k, fL=p.funnel_len*k;
+  G.deckhouse=rrect(0,s0+sL/2,p.super_w,sL,.6);
+  G.bridge=rrect(0,s0+sL*.3,p.super_w*.72,sL*.42,.5);
+  G.bridgeWing=[[-p.super_w/2-1.1,s0+sL*.14],[p.super_w/2+1.1,s0+sL*.14]];
+  G.masts=[{c:[0,s0+sL*.64],r:.55,yard:B*.5}];
+  let yy=s0+sL+1.5; G.funnels=[];
+  for(let i=0;i<p.funnels;i++){G.funnels.push({c:[0,yy+fL/2],rx:p.funnel_w/2,ry:fL/2}); yy+=fL+3*k;}
+  if(p.mainmast){G.aftHouse=rrect(0,yy+3.2*k,p.super_w*.66,5.6*k,.5); G.masts.push({c:[0,yy+3.2*k],r:.45,yard:B*.4});}
+  G.breakLine=(()=>{const yb=yy+(p.mainmast?7*k:1), t=(yb+L/2)/L, h=hb(t)-.6; return [[-h,yb],[h,yb]];})();
+  G.boats=[]; for(let i=0;i<p.boats;i++){const sx=i%2?-1:1, yb=s0+sL+2.5+(i>>1)*6.5; G.boats.push(ellipse(sx*(B/2-2.7),yb,.9,2.8,16));}
+  G.secs=[]; for(let i=0;i<p.secondaries;i++){const sx=i%2?-1:1, ys=s0+sL*.55+(i>>1)*8, c=[sx*(B/2-1.9),ys], a=sx>0?-Math.PI/4:-3*Math.PI/4;
+    G.secs.push({c,poly:circ(c[0],c[1],.95,14),bar:place(rectP(.7,-.13,3.4,.13),c[0],c[1],a)});}
+  // deck furniture
+  const tA=fw[0], apex=y(tA)-p.turret_r-3.4, ta=(apex+L/2)/L;
+  G.breakwater=[[-hb(ta+.025)*.72,apex+3],[0,apex],[hb(ta+.025)*.72,apex+3]];
+  G.capstans=[-1,1].map(s=>circ(s*1.15,y(.058),.45,12));
+  G.chains=[-1,1].map(s=>[[s*hb(.032)*.8,y(.032)],[s*1.15,y(.058)],[s*.9,y(.08)]]);
+  G.bollards=[]; for(const t of[.1,.46,.62,.93]) for(const s of[1,-1]) G.bollards.push([s*(hb(t)-1.0),y(t)]);
+  const ya=y(af[af.length-1])+p.turret_r+2.4, tq=(ya+3+L/2)/L, hq=Math.min(hb(Math.min(1,tq)),B/2)*.6;
+  G.panel=rectP(-hq,ya,hq,ya+5.2);    // accent zone: painted recognition panel on the quarterdeck
+  // wake and bow wave (PROPOSED: water is an open decision, so these are ink lines only)
+  G.wake=[];
+  for(const sx of[1,-1]){G.wake.push(Array.from({length:12},(_,i)=>{const t=.015+i/11*.3;return[sx*(hb(t)+.8+t*16),y(t)];}));
+    G.wake.push(Array.from({length:10},(_,i)=>{const u=i/9;return[sx*(hb(1)*.85+u*4.5),L/2+1.5+u*18];}));}
+  G.wake.push([[0,L/2+3],[0,L/2+16]]);
+  const fb=p.freeboard; G.base=G.hull;
+  G.ext=[G.hull].concat(G.wake);
+  G.shadows=[{layer:"ground",kind:"prism",polys:[G.hull],h:fb},
+    ...G.turrets.map(t=>({layer:"upper",kind:"prism",polys:[t.poly],h:fb+(t.sup?5.4:3.2),b:fb,base:"base"})),
+    {layer:"upper",kind:"float",polys:G.turrets.flatMap(t=>t.bars),h:fb+2.4,b:fb,base:"base"},
+    {layer:"upper",kind:"prism",polys:[G.deckhouse].concat(G.aftHouse?[G.aftHouse]:[]),h:fb+3.4,b:fb,base:"base"},
+    {layer:"upper",kind:"prism",polys:[G.bridge],h:fb+8.5,b:fb,base:"base"},
+    {layer:"upper",kind:"prism",polys:G.funnels.map(f=>ellipse(f.c[0],f.c[1],f.rx,f.ry,16)),h:fb+10.5,b:fb,base:"base"},
+    {layer:"upper",kind:"float",polys:G.boats,h:fb+2.4,b:fb,base:"base"},
+    {layer:"upper",kind:"prism",polys:G.secs.map(s=>s.poly),h:fb+2,b:fb,base:"base"},
+    {layer:"upper",kind:"line",w:.6,minPx:1,b:fb,base:"base",lines:G.masts.map(m=>[[m.c[0],m.c[1],fb],[m.c[0],m.c[1],fb+21]])},
+    {layer:"upper",kind:"line",w:.3,minPx:.8,b:fb,base:"base",lines:G.masts.map(m=>[[-m.yard/2,m.c[1],fb+17],[m.yard/2,m.c[1],fb+17]])}];
+  return G;
+}
+function drawCruiserGround(g,I){
+  const {M,V,side}=I, G=M.G, p=M.p, pn=pen(g,V,M.seed+5), ppm=V.ppm;
+  for(const w of G.wake) pn.line(w,{alpha:.42,weight:.6,breaks:.3,freq:.05});
+  const hO=pn.path(G.hull,{fill:ROOF,weight:0});
+  const dO=tps(V,G.deck); planks(g,dO,V,pn.r());
+  pn.path(G.deck,{weight:.6,alpha:.55,breaks:.15});
+  edgeHatch(g,hO,Math.min(5,1.1*ppm),pn.r());
+  pn.line(G.breakLine,{alpha:.7,weight:.65,breaks:.1});
+  pn.line(G.breakwater,{alpha:.75,weight:.7});
+  for(const c of G.chains) pn.line(c,{alpha:.7,weight:.6});
+  for(const c of G.capstans) pn.path(c,{fill:CREAM,weight:.7});
+  if(ppm>2.2){g.fillStyle=INK; g.globalAlpha=.7; for(const b of G.bollards){const q=tp(V,b); g.beginPath(); g.arc(q[0],q[1],Math.max(.5,.25*ppm),0,TAU); g.fill();} g.globalAlpha=1;}
+  accentPanel(pn,G.panel,side);
+  strokeO(g,hO,1.2);
+}
+function drawCruiserUpper(g,I){
+  const {M,V}=I, G=M.G, p=M.p, pn=pen(g,V,M.seed+9), ppm=V.ppm;
+  for(const s of G.secs){pn.path(s.bar,{fill:CREAM,weight:.7}); const o=pn.path(s.poly,{fill:CREAM,weight:0}); shadeDome(g,o,tp(V,s.c),shade(CREAM)); strokeO(g,o,.8);}
+  for(const b of G.boats){pn.path(b,{fill:CREAM,weight:.8}); if(ppm>3) pn.path(b.map(q=>[q[0]+(cen(b)[0]-q[0])*.3,q[1]+(cen(b)[1]-q[1])*.18]),{weight:.5,alpha:.6});}
+  for(const h of [G.deckhouse,G.aftHouse].filter(Boolean)){const o=pn.path(h,{fill:CREAM,weight:0}); edgeHatch(g,o,Math.min(4,.9*ppm),pn.r()); strokeO(g,o,1.1);
+    if(ppm>2.5) pn.path(offsetPoly(h,.45),{weight:.5,alpha:.4});}
+  const bO=pn.path(G.bridge,{fill:ROOF,weight:0}); edgeHatch(g,bO,Math.min(4,.9*ppm),pn.r()); strokeO(g,bO,1.1);
+  pn.line(G.bridgeWing,{weight:.85,alpha:.9});
+  for(const f of G.funnels){const o=pn.path(ellipse(f.c[0],f.c[1],f.rx,f.ry,24),{fill:CREAM,weight:0}); shadeDome(g,o,tp(V,f.c),shade(CREAM)); strokeO(g,o,1.0);
+    pn.path(ellipse(f.c[0],f.c[1],f.rx*.82,f.ry*.86,20),{weight:.55,alpha:.7});
+    const mouth=pn.path(ellipse(f.c[0],f.c[1],f.rx*.58,f.ry*.66,18),{weight:.7});   // soot-dark mouth: cross-hatched ink
+    hatchLines(g,mouth,tv(V,[1,1]).map(v=>v/Math.SQRT2),1.1,{alpha:.7,weight:.55}); hatchLines(g,mouth,tv(V,[1,-1]).map(v=>v/Math.SQRT2),1.3,{alpha:.55,weight:.5});}
+  for(const m of G.masts){pn.line([[-m.yard/2,m.c[1]],[m.yard/2,m.c[1]]],{weight:.75,alpha:.9}); pn.path(circ(m.c[0],m.c[1],m.r,10),{fill:CREAM,weight:.8});}
+  for(const t of G.turrets){
+    for(const b of t.bars){const o=pn.path(b,{fill:CREAM,weight:.75});}
+    for(const e of t.ears) pn.path(e,{fill:CREAM,weight:.6});
+    const o=pn.path(t.poly,{fill:CREAM,weight:0}); shadeDome(g,o,tp(V,t.c),shade(CREAM)); stipple(g,o,{rng:pn.r(),density:1.2,away:tp(V,t.c)}); strokeO(g,o,1.1);}
+}
+
+// ---------- radio tower (static) ----------
+function genTower(rng){const R=rnd(rng);return{base:R(5.4,6.6),top:R(1.0,1.8),height:R(23,27),sections:5+Math.floor(rng()*4),brace:rng()<.5?"X":"Z",
+  hut_w:R(3.6,4.6),hut_d:R(2.6,3.2),hut_h:R(2.6,3.2),hut_side:pickW(rng,[["west",.5],["north",.5]]),aerial_arm:R(2.2,3.4)};}
+function buildTower(p){
+  const G={}, b2=p.base/2, t2=p.top/2, H=p.height, N=p.sections, hs=z=>b2+(t2-b2)*z/H, C=[[-1,-1],[1,-1],[1,1],[-1,1]];
+  G.levels=Array.from({length:N+1},(_,k)=>H*k/N);
+  G.legs=C.map(([sx,sy])=>[[sx*b2,sy*b2,0],[sx*t2,sy*t2,H]]);
+  G.girts=[]; for(let k=1;k<N;k++){const z=G.levels[k],h=hs(z); for(let f=0;f<4;f++){const A=C[f],B=C[(f+1)%4]; G.girts.push([[A[0]*h,A[1]*h,z],[B[0]*h,B[1]*h,z]]);}}
+  G.braces=[]; for(let f=0;f<4;f++){const A=C[f],B=C[(f+1)%4];
+    for(let k=0;k<N;k++){const z0=G.levels[k],z1=G.levels[k+1],h0=hs(z0),h1=hs(z1);
+      if(p.brace==="X"||k%2===0) G.braces.push([[A[0]*h0,A[1]*h0,z0],[B[0]*h1,B[1]*h1,z1]]);
+      if(p.brace==="X"||k%2===1) G.braces.push([[B[0]*h0,B[1]*h0,z0],[A[0]*h1,A[1]*h1,z1]]);}}
+  G.baseSq=C.map(([sx,sy])=>[sx*b2,sy*b2]);
+  G.platform=rectP(-t2-.35,-t2-.35,t2+.35,t2+.35);
+  G.arms=C.map(([sx,sy])=>[[sx*(t2+.35),sy*(t2+.35),H+.4],[sx*(t2+.35+p.aerial_arm*.7),sy*(t2+.35+p.aerial_arm*.7),H+.4]]);
+  G.footings=C.map(([sx,sy])=>rectP(sx*b2-.45,sy*b2-.45,sx*b2+.45,sy*b2+.45));
+  const off=b2+1.9+p.hut_d/2;
+  G.hut=p.hut_side==="west"?rectP(-off-p.hut_d/2,-p.hut_w/2,-off+p.hut_d/2,p.hut_w/2):rectP(-p.hut_w/2,-off-p.hut_d/2,p.hut_w/2,-off+p.hut_d/2);
+  const hc=cen(G.hut), hw2=p.hut_side==="west"?[p.hut_d/2,p.hut_w/2]:[p.hut_w/2,p.hut_d/2];
+  G.hutPanel=rectP(hc[0]-hw2[0]*.55,hc[1]-hw2[1]*.5,hc[0]+hw2[0]*.55,hc[1]+hw2[1]*.5);   // accent zone: painted panel on the hut roof
+  G.hutEave=offsetPoly(G.hut,.3); G.vent=circ(hc[0]+hw2[0]*.68,hc[1]-hw2[1]*.68,.22,10);
+  G.cable=p.hut_side==="west"?[[hc[0]+p.hut_d/2,hc[1]+.6],[-b2,.6]]:[[hc[0]+.6,hc[1]+p.hut_d/2],[.6,-b2]];
+  G.ext=G.footings.concat([G.hut],G.arms.map(a=>a.map(q=>[q[0],q[1]])));
+  G.shadows=[{layer:"ground",kind:"prism",polys:[G.hut],h:p.hut_h},
+    {layer:"upper",kind:"line",w:.32,minPx:1.1,lines:G.legs},
+    {layer:"upper",kind:"line",w:.12,minPx:.7,lines:G.girts.concat(G.braces)},
+    {layer:"upper",kind:"float",polys:[G.platform],h:H},
+    {layer:"upper",kind:"line",w:.08,minPx:.6,lines:G.arms}];
+  return G;
+}
+function drawTowerGround(g,I){
+  const {M,V,side}=I, G=M.G, p=M.p, pn=pen(g,V,M.seed+5), ppm=V.ppm;
+  dirt(g,tps(V,offsetPoly(G.baseSq,-.6)),pn.r(),2.6);
+  pn.line(G.cable,{alpha:.6,weight:.6,breaks:.35,freq:.25});
+  for(const f of G.footings) pn.path(f,{fill:ROCK,weight:.8});
+  const hO=pn.path(G.hut,{fill:ROOF,weight:0});
+  if(ppm>3) pn.path(G.hutEave,{weight:.5,alpha:.4});
+  accentPanel(pn,G.hutPanel,side);
+  pn.path(G.vent,{fill:CREAM,weight:.6});
+  strokeO(g,hO,1.2);
+}
+function drawTowerUpper(g,I){
+  const {M,V}=I, G=M.G, pn=pen(g,V,M.seed+9), ppm=V.ppm;
+  const flat=s=>s.map(q=>[q[0],q[1]]);
+  for(const s of G.girts) pn.line(flat(s),{weight:.5,alpha:.6,breaks:.12});
+  for(const s of G.braces) pn.line(flat(s),{weight:.45,alpha:.62});
+  for(const s of G.legs) pn.line(flat(s),{weight:.95,alpha:1});
+  for(const a of G.arms){pn.line(flat(a),{weight:.55,alpha:.8}); const q=tp(V,a[1]); g.fillStyle=INK; g.beginPath(); g.arc(q[0],q[1],.8,0,TAU); g.fill();}
+  const o=pn.path(G.platform,{fill:CREAM,weight:0});
+  hatchLines(g,o,tv(V,[1,0]),Math.max(1.3,.2*ppm),{alpha:.45,weight:.45}); strokeO(g,o,.9);
+}
+
+// ---------- the roster (initial unit roster, design doc) ----------
+const f1=v=>(Math.round(v*10)/10).toFixed(1);
+const UNITS=[
+  {id:"light_fighter",name:"Light fighter",domain:"air",gen:r=>genPlane("light",r),build:buildPlane,draw:{air:drawPlane},dims:p=>`span ${f1(p.span)} m · length ${f1(p.length)} m`},
+  {id:"heavy_fighter",name:"Heavy fighter",domain:"air",gen:r=>genPlane("heavy",r),build:buildPlane,draw:{air:drawPlane},dims:p=>`span ${f1(p.span)} m · ${p.booms?"twin boom":"twin engine"}`},
+  {id:"bomber",name:"Bomber",domain:"air",gen:r=>genPlane("bomber",r),build:buildPlane,draw:{air:drawPlane},dims:p=>`span ${f1(p.span)} m · ${p.engines} engines`},
+  {id:"tank",name:"Tank",domain:"ground",gen:genTank,build:buildTank,draw:{ground:drawTankGround,upper:drawTankUpper},dims:p=>`${f1(p.length)} × ${f1(p.width)} m · ${p.turret} turret`},
+  {id:"anti_aircraft_battery",name:"Anti-aircraft battery",domain:"ground",gen:genAA,build:buildAA,prep:prepAA,draw:{ground:drawAAGround,upper:drawAAUpper},dims:p=>`${f1(p.radius*2)} m across · ${p.guns===1?"single":p.guns===2?"twin":"quad"} mount`},
+  {id:"small_cruiser",name:"Small cruiser",domain:"sea",gen:genCruiser,build:buildCruiser,draw:{ground:drawCruiserGround,upper:drawCruiserUpper},dims:p=>`${Math.round(p.length)} × ${f1(p.beam)} m · ${p.turrets_fwd+p.turrets_aft} turrets`},
+  {id:"radio_tower",name:"Radio tower",domain:"static",gen:genTower,build:buildTower,draw:{ground:drawTowerGround,upper:drawTowerUpper},dims:p=>`${f1(p.base)} m base · ${Math.round(p.height)} m tall`}
+];
+const VLET="abc";
+const mcache=new Map();
+function unitSeed(ui,v){let h=(P.seed^Math.imul(ui+1,0x9E3779B1))|0; h=Math.imul(h^(h>>>15),0x85EBCA77); h^=Math.imul(v+1,0xC2B2AE35); h^=h>>>13; return (h>>>0)%2147483647;}
+function model(ui,v){
+  const key=P.seed+"|"+ui+"|"+v; let M=mcache.get(key); if(M) return M;
+  const U=UNITS[ui], seed=unitSeed(ui,v), p=U.gen(mulberry32(seed)), G=U.build(p);
+  M={U,ui,v,p,G,seed}; mcache.set(key,M); return M;
+}
+
+// =====================================================================================
+// Shadows: silhouettes into one mask per height class, tinted once, composited at P.shadowStr
+// =====================================================================================
+function projPts(pts,V,z,k,sd){return tps(V,pts).map(q=>[q[0]+sd[0]*z*k,q[1]+sd[1]*z*k]);}
+function maskOps(I,phase){
+  const {M,V}=I, G=M.G, sd=shadowDir(), L=sunL(), k=V.ppm*L;
+  return m=>{
+    for(const s of G.shadows){
+      if((phase==="air")!==(s.layer==="air")) continue;
+      if(phase==="air"){   // aircraft: the silhouette at its drawn height, offset away from the sun, not stretched
+        const off=altVis()*k, st=planeStretch(), az=(P.sunAz+90)*Math.PI/180;
+        m.save(); if(I.clip){m.beginPath(); m.rect(I.clip.x,I.clip.y,I.clip.w,I.clip.h); m.clip();} m.translate(V.x+sd[0]*off,V.y+sd[1]*off); m.rotate(az); m.scale(st,1); m.rotate(-az); m.translate(-V.x,-V.y);
+        m.beginPath(); for(const poly of s.polys) addPoly(m,tps(V,poly),true); m.fill(); m.restore(); continue;}
+      const b=s.b||0, elevated=b>0;
+      if(phase==="deck"&&!elevated) continue;
+      // ground phase: ground parts whole; raised parts only beyond their base. Deck phase: raised parts onto their base.
+      const z0=phase==="deck"?0:(elevated?b:0), dz=phase==="deck"?b:0, base=elevated?tps(V,G[s.base]):null;
+      m.save();
+      if(elevated){m.beginPath(); if(phase==="ground"){m.rect(-1e5,-1e5,2e5,2e5);} addPoly(m,base,true); m.clip(phase==="ground"?"evenodd":"nonzero");}
+      if(s.kind==="band"){ const bd=I.band, hh=bd.h*L, offx=sd[0]*hh, offy=sd[1]*hh;
+        const add=q=>{const h2=hull(q.concat(q.map(p=>[p[0]+offx,p[1]+offy]))); addPoly(m,h2,true);};
+        m.beginPath(); const n=bd.pts.length, lim=bd.closed?n:n-1;
+        for(let i=0;i<lim;i++){const j=(i+1)%n; add([bd.L[i],bd.L[j],bd.R[j],bd.R[i]]);} bd.caps.forEach(add); m.fill();}
+      else if(s.kind==="prism"){ m.beginPath(); for(const poly of s.polys){const a=projPts(poly,V,z0,k,sd), c=projPts(poly,V,s.h-dz,k,sd); addPoly(m,hull(a.concat(c)),true);} m.fill();}
+      else if(s.kind==="float"){ m.beginPath(); for(const poly of s.polys) addPoly(m,projPts(poly,V,s.h-dz,k,sd),true); m.fill();}
+      else if(s.kind==="line"){ m.lineWidth=Math.max(s.minPx||.8,s.w*V.ppm); m.lineCap="round"; m.beginPath();
+        for(const ln of s.lines){ln.forEach((q,i)=>{const p=tp(V,q), z=q[2]-dz; const x=p[0]+sd[0]*z*k, y=p[1]+sd[1]*z*k; i?m.lineTo(x,y):m.moveTo(x,y);});}
+        m.stroke();}
+      m.restore();
+    }
+  };
+}
+function shadowPass(g,sc,ops){
+  if(!ops.length) return;
+  const m=sc.mctx;
+  m.setTransform(1,0,0,1,0,0); m.globalCompositeOperation="source-over"; m.clearRect(0,0,sc.mask.width,sc.mask.height);
+  m.setTransform(DPR,0,0,DPR,0,0); m.fillStyle="#000"; m.strokeStyle="#000";
+  for(const op of ops) op(m);
+  m.setTransform(1,0,0,1,0,0); m.globalCompositeOperation="source-in"; m.fillStyle=P.shadowCol; m.fillRect(0,0,sc.mask.width,sc.mask.height);
+  m.globalCompositeOperation="source-over";
+  g.save(); g.setTransform(1,0,0,1,0,0); g.globalAlpha=P.shadowStr; g.drawImage(sc.mask,0,0); g.restore();
+}
+// where a unit and its shadow reach, in world metres (for fitting a cell)
+function extPts(M,rot,withShadow){
+  const c=Math.cos(rot),s=Math.sin(rot), r=p=>[p[0]*c-p[1]*s,p[0]*s+p[1]*c], out=[];
+  for(const poly of M.G.ext) for(const p of poly) out.push(r(p));
+  if(!withShadow) return out;
+  const sd=shadowDir(), L=sunL(), st=planeStretch();
+  for(const sh of M.G.shadows){
+    if(sh.kind==="plane"){const off=altVis()*L; for(const poly of sh.polys) for(const p of poly){const q=r(p), d=q[0]*sd[0]+q[1]*sd[1]; out.push([q[0]+(st-1)*d*sd[0]+sd[0]*off,q[1]+(st-1)*d*sd[1]+sd[1]*off]);}}
+    else if(sh.kind==="line"){for(const ln of sh.lines) for(const p of ln){const q=r(p); out.push([q[0]+sd[0]*p[2]*L,q[1]+sd[1]*p[2]*L]);}}
+    else for(const poly of sh.polys) for(const p of poly){const q=r(p); out.push([q[0]+sd[0]*sh.h*L,q[1]+sd[1]*sh.h*L]);}
+  }
+  return out;
+}
+// fit a unit and its shadow to a box. floorFrac keeps an aircraft at least that fraction of its
+// plane-only fit; a shadow that then outruns the box is anchored away from the sun and clipped by the cell.
+function fitView(M,box,rot,maxPpm,floorFrac){
+  const ub=bbox(extPts(M,rot,true)), mx=maxPpm||30;
+  let ppm=Math.min(box.w/Math.max(.1,ub[2]-ub[0]),box.h/Math.max(.1,ub[3]-ub[1]),mx);
+  if(floorFrac){const gb=bbox(extPts(M,rot,false)); ppm=Math.max(ppm,Math.min(box.w/(gb[2]-gb[0]),box.h/(gb[3]-gb[1]),mx)*floorFrac);}
+  const sd=shadowDir(), ax=(lo,hi,start,len,d)=>(hi-lo)*ppm<=len?start+len/2-ppm*(lo+hi)/2:(d>=0?start-ppm*lo:start+len-ppm*hi);
+  return view(ax(ub[0],ub[2],box.x,box.w,sd[0]),ax(ub[1],ub[3],box.y,box.h,sd[1]),ppm,rot);
+}
+
+// =====================================================================================
+// Prototype objects for the true-scale strip: tree and house, verbatim
+// =====================================================================================
+function scallop(cx,cy,R,n,ph,amps,wob,ns){
+  const pts=[], steps=n*9;
+  for(let i=0;i<=steps;i++){
+    const th=i/steps*Math.PI*2, u=n*th/2+ph, idx=Math.floor(u/Math.PI)%n, a=amps[idx];
+    let rr=R*(1-a+a*Math.pow(Math.abs(Math.sin(u)),.55));
+    rr*=1+wob*.08*(vnoise(Math.cos(th)*1.6+7,Math.sin(th)*1.6+7,ns)*2-1);
+    pts.push([cx+Math.cos(th)*rr,cy+Math.sin(th)*rr,idx]);
+  }
+  return pts;
+}
+function tracePath(g,pts){g.beginPath();for(let i=0;i<pts.length;i++){const p=pts[i];i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]);}g.closePath();}
+function drawLobe(g,L,rng){
+  const {x,y,R}=L, n=Math.max(5,Math.round(4.5+R/3)), ph=rng()*Math.PI, ns=(rng()*1e6)|0;
+  const amps=Array.from({length:n},()=>.13+rng()*.12);
+  const pts=scallop(x,y,R,n,ph,amps,P.wob,ns);
+  tracePath(g,pts); g.fillStyle=CREAM; g.fill();
+  g.strokeStyle=INK; g.lineWidth=1.25*P.lw; g.stroke();
+  for(let k=1;k<=P.rings;k++){
+    const s=1-k*(.68/(P.rings+.4)), nk=Math.max(3,n-k);
+    const am=Array.from({length:nk},()=>.15+rng()*.12);
+    const ring=scallop(x+LX*R*.1*k,y+LY*R*.1*k,R*s,nk,ph+k*.7,am,P.wob,ns+k*31);
+    g.lineWidth=.85*P.lw; g.globalAlpha=.88; g.beginPath();
+    let seg=-1, draw=false;
+    for(const p of ring){
+      if(p[2]!==seg){seg=p[2]; draw=rng()<.8; if(draw) g.moveTo(p[0],p[1]); continue;}
+      if(draw) g.lineTo(p[0],p[1]);
+    }
+    g.stroke(); g.globalAlpha=1;
+  }
+  g.lineWidth=.75*P.lw; g.beginPath();
+  for(let m=1;m<=n;m++){
+    if(rng()>.55) continue;
+    const th=2*(m*Math.PI-ph)/n, rr=R*(1-amps[m%n]), cx=x+Math.cos(th)*rr, cy=y+Math.sin(th)*rr;
+    g.moveTo(cx,cy); g.lineTo(cx-Math.cos(th)*R*.15,cy-Math.sin(th)*R*.15);
+  }
+  g.stroke();
+  g.fillStyle=INK; g.globalAlpha=.55;
+  const dots=Math.round(R*.6);
+  for(let i=0;i<dots;i++){
+    const a=rng()*Math.PI*2, d=Math.sqrt(rng())*R*.78, dx=Math.cos(a), dy=Math.sin(a);
+    if(dx*LX+dy*LY>-.15) continue;
+    g.beginPath(); g.arc(x+dx*d,y+dy*d,.45,0,Math.PI*2); g.fill();
+  }
+  g.globalAlpha=1;
+}
+function buildTreeSprite(t){
+  const r=t.r, half=Math.ceil(r*1.3+4), size=half*2;
+  const c=document.createElement("canvas"); c.width=c.height=Math.ceil(size*DPR);
+  const g=c.getContext("2d"); g.setTransform(DPR,0,0,DPR,half*DPR,half*DPR); g.lineJoin="round"; g.lineCap="round";
+  const rng=mulberry32(t.seed);
+  const nOuter=Math.min(7,3+Math.floor(r/11)+(rng()<.5?1:0)), a0=rng()*Math.PI*2, lobes=[];
+  for(let i=0;i<nOuter;i++){
+    const a=a0+i/nOuter*Math.PI*2+(rng()-.5)*.5, d=r*(.36+rng()*.14);
+    lobes.push({x:Math.cos(a)*d,y:Math.sin(a)*d,R:r*(.34+rng()*.16)});
+  }
+  lobes.sort((p,q)=>(p.x*LX+p.y*LY)-(q.x*LX+q.y*LY));
+  lobes.push({x:(rng()-.5)*r*.12,y:(rng()-.5)*r*.12,R:r*(.48+rng()*.1)});
+  for(const L of lobes) drawLobe(g,L,rng);
+  t.sprite=c; t.half=half;
+}
+function houseParts(s){
+  const S=P.houseSize, c=Math.cos(s.rot), sn=Math.sin(s.rot);
+  return s.parts.map(p=>{
+    const cx=s.x+(p.ox*c-p.oy*sn)*S, cy=s.y+(p.ox*sn+p.oy*c)*S, rot=s.rot+p.r, w=p.w*S, d=p.d*S, cc=Math.cos(rot), ss=Math.sin(rot);
+    const tf=(lx,ly)=>[cx+lx*cc-ly*ss,cy+lx*ss+ly*cc];
+    return {cx,cy,w,d,cc,ss,tf,corners:[tf(-w/2,-d/2),tf(w/2,-d/2),tf(w/2,d/2),tf(-w/2,d/2)]};
+  });
+}
+function drawHouse(g,s){
+  const rng=mulberry32(s.seed), [sdx,sdy]=shadowDir(), dark=mix(P.shadowCol,ROOF,.58);
+  g.lineJoin="round"; g.lineCap="round"; g.strokeStyle=INK;
+  s.geo.forEach((pt,pi)=>{
+    const {w,d,tf,cc,ss}=pt;
+    for(const sg of [-1,1]){
+      const fx=-sg*ss, fy=sg*cc;
+      g.beginPath(); addPoly(g,[tf(-w/2,0),tf(w/2,0),tf(w/2,sg*d/2),tf(-w/2,sg*d/2)],true);
+      g.fillStyle=fx*sdx+fy*sdy>0?dark:ROOF; g.fill();
+      g.lineWidth=.5*P.lw; g.globalAlpha=.5; g.beginPath();
+      for(let lx=-w/2+1.8;lx<w/2-1;lx+=2.4){
+        if(rng()>.78) continue; const j=(rng()-.5)*.6, a=tf(lx+j,sg*.8), b=tf(lx+j*.5,sg*(d/2-1));
+        g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]);
+      }
+      g.stroke(); g.globalAlpha=1;
+    }
+    g.lineWidth=.5*P.lw; g.globalAlpha=.4; g.beginPath(); addPoly(g,[tf(-w/2+1.3,-d/2+1.3),tf(w/2-1.3,-d/2+1.3),tf(w/2-1.3,d/2-1.3),tf(-w/2+1.3,d/2-1.3)],true); g.stroke();
+    g.globalAlpha=1; g.lineWidth=1.2*P.lw; g.beginPath(); addPoly(g,pt.corners,true); g.stroke();
+    g.lineWidth=1.05*P.lw; g.beginPath(); const r0=tf(-w/2,0),r1=tf(w/2,0); g.moveTo(r0[0],r0[1]); g.lineTo(r1[0],r1[1]); g.stroke();
+    if(pi===0&&s.chimney){
+      const q=[tf(w*.22-1.5,-d*.22-1.5),tf(w*.22+1.5,-d*.22-1.5),tf(w*.22+1.5,-d*.22+1.5),tf(w*.22-1.5,-d*.22+1.5)];
+      g.beginPath(); addPoly(g,q,true); g.fillStyle=CREAM; g.fill(); g.lineWidth=.8*P.lw; g.stroke();
+    }
+  });
+}
+function makeHouse(rng,x,y,rot){
+  const parts=[{ox:0,oy:0,w:1.3+rng()*.5,d:.72+rng()*.15,r:0}];
+  if(rng()<.6){
+    const m=parts[0], d2=.55+rng()*.12, w2=.8+rng()*.35, side=rng()<.5?-1:1;
+    parts.push({ox:m.w/2-d2/2-.05,oy:side*(m.d/2+w2/2-.25),w:w2,d:d2,r:Math.PI/2});
+  }
+  return {kind:"house",x,y,rot,parts,hs:.85+rng()*.3,chimney:rng()<.6,seed:(rng()*2147483647)|0,key:""};
+}
+function houseMaskOp(s){ // prism shadow, as castShadows does for houses
+  return m=>{const [dx,dy]=shadowDir(), L=sunL(), offx=dx*s.h*L, offy=dy*s.h*L;
+    m.beginPath(); s.geo.forEach(p=>{const q=p.corners; addPoly(m,hull(q.concat(q.map(v=>[v[0]+offx,v[1]+offy]))),true);}); m.fill();};
+}
+function treeMaskOp(o){ // trunk line plus the canopy silhouette stretched along the shadow (castShadows, tree branch)
+  return m=>{const az=(P.sunAz+90)*Math.PI/180, dx=Math.cos(az), dy=Math.sin(az), L=sunL(), stretch=Math.min(2.4,1+L*.3), off=o.h*L, sx=o.x+dx*off, sy=o.y+dy*off, s=o.half*2;
+    m.lineCap="round"; m.lineWidth=Math.max(1.5,o.r*.12); m.beginPath(); m.moveTo(o.x,o.y); m.lineTo(sx,sy); m.stroke();
+    m.save(); m.translate(sx,sy); m.rotate(az); m.scale(stretch,1); m.rotate(-az); m.drawImage(o.sprite,-o.half,-o.half,s,s); m.restore();};
+}
+
+// =====================================================================================
+// Paper (the prototype's buildGround without the road, and buildGrain with a seeded rng)
+// =====================================================================================
+function makeSheet(cv){const mask=document.createElement("canvas"); return {cv,ctx:cv.getContext("2d"),ground:document.createElement("canvas"),grain:document.createElement("canvas"),mask,mctx:mask.getContext("2d"),W:0,H:0};}
+function sizeSheet(sc,W,H){
+  W=Math.round(W); H=Math.round(H);
+  if(sc.W===W&&sc.H===H) return;
+  sc.W=W; sc.H=H;
+  for(const c of [sc.cv,sc.mask]){c.width=Math.round(W*DPR); c.height=Math.round(H*DPR);}
+  sc.cv.style.width=W+"px"; sc.cv.style.height=H+"px";
+  buildGround(sc); buildGrain(sc);
+}
+function buildGround(sc){
+  const W=sc.W,H=sc.H; sc.ground.width=Math.round(W*DPR); sc.ground.height=Math.round(H*DPR);
+  const g=sc.ground.getContext("2d"); g.setTransform(DPR,0,0,DPR,0,0); g.globalAlpha=1;
+  const S=3, lw=Math.ceil(W/S)+1, lh=Math.ceil(H/S)+1, small=document.createElement("canvas");
+  small.width=lw; small.height=lh; const sg=small.getContext("2d"), img=sg.createImageData(lw,lh), d=img.data;
+  for(let y=0;y<lh;y++)for(let x=0;x<lw;x++){
+    const wx=x*S,wy=y*S, n=fbm(wx*.008,wy*.008,11,4), m=fbm(wx*.0025,wy*.0025,23,3), k=.93+.11*n, i=(y*lw+x)*4;
+    d[i]=PAPER[0]*k+(m-.5)*14; d[i+1]=PAPER[1]*k+(m-.5)*8; d[i+2]=PAPER[2]*k-(m-.5)*8; d[i+3]=255;
+  }
+  sg.putImageData(img,0,0); g.imageSmoothingEnabled=true; g.imageSmoothingQuality="high"; g.drawImage(small,0,0,lw*S,lh*S);
+  const rng=mulberry32(4242);
+  const specks=Math.round(W*H/90);
+  for(let i=0;i<specks;i++){
+    const x=rng()*W,y=rng()*H;
+    if(rng()<.85){g.globalAlpha=.12+rng()*.28; g.fillStyle=INK; const s=.5+rng()*.9; g.fillRect(x,y,s,s);}
+    else{g.globalAlpha=.18; g.strokeStyle=rng()<.5?INK:FIBRE; g.lineWidth=.5; g.beginPath(); g.moveTo(x,y); const a=rng()*6.28,l=1.5+rng()*3; g.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l); g.stroke();}
+  }
+  g.fillStyle=DIRT; const darts=Math.round(W*H/12);
+  for(let i=0;i<darts;i++){
+    const x=rng()*W,y=rng()*H, f=fbm(x*.011,y*.011,91,3); if(f<.58||rng()>(f-.58)*4) continue;
+    g.globalAlpha=.15+rng()*.25; const s=.6+rng()*.8; g.fillRect(x,y,s,s);
+  }
+  g.globalAlpha=1;
+}
+function buildGrain(sc){
+  sc.grain.width=Math.round(sc.W*DPR); sc.grain.height=Math.round(sc.H*DPR);
+  const gx=sc.grain.getContext("2d"), img=gx.createImageData(sc.grain.width,sc.grain.height), d=img.data, rng=mulberry32(9001);
+  for(let i=0;i<d.length;i+=4){
+    let v=255-rng()*24; if(rng()<.004) v=150+rng()*60;
+    d[i]=v; d[i+1]=v-2; d[i+2]=v-6; d[i+3]=255;
+  }
+  gx.putImageData(img,0,0);
+}
+
+// =====================================================================================
+// Rendering: the prototype's pass order, with units slotted into its height classes
+// =====================================================================================
+function drawLayer(g,I,layer){const fn=I.M.U.draw[layer]; if(fn){g.lineJoin="round"; g.lineCap="round"; fn(g,I);}}
+function renderSheet(sc,scene){
+  const g=sc.ctx;
+  g.setTransform(1,0,0,1,0,0); g.globalAlpha=1; g.globalCompositeOperation="source-over";
+  g.drawImage(sc.ground,0,0);
+  g.setTransform(DPR,0,0,DPR,0,0); g.lineJoin="round"; g.lineCap="round";
+  const insts=scene.insts, ground=insts.filter(I=>I.M.U.domain!=="air"), air=insts.filter(I=>I.M.U.domain==="air");
+  for(const I of ground) if(I.M.U.prep) I.M.U.prep(I);
+  // 1. structure class: hulls, rings, huts, houses; raised parts' shadows beyond their base merge into the same mask
+  shadowPass(g,sc,ground.map(I=>maskOps(I,"ground")).concat((scene.houses||[]).map(houseMaskOp)));
+  for(const s of scene.houses||[]) drawHouse(g,s);
+  for(const I of ground) drawLayer(g,I,"ground");
+  // 2. raised parts (turrets, superstructure, gun mounts) cast onto the decks below them
+  shadowPass(g,sc,ground.map(I=>maskOps(I,"deck")));
+  for(const I of ground) drawLayer(g,I,"upper");
+  // 3. trees (the prototype's tree class)
+  if(scene.trees&&scene.trees.length){shadowPass(g,sc,scene.trees.map(treeMaskOp)); for(const t of scene.trees){const s=t.half*2; g.drawImage(t.sprite,t.x-t.half,t.y-t.half,s,s);}}
+  // 4. aircraft at altitude: highest class, shadow falls across everything
+  shadowPass(g,sc,air.map(I=>maskOps(I,"air")));
+  for(const I of air) drawLayer(g,I,"air");
+  // ink lettering, scale bars, legend: part of the drawing, so under the grain
+  g.globalAlpha=1; scene.overlay(g);
+  if(P.grain>0){g.save(); g.setTransform(1,0,0,1,0,0); g.globalCompositeOperation="multiply"; g.globalAlpha=P.grain; g.drawImage(sc.grain,0,0); g.restore();}
+}
+
+// ---------- ink lettering and map furniture ----------
+const FONT_SC='"IM Fell English SC","Iowan Old Style",Georgia,serif', FONT_IT='"IM Fell English","Iowan Old Style",Georgia,serif';
+function inkText(g,txt,x,y,size,o){
+  o=o||{}; let s=size; g.font=`${o.italic?"italic ":""}${s}px ${o.sc?FONT_SC:FONT_IT}`;
+  if(o.maxW){while(s>9&&g.measureText(txt).width>o.maxW){s-=.5; g.font=`${o.italic?"italic ":""}${s}px ${o.sc?FONT_SC:FONT_IT}`;}}
+  g.textAlign=o.align||"left"; g.textBaseline="alphabetic"; g.fillStyle=INK; g.globalAlpha=o.alpha??.9; g.fillText(txt,x,y); g.globalAlpha=1;
+  return g.measureText(txt).width;
+}
+// a centred caption that wraps once, at its " · " separators, when the cell is too narrow
+function inkSpec(g,txt,cx,y,maxW){
+  const size=11.5; g.font=`italic ${size}px ${FONT_IT}`;
+  if(g.measureText(txt).width<=maxW){inkText(g,txt,cx,y,size,{italic:true,align:"center",alpha:.8}); return;}
+  const parts=txt.split(" · "); let a=parts[0], i=1;
+  for(;i<parts.length;i++){const t=a+" · "+parts[i]; if(g.measureText(t).width>maxW) break; a=t;}
+  inkText(g,a,cx,y,size,{italic:true,align:"center",alpha:.8,maxW}); inkText(g,parts.slice(i).join(" · "),cx,y+13,size,{italic:true,align:"center",alpha:.8,maxW});
+}
+const PX=view(0,0,1,0);
+function scaleBar(g,cx,y,ppm,seed){ // 10 m in ink: 0-5 m solid, 5-10 m open, map style
+  const L=10*ppm, h=2.6, pn=pen(g,PX,seed), lab="10 m";
+  g.font=`italic 11.5px ${FONT_IT}`; const tw=g.measureText(lab).width, x=cx-(L+5+tw)/2;
+  pn.path(rectP(x,y-h,x+L/2,y),{fill:INK,weight:.55,wob:.4}); pn.path(rectP(x+L/2,y-h,x+L,y),{fill:CREAM,weight:.65,wob:.4});
+  for(const t of [0,.5,1]) pn.line([[x+L*t,y-h-(t===.5?2:3.2)],[x+L*t,y]],{weight:.7,alpha:.9,wob:.3});
+  inkText(g,lab,x+L+5,y+1,11.5,{italic:true});
+}
+function neatline(g,W,H,seed){const pn=pen(g,PX,seed); pn.path(rectP(7,7,W-7,H-7),{weight:1.2,wob:.7}); pn.path(rectP(10.5,10.5,W-10.5,H-10.5),{weight:.5,alpha:.8,wob:.7});}
+function dimLine(g,x0,x1,y,label,seed,below){
+  const pn=pen(g,PX,seed); pn.line([[x0,y],[x1,y]],{weight:.7,alpha:.85});
+  for(const x of[x0,x1]) pn.line([[x,y-5],[x,y+5]],{weight:.8,alpha:.9});
+  for(const [x,d] of[[x0,1],[x1,-1]]) pn.line([[x+d*5,y-2.4],[x,y],[x+d*5,y+2.4]],{weight:.7,alpha:.85});
+  inkText(g,label,(x0+x1)/2,below?y+14:y-5,12,{italic:true,align:"center"});
+}
+
+// ---------- the roster sheet ----------
+const rosterSc=makeSheet(document.getElementById("roster"));
+const stripSc=makeSheet(document.getElementById("strip"));
+let cells=[];
+const ORDER=[0,1,2,3,4,6,5];   // light fighter, heavy fighter, bomber, tank, AA battery, radio tower, small cruiser
+function rosterLayout(W){
+  const mx=16, top=W<560?64:46, bot=16, items=[];
+  if(P.view==="roster"){
+    const cols=W>=640?3:W>=330?2:1, cw=(W-2*mx)/cols, ch=Math.round(Math.min(330,Math.max(205,cw*.92)));
+    let col=0,row=0;
+    for(const it of ORDER.concat(["pair"])){
+      const span=it===5?Math.min(2,cols):it==="pair"?(cols===2?2:1):1;
+      if(col+span>cols){row++;col=0;}
+      items.push({it,v:it==="pair"?P.variant[0]:P.variant[it],x:mx+col*cw,y:top+row*ch,w:cw*span,h:ch});
+      col+=span; if(col>=cols){col=0;row++;}
+    }
+    return {items,H:top+(col?row+1:row)*ch+bot};
+  }
+  const cw=(W-2*mx)/3, ch=Math.round(Math.min(290,Math.max(170,cw*.86))), chShip=Math.round(Math.max(140,Math.min(210,cw*.6)));
+  let y=top;
+  for(const ui of ORDER){const h=ui===5?chShip:ch; for(let v=0;v<3;v++) items.push({it:ui,v,x:mx+v*cw,y,w:cw,h,board:true}); y+=h;}
+  return {items,H:y+bot};
+}
+function rosterScene(W){
+  const lay=rosterLayout(W), insts=[], over=[]; cells=lay.items;
+  const altTxt=`${P.alt} m up`;
+  for(const c of lay.items){
+    const narrow=c.w<240, labelH=narrow?72:58, box={x:c.x+14,y:c.y+12,w:c.w-28,h:c.h-12-labelH};
+    const capPpm=Math.min(30,(c.w-70)/10);           // the 10 m bar always fits its cell
+    const yName=c.y+c.h-(narrow?36:22), ySpec=yName+14;
+    const clip={x:c.x+3,y:c.y+3,w:c.w-6,h:c.h-labelH+2};
+    if(c.it==="pair"){
+      const M=model(0,c.v), half={...box,w:box.w/2-6}, halfB={...half,x:box.x+box.w/2+6}, ppm=fitView(M,half,0,capPpm,.5).ppm;
+      const A=fitView(M,half,0,ppm,1), B=fitView(M,halfB,0,ppm,1);
+      insts.push({M,V:A,side:"A",clip:{...clip,w:c.w/2-3}},{M,V:B,side:"B",clip:{...clip,x:c.x+c.w/2,w:c.w/2-3}});
+      over.push(g=>{const yb=c.y+c.h-labelH+12;
+        inkText(g,"A",box.x+half.w/2,yb-2,13,{sc:true,align:"center"}); inkText(g,"B",box.x+box.w/2+6+half.w/2,yb-2,13,{sc:true,align:"center"});
+        scaleBar(g,c.x+c.w/2,yb+12,ppm,77);
+        inkText(g,"Sides A and B",c.x+c.w/2,yName,15,{sc:true,align:"center",maxW:c.w-16});
+        inkSpec(g,"proposed accents · brick red, slate blue",c.x+c.w/2,ySpec,c.w-16);});
+      continue;
+    }
+    const M=model(c.it,c.v), rot=c.it===5?Math.PI/2:0, air=M.U.domain==="air", V=fitView(M,box,rot,capPpm,air?.5:0);
+    insts.push({M,V,side:P.side,clip:air?clip:null});
+    const U=M.U, chosen=c.board&&P.variant[c.it]===c.v;
+    over.push(g=>{
+      scaleBar(g,c.x+c.w/2,c.y+c.h-labelH+12,V.ppm,M.seed%997);
+      const nm=c.board?`${U.name} · ${VLET[c.v]}`:U.name;
+      inkText(g,nm,c.x+c.w/2,yName,15,{sc:true,align:"center",maxW:c.w-16});
+      const spec=(c.board?"":`variant ${VLET[c.v]} · `)+U.dims(M.p)+(U.domain==="air"?` · ${altTxt}`:"");
+      inkSpec(g,spec,c.x+c.w/2,ySpec,c.w-16);
+      if(chosen){const pn=pen(g,PX,c.v+5); const x0=c.x+5,y0=c.y+5,x1=c.x+c.w-5,y1=c.y+c.h-3,k=12;
+        for(const [x,y,sx,sy] of [[x0,y0,1,1],[x1,y0,-1,1],[x1,y1,-1,-1],[x0,y1,1,-1]]) pn.line([[x+sx*k,y],[x,y],[x,y+sy*k]],{weight:1.1,alpha:.9});}
+    });
+  }
+  over.unshift(g=>{
+    neatline(g,W,lay.H,11);
+    inkText(g,P.view==="roster"?"Inkwood · unit roster":"Inkwood · variant board",22,33,17,{sc:true});
+    const meta=`seed ${P.seed} · sun ${P.sunAz}° at ${P.elev}° · side ${P.side}`;
+    if(W<560) inkText(g,meta,22,52,12,{italic:true,alpha:.8,maxW:W-44});
+    else inkText(g,meta,W-22,33,12,{italic:true,align:"right",alpha:.8,maxW:W-250});
+  });
+  return {W,H:lay.H,insts,overlay:g=>over.forEach(f=>f(g))};
+}
+
+// ---------- the true-scale strip ----------
+function stripScene(cw){
+  const ppm=P.ppm, mx=24, gap=Math.max(26,ppm*4.5), rot=Math.PI/2, items=[];
+  const rng=mulberry32(P.seed^0x51ed);
+  const tree={kind:"tree",x:0,y:0,seed:(rng()*2147483647)|0,r:P.treeSize,h:0};
+  tree.h=tree.r*1.3*(.85+.3*.5); buildTreeSprite(tree);
+  const house=makeHouse(mulberry32(P.seed+7),0,0,-.12); house.h=P.houseSize*.9*house.hs;
+  const sd=shadowDir(), Lsun=sunL();
+  // geometry and shadow extents of each item, relative to its own origin, in px
+  items.push({kind:"tree",name:"Tree",size:`canopy ${tree.r*2} px`,obj:tree,g:[-tree.r,-tree.r,tree.r,tree.r],
+    s:[-tree.r,-tree.r,tree.r+sd[0]*tree.h*Lsun*1.4+tree.r,tree.r+sd[1]*tree.h*Lsun*1.4+tree.r]});
+  { house.geo=houseParts(house); const pts=house.geo.flatMap(p=>p.corners), b=bbox(pts), o=house.h*Lsun;
+    items.push({kind:"house",name:"House",size:`${P.houseSize} px`,obj:house,g:b,s:[b[0],b[1],b[2]+Math.max(0,sd[0]*o),b[3]+Math.max(0,sd[1]*o)]}); }
+  for(const ui of [3,4,6,0,1,2,5]){
+    const M=model(ui,P.variant[ui]), gp=extPts(M,rot,false).map(q=>[q[0]*ppm,q[1]*ppm]), sp=extPts(M,rot,true).map(q=>[q[0]*ppm,q[1]*ppm]);
+    const gb=bbox(gp), sb=bbox(sp), len=ui<3?Math.max(M.p.span,M.p.length):ui===4?M.p.radius*2:ui===6?M.p.base:M.p.length;
+    items.push({kind:"unit",ui,M,name:M.U.name,size:`${Math.round(len*ppm)} px`,g:gb,s:sb});
+  }
+  let x=mx+14; for(const it of items){it.ox=x-it.g[0]; x+=it.g[2]-it.g[0]+gap;}
+  const contentR=x-gap, cruiser=items[items.length-1];
+  const top=58;   // caption + phone bracket
+  const above=Math.max(...items.map(it=>-Math.min(it.g[1],it.s[1]))), below=Math.max(...items.map(it=>Math.max(it.g[3],it.s[3])));
+  const base=top+above+6, yNum=base+below+18, yShip=yNum+34;
+  const W=Math.max(cw,Math.round(contentR+mx+14),Math.round(mx+14+250*ppm+mx+14),Math.round(cruiser.ox+cruiser.g[0]+390+mx));
+  // legend rows, wrapped to the width
+  const legend=items.map((it,i)=>`${i+1} ${it.name}, ${it.size}`);
+  const ctx=stripSc.ctx; ctx.font=`italic 12px ${FONT_IT}`;
+  const rows=[[]]; let rw=0; const maxW=W-2*(mx+14);
+  for(const e of legend){const w=ctx.measureText(e).width+22; if(rw+w>maxW&&rows[rows.length-1].length){rows.push([]);rw=0;} rows[rows.length-1].push(e); rw+=w;}
+  const yLeg=yShip+30, H=Math.round(yLeg+rows.length*17+18);
+  const insts=[], trees=[], houses=[];
+  for(const it of items){
+    if(it.kind==="tree"){it.obj.x=it.ox; it.obj.y=base; trees.push(it.obj);}
+    else if(it.kind==="house"){const h=it.obj; h.x=it.ox; h.y=base; h.geo=houseParts(h); houses.push(h);}
+    else insts.push({M:it.M,V:view(it.ox,base,ppm,rot),side:P.side});
+  }
+  const overlay=g=>{
+    neatline(g,W,H,23);
+    inkText(g,"True scale",mx+6,34,17,{sc:true});
+    inkText(g,`${ppm.toFixed(1)} px per metre · aircraft ${P.alt} m up · tree and house at the prototype's own size`,mx+104,34,12,{italic:true,alpha:.8});
+    const cx0=cruiser.ox+cruiser.g[0], cy=base+cruiser.g[1]-12;
+    dimLine(g,cx0,cx0+390,Math.min(cy,top-2),"390 px · a phone held upright",31);
+    items.forEach((it,i)=>inkText(g,String(i+1),it.ox+(it.g[0]+it.g[2])/2,yNum,13,{sc:true,align:"center"}));
+    dimLine(g,mx+14,mx+14+250*ppm,yShip,"250 m · a true-scale battleship, a later unit",37,true);
+    rows.forEach((r,ri)=>{let xx=mx+14; for(const e of r){const w=inkText(g,e,xx,yLeg+ri*17+12,12,{italic:true,alpha:.85}); xx+=w+22;}});
+  };
+  return {W,H,insts,trees,houses,overlay};
+}
+
+// =====================================================================================
+// UI
+// =====================================================================================
+const rosterBox=document.getElementById("roster").parentElement, stripBox=document.getElementById("strip").parentElement;
+function renderAll(){
+  const wR=Math.max(280,Math.floor(rosterBox.clientWidth));
+  let sc=rosterScene(wR); sizeSheet(rosterSc,sc.W,sc.H); renderSheet(rosterSc,sc);
+  const wS=Math.max(280,Math.floor(stripBox.clientWidth));
+  sc=stripScene(wS); sizeSheet(stripSc,sc.W,sc.H); renderSheet(stripSc,sc);
+}
+let pending=false;
+function requestRender(){if(pending) return; pending=true; requestAnimationFrame(()=>{pending=false; renderAll();});}
+new ResizeObserver(()=>requestRender()).observe(rosterBox);
+
+const compass=b=>["N","NE","E","SE","S","SW","W","NW"][Math.round(b/45)%8];
+const fmt={lw:v=>(+v).toFixed(2),wob:v=>(+v).toFixed(2),stip:v=>`${Math.round(v*100)}%`,sunAz:v=>`${v}° ${compass(+v)}`,elev:v=>`${v}°`,
+  ppm:v=>`${(+v).toFixed(1)} px/m`,alt:v=>`${v} m`,altScale:v=>`${(v*100).toFixed(1)}% · ${Math.round(P.alt*v)} m`};
+Object.keys(fmt).forEach(id=>{
+  const el=document.getElementById(id), out=document.getElementById(id+"V");
+  const apply=()=>{P[id]=+el.value; out.textContent=fmt[id](el.value); if(id==="alt") document.getElementById("altScaleV").textContent=fmt.altScale(P.altScale);};
+  apply();
+  el.addEventListener("input",()=>{apply(); requestRender();});
+});
+function seg(id,fn){
+  const box=document.getElementById(id);
+  box.addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    box.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); fn(b.dataset.v);
+  });
+}
+seg("side",v=>{P.side=v; requestRender();});
+seg("view",v=>{P.view=v; requestRender();});
+const vlist=document.getElementById("variantList");
+function buildVariantList(){
+  vlist.innerHTML="";
+  ORDER.forEach(ui=>{
+    const row=document.createElement("div"); row.className="vrow";
+    const lab=document.createElement("span"); lab.textContent=UNITS[ui].name; row.appendChild(lab);
+    const s=document.createElement("div"); s.className="seg small"; s.id="var_"+ui; s.setAttribute("role","group"); s.setAttribute("aria-label",UNITS[ui].name+" variant");
+    for(let v=0;v<3;v++){const b=document.createElement("button"); b.type="button"; b.dataset.v=v; b.textContent=VLET[v]; b.setAttribute("aria-pressed",String(P.variant[ui]===v)); s.appendChild(b);}
+    s.addEventListener("click",e=>{const b=e.target.closest("button"); if(!b) return; setVariant(ui,+b.dataset.v);});
+    row.appendChild(s); vlist.appendChild(row);
+  });
+}
+function setVariant(ui,v){
+  P.variant[ui]=v;
+  const s=document.getElementById("var_"+ui); if(s) s.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.v===v)));
+  renderDefs(); requestRender();
+}
+document.getElementById("roster").addEventListener("click",e=>{
+  const r=e.currentTarget.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
+  const c=cells.find(c=>x>=c.x&&x<c.x+c.w&&y>=c.y&&y<c.y+c.h); if(!c) return;
+  const ui=c.it==="pair"?0:c.it;
+  if(c.board) setVariant(ui,c.v); else setVariant(ui,(P.variant[ui]+1)%3);
+});
+function setSeed(s){
+  P.seed=s; mcache.clear(); document.getElementById("seedChip").textContent=`seed ${s}`; renderDefs(); requestRender();
+}
+document.getElementById("newSeed").addEventListener("click",()=>setSeed(1+((Math.random()*2147483646)|0)));
+document.getElementById("resetSeed").addEventListener("click",()=>setSeed(SEED0));
+
+// the definitions, as data
+function renderDefs(){
+  const box=document.getElementById("defsBody"); box.innerHTML="";
+  ORDER.forEach(ui=>{
+    const M=model(ui,P.variant[ui]), d=document.createElement("div");
+    const h=document.createElement("h3"); h.textContent=`${M.U.name} · variant ${VLET[M.v]}`; d.appendChild(h);
+    const t=document.createElement("table");
+    for(const [k,v] of Object.entries(M.p)){const tr=document.createElement("tr"); const a=document.createElement("td"); a.textContent=k; const b=document.createElement("td"); b.textContent=typeof v==="boolean"?(v?"yes":"no"):String(v); tr.append(a,b); t.appendChild(tr);}
+    d.appendChild(t); box.appendChild(d);
+  });
+}
+// read-only hook for porting: the same definitions the sheet draws
+window.InkwoodUnits={units:UNITS.map(u=>({id:u.id,name:u.name,domain:u.domain})),
+  params:(id,v)=>{const ui=UNITS.findIndex(u=>u.id===id); return ui<0?null:JSON.parse(JSON.stringify(model(ui,v??P.variant[ui]).p));},
+  chosen:()=>Object.fromEntries(UNITS.map((u,ui)=>[u.id,{variant:VLET[P.variant[ui]],params:model(ui,P.variant[ui]).p}]))};
+
+// Save PNG: the whole sheet (roster above the strip) as one image
+const statusEl=document.getElementById("status");
+document.getElementById("savePng").addEventListener("click",async()=>{
+  renderAll();
+  const a=rosterSc.cv, b=stripSc.cv, gapPx=Math.round(16*DPR), out=document.createElement("canvas");
+  out.width=Math.max(a.width,b.width); out.height=a.height+gapPx+b.height;
+  const g=out.getContext("2d"); g.fillStyle=`rgb(${PAPER})`; g.fillRect(0,0,out.width,out.height);
+  g.drawImage(a,0,0); g.drawImage(b,0,a.height+gapPx);
+  const blob=await new Promise(r=>out.toBlob(r,"image/png")), name=`inkwood_unit_sheet_${P.seed}.png`;
+  try{
+    const dl=window.claude&&window.claude.use?await window.claude.use("downloads"):null;
+    if(dl){await dl.save({filename:name,data:blob}); statusEl.textContent=`Saved ${name}`; return;}
+  }catch(err){ if(err&&err.code==="declined"){statusEl.textContent="Save cancelled"; return;} if(err&&err.code&&err.code!=="unavailable"&&err.code!=="not_granted"){statusEl.textContent=`Could not save the PNG (${err.code}).`; return;} }
+  const url=URL.createObjectURL(blob), link=document.createElement("a"); link.href=url; link.download=name; document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000); statusEl.textContent=`Saved ${name}`;
+});
+
+// a bare #variants anchor opens the variant board directly
+if(location.hash==="#variants"){P.view="variants"; document.querySelectorAll("#view button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v==="variants")));}
+buildVariantList(); renderDefs(); renderAll();
+// redraw once the lettering faces arrive, so canvas text is in IM Fell rather than the fallback
+if(document.fonts&&document.fonts.load){Promise.all([document.fonts.load(`15px "IM Fell English SC"`),document.fonts.load(`italic 12px "IM Fell English"`)]).then(()=>requestRender(),()=>{});}
+})();
+</script>
+
+</body></html>
