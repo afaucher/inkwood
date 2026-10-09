@@ -1,0 +1,142 @@
+extends Node2D
+
+# Application shell: the menu, the headless test entry point and the session
+# wiring, carried over from Bridge to Friendship's scripts/app/main.gd. It holds
+# no game world yet -- the sandbox world arrives with the execution plan's later
+# components -- and when it does, it is created at runtime from here (the way
+# Bridge to Friendship's GameWorld is) rather than placed in the scene, so that a
+# test can stand up its own.
+
+const BuildVersion = preload("res://scripts/ui/build_version.gd")
+
+@onready var menu: VBoxContainer = $CanvasLayer/Menu
+@onready var status_label: Label = $CanvasLayer/Menu/StatusLabel
+
+func _ready() -> void:
+	# Headless entry point first, before any menu, network or Steam wiring: a
+	# test run must not touch any of it.
+	var args := OS.get_cmdline_args()
+	for i in args.size():
+		if args[i] == "--run-test" and i + 1 < args.size():
+			_run_test(args[i + 1])
+			return
+
+	# A sibling of the menu rather than a child of it, so hiding the menu to
+	# start a game leaves the build stamp on screen. Added here and not in the
+	# .tscn because a headless run returns above this line, so a test never
+	# builds a Label it will not look at.
+	$CanvasLayer.add_child(BuildVersion.make_label())
+
+	$CanvasLayer/Menu/HostButton.pressed.connect(_on_host_pressed)
+	$CanvasLayer/Menu/JoinButton.pressed.connect(_on_join_pressed)
+	$CanvasLayer/Menu/LocalButton.pressed.connect(_on_local_pressed)
+
+	NetworkManager.session_started.connect(_on_session_started)
+	NetworkManager.session_ended.connect(_on_session_ended)
+	NetworkManager.peer_joined.connect(_on_peer_joined)
+	NetworkManager.peer_left.connect(_on_peer_left)
+	NetworkManager.session_error.connect(_set_status)
+	SteamManager.lobby_error.connect(_set_status)
+
+	if not SteamManager.available:
+		_set_status("Steam not available -- local only.")
+
+func _unhandled_input(_event: InputEvent) -> void:
+	if Input.is_action_just_pressed("system_exit"):
+		get_tree().quit()
+
+# --- Menu --------------------------------------------------------------------
+
+func _on_host_pressed() -> void:
+	_set_status("Creating lobby...")
+	# The host's net log goes on HERE, before the session exists: NetworkManager
+	# logs "hosting via steam" on the line before it emits session_started, so a
+	# switch flipped from that signal misses the one event it is most wanted for.
+	# Set locally, not pushed, and not as the knob's default (which would print
+	# [Net] lines under every test that stands up a session).
+	DebugSettings.set_value("net_log", 1)
+	await NetworkManager.host(NetworkManager.Transport.STEAM)
+
+# THE JOIN FLOW, verbatim from Bridge to Friendship: Join connects to the first
+# global Steam lobby it finds. One game at a time suits the test group (design
+# doc, decision log 2026-10-09); a lobby browser is deliberately not here.
+func _on_join_pressed() -> void:
+	if not SteamManager.request_lobby_list():
+		return
+	_set_status("Searching for lobbies...")
+	var lobbies: Array = await SteamManager.lobby_list
+	if lobbies.is_empty():
+		_set_status("No lobbies found.")
+		return
+	SteamManager.join_lobby(int(lobbies[0]))
+	await SteamManager.lobby_joined
+	NetworkManager.join(NetworkManager.Transport.STEAM)
+
+func _on_local_pressed() -> void:
+	# No world to show yet, so the menu stays up and the status says why.
+	_set_status("Local session. No sandbox world yet (execution plan, phase 2+).")
+
+# --- Session -----------------------------------------------------------------
+
+func _on_session_started(is_host: bool) -> void:
+	# The menu stays visible until there is a world to hide it for.
+	_set_status("%s via %s as peer %d. No sandbox world yet." % [
+		"Hosting" if is_host else "Joined",
+		"steam" if NetworkManager.transport == NetworkManager.Transport.STEAM else "enet",
+		NetworkManager.local_id()])
+
+func _on_session_ended() -> void:
+	menu.show()
+	_set_status("Disconnected.")
+
+func _on_peer_joined(id: int) -> void:
+	_set_status("Peer %d joined (%d in session)." % [id, NetworkManager.peers.size()])
+
+func _on_peer_left(id: int) -> void:
+	_set_status("Peer %d left (%d in session)." % [id, NetworkManager.peers.size()])
+
+func _set_status(text: String) -> void:
+	if status_label != null:
+		status_label.text = text
+	print("[Main] ", text)
+
+# --- Headless entry point ----------------------------------------------------
+
+func _run_test(test_name: String) -> void:
+	print("Starting automated test: ", test_name)
+
+	# Deterministic RNG for every test. The global randi/randf is otherwise
+	# seeded from entropy per launch, which makes any test whose outcome depends
+	# on a random draw flaky run to run -- and a flaky gate gets ignored, which
+	# costs the one real regression it exists to catch. Do NOT remove it; if a
+	# new test is flaky, check this first. (The project's generators do not use
+	# the global RNG at all -- see scripts/core/mulberry32.gd.)
+	seed(20261009)
+
+	var path := "res://scripts/tests/%s.gd" % test_name
+	if not ResourceLoader.exists(path):
+		printerr("[TEST FAILED] test script not found: ", path)
+		get_tree().quit(1)
+		return
+
+	# A script with a PARSE ERROR must fail loudly here, not present as a 600s
+	# HANG with the real message (Parse Error) sitting in the .err.log. Bridge to
+	# Friendship guards `load() == null` -- but on 4.7 a broken script loads as a
+	# NON-null resource that cannot be instantiated (observed 2026-10-09), so the
+	# null check alone never fires and the typo surfaces as "has no setup()".
+	# Both conditions, so either engine behaviour is caught by name.
+	var script: Resource = load(path)
+	if script == null or not (script as Script).can_instantiate():
+		printerr("[TEST FAILED] ", test_name, " did not compile -- see the .err.log for the Parse Error")
+		get_tree().quit(1)
+		return
+
+	var node := Node.new()
+	node.name = test_name
+	node.set_script(script)
+	add_child(node)
+	if not node.has_method("setup"):
+		printerr("[TEST FAILED] ", test_name, " has no setup(main) entry point")
+		get_tree().quit(1)
+		return
+	node.setup(self)

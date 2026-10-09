@@ -1,0 +1,32 @@
+# Normalise every text file to LF in the repository AND on checkout.
+#
+# Not cosmetic. Git's Windows default (core.autocrlf=true) checks text files out
+# as CRLF, and a bash script with CRLF line endings fails on Linux with the
+# useless message `bad interpreter: /bin/bash^M` -- so build.sh, test_runner.sh
+# and import_check.sh, which README.md tells Linux users to run directly, would
+# be broken for anyone who cloned on Windows and shared the tree, or who checked
+# out on Linux from a Windows-normalised commit.
+#
+# eol=lf (not just text=auto) is what forces the working-copy ending too.
+# PowerShell, Godot and every tool in this project read LF fine on Windows.
+* text=auto eol=lf
+
+# Explicit for the files where it is load-bearing rather than tidy.
+*.sh   text eol=lf
+*.gd   text eol=lf
+*.tscn text eol=lf
+*.cfg  text eol=lf
+*.godot text eol=lf
+
+# Never touch these -- the GodotSteam addon ships prebuilt binaries for every
+# platform, and a line-ending "fix" applied to one corrupts it silently.
+*.dll    binary
+*.so     binary
+*.dylib  binary
+*.exe    binary
+*.bin    binary
+*.png    binary
+*.jpg    binary
+*.ogg    binary
+*.wav    binary
+*.glb    binary

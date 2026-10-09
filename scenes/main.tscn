@@ -1,0 +1,44 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/app/main.gd" id="1_main"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Menu" type="VBoxContainer" parent="CanvasLayer"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -90.0
+offset_right = 140.0
+offset_bottom = 90.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="CanvasLayer/Menu"]
+layout_mode = 2
+text = "INKWOOD"
+horizontal_alignment = 1
+
+[node name="HostButton" type="Button" parent="CanvasLayer/Menu"]
+layout_mode = 2
+text = "HOST (STEAM LOBBY)"
+
+[node name="JoinButton" type="Button" parent="CanvasLayer/Menu"]
+layout_mode = 2
+text = "JOIN (STEAM LOBBY)"
+
+[node name="LocalButton" type="Button" parent="CanvasLayer/Menu"]
+layout_mode = 2
+text = "SOLO / LOCAL"
+
+[node name="StatusLabel" type="Label" parent="CanvasLayer/Menu"]
+layout_mode = 2
+text = "Not connected."
+horizontal_alignment = 1

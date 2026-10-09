@@ -1,0 +1,2 @@
+# Keeps variant board output (PNG sheets) out of the editor file system and the import cache.
+# Code reads board.json and the images through FileAccess, which a .gdignore does not affect.

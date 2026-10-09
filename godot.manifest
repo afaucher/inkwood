@@ -1,0 +1,24 @@
+# godot.manifest -- the engine this project is pinned to.
+#
+# THIS IS THE ONLY PLACE THE VERSION IS WRITTEN DOWN. build.sh, build.ps1 and
+# both test runners read this file, install exactly that build under
+# build/deps/, and REFUSE any engine that reports a different version. Upgrading
+# is a one-line edit: change the value, run the build, and the new engine plus
+# its export templates are fetched on the next run.
+#
+# The value is a release tag from the godot-builds repo. Anything published
+# there works, pre-releases included:
+#
+#   4.4.1-stable   4.5-stable   4.5-beta3   4.6-dev5
+#   https://github.com/godotengine/godot-builds/releases
+#
+# To trial a version WITHOUT editing this file (it is a real pin -- a build made
+# against an unpinned engine should not be shippable by accident):
+#
+#   INKWOOD_GODOT_VERSION=4.5-stable ./build.sh --target linux
+#
+# Format is `key = value`, `#` starts a comment. Deliberately not JSON or TOML:
+# bash has a parser for neither, and a format both shells read in four lines
+# beats one that needs a tool installed on every machine that builds this game.
+
+version = 4.7-stable

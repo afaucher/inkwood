@@ -1,0 +1,36 @@
+# Godot-specific ignores
+.godot/
+!/.godot/extension_list.cfg
+!/.godot/global_script_class_cache.cfg
+!/.godot/uid_cache.bin
+
+# Build output AND dependencies. build/deps holds the pinned Godot engine and
+# its export templates (see godot.manifest / godot_env.sh) -- ~200 MB that is
+# downloaded, never committed.
+build/
+*.tmp
+*.bak
+*.sav
+*.log
+test_logs/
+version.txt
+
+# Temporary / scratch output -- see CLAUDE.md "Temporary files".
+# Tests and dev scripts write throwaway files here so a run never dirties the tree.
+tmp/
+
+# Export-step temp artifacts: the Windows export writes tilde-prefixed copies
+# (and RF*.TMP restore files) next to the Steam DLLs in addons/ while it runs.
+~*.dll
+~*.TMP
+
+# Windows specific
+desktop.ini
+Thumbs.db
+*.exe
+*.zip
+
+# Linux specific. The engine lives under build/deps (already ignored above);
+# these stay so an engine left at the root by an older checkout is still ignored.
+Godot_v*_linux.x86_64
+*.tar.gz

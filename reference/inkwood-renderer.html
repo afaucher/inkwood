@@ -1,0 +1,812 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Inkwood Renderer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: the map canvas is the stage; a cartographer's tool palette sits beside it (below it on phones) */
+:root{
+  --bg:#e5e9eb; --panel:#f2f4f5; --fg:#1c2630; --muted:#56646f; --line:#c8d0d5;
+  --accent:#3d6c8f; --accent-fg:#ffffff; --chip:rgba(28,38,48,.8); --chip-fg:#f2f4f5;
+  --f-display:"IM Fell English SC","Iowan Old Style",Georgia,serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11171c; --panel:#182027; --fg:#e1e6ea; --muted:#93a1ac; --line:#2a3640;
+    --accent:#86b0cf; --accent-fg:#0d151b; --chip:rgba(9,14,18,.82); --chip-fg:#e1e6ea; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11171c; --panel:#182027; --fg:#e1e6ea; --muted:#93a1ac; --line:#2a3640;
+  --accent:#86b0cf; --accent-fg:#0d151b; --chip:rgba(9,14,18,.82); --chip-fg:#e1e6ea; color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+.app{display:flex;flex-direction:column;min-height:100%}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 14px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-family:var(--f-display);font-weight:400;font-size:24px;line-height:1.1;margin:0;letter-spacing:.01em}
+header p{margin:0;color:var(--muted);font-size:12.5px}
+.stage{position:relative;height:62svh;min-height:340px;background:#d9ccaa;overflow:hidden;touch-action:none;cursor:crosshair}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#cursor{pointer-events:none}
+.hud{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:6px;pointer-events:none}
+.chip{background:var(--chip);color:var(--chip-fg);font-family:var(--f-mono);font-size:11.5px;padding:4px 8px;border-radius:4px;font-variant-numeric:tabular-nums}
+.panel{padding-block:14px 28px;padding-inline:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px 22px;background:var(--panel);align-content:start}
+section{display:grid;gap:10px;min-width:0}
+h2{margin:0;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.ctl{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:baseline}
+.ctl label{font-size:13.5px}
+.ctl output{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ctl input[type=range]{grid-column:1/-1;width:100%;margin:2px 0 0;accent-color:var(--accent);height:24px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{flex:1;min-width:0;border:0;background:transparent;color:var(--fg);font:500 13px var(--f-body);padding:8px 6px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.seg.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line)}
+.seg.tools button{border:0;background:var(--panel)}
+.seg.tools button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.sw{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.25);flex:none}
+.toggles{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+.tg{display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer}
+.tg input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;border:1px solid var(--line);background:transparent;color:var(--fg);font:500 13px var(--f-body);padding:9px 12px;border-radius:6px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.note{font-size:12px;color:var(--muted);margin:0}
+@media (min-width:900px){
+  html,body{overflow:hidden}
+  .app{display:grid;grid-template-columns:1fr 340px;grid-template-rows:auto 1fr;height:100%;min-height:0}
+  header{grid-column:1/-1}
+  .stage{height:auto;min-height:0}
+  .panel{grid-template-columns:1fr;overflow-y:auto;border-left:1px solid var(--line)}
+}
+</style>
+
+<div class="app">
+  <header>
+    <h1>Inkwood Renderer</h1>
+    <p>Paper ground · rosette trees · walls &amp; houses · merged cast shadows</p>
+  </header>
+
+  <div class="stage" id="stage">
+    <canvas id="map"></canvas>
+    <canvas id="cursor"></canvas>
+    <div class="hud"><span class="chip" id="count">0 trees · 0 props</span><span class="chip" id="hint">Drag on the map to paint</span></div>
+  </div>
+
+  <div class="panel">
+    <section>
+      <h2>Brush</h2>
+      <div class="seg tools" id="tool">
+        <button type="button" data-v="tree" aria-pressed="true">Trees</button>
+        <button type="button" data-v="prop" aria-pressed="false">Props</button>
+        <button type="button" data-v="wall" aria-pressed="false">Wall</button>
+        <button type="button" data-v="fort" aria-pressed="false">Enclosure</button>
+        <button type="button" data-v="house" aria-pressed="false">House</button>
+        <button type="button" data-v="erase" aria-pressed="false">Erase</button>
+      </div>
+      <div class="ctl"><label for="brush">Brush size</label><output id="brushV"></output><input type="range" id="brush" min="20" max="140" step="1" value="60"></div>
+      <div class="ctl"><label for="density">Density</label><output id="densityV"></output><input type="range" id="density" min="0.05" max="1" step="0.05" value="0.5"></div>
+      <label class="tg"><input type="checkbox" id="collide" checked> Collision check (objects and road)</label>
+    </section>
+
+    <section>
+      <h2>Trees</h2>
+      <div class="ctl"><label for="treeSize">Canopy size</label><output id="treeSizeV"></output><input type="range" id="treeSize" min="8" max="40" step="1" value="19"></div>
+      <div class="ctl"><label for="sizeVar">Size variation</label><output id="sizeVarV"></output><input type="range" id="sizeVar" min="0" max="0.8" step="0.05" value="0.4"></div>
+      <div class="ctl"><label for="rings">Inner contour rings</label><output id="ringsV"></output><input type="range" id="rings" min="0" max="4" step="1" value="3"></div>
+      <div class="ctl"><label for="height">Tree height</label><output id="heightV"></output><input type="range" id="height" min="0.6" max="3.5" step="0.1" value="1.3"></div>
+    </section>
+
+    <section>
+      <h2>Structures</h2>
+      <div class="ctl"><label for="wallW">Wall width</label><output id="wallWV"></output><input type="range" id="wallW" min="6" max="26" step="1" value="16"></div>
+      <div class="ctl"><label for="wallH">Wall height</label><output id="wallHV"></output><input type="range" id="wallH" min="3" max="30" step="1" value="12"></div>
+      <div class="ctl"><label for="houseSize">House size</label><output id="houseSizeV"></output><input type="range" id="houseSize" min="14" max="44" step="1" value="28"></div>
+      <p class="note">Enclosure size follows the brush size. Placing a structure clears trees and props under it while collision check is on.</p>
+    </section>
+
+    <section>
+      <h2>Light</h2>
+      <div class="ctl"><label for="sunAz">Sun direction</label><output id="sunAzV"></output><input type="range" id="sunAz" min="0" max="359" step="1" value="315"></div>
+      <div class="ctl"><label for="elev">Sun elevation</label><output id="elevV"></output><input type="range" id="elev" min="12" max="85" step="1" value="46"></div>
+      <div class="ctl"><label for="shadowStr">Shadow strength</label><output id="shadowStrV"></output><input type="range" id="shadowStr" min="0.2" max="1" step="0.02" value="0.92"></div>
+      <div class="seg" id="tint">
+        <button type="button" data-v="#3d6c8f" aria-pressed="true"><span class="sw" style="background:#3d6c8f"></span>Steel</button>
+        <button type="button" data-v="#2c4a66" aria-pressed="false"><span class="sw" style="background:#2c4a66"></span>Ink</button>
+        <button type="button" data-v="#3e7a7c" aria-pressed="false"><span class="sw" style="background:#3e7a7c"></span>Teal</button>
+        <button type="button" data-v="#6a5843" aria-pressed="false"><span class="sw" style="background:#6a5843"></span>Umber</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Ink &amp; paper</h2>
+      <div class="ctl"><label for="lw">Line weight</label><output id="lwV"></output><input type="range" id="lw" min="0.5" max="2" step="0.05" value="0.8"></div>
+      <div class="ctl"><label for="wob">Hand wobble</label><output id="wobV"></output><input type="range" id="wob" min="0" max="1.5" step="0.05" value="0.6"></div>
+      <div class="ctl"><label for="grain">Paper grain overlay</label><output id="grainV"></output><input type="range" id="grain" min="0" max="1" step="0.05" value="0.55"></div>
+    </section>
+
+    <section>
+      <h2>Render passes</h2>
+      <div class="toggles">
+        <label class="tg"><input type="checkbox" id="L_paper" checked> Paper</label>
+        <label class="tg"><input type="checkbox" id="L_road" checked> Road</label>
+        <label class="tg"><input type="checkbox" id="L_shadows" checked> Shadows</label>
+        <label class="tg"><input type="checkbox" id="L_objects" checked> Objects</label>
+        <label class="tg"><input type="checkbox" id="L_grain" checked> Grain</label>
+        <label class="tg"><input type="checkbox" id="L_grid"> Collision grid</label>
+      </div>
+      <p class="note">Draw order: paper → road → prop shadows → props → structure shadows → walls &amp; houses → tree shadows → trees → grain. Turn off Objects to see the raw shadow pass.</p>
+      <div class="actions">
+        <button type="button" class="btn primary" id="newScene">New scene</button>
+        <button type="button" class="btn" id="clear">Clear map</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+// ---------- palette (the map is a fixed paper world, independent of UI theme) ----------
+const PAPER=[217,204,170], CREAM="#efe6cd", ROCK="#e4d9bd", INK="#3d3226", DIRT="#5d5140", WALL="#e2d7ba", ROOF="#ebe5d2";
+const LX=-Math.SQRT1_2, LY=-Math.SQRT1_2;   // fixed "drawing light" for interior detail (top-left)
+const CELL=32, ROAD_HALF=16;
+const DPR=Math.min(2, window.devicePixelRatio||1);
+
+const P={tool:"tree",brush:60,density:.5,collide:true,treeSize:19,sizeVar:.4,rings:3,height:1.3,
+  sunAz:315,elev:46,shadowStr:.92,shadowCol:"#3d6c8f",lw:.8,wob:.6,grain:.55,wallW:16,wallH:12,houseSize:28,
+  L:{paper:true,road:true,shadows:true,objects:true,grain:true,grid:false}};
+
+// ---------- random + noise ----------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function hash2(i,j,s){let h=(Math.imul(i,374761393)+Math.imul(j,668265263)+Math.imul(s,1442695041))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return(h>>>0)/4294967296;}
+function vnoise(x,y,s){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+  const a=hash2(xi,yi,s),b=hash2(xi+1,yi,s),c=hash2(xi,yi+1,s),d=hash2(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;}
+function fbm(x,y,s,o){let v=0,a=.5,f=1,n=0;for(let i=0;i<o;i++){v+=a*vnoise(x*f,y*f,s+i*17);n+=a;a*=.5;f*=2.03;}return v/n;}
+
+// ---------- canvases ----------
+const stage=document.getElementById("stage"), map=document.getElementById("map"), cur=document.getElementById("cursor");
+const ctx=map.getContext("2d"), cctx=cur.getContext("2d");
+const ground=document.createElement("canvas"), gctx=ground.getContext("2d");
+const mask=document.createElement("canvas"), mctx=mask.getContext("2d");
+const grainC=document.createElement("canvas"), grctx=grainC.getContext("2d");
+let W=0,H=0, trees=[], props=[], structs=[], grid=new Map(), roadPts=[], sceneSeed=1;
+const hexRGB=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const mix=(a,b,t)=>{const pa=hexRGB(a),pb=hexRGB(b);return `rgb(${pa.map((v,i)=>Math.round(v+(pb[i]-v)*t))})`;};
+function shadowDir(){const az=(P.sunAz+90)*Math.PI/180; return [Math.cos(az),Math.sin(az)];}
+function hull(pts){
+  const p=pts.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]), cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lo=[],up=[];
+  for(const q of p){while(lo.length>=2&&cross(lo[lo.length-2],lo[lo.length-1],q)<=0)lo.pop();lo.push(q);}
+  for(let i=p.length-1;i>=0;i--){const q=p[i];while(up.length>=2&&cross(up[up.length-2],up[up.length-1],q)<=0)up.pop();up.push(q);}
+  up.pop();lo.pop();return lo.concat(up);
+}
+
+// ---------- scallop contour: |sin| bumps give rounded lobes with inward cusps ----------
+function scallop(cx,cy,R,n,ph,amps,wob,ns){
+  const pts=[], steps=n*9;
+  for(let i=0;i<=steps;i++){
+    const th=i/steps*Math.PI*2, u=n*th/2+ph, idx=Math.floor(u/Math.PI)%n, a=amps[idx];
+    let rr=R*(1-a+a*Math.pow(Math.abs(Math.sin(u)),.55));
+    rr*=1+wob*.08*(vnoise(Math.cos(th)*1.6+7,Math.sin(th)*1.6+7,ns)*2-1);
+    pts.push([cx+Math.cos(th)*rr,cy+Math.sin(th)*rr,idx]);
+  }
+  return pts;
+}
+function tracePath(g,pts){g.beginPath();for(let i=0;i<pts.length;i++){const p=pts[i];i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]);}g.closePath();}
+
+function drawLobe(g,L,rng){
+  const {x,y,R}=L, n=Math.max(5,Math.round(4.5+R/3)), ph=rng()*Math.PI, ns=(rng()*1e6)|0;
+  const amps=Array.from({length:n},()=>.13+rng()*.12);
+  const pts=scallop(x,y,R,n,ph,amps,P.wob,ns);
+  tracePath(g,pts); g.fillStyle=CREAM; g.fill();
+  g.strokeStyle=INK; g.lineWidth=1.25*P.lw; g.stroke();
+  // nested, broken contour rings shifted toward the light: reads as a raised floret
+  for(let k=1;k<=P.rings;k++){
+    const s=1-k*(.68/(P.rings+.4)), nk=Math.max(3,n-k);
+    const am=Array.from({length:nk},()=>.15+rng()*.12);
+    const ring=scallop(x+LX*R*.1*k,y+LY*R*.1*k,R*s,nk,ph+k*.7,am,P.wob,ns+k*31);
+    g.lineWidth=.85*P.lw; g.globalAlpha=.88; g.beginPath();
+    let seg=-1, draw=false;
+    for(const p of ring){
+      if(p[2]!==seg){seg=p[2]; draw=rng()<.8; if(draw) g.moveTo(p[0],p[1]); continue;}
+      if(draw) g.lineTo(p[0],p[1]);
+    }
+    g.stroke(); g.globalAlpha=1;
+  }
+  // short ticks from cusps toward the centre
+  g.lineWidth=.75*P.lw; g.beginPath();
+  for(let m=1;m<=n;m++){
+    if(rng()>.55) continue;
+    const th=2*(m*Math.PI-ph)/n, rr=R*(1-amps[m%n]), cx=x+Math.cos(th)*rr, cy=y+Math.sin(th)*rr;
+    g.moveTo(cx,cy); g.lineTo(cx-Math.cos(th)*R*.15,cy-Math.sin(th)*R*.15);
+  }
+  g.stroke();
+  // stipple on the side away from the light
+  g.fillStyle=INK; g.globalAlpha=.55;
+  const dots=Math.round(R*.6);
+  for(let i=0;i<dots;i++){
+    const a=rng()*Math.PI*2, d=Math.sqrt(rng())*R*.78, dx=Math.cos(a), dy=Math.sin(a);
+    if(dx*LX+dy*LY>-.15) continue;
+    g.beginPath(); g.arc(x+dx*d,y+dy*d,.45,0,Math.PI*2); g.fill();
+  }
+  g.globalAlpha=1;
+}
+
+function buildTreeSprite(t){
+  const r=t.r, half=Math.ceil(r*1.3+4), size=half*2;
+  const c=document.createElement("canvas"); c.width=c.height=Math.ceil(size*DPR);
+  const g=c.getContext("2d"); g.setTransform(DPR,0,0,DPR,half*DPR,half*DPR); g.lineJoin="round"; g.lineCap="round";
+  const rng=mulberry32(t.seed);
+  const nOuter=Math.min(7,3+Math.floor(r/11)+(rng()<.5?1:0)), a0=rng()*Math.PI*2, lobes=[];
+  for(let i=0;i<nOuter;i++){
+    const a=a0+i/nOuter*Math.PI*2+(rng()-.5)*.5, d=r*(.36+rng()*.14);
+    lobes.push({x:Math.cos(a)*d,y:Math.sin(a)*d,R:r*(.34+rng()*.16)});
+  }
+  lobes.sort((p,q)=>(p.x*LX+p.y*LY)-(q.x*LX+q.y*LY));       // far-from-light lobes first
+  lobes.push({x:(rng()-.5)*r*.12,y:(rng()-.5)*r*.12,R:r*(.48+rng()*.1)}); // crown on top
+  for(const L of lobes) drawLobe(g,L,rng);
+  t.sprite=c; t.half=half;
+}
+
+function buildPropSprite(p){
+  const s=p.s, half=Math.ceil(s*1.9+3);
+  const c=document.createElement("canvas"); c.width=c.height=Math.ceil(half*2*DPR);
+  const g=c.getContext("2d"); g.setTransform(DPR,0,0,DPR,half*DPR,half*DPR); g.rotate(p.rot);
+  g.lineJoin="round"; g.lineCap="round"; g.strokeStyle=INK; g.lineWidth=.95*P.lw;
+  const rng=mulberry32(p.seed);
+  if(p.type==="barrel"){
+    g.beginPath(); g.arc(0,0,s,0,Math.PI*2); g.fillStyle=CREAM; g.fill(); g.stroke();
+    g.lineWidth=.7*P.lw; g.beginPath(); g.arc(0,0,s*.64,0,Math.PI*2); g.stroke();
+    g.beginPath(); g.moveTo(-s*.64,0); g.lineTo(s*.64,0); g.stroke();
+  } else if(p.type==="crate"){
+    const a=s*.85; g.beginPath(); g.rect(-a,-a,a*2,a*2); g.fillStyle=CREAM; g.fill(); g.stroke();
+    g.lineWidth=.7*P.lw; g.beginPath(); g.rect(-a*.6,-a*.6,a*1.2,a*1.2); g.moveTo(-a*.6,-a*.6); g.lineTo(a*.6,a*.6); g.stroke();
+  } else {
+    const n=7, v=[];
+    for(let i=0;i<n;i++){const a=i/n*Math.PI*2+(rng()-.5)*.5, rr=s*(.72+rng()*.4); v.push([Math.cos(a)*rr,Math.sin(a)*rr]);}
+    g.beginPath(); v.forEach((q,i)=>i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1])); g.closePath();
+    g.fillStyle=ROCK; g.fill(); g.stroke();
+    g.lineWidth=.6*P.lw; g.beginPath(); g.moveTo(v[0][0]*.55,v[0][1]*.55); g.lineTo(v[3][0]*.2,v[3][1]*.2); g.stroke();
+    g.setTransform(DPR,0,0,DPR,half*DPR,half*DPR); g.globalAlpha=.6; g.beginPath();
+    for(let i=0;i<3;i++){const o=s*(.1+i*.22); g.moveTo(o,s*.55-o*.2); g.lineTo(o+s*.25,s*.3-o*.2);} g.stroke(); g.globalAlpha=1;
+  }
+  p.sprite=c; p.half=half;
+}
+
+// ---------- object model ----------
+function makeTree(rng,x,y){return {kind:"tree",x,y,seed:(rng()*2147483647)|0,sr:rng()*2-1,hr:rng(),big:rng()<.1,r:0,h:0,key:""};}
+function makeProp(rng,x,y){
+  const u=rng(), type=u<.5?"rock":u<.8?"barrel":"crate", s=type==="rock"?2.2+rng()*3.6:3+rng()*2.2;
+  return {kind:"prop",x,y,type,s,rot:rng()*Math.PI*2,seed:(rng()*2147483647)|0,h:s*(type==="rock"?.8:type==="barrel"?1.5:1.3),key:""};
+}
+function syncTree(t){
+  t.r=P.treeSize*(1+P.sizeVar*t.sr)*(t.big?1.45:1);
+  t.h=t.r*P.height*(.85+.3*t.hr);
+  const key=t.r.toFixed(1)+"|"+P.rings+"|"+P.wob+"|"+P.lw;
+  if(key!==t.key){t.key=key; buildTreeSprite(t);}
+}
+function syncProp(p){const key=String(P.lw); if(key!==p.key){p.key=key; buildPropSprite(p);}}
+const cr=o=>o.kind==="tree"?o.r*.72:o.s*1.25;
+const maxCr=()=>Math.max(P.treeSize*(1+P.sizeVar)*1.45*.72,10);
+
+// ---------- structures: walls / ramparts (centerline + width) and gable-roof houses ----------
+function rrectLocal(w,d,r,step){
+  const pts=[], hx=w/2, hy=d/2;
+  const seg=(x0,y0,x1,y1)=>{const n=Math.max(1,Math.ceil(Math.hypot(x1-x0,y1-y0)/step));for(let i=0;i<n;i++){const t=i/n;pts.push([x0+(x1-x0)*t,y0+(y1-y0)*t]);}};
+  const arc=(cx,cy,a0)=>{const n=Math.max(2,Math.ceil(r*Math.PI/2/step));for(let i=0;i<n;i++){const a=a0+i/n*Math.PI/2;pts.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r]);}};
+  seg(-hx+r,-hy,hx-r,-hy); arc(hx-r,-hy+r,-Math.PI/2); seg(hx,-hy+r,hx,hy-r); arc(hx-r,hy-r,0);
+  seg(hx-r,hy,-hx+r,hy); arc(-hx+r,hy-r,Math.PI/2); seg(-hx,hy-r,-hx,-hy+r); arc(-hx+r,-hy+r,Math.PI);
+  return pts;
+}
+function resample(src,step,closed){
+  const pts=closed?src.concat([src[0]]):src, out=[pts[0]]; let acc=0;
+  for(let i=1;i<pts.length;i++){
+    let [ax,ay]=pts[i-1]; const [bx,by]=pts[i]; let seg=Math.hypot(bx-ax,by-ay);
+    while(acc+seg>=step){const t=(step-acc)/seg; ax+=(bx-ax)*t; ay+=(by-ay)*t; out.push([ax,ay]); seg=Math.hypot(bx-ax,by-ay); acc=0;}
+    acc+=seg;
+  }
+  if(!closed){const e=pts[pts.length-1], l=out[out.length-1]; if(Math.hypot(e[0]-l[0],e[1]-l[1])>step*.3) out.push(e);}
+  else if(out.length>2){const l=out[out.length-1]; if(Math.hypot(l[0]-out[0][0],l[1]-out[0][1])<step*.5) out.pop();}
+  return out;
+}
+function chaikin(p,closed){
+  const out=[], n=p.length, lim=closed?n:n-1;
+  if(!closed) out.push(p[0]);
+  for(let i=0;i<lim;i++){const a=p[i],b=p[(i+1)%n]; out.push([a[0]*.75+b[0]*.25,a[1]*.75+b[1]*.25],[a[0]*.25+b[0]*.75,a[1]*.25+b[1]*.75]);}
+  if(!closed) out.push(p[n-1]);
+  return out;
+}
+function wallCenterline(s){
+  const g=s.gen;
+  if(g.type==="free") return g.pts;
+  const c=Math.cos(g.rot), sn=Math.sin(g.rot), tf=q=>[g.cx+q[0]*c-q[1]*sn, g.cy+q[0]*sn+q[1]*c];
+  if(g.type==="rrect") return rrectLocal(g.w,g.d,g.r,3).map(tf);
+  // divider: spans the ring's inner edge to inner edge, overlapping it slightly so the T-junction merges
+  const y=g.d/2-P.wallW*g.ringWs/2+2.5, pts=[];
+  const n=Math.max(2,Math.ceil(2*y/3)); for(let i=0;i<=n;i++) pts.push([g.lx,-y+2*y*i/n]);
+  return pts.map(tf);
+}
+function wallGeom(s){
+  const pts=wallCenterline(s), n=pts.length, hw=P.wallW*s.ws/2, nrm=[], Lp=[], Rp=[];
+  for(let i=0;i<n;i++){
+    const a=s.closed?pts[(i-1+n)%n]:pts[Math.max(i-1,0)], b=s.closed?pts[(i+1)%n]:pts[Math.min(i+1,n-1)];
+    const tx=b[0]-a[0], ty=b[1]-a[1], l=Math.hypot(tx,ty)||1, nx=-ty/l, ny=tx/l;
+    const eL=(vnoise(i*.18,1.3,s.seed)*2-1)*P.wob*1.3, eR=(vnoise(i*.18,5.1,s.seed)*2-1)*P.wob*1.3;
+    nrm.push([nx,ny]); Lp.push([pts[i][0]+nx*(hw+eL),pts[i][1]+ny*(hw+eL)]); Rp.push([pts[i][0]-nx*(hw+eR),pts[i][1]-ny*(hw+eR)]);
+  }
+  const cap=(i,startAng)=>{const c=[];for(let k=1;k<8;k++){const a=startAng-k*Math.PI/8;c.push([pts[i][0]+Math.cos(a)*hw,pts[i][1]+Math.sin(a)*hw]);}return c;};
+  let outline, edges, caps=[];
+  if(s.closed){ outline=[Lp,Rp]; edges=[{p:Lp,closed:true},{p:Rp,closed:true}]; }
+  else if(s.caps){
+    const a0=Math.atan2(nrm[n-1][1],nrm[n-1][0]), a1=Math.atan2(nrm[0][1],nrm[0][0]);
+    const ce=cap(n-1,a0), cs=cap(0,a1+Math.PI);
+    const loop=Lp.concat(ce,Rp.slice().reverse(),cs);
+    outline=[loop]; edges=[{p:loop,closed:true}]; caps=[ce.concat([Lp[n-1],Rp[n-1]]),cs.concat([Lp[0],Rp[0]])];
+  } else { outline=[Lp.concat(Rp.slice().reverse())]; edges=[{p:Lp,closed:false},{p:Rp,closed:false}]; }
+  Object.assign(s,{pts,nrm,L:Lp,R:Rp,hw,outline,edges,caps});
+}
+function addPoly(g,p,closed){g.moveTo(p[0][0],p[0][1]);for(let i=1;i<p.length;i++)g.lineTo(p[i][0],p[i][1]);if(closed)g.closePath();}
+function drawWall(g,s){
+  const rng=mulberry32(s.seed), {pts,nrm,L:Lp,R:Rp,hw}=s, n=pts.length, [sdx,sdy]=shadowDir(), lim=s.closed?n:n-1;
+  g.lineJoin="round"; g.lineCap="round";
+  g.beginPath(); s.outline.forEach(o=>addPoly(g,o,true)); g.fillStyle=WALL; g.fill("evenodd");
+  // tonal slope on the side facing away from the sun
+  g.strokeStyle=mix(P.shadowCol,WALL,.7); g.lineWidth=hw*.7; g.lineCap="butt"; g.globalAlpha=.6;
+  for(const side of [1,-1]){
+    g.beginPath(); let pen=false;
+    for(let k=0;k<=lim;k++){
+      const i=k%n, fx=nrm[i][0]*side, fy=nrm[i][1]*side;
+      if(fx*sdx+fy*sdy<.2){pen=false;continue;}
+      const x=pts[i][0]+fx*hw*.55, y=pts[i][1]+fy*hw*.55;
+      if(!pen){g.moveTo(x,y);pen=true;} else g.lineTo(x,y);
+    }
+    g.stroke();
+  }
+  g.globalAlpha=1; g.lineCap="round";
+  // stipple, denser toward the edges
+  g.fillStyle=INK;
+  for(let i=0;i<n;i++)for(let k=0;k<3;k++){
+    const t=rng()*2-1; if(rng()>.25+Math.abs(t)*.6) continue;
+    g.globalAlpha=.18+rng()*.25; g.fillRect(pts[i][0]+nrm[i][0]*t*hw*.95,pts[i][1]+nrm[i][1]*t*hw*.95,.8,.8);
+  }
+  // hatching down the shaded slope
+  g.strokeStyle=INK; g.lineWidth=.55*P.lw; g.globalAlpha=.5;
+  for(const side of [1,-1]){
+    const E=side>0?Lp:Rp; g.beginPath();
+    for(let i=0;i<n;i+=2){
+      const fx=nrm[i][0]*side, fy=nrm[i][1]*side, f=fx*sdx+fy*sdy;
+      if(f<.2||rng()>.85) continue;
+      const len=hw*(.28+rng()*.3)*Math.min(1,f+.3); g.moveTo(E[i][0],E[i][1]); g.lineTo(E[i][0]-fx*len,E[i][1]-fy*len);
+    }
+    g.stroke();
+  }
+  // double crest line along the top of the rampart
+  g.globalAlpha=.5; g.lineWidth=.65*P.lw;
+  [.24,-.24].forEach((c,ci)=>{
+    g.beginPath(); let pen=false;
+    for(let k=0;k<=lim;k++){
+      const i=k%n; if(vnoise(k*.06,ci*4.1+2,s.seed+3)<.22){pen=false;continue;}
+      const o=hw*c+(vnoise(k*.15,ci+8,s.seed)-.5)*P.wob*1.2, x=pts[i][0]+nrm[i][0]*o, y=pts[i][1]+nrm[i][1]*o;
+      if(!pen){g.moveTo(x,y);pen=true;} else g.lineTo(x,y);
+    }
+    g.stroke();
+  });
+  // outer edges
+  g.globalAlpha=1; g.lineWidth=1.15*P.lw; g.beginPath(); s.edges.forEach(e=>addPoly(g,e.p,e.closed)); g.stroke();
+  // pebbles sitting on the edges break up the line
+  g.lineWidth=.55*P.lw;
+  for(const side of [1,-1]){
+    const E=side>0?Lp:Rp;
+    for(let i=0;i<n;i+=2){
+      if(rng()<.45) continue;
+      const r=.6+rng()*1.1, o=(rng()*1.8-.4)*side;
+      g.beginPath(); g.arc(E[i][0]+nrm[i][0]*o,E[i][1]+nrm[i][1]*o,r,0,Math.PI*2);
+      g.fillStyle=WALL; g.fill(); g.globalAlpha=.8; g.stroke(); g.globalAlpha=1;
+    }
+  }
+}
+function houseParts(s){
+  const S=P.houseSize, c=Math.cos(s.rot), sn=Math.sin(s.rot);
+  return s.parts.map(p=>{
+    const cx=s.x+(p.ox*c-p.oy*sn)*S, cy=s.y+(p.ox*sn+p.oy*c)*S, rot=s.rot+p.r, w=p.w*S, d=p.d*S, cc=Math.cos(rot), ss=Math.sin(rot);
+    const tf=(lx,ly)=>[cx+lx*cc-ly*ss,cy+lx*ss+ly*cc];
+    return {cx,cy,w,d,cc,ss,tf,corners:[tf(-w/2,-d/2),tf(w/2,-d/2),tf(w/2,d/2),tf(-w/2,d/2)]};
+  });
+}
+function drawHouse(g,s){
+  const rng=mulberry32(s.seed), [sdx,sdy]=shadowDir(), dark=mix(P.shadowCol,ROOF,.58);
+  g.lineJoin="round"; g.lineCap="round"; g.strokeStyle=INK;
+  s.geo.forEach((pt,pi)=>{
+    const {w,d,tf,cc,ss}=pt;
+    for(const sg of [-1,1]){
+      const fx=-sg*ss, fy=sg*cc;                         // roof-half normal in world space
+      g.beginPath(); addPoly(g,[tf(-w/2,0),tf(w/2,0),tf(w/2,sg*d/2),tf(-w/2,sg*d/2)],true);
+      g.fillStyle=fx*sdx+fy*sdy>0?dark:ROOF; g.fill();
+      g.lineWidth=.5*P.lw; g.globalAlpha=.5; g.beginPath();
+      for(let lx=-w/2+1.8;lx<w/2-1;lx+=2.4){
+        if(rng()>.78) continue; const j=(rng()-.5)*.6, a=tf(lx+j,sg*.8), b=tf(lx+j*.5,sg*(d/2-1));
+        g.moveTo(a[0],a[1]); g.lineTo(b[0],b[1]);
+      }
+      g.stroke(); g.globalAlpha=1;
+    }
+    g.lineWidth=.5*P.lw; g.globalAlpha=.4; g.beginPath(); addPoly(g,[tf(-w/2+1.3,-d/2+1.3),tf(w/2-1.3,-d/2+1.3),tf(w/2-1.3,d/2-1.3),tf(-w/2+1.3,d/2-1.3)],true); g.stroke();
+    g.globalAlpha=1; g.lineWidth=1.2*P.lw; g.beginPath(); addPoly(g,pt.corners,true); g.stroke();
+    g.lineWidth=1.05*P.lw; g.beginPath(); const r0=tf(-w/2,0),r1=tf(w/2,0); g.moveTo(r0[0],r0[1]); g.lineTo(r1[0],r1[1]); g.stroke();
+    if(pi===0&&s.chimney){
+      const q=[tf(w*.22-1.5,-d*.22-1.5),tf(w*.22+1.5,-d*.22-1.5),tf(w*.22+1.5,-d*.22+1.5),tf(w*.22-1.5,-d*.22+1.5)];
+      g.beginPath(); addPoly(g,q,true); g.fillStyle=CREAM; g.fill(); g.lineWidth=.8*P.lw; g.stroke();
+    }
+  });
+}
+function makeHouse(rng,x,y,rot){
+  const parts=[{ox:0,oy:0,w:1.3+rng()*.5,d:.72+rng()*.15,r:0}];
+  if(rng()<.6){
+    const m=parts[0], d2=.55+rng()*.12, w2=.8+rng()*.35, side=rng()<.5?-1:1;
+    parts.push({ox:m.w/2-d2/2-.05,oy:side*(m.d/2+w2/2-.25),w:w2,d:d2,r:Math.PI/2});
+  }
+  return {kind:"house",x,y,rot,parts,hs:.85+rng()*.3,chimney:rng()<.6,seed:(rng()*2147483647)|0,key:""};
+}
+function makeWall(rng,gen,o){return Object.assign({kind:"wall",gen,ws:1,hs:1,closed:false,caps:true,seed:(rng()*2147483647)|0,key:""},o);}
+function makeFort(rng,x,y,size,rot){
+  const Wf=size, Df=size*(.55+rng()*.1), r=Math.min(Df*.28,26), c=Math.cos(rot), sn=Math.sin(rot);
+  const out=[makeWall(rng,{type:"rrect",cx:x,cy:y,w:Wf,d:Df,r,rot},{closed:true,caps:false})];
+  const lx=-Wf*(.06+rng()*.14);
+  out.push(makeWall(rng,{type:"line",cx:x,cy:y,rot,lx,d:Df,ringWs:1},{ws:.85,hs:.9,caps:false}));
+  const cellW=lx+Wf/2-P.wallW*1.6-10, cellD=Df-P.wallW*1.6-12;
+  if(rng()<.8&&cellW>24&&cellD>20){
+    const lcx=(-Wf/2+lx)/2;
+    out.push(makeWall(rng,{type:"rrect",cx:x+lcx*c,cy:y+lcx*sn,w:cellW,d:cellD,r:Math.min(8,cellD*.25),rot},{closed:true,caps:false,ws:.5,hs:.45}));
+  }
+  return out;
+}
+function syncStruct(s){
+  const key=[P.lw,P.wob,P.sunAz,P.wallW,P.houseSize,P.shadowCol].join("|");
+  s.h=(s.kind==="wall"?P.wallH:P.houseSize*.9)*s.hs;
+  if(key===s.key) return; s.key=key;
+  let pts;
+  if(s.kind==="wall"){wallGeom(s); pts=s.L.concat(s.R);} else {s.geo=houseParts(s); pts=s.geo.flatMap(p=>p.corners);}
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const p of pts){x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1]);}
+  x0=Math.floor(x0-6); y0=Math.floor(y0-6); x1=Math.ceil(x1+6); y1=Math.ceil(y1+6);
+  const c=document.createElement("canvas"); c.width=Math.ceil((x1-x0)*DPR); c.height=Math.ceil((y1-y0)*DPR);
+  const g=c.getContext("2d"); g.setTransform(DPR,0,0,DPR,-x0*DPR,-y0*DPR);
+  if(s.kind==="wall") drawWall(g,s); else drawHouse(g,s);
+  Object.assign(s,{sprite:c,bx:x0,by:y0,bw:x1-x0,bh:y1-y0});
+}
+function sDist(s,x,y){
+  let m=1e9;
+  if(s.kind==="wall"){for(const p of s.pts){const d=Math.hypot(p[0]-x,p[1]-y); if(d<m)m=d;} return m-s.hw;}
+  for(const p of s.geo){
+    const dx=x-p.cx,dy=y-p.cy, lx=dx*p.cc+dy*p.ss, ly=-dx*p.ss+dy*p.cc, qx=Math.abs(lx)-p.w/2, qy=Math.abs(ly)-p.d/2;
+    const d=Math.hypot(Math.max(qx,0),Math.max(qy,0))+Math.min(Math.max(qx,qy),0); if(d<m)m=d;
+  }
+  return m;
+}
+function addStruct(s){
+  syncStruct(s); structs.push(s);
+  if(P.collide){
+    const keep=o=>sDist(s,o.x,o.y)>cr(o)*.6; trees=trees.filter(keep); props=props.filter(keep); gRebuild();
+  }
+}
+
+// ---------- spatial hash (the red grid in the reference) ----------
+function gAdd(o){const k=Math.floor(o.x/CELL)+","+Math.floor(o.y/CELL); let a=grid.get(k); if(!a){a=[];grid.set(k,a);} a.push(o);}
+function gRebuild(){grid=new Map(); trees.forEach(gAdd); props.forEach(gAdd);}
+function gQuery(x,y,rad,fn){
+  const c0=Math.floor((x-rad)/CELL),c1=Math.floor((x+rad)/CELL),r0=Math.floor((y-rad)/CELL),r1=Math.floor((y+rad)/CELL);
+  for(let cx=c0;cx<=c1;cx++)for(let cy=r0;cy<=r1;cy++){const a=grid.get(cx+","+cy); if(a) for(const o of a) fn(o);}
+}
+function roadDist(x,y){let m=1e9; for(const p of roadPts){const dx=p.x-x,dy=p.y-y,d=dx*dx+dy*dy; if(d<m)m=d;} return Math.sqrt(m);}
+function canPlace(x,y,c,force){
+  if(x<-10||y<-10||x>W+10||y>H+10) return false;
+  if(!(force||P.collide)) return true;
+  if(P.L.road && roadDist(x,y)<ROAD_HALF+c*.6) return false;
+  for(const s of structs) if(sDist(s,x,y)<c*.6) return false;
+  let ok=true;
+  gQuery(x,y,c+maxCr(),o=>{ if(!ok) return; const dx=o.x-x,dy=o.y-y,rr=c+cr(o); if(dx*dx+dy*dy<rr*rr) ok=false; });
+  return ok;
+}
+
+// ---------- road: Catmull-Rom spline, offset rut lines, pebbles ----------
+function buildRoad(){
+  const c=[[-.1,.86],[.2,.77],[.47,.84],[.75,.71],[1.1,.64]].map(p=>[p[0]*W,p[1]*H]);
+  const pts=[];
+  for(let i=0;i<c.length-1;i++){
+    const p0=c[Math.max(i-1,0)],p1=c[i],p2=c[i+1],p3=c[Math.min(i+2,c.length-1)];
+    const steps=Math.max(2,Math.ceil(Math.hypot(p2[0]-p1[0],p2[1]-p1[1])/3));
+    for(let s=0;s<steps;s++){
+      const t=s/steps,t2=t*t,t3=t2*t;
+      const f=k=>.5*((2*p1[k])+(-p0[k]+p2[k])*t+(2*p0[k]-5*p1[k]+4*p2[k]-p3[k])*t2+(-p0[k]+3*p1[k]-3*p2[k]+p3[k])*t3);
+      pts.push({x:f(0),y:f(1)});
+    }
+  }
+  for(let i=0;i<pts.length;i++){
+    const a=pts[Math.max(i-1,0)],b=pts[Math.min(i+1,pts.length-1)],tx=b.x-a.x,ty=b.y-a.y,l=Math.hypot(tx,ty)||1;
+    pts[i].nx=-ty/l; pts[i].ny=tx/l;
+  }
+  roadPts=pts;
+}
+function drawRoad(g){
+  const rng=mulberry32(77);
+  g.fillStyle=DIRT;
+  for(const p of roadPts){
+    for(let k=0;k<6;k++){
+      const t=rng()*2-1; if(rng()>1-Math.abs(t)*.65) continue;
+      const off=t*ROAD_HALF*1.5; g.globalAlpha=.14+rng()*.2;
+      g.fillRect(p.x+p.nx*off+(rng()-.5)*3,p.y+p.ny*off+(rng()-.5)*3,.9,.9);
+    }
+  }
+  g.strokeStyle=INK; g.lineCap="round"; g.lineJoin="round";
+  const lines=[{o:-9,a:.6},{o:-7.2,a:.35},{o:-10.9,a:.3},{o:9,a:.6},{o:7.2,a:.35},{o:10.9,a:.3},{o:-ROAD_HALF,a:.3},{o:ROAD_HALF,a:.3}];
+  lines.forEach((L,li)=>{
+    const ns=1000+li*13; g.globalAlpha=L.a; g.lineWidth=.8*P.lw; g.beginPath(); let pen=false;
+    roadPts.forEach((p,i)=>{
+      if(vnoise(i*.045,3.3,ns)<.3){pen=false;return;}
+      const j=(vnoise(i*.09,1.7,ns+5)-.5)*2.6*(.35+P.wob), x=p.x+p.nx*(L.o+j), y=p.y+p.ny*(L.o+j);
+      if(!pen){g.moveTo(x,y);pen=true;} else g.lineTo(x,y);
+    });
+    g.stroke();
+  });
+  for(let i=0;i<roadPts.length;i+=5){
+    if(rng()<.45) continue;
+    const p=roadPts[i], off=(rng()<.5?-1:1)*(ROAD_HALF+1+rng()*8), rr=.6+rng()*1.4;
+    g.beginPath(); g.arc(p.x+p.nx*off,p.y+p.ny*off,rr,0,Math.PI*2);
+    g.globalAlpha=.9; g.fillStyle=CREAM; g.fill(); g.globalAlpha=.55; g.lineWidth=.6*P.lw; g.stroke();
+  }
+  g.globalAlpha=1;
+}
+
+// ---------- paper ground ----------
+function buildGround(){
+  ground.width=Math.round(W*DPR); ground.height=Math.round(H*DPR);
+  const g=gctx; g.setTransform(DPR,0,0,DPR,0,0); g.globalAlpha=1;
+  if(P.L.paper){
+    const S=3, lw=Math.ceil(W/S)+1, lh=Math.ceil(H/S)+1, small=document.createElement("canvas");
+    small.width=lw; small.height=lh; const sg=small.getContext("2d"), img=sg.createImageData(lw,lh), d=img.data;
+    for(let y=0;y<lh;y++)for(let x=0;x<lw;x++){
+      const wx=x*S,wy=y*S, n=fbm(wx*.008,wy*.008,11,4), m=fbm(wx*.0025,wy*.0025,23,3), k=.93+.11*n, i=(y*lw+x)*4;
+      d[i]=PAPER[0]*k+(m-.5)*14; d[i+1]=PAPER[1]*k+(m-.5)*8; d[i+2]=PAPER[2]*k-(m-.5)*8; d[i+3]=255;
+    }
+    sg.putImageData(img,0,0); g.imageSmoothingEnabled=true; g.imageSmoothingQuality="high"; g.drawImage(small,0,0,lw*S,lh*S);
+    const rng=mulberry32(4242);
+    // specks and fibres
+    const specks=Math.round(W*H/90);
+    for(let i=0;i<specks;i++){
+      const x=rng()*W,y=rng()*H;
+      if(rng()<.85){g.globalAlpha=.12+rng()*.28; g.fillStyle=INK; const s=.5+rng()*.9; g.fillRect(x,y,s,s);}
+      else{g.globalAlpha=.18; g.strokeStyle=rng()<.5?INK:"#f4ecd6"; g.lineWidth=.5; g.beginPath(); g.moveTo(x,y); const a=rng()*6.28,l=1.5+rng()*3; g.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l); g.stroke();}
+    }
+    // dirt stipple patches driven by a noise field
+    g.fillStyle=DIRT; const darts=Math.round(W*H/12);
+    for(let i=0;i<darts;i++){
+      const x=rng()*W,y=rng()*H, f=fbm(x*.011,y*.011,91,3); if(f<.58||rng()>(f-.58)*4) continue;
+      g.globalAlpha=.15+rng()*.25; const s=.6+rng()*.8; g.fillRect(x,y,s,s);
+    }
+    g.globalAlpha=1;
+  } else { g.fillStyle=`rgb(${PAPER})`; g.fillRect(0,0,W,H); }
+  if(P.L.road) drawRoad(g);
+}
+function buildGrain(){
+  grainC.width=Math.round(W*DPR); grainC.height=Math.round(H*DPR);
+  const img=grctx.createImageData(grainC.width,grainC.height), d=img.data;
+  for(let i=0;i<d.length;i+=4){
+    let v=255-Math.random()*24; if(Math.random()<.004) v=150+Math.random()*60;
+    d[i]=v; d[i+1]=v-2; d[i+2]=v-6; d[i+3]=255;
+  }
+  grctx.putImageData(img,0,0);
+}
+
+// ---------- shadow pass: silhouettes projected by height into one mask, tinted once ----------
+function castShadows(list){
+  const m=mctx;
+  m.setTransform(1,0,0,1,0,0); m.globalCompositeOperation="source-over"; m.clearRect(0,0,mask.width,mask.height);
+  m.setTransform(DPR,0,0,DPR,0,0);
+  const az=(P.sunAz+90)*Math.PI/180, dx=Math.cos(az), dy=Math.sin(az);   // shadow points away from the sun
+  const L=1/Math.tan(P.elev*Math.PI/180), stretch=Math.min(2.4,1+L*.3);
+  m.strokeStyle="#000"; m.lineCap="round";
+  for(const o of list){
+    const off=o.h*L, sx=o.x+dx*off, sy=o.y+dy*off, s=o.half*2;
+    if(o.kind==="wall"||o.kind==="house"){
+      // prism shadow: convex hull of each footprint piece and its copy shifted by height
+      const offx=dx*o.h*L, offy=dy*o.h*L, add=q=>{const hh=hull(q.concat(q.map(p=>[p[0]+offx,p[1]+offy]))); addPoly(m,hh,true);};
+      m.fillStyle="#000"; m.beginPath();
+      if(o.kind==="house") o.geo.forEach(p=>add(p.corners));
+      else {
+        const n=o.pts.length, lim=o.closed?n:n-1;
+        for(let i=0;i<lim;i++){const j=(i+1)%n; add([o.L[i],o.L[j],o.R[j],o.R[i]]);}
+        o.caps.forEach(add);
+      }
+      m.fill();
+      continue;
+    }
+    if(o.kind==="tree"){
+      m.lineWidth=Math.max(1.5,o.r*.12); m.beginPath(); m.moveTo(o.x,o.y); m.lineTo(sx,sy); m.stroke();
+      m.save(); m.translate(sx,sy); m.rotate(az); m.scale(stretch,1); m.rotate(-az); m.drawImage(o.sprite,-o.half,-o.half,s,s); m.restore();
+    } else {
+      for(let k=1;k<=3;k++){const f=k/3; m.drawImage(o.sprite,o.x+dx*off*f-o.half,o.y+dy*off*f-o.half,s,s);}
+    }
+  }
+  m.setTransform(1,0,0,1,0,0); m.globalCompositeOperation="source-in"; m.fillStyle=P.shadowCol; m.fillRect(0,0,mask.width,mask.height);
+  m.globalCompositeOperation="source-over";
+  ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=P.shadowStr; ctx.drawImage(mask,0,0); ctx.restore();
+}
+function drawSprites(list){for(const o of list){const s=o.half*2; ctx.drawImage(o.sprite,o.x-o.half,o.y-o.half,s,s);}}
+
+function render(){
+  trees.forEach(syncTree); props.forEach(syncProp);
+  ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=1; ctx.globalCompositeOperation="source-over";
+  ctx.drawImage(ground,0,0);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  if(P.L.shadows) castShadows(props);
+  if(P.L.objects) drawSprites(props);
+  structs.forEach(syncStruct);
+  if(P.L.shadows) castShadows(structs);
+  if(P.L.objects) for(const s of structs) ctx.drawImage(s.sprite,s.bx,s.by,s.bw,s.bh);
+  const sorted=trees.slice().sort((a,b)=>a.h-b.h||a.y-b.y);
+  if(P.L.shadows) castShadows(sorted);
+  if(P.L.objects) drawSprites(sorted);
+  if(P.L.grain&&P.grain>0){
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalCompositeOperation="multiply"; ctx.globalAlpha=P.grain; ctx.drawImage(grainC,0,0); ctx.restore();
+  }
+  if(P.L.grid){
+    ctx.fillStyle="rgba(214,58,50,.13)";
+    for(const k of grid.keys()){const [cx,cy]=k.split(",").map(Number); ctx.fillRect(cx*CELL,cy*CELL,CELL,CELL);}
+    ctx.strokeStyle="rgba(214,58,50,.8)"; ctx.lineWidth=1.2; ctx.beginPath();
+    for(let x=0;x<=W;x+=CELL){ctx.moveTo(x,0);ctx.lineTo(x,H);} for(let y=0;y<=H;y+=CELL){ctx.moveTo(0,y);ctx.lineTo(W,y);} ctx.stroke();
+  }
+  document.getElementById("count").textContent=`${trees.length} trees · ${props.length} props · ${structs.length} structures`;
+}
+let pending=false;
+function requestRender(){if(pending) return; pending=true; requestAnimationFrame(()=>{pending=false; render();});}
+
+// ---------- scene ----------
+function newScene(seed){
+  sceneSeed=seed; trees=[]; props=[]; structs=[]; grid=new Map();
+  const rng=mulberry32(seed), tries=Math.round(W*H/75);
+  const fs=Math.min(W*.78,H*.5,340);
+  makeFort(rng,W*(.45+rng()*.1),H*.3,fs,-.35+(rng()-.5)*.4).forEach(addStruct);
+  if(roadPts.length){
+    const c=roadPts[Math.floor(roadPts.length*(.66+rng()*.12))], off=ROAD_HALF+P.houseSize*1.5;
+    addStruct(makeHouse(rng,c.x-c.nx*off,c.y-c.ny*off,Math.atan2(-c.nx,c.ny)));
+  }
+  if(roadPts.length){
+    const c=roadPts[Math.floor(roadPts.length*.42)], cx=c.x-c.nx*48, cy=c.y-c.ny*48;
+    for(let i=0;i<70;i++){
+      const a=rng()*Math.PI*2, d=Math.sqrt(rng())*52, x=cx+Math.cos(a)*d, y=cy+Math.sin(a)*d*.8;
+      const p=makeProp(rng,x,y); if(canPlace(x,y,cr(p),true)){props.push(p); gAdd(p);}
+    }
+  }
+  for(let i=0;i<tries;i++){
+    const x=rng()*W,y=rng()*H, f=fbm(x*.006,y*.006,seed%9973+3,3);
+    if(f<.5||rng()>(f-.5)*3.2) continue;
+    const t=makeTree(rng,x,y); syncTree(t);
+    if(canPlace(x,y,cr(t),true)){trees.push(t); gAdd(t);}
+  }
+  requestRender();
+}
+
+function resize(){
+  const r=stage.getBoundingClientRect(), w=Math.round(r.width), h=Math.round(r.height);
+  if(w<10||h<10||(w===W&&h===H)) return;
+  const first=W===0; W=w; H=h;
+  for(const c of [map,cur,mask]){c.width=Math.round(W*DPR); c.height=Math.round(H*DPR);}
+  buildRoad(); buildGround(); buildGrain();
+  if(first) newScene(20261009); else requestRender();
+}
+new ResizeObserver(resize).observe(stage);
+
+// ---------- brush ----------
+let down=false, last=null, timer=null, lastStamp=null;
+function stamp(x,y){
+  const B=P.brush;
+  if(P.tool==="erase"){
+    const keep=o=>Math.hypot(o.x-x,o.y-y)>B, nt=trees.filter(keep), np=props.filter(keep), ns=structs.filter(s=>sDist(s,x,y)>B*.5);
+    if(nt.length!==trees.length||np.length!==props.length||ns.length!==structs.length){trees=nt; props=np; structs=ns; gRebuild(); requestRender();}
+    return;
+  }
+  const isTree=P.tool==="tree", meanR=isTree?P.treeSize*.9:5;
+  const darts=Math.min(40,Math.max(1,Math.round(P.density*(B*B)/(meanR*meanR)*(isTree?.35:.25))));
+  let placed=0;
+  for(let k=0;k<darts;k++){
+    const a=Math.random()*Math.PI*2, d=Math.sqrt(Math.random())*B, px=x+Math.cos(a)*d, py=y+Math.sin(a)*d;
+    const o=isTree?makeTree(Math.random,px,py):makeProp(Math.random,px,py);
+    if(isTree) syncTree(o);
+    if(canPlace(px,py,cr(o),false)){(isTree?trees:props).push(o); gAdd(o); placed++;}
+  }
+  if(placed) requestRender();
+}
+function local(e){const r=map.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top};}
+function drawCursor(p){
+  cctx.setTransform(1,0,0,1,0,0); cctx.clearRect(0,0,cur.width,cur.height);
+  if(!p) return;
+  const rad=P.tool==="wall"?P.wallW/2:P.tool==="house"?P.houseSize*.8:P.tool==="fort"?Math.max(90,Math.min(380,P.brush*2.6))/2:P.brush;
+  cctx.setTransform(DPR,0,0,DPR,0,0); cctx.beginPath(); cctx.arc(p.x,p.y,rad,0,Math.PI*2);
+  cctx.fillStyle=P.tool==="erase"?"rgba(170,50,40,.18)":"rgba(70,60,45,.2)"; cctx.fill();
+  cctx.strokeStyle=P.tool==="erase"?"rgba(170,50,40,.6)":"rgba(61,50,38,.45)"; cctx.lineWidth=1; cctx.stroke();
+}
+let drawing=null;
+function drawWallPreview(){
+  drawCursor(null); if(!drawing||drawing.length<2) return;
+  cctx.setTransform(DPR,0,0,DPR,0,0); cctx.lineCap="round"; cctx.lineJoin="round";
+  cctx.strokeStyle="rgba(61,50,38,.35)"; cctx.lineWidth=P.wallW; cctx.beginPath(); addPoly(cctx,drawing,false); cctx.stroke();
+  const a=drawing[0], b=drawing[drawing.length-1];
+  if(drawing.length>8&&Math.hypot(a[0]-b[0],a[1]-b[1])<28){cctx.beginPath(); cctx.arc(a[0],a[1],8,0,Math.PI*2); cctx.strokeStyle="rgba(61,50,38,.7)"; cctx.lineWidth=1.5; cctx.stroke();}
+}
+function finishWall(){
+  const d=drawing; drawing=null; drawCursor(null);
+  if(!d||d.length<3) return;
+  let len=0; for(let i=1;i<d.length;i++) len+=Math.hypot(d[i][0]-d[i-1][0],d[i][1]-d[i-1][1]);
+  if(len<20) return;
+  const a=d[0], b=d[d.length-1], closed=len>100&&Math.hypot(a[0]-b[0],a[1]-b[1])<28;
+  const src=closed?d.slice(0,-1):d;
+  const pts=resample(chaikin(chaikin(resample(src,6,closed),closed),closed),3,closed);
+  addStruct(makeWall(Math.random,{type:"free",pts},{closed,caps:!closed})); requestRender();
+}
+map.addEventListener("pointerdown",e=>{
+  down=true; map.setPointerCapture(e.pointerId); last=local(e); lastStamp=last;
+  if(P.tool==="wall"){drawing=[[last.x,last.y]]; return;}
+  if(P.tool==="fort"){
+    makeFort(Math.random,last.x,last.y,Math.max(90,Math.min(380,P.brush*2.6)),(Math.random()-.5)*1.2).forEach(addStruct); requestRender(); return;
+  }
+  if(P.tool==="house"){addStruct(makeHouse(Math.random,last.x,last.y,(Math.random()-.5)*Math.PI)); requestRender(); return;}
+  stamp(last.x,last.y); drawCursor(last);
+  clearInterval(timer); timer=setInterval(()=>{if(down&&last) stamp(last.x,last.y);},110);
+});
+map.addEventListener("pointermove",e=>{
+  last=local(e);
+  if(drawing){const p=drawing[drawing.length-1]; if(Math.hypot(last.x-p[0],last.y-p[1])>5){drawing.push([last.x,last.y]); drawWallPreview();} return;}
+  drawCursor(last);
+  if(down&&(P.tool==="tree"||P.tool==="prop"||P.tool==="erase")&&Math.hypot(last.x-lastStamp.x,last.y-lastStamp.y)>P.brush*.3){lastStamp=last; stamp(last.x,last.y);}
+});
+const end=e=>{down=false; clearInterval(timer); if(drawing) finishWall(); if(e.pointerType!=="mouse") drawCursor(null);};
+map.addEventListener("pointerup",end); map.addEventListener("pointercancel",end);
+map.addEventListener("pointerleave",()=>{if(!down) drawCursor(null);});
+
+// ---------- controls ----------
+const compass=b=>["N","NE","E","SE","S","SW","W","NW"][Math.round(b/45)%8];
+const fmt={brush:v=>`${v} px`,density:v=>`${Math.round(v*100)}%`,treeSize:v=>`${v} px`,sizeVar:v=>`±${Math.round(v*100)}%`,
+  rings:v=>String(v),height:v=>`${(+v).toFixed(1)}×`,sunAz:v=>`${v}° ${compass(+v)}`,elev:v=>`${v}°`,
+  shadowStr:v=>`${Math.round(v*100)}%`,lw:v=>(+v).toFixed(2),wob:v=>(+v).toFixed(2),grain:v=>`${Math.round(v*100)}%`,
+  wallW:v=>`${v} px`,wallH:v=>`${v} px`,houseSize:v=>`${v} px`};
+let groundTimer=null;
+const rebuildGroundSoon=()=>{clearTimeout(groundTimer); groundTimer=setTimeout(()=>{buildGround(); requestRender();},140);};
+Object.keys(fmt).forEach(id=>{
+  const el=document.getElementById(id), out=document.getElementById(id+"V");
+  const apply=()=>{P[id]=+el.value; out.textContent=fmt[id](el.value);};
+  apply();
+  el.addEventListener("input",()=>{
+    apply();
+    if(id==="brush"||id==="density"){ if(last) drawCursor(last); return; }
+    if(id==="lw"||id==="wob") rebuildGroundSoon();
+    requestRender();
+  });
+});
+document.getElementById("collide").addEventListener("change",e=>{P.collide=e.target.checked;});
+function seg(id,fn){
+  const box=document.getElementById(id);
+  box.addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    box.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); fn(b.dataset.v);
+  });
+}
+const hints={tree:"Drag on the map to paint trees",prop:"Drag to scatter rocks, barrels, crates",erase:"Drag to erase objects",
+  wall:"Drag to draw a wall; finish near the start to close it",fort:"Tap to place an enclosure",house:"Tap to place a house"};
+seg("tool",v=>{P.tool=v; document.getElementById("hint").textContent=hints[v];});
+seg("tint",v=>{P.shadowCol=v; requestRender();});
+["paper","road","shadows","objects","grain","grid"].forEach(k=>{
+  document.getElementById("L_"+k).addEventListener("change",e=>{
+    P.L[k]=e.target.checked;
+    if(k==="paper"||k==="road") buildGround();
+    requestRender();
+  });
+});
+document.getElementById("newScene").addEventListener("click",()=>newScene((Math.random()*1e9)|0));
+document.getElementById("clear").addEventListener("click",()=>{trees=[];props=[];structs=[];grid=new Map();requestRender();});
+})();
+</script>
+
+</body></html>

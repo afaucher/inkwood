@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "autoMode": {
+    "environment": [
+      "**Primary use of Claude Code**: software development -- Godot 4.7 / GDScript 2D co-op tactics game work in this repo, driven by a headless test gate (`scripts/tests/*.gd` run via `test_runner.ps1` or the pinned engine in `build/deps/`)",
+      "**Trusted repo**: `inkwood` at C:\\Users\\alexa\\.gemini\\antigravity\\scratch\\inkwood; no remote yet. Sibling reference projects, read-only: `bridge-to-friendship` (project setup model) and `goto` (co-op turn reference) in the same parent folder.",
+      "**Source of truth**: the live design doc https://claude.ai/code/artifact/5cdc9f22-2f23-41a5-9196-c0370d346d2e (read with the docs tools); docs/inkwood-design-doc.md is a snapshot",
+      "**Routine under repo-local prefixes**: writes under `tmp/`, `test_logs/` and `build/` are throwaway build/test artifacts (all gitignored) and are routine; scratch files must not be written to the repo root"
+    ],
+    "allow": [
+      "$defaults",
+      "Bash(taskkill:*) for stray Godot test processes named Godot_v* in this project",
+      "Bash(pkill:*) limited to `pkill -f Godot_v` for stray headless Godot test processes in this project"
+    ],
+    "soft_deny": [
+      "$defaults",
+      "Bash(git checkout -- :*) in inkwood -- Bridge to Friendship's CLAUDE.md records this discarding an hour of uncommitted work during an A/B; copy files aside instead"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "_about": "Design decisions made from variant boards (design doc: Execution plan > Decision workflow). One record per decision, appended, never rewritten once chosen. Every record is reported to Alex so it can be added to the design doc's decision log, which stays the source of truth; this file is what the build reads.",
+  "record_shape": {
+    "id": "short kebab-case slug, e.g. tree-canopy-size",
+    "date": "YYYY-MM-DD",
+    "area": "the design doc area, e.g. Trees, Shadows, Walls, UI",
+    "question": "what was being decided, in one line",
+    "board": "variants/<id>/ -- the board the choice was made from; its seed and parameter sets are in that folder's board.json",
+    "options": ["the 3-6 variant names shown"],
+    "chosen": "a variant name, 'blend of A and B', or 'new round'",
+    "parameters": { "the exact values chosen": "..." },
+    "applied_to": ["data/params/render_defaults.json#parameters.canopy_size"],
+    "status": "proposed | chosen by Alex | logged in design doc",
+    "notes": "optional"
+  },
+  "decisions": []
+}
