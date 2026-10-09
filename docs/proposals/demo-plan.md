@@ -38,6 +38,7 @@ each other's code. Everything is headless-testable except pixels.
 | Track | Delivers | Owns | Starts when |
 | --- | --- | --- | --- |
 | **R** Rendering | drawing layer; prototype draw routines ported; render parity; `--render-shot` | `scripts/render/`, `scripts/app/main.gd` (entry points only) | running |
+| **V** Map view (R, second job) | the static map (terrain, vegetation, structures, their shadows, grain) baked into texture chunks a few per frame (tessellation may move to a worker thread), cached, shown under a camera; only units, unit shadows and UI drawn live | `scripts/render/map_view*`, `scripts/render/chunk*` | R reports parity and T lands |
 | **S** Simulation | unit data model; motion + envelope; turn loop (plan, commit, resolve); dumb AI | `scripts/sim/`, `data/units/`, `data/sim/` | now |
 | **T** Terrain | two height levels; vegetation per level; height-respecting shadows; map size from the flight rule | `scripts/world/terrain*`, `scripts/render/terrain*`, `data/terrain/` | R's drawing layer reports |
 | **U** Interface | per-unit marker and card; roster sidebar; motion planning control | `scripts/ui/` | S's interfaces land, R's drawing layer reports |
@@ -57,6 +58,13 @@ each other's code. Everything is headless-testable except pixels.
   shadow pass, the grain and paper helpers, and a frame composition entry.
 - **T exposes** (read by F, A): a height query `height_at(x, y)` and the
   terrain layers (levels, vegetation lists) in the scene-gen data shape.
+- **V exposes** (read by U, F, A): a `MapView` node that takes the world's
+  seed and bounds, bakes chunks around the camera on demand, and offers a
+  world-to-screen transform plus a layer slot above the map for live drawing
+  (units, unit shadows, fog). Why a bake (proposed): the drawing layer
+  tessellates in GDScript at about 7 ms per tree sprite, fine for one still
+  frame and far too slow to redraw a flyable map each frame; the static map
+  never changes during a turn, so it is drawn once per chunk.
 - **Data first**: a track that needs a number another track owns adds it to
   the owning track's data file via a proposal in its report, not by editing
   code.
@@ -73,7 +81,10 @@ each other's code. Everything is headless-testable except pixels.
 ## Fan-out point
 
 - S starts immediately: no rendering dependency.
-- T and U start when R's drawing layer reports (expected 2026-10-09).
-- F starts when T lands; A when everything else has.
+- T starts when R's drawing layer reports (it did, 2026-10-09).
+- U starts when S's interface lands (it draws onto V's live layer, so its
+  first cut uses a plain Node2D stand-in until V lands).
+- V starts when R reports parity and T lands; F when T and V have landed;
+  A when everything else has.
 - Every track runs the gate (`build.ps1` or the runner) before reporting, and
   reports deviations and proposals rather than deciding.
