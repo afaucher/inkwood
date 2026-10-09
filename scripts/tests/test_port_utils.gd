@@ -6,13 +6,16 @@ extends "res://scripts/test_support/test_case.gd"
 # runs it under node; this test recomputes every entry with the GDScript port
 # and compares.
 #
-# RNG and noise are compared BIT FOR BIT -- the eight IEEE-754 bytes of each
-# double -- because "the same seed draws the same scene" is a property of those
-# two and nothing else, and a printed decimal can agree while the bits do not.
-# Geometry is compared to 1e-3 px: Vector2 stores float32 in a standard Godot
-# build (see geometry.gd), so a bit match there is not on offer. The float64
-# variants the scene generator uses (catmull_rom_f64, chaikin_f64,
-# resample_f64) ARE compared bit for bit, against the same prototype output.
+# RNG, noise and the float64 geometry are compared to TOLERANCE (relative,
+# 1e-9); Vector2 geometry to 1e-3 px, since Vector2 stores float32 in a
+# standard Godot build (see geometry.gd). Expected values are decoded from the
+# fixture's bytes, never its decimals (Godot's float parser is not exact past
+# 15 digits), and the bytes are printed on a mismatch for diagnosis.
+#
+# NOT BIT-EXACT, BY DECISION. Alex, 2026-10-09: bit-exactness with the browser
+# is not required; visual parity is. The port happens to match node bit for
+# bit today; the tolerance is what lets engine math onto the placement path
+# without failing the gate on last-bit noise.
 #
 # The sample is also PRINTED, so the .log shows the values side by side with
 # what node printed when the fixture was made.
@@ -25,9 +28,13 @@ const Geometry = preload("res://scripts/core/geometry.gd")
 
 const FIXTURE := "res://reference/port_check/expected_seed_20261009.json"
 const GEOMETRY_TOLERANCE := 1e-3
+const TOLERANCE := 1e-9
 
 static func bits(x: float) -> String:
 	return PackedFloat64Array([x]).to_byte_array().hex_encode()
+
+static func _close(a: float, b: float) -> bool:
+	return absf(a - b) <= TOLERANCE * maxf(1.0, maxf(absf(a), absf(b)))
 
 # Inputs come in as bytes as well (xbits/ybits in the fixture): Godot's float
 # parser -- literals, to_float and JSON.parse_string alike -- is not correctly
@@ -38,7 +45,7 @@ static func _f64(hex: Variant) -> float:
 
 func exact(actual: float, entry: Dictionary, label: String) -> bool:
 	var expected_bits := str(entry["bits"])
-	var ok := bits(actual) == expected_bits
+	var ok := _close(actual, _f64(expected_bits))
 	if not ok:
 		fail("%s -- prototype %s (%s), port %s (%s)" % [label, entry["value"], expected_bits, actual, bits(actual)])
 	return ok
@@ -204,7 +211,7 @@ static func _pairs(rows: Array) -> PackedFloat64Array:
 
 func exact_bits(actual: float, expected_bits: Variant, label: String) -> bool:
 	var want := str(expected_bits)
-	var ok := bits(actual) == want
+	var ok := _close(actual, _f64(want))
 	if not ok:
 		fail("%s -- prototype %s (%s), port %s (%s)" % [label, String.num(_f64(want), 17), want, String.num(actual, 17), bits(actual)])
 	return ok

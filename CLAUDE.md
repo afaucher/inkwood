@@ -43,7 +43,7 @@ ported as-is -- `scripts/core/mulberry32.gd`, `noise.gd`, `geometry.gd`,
 `js_math.gd` -- with `test_port_utils` checking them against the prototype's
 own output. Scene generation (`scripts/world/`: the prototype's newScene, the
 structures' geometry, the spatial hash and collision) is ported and
-`test_scene_gen` checks the whole default scene bit for bit.
+`test_scene_gen` checks the whole default scene against the prototype's.
 
 In progress (2026-10-09, toward render parity with the prototype): the
 drawing layer in `scripts/render/` and the line-for-line port of the
@@ -87,23 +87,22 @@ Tests live in `scripts/tests/*.gd`, one file per test, and are run by name:
 `reference/port_check/prototype_sample.js` runs the prototype's own functions
 (sliced out of the HTML, not retyped) under node and writes
 `expected_seed_20261009.json`; `test_port_utils` recomputes the sample in
-GDScript and compares RNG, noise and the float64 geometry **bit for bit**, and
-the Vector2 geometry to 1e-3 px (Vector2 is float32 in a standard build).
-`prototype_scene.js` does the same for the whole default scene
-(`expected_scene_20261009.json`, checked by `test_scene_gen`). Re-run the
-scripts only when the prototype changes. Do not swap the RNG or the noise for
-engine ones: the same seed must draw the same scene as the browser.
+GDScript and compares. `prototype_scene.js` does the same for the whole
+default scene (`expected_scene_20261009.json`, checked by `test_scene_gen`:
+same object counts, every value within tolerance). Re-run the scripts only
+when the prototype changes. Do not swap the RNG or the noise for engine ones:
+the same seed must draw the same scene as the browser.
 
-- **Anything that feeds a placement decision runs in float64 and uses
-  `JsMath`** (`scripts/core/js_math.gd`: V8's fdlibm `hypot`, `sin`, `cos`,
-  `atan2`, `round`). Godot's own trig differs from V8's in the last bit, and
-  that last bit moves objects (observed 2026-10-09: the engine's sin/cos/atan2
-  give 3 scene mismatches, `sqrt(x*x+y*y)` for hypot gives 541). Vector2 and
-  engine math are for drawing, past the boundary where placement is settled.
-- The fixtures record what NODE computes. Chrome's V8 takes sin/cos/atan2 from
-  a different library and differs from node in the last bit on a few percent
-  of inputs (measured 2026-10-09); for seed 20261009 that is three house
-  doubles and no placement change. See `reference/README.md`.
+**Bit-exactness is NOT required** (Alex, 2026-10-09): visual parity with the
+prototype is the bar. The tests compare to a tolerance (1e-9 relative on the
+scene data, 1e-3 px on Vector2 geometry), so engine math and Vector2 are fine
+on the placement path. The port happens to be bit-exact with node today
+through `scripts/core/js_math.gd` (V8's fdlibm trig and hypot); that file is
+kept because it is already proven and costs nothing, not because anything
+must use it. Note for later (proposed): if the world is ever generated on
+every peer from the seed, pure-GDScript math is what keeps a Windows and a
+Linux build placing the same trees, since the engine's trig comes from each
+platform's C runtime.
 
 ## Layout
 
@@ -266,15 +265,7 @@ is made in BOTH twins; `tar_pack.ps1` is the one Windows-only helper, because
 - Renderer: "Forward Plus" carried over from Bridge to Friendship (a 3D game).
   For a 2D game the Mobile or Compatibility renderer may suit the target devices
   better; the design doc leaves platforms open.
-- Geometry precision: Vector2 is float32. Bit-exact geometry with the browser
-  would need float64 pair arrays or a double-precision engine build (not an
-  official download, so it would break the engine pin).
 - Variant boards: commit the rendered sheets, or only each board's `board.json`?
-- Which "browser" is the reference for bit-exactness: node's fdlibm trig (what
-  the fixtures and `JsMath` match today; reproducible, no browser needed) or
-  Chrome's (would need Chromium's trig ported and fixtures made in a headless
-  Chrome). Proposed: node, unless a seed ever shows a placement flip between
-  the two.
 - Steam during tests: the runners do not set `INKWOOD_STEAM=off`, so every
   headless test initialises Steam against a running client (`[Steam] ready:
   ...` in the logs, appid 480). Bridge to Friendship behaves the same.

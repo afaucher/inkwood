@@ -5,16 +5,20 @@ extends "res://scripts/test_support/test_case.gd"
 # PROTOTYPE'S OWN CODE generates under node
 # (reference/port_check/prototype_scene.js -> expected_scene_20261009.json).
 #
-# EVERYTHING IS COMPARED BIT FOR BIT: object counts exactly; every tree's x, y,
-# sr, hr, r, h, every prop's x, y, s, rot, h, every struct's scalars and every
-# geometry point (wall centre line, normals, both edges, caps; house parts and
-# corners), and every 10th road sample with its normal, as the eight IEEE-754
-# bytes of the double; seeds, kinds, types and flags exactly. "Same seed, same
-# scene" is a claim about placement, and placement is decided by these values:
-# a last-bit difference in a wall point is a tree kept here and rejected there.
-# Expected doubles are decoded from the fixture's `bits`
+# WHAT IS COMPARED: object counts exactly; every tree's x, y, sr, hr, r, h,
+# every prop's x, y, s, rot, h, every struct's scalars and every geometry point
+# (wall centre line, normals, both edges, caps; house parts and corners), and
+# every 10th road sample with its normal, within TOLERANCE; seeds, kinds, types
+# and flags exactly. Expected doubles are decoded from the fixture's `bits`
 # (hex_decode().decode_double(0)), never from its decimals -- Godot's float
 # parser is not exact past 15 significant digits (CLAUDE.md, engine traps).
+#
+# NOT BIT-EXACT, BY DECISION. Alex, 2026-10-09: bit-exactness with the browser
+# is not required; visual parity is the bar. The port happens to match node bit
+# for bit today (0 mismatches at zero tolerance), but the check is a tolerance
+# so that engine math or Vector2 on the placement path does not fail the gate
+# on last-bit noise. A COUNT difference is still a real failure: the same seed
+# drew a different scene.
 #
 # The parameters are checked too: data/params/render_defaults.json, read by
 # RenderParams, must hold the prototype's own `P` defaults bit for bit. So is
@@ -34,12 +38,19 @@ const FIXTURE := "res://reference/port_check/expected_scene_20261009.json"
 # Bit mismatches beyond this many are counted, not listed: one wrong formula
 # would otherwise list every object after it.
 const MAX_LISTED := 25
+# Relative, with the same absolute floor near zero. 1e-9 is a million times the
+# last-bit noise this exists to forgive and a million times smaller than any
+# difference that moves a pixel.
+const TOLERANCE := 1e-9
 
 var _compared := 0
 var _mismatched := 0
 
 static func bits(x: float) -> String:
 	return PackedFloat64Array([x]).to_byte_array().hex_encode()
+
+static func _close(a: float, b: float) -> bool:
+	return absf(a - b) <= TOLERANCE * maxf(1.0, maxf(absf(a), absf(b)))
 
 static func _f64(hex: Variant, offset: int = 0) -> float:
 	return str(hex).hex_decode().decode_double(offset)
@@ -59,7 +70,7 @@ func exact(actual: Variant, entry: Variant, label: String) -> bool:
 		_mismatch("%s -- port value is %s, not a float" % [label, type_string(typeof(actual))])
 		return false
 	var want := str(entry["bits"])
-	if bits(actual) != want:
+	if not _close(actual, _f64(want)):
 		_mismatch("%s -- prototype %s (%s), port %s (%s)" % [label, String.num(_f64(want), 17), want, String.num(actual, 17), bits(actual)])
 		return false
 	return true
@@ -80,7 +91,7 @@ func exact_points(actual: Variant, entry: Variant, label: String) -> bool:
 			_compared += 1
 			var got: float = p[k]
 			var expect_bits := hex.substr(k * 16, 16)
-			if bits(got) != expect_bits:
+			if not _close(got, _f64(expect_bits)):
 				ok = false
 				_mismatch("%s[%d].%s -- prototype %s (%s), port %s (%s)" % [label, i, "xy"[k],
 					String.num(_f64(expect_bits), 17), expect_bits, String.num(got, 17), bits(got)])
@@ -201,7 +212,7 @@ func setup(_main) -> void:
 			(free.caps[0] as Array).size(), (free.caps[1] as Array).size(), (free.outline[0] as Array).size(), free.seed])
 
 	if _mismatched > MAX_LISTED:
-		fail("... and %d more bit mismatches (%d listed above)" % [_mismatched - MAX_LISTED, MAX_LISTED])
+		fail("... and %d more mismatches (%d listed above)" % [_mismatched - MAX_LISTED, MAX_LISTED])
 
 	# --- the summary, in prototype_scene.js's format ------------------------------------------------
 	print("scene %d at %dx%d: %d trees, %d props, %d structures (%d walls, %d houses), road %d samples, grid %d cells / %d objects" % [
@@ -218,7 +229,7 @@ func setup(_main) -> void:
 		var p: Dictionary = gen.props[0]
 		print("first prop: %s (%s, %s) s=%s seed=%d" % [p.type, _g(p.x), _g(p.y), _g(p.s), p.seed])
 	print(free_line)
-	print("generated in %.0f ms; %d doubles compared bit for bit, %d mismatched" % [ms, _compared, _mismatched])
+	print("generated in %.0f ms; %d doubles compared within %s, %d mismatched" % [ms, _compared, str(TOLERANCE), _mismatched])
 	finish()
 
 func _check_struct(s: Dictionary, e: Dictionary, label: String) -> void:

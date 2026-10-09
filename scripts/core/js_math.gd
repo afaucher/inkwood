@@ -1,5 +1,14 @@
 extends RefCounted
 
+# NOT A REQUIREMENT ANY MORE. Alex, 2026-10-09: bit-exactness with the browser
+# is not needed; visual parity is the bar, and the port tests compare to a
+# tolerance. This file stays because it is written, proven (below) and free at
+# runtime -- and because pure-GDScript math is what would keep a Windows and a
+# Linux build placing the same trees from one seed if the world is ever
+# generated on every peer (the engine's trig comes from each platform's C
+# runtime). Nothing new has to use it; engine math on the placement path is
+# fine. The rest of this header is the original reasoning, kept as a record.
+#
 # JavaScript's Math.hypot, Math.sin, Math.cos, Math.atan, Math.atan2 and
 # Math.round EXACTLY AS V8 COMPUTES THEM, for the scene generator's placement
 # path (scripts/world/). The prototype (reference/inkwood-renderer.html) feeds
