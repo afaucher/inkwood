@@ -177,6 +177,28 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'For ground level fill - I actually like the current look the most.' Accepted with it: on the top level, wall and rock fills sit slightly darker than the ground (-0.018 / -0.011 L)."
+    },
+    {
+      "id": "terrain-passability",
+      "date": "2026-10-09",
+      "area": "Terrain, Ground movement",
+      "question": "Are height steps passable to ground units, and what do the contours signal?",
+      "board": "none (options A/B/C in chat)",
+      "options": [
+        "A every step a cliff, crossed at ramps or roads",
+        "B every step a slope, crossed anywhere slower",
+        "C mixed: some edges cliffs, some slopes"
+      ],
+      "chosen": "C",
+      "parameters": {
+        "rule": "cliffs are impassable to ground units, slopes passable; contour spacing signals which (tight = cliff, wide = slope); gaps in contour lines will mark ramps through cliffs",
+        "contour_breaks_now": "none: lines drawn unbroken until gaps carry meaning"
+      },
+      "applied_to": [
+        "data/terrain/terrain.json#draw.contours.break_thresholds"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'C, and draw the lines unbroken for now.' The generator change (varying slope widths, a passability query) is handed to Track T. Ramps come with roads and ground units."
     }
   ]
 }

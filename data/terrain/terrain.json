@@ -79,7 +79,7 @@
       "count": { "value": 3, "_proposed": true, "_reason": "the alternative style: the scarp top plus two lines down the slope" },
       "spacing_scarp": { "value": 0.5, "_proposed": true, "_reason": "lines every half scarp width, so the last one is the scarp foot" },
       "alphas": { "value": [0.9, 0.6, 0.4], "_proposed": true, "_reason": "fading down the slope" },
-      "break_thresholds": { "value": [0.0, 0.2, 0.3], "_proposed": true, "_reason": "the top line is unbroken, the lower ones break like the wall crest lines" },
+      "break_thresholds": { "value": [0.0, 0.0, 0.0], "decision": "terrain-passability", "_reason": "Alex 2026-10-09: contour lines unbroken for now; a gap will mean a way through (a ramp in a cliff) once ramps exist. Was proposed: the top line is unbroken, the lower ones break like the wall crest lines" },
       "break_noise_per_px": { "value": 0.015, "_proposed": true, "_reason": "the same broken-line frequency as the hachures (the prototype's rut lines)" },
       "weight": { "value": "road_ruts", "_proposed": true, "_reason": "named linework multiplier for the lines below the top one" }
     }
