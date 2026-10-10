@@ -77,6 +77,10 @@ var ready: Dictionary = {}      # participant -> bool
 var errors: Array[String] = []  # load errors (rules); see ok()
 var last_error: String = ""
 var quiet: bool = false
+# The game's seed for every random roll (combat's hit rolls; design doc: hits
+# are random-ish). A scenario sets it. In a networked game only the host's
+# World resolves, so only the host rolls.
+var rng_seed: int = 0
 
 func _init(turn_path: String = SimRules.TURN_PATH, altitude_path: String = SimRules.ALTITUDE_PATH, unit_dir: String = UnitDef.UNITS_DIR) -> void:
 	rules = SimRules.new(turn_path, altitude_path)
@@ -162,6 +166,7 @@ func add_unit(spec: Dictionary) -> String:
 	u.heading = Envelope.wrap_angle(float(spec["heading"]))
 	u.speed = float(speed)
 	u.altitude_band = band
+	u.health = def.health
 	u.out_of_bounds = not in_bounds(u.x, u.y)
 	units[id] = u
 	if controller == CONTROLLER_AI and not ready.has(AI_PLAYER):
@@ -287,7 +292,9 @@ func withdraw(player: String) -> void:
 # --- Resolution --------------------------------------------------------------
 
 # Advance every unit through its plan. Returns {turn, histories: {unit id ->
-# Array of states}, events: Array}, or {} if not everyone is ready.
+# Array of states}, events: Array, units: {unit id -> Unit.net_state()}}, or
+# {} if not everyone is ready. The whole result is what a host sends its
+# clients (apply_resolution).
 func resolve() -> Dictionary:
 	if phase != PHASE_PLANNING:
 		return _fail_d("resolve: only from the planning phase (phase is %s)" % phase)
@@ -349,7 +356,49 @@ func resolve() -> Dictionary:
 		if ev["type"] == "left_bounds":
 			unit_left_bounds.emit(str(ev["unit"]), turn, int(ev["step"]))
 	turn_resolved.emit(turn, histories, events)
-	return {"turn": turn, "histories": histories, "events": events}
+	return {"turn": turn, "histories": histories, "events": events, "units": _net_states()}
+
+# THE NETWORK CONTRACT (proposed by the lead for the first fight, 2026-10-09;
+# Alex: the host resolves each turn and sends the result): a World that did
+# not resolve this turn itself -- a client -- applies the host's resolve()
+# result as if it had. From the planning phase, for this World's own turn,
+# with exactly this World's units; otherwise it changes nothing and returns
+# false. Ready flags are left for begin_turn() to reset, as after a resolve;
+# plans are consumed. Emits what resolve() emits, in the same order, so the
+# interface plays it back unchanged.
+func apply_resolution(result: Dictionary) -> bool:
+	if phase != PHASE_PLANNING:
+		_fail("apply_resolution: only from the planning phase (phase is %s)" % phase)
+		return false
+	for k: String in ["turn", "histories", "events", "units"]:
+		if not result.has(k):
+			_fail("apply_resolution: the result has no '%s'" % k)
+			return false
+	if int(result["turn"]) != turn:
+		_fail("apply_resolution: the result is for turn %d, this world is on turn %d" % [int(result["turn"]), turn])
+		return false
+	var states: Dictionary = result["units"]
+	var histories: Dictionary = result["histories"]
+	if states.size() != units.size():
+		_fail("apply_resolution: the result has %d units, this world %d" % [states.size(), units.size()])
+		return false
+	for id: String in units:
+		if not states.has(id) or not histories.has(id):
+			_fail("apply_resolution: the result has no state or history for '%s'" % id)
+			return false
+	_set_phase(PHASE_RESOLVING)
+	for id: String in units:
+		var u: Unit = units[id]
+		u.apply_net_state(states[id])
+		u.history = (histories[id] as Array).duplicate(true)
+		u.plan.clear()
+	_set_phase(PHASE_RESOLVED)
+	var events: Array = (result["events"] as Array).duplicate(true)
+	for ev: Dictionary in events:
+		if ev["type"] == "left_bounds":
+			unit_left_bounds.emit(str(ev["unit"]), turn, int(ev["step"]))
+	turn_resolved.emit(turn, histories.duplicate(true), events)
+	return true
 
 # resolved -> planning: the next turn. Ready flags reset; plans start empty.
 func begin_turn() -> void:
@@ -364,6 +413,12 @@ func begin_turn() -> void:
 	_set_phase(PHASE_PLANNING)
 
 # --- Queries -----------------------------------------------------------------
+
+func _net_states() -> Dictionary:
+	var out := {}
+	for id: String in units:
+		out[id] = (units[id] as Unit).net_state()
+	return out
 
 func in_bounds(px: float, py: float) -> bool:
 	return px >= bounds.position.x and px <= bounds.end.x and py >= bounds.position.y and py <= bounds.end.y

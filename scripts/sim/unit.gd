@@ -45,6 +45,14 @@ var plan: Array = []
 # def.actions_per_turn + 1 entries, each with t (seconds into the turn).
 var history: Array = []
 var out_of_bounds: bool = false
+# Combat state (the first fight's contract, proposed by the lead 2026-10-09):
+# health in pips, set from the type's data by World.add_unit; down once it
+# reaches 0. down_at is the time into the last resolved turn, in seconds, at
+# which the unit went down, NAN if it did not go down in that turn. A down unit
+# no longer plans, fires or is fired at (Track C builds that).
+var health: int = 0
+var down: bool = false
+var down_at: float = NAN
 
 func state() -> Dictionary:
 	return {"x": x, "y": y, "heading": heading, "speed": speed, "altitude_band": altitude_band}
@@ -72,4 +80,23 @@ func to_dict() -> Dictionary:
 		"plan": plan.duplicate(true),
 		"history": history.duplicate(true),
 		"out_of_bounds": out_of_bounds,
+		"health": health,
+		"down": down,
+		"down_at": down_at,
 	}
+
+# Everything a resolve changes, for sending a resolved turn over the network
+# (World.apply_resolution). A track that adds runtime state a resolve changes
+# adds it here and in apply_net_state, or clients drift from the host.
+func net_state() -> Dictionary:
+	return {
+		"x": x, "y": y, "heading": heading, "speed": speed, "altitude_band": altitude_band,
+		"out_of_bounds": out_of_bounds, "health": health, "down": down, "down_at": down_at,
+	}
+
+func apply_net_state(s: Dictionary) -> void:
+	apply_state(s)
+	out_of_bounds = bool(s["out_of_bounds"])
+	health = int(s["health"])
+	down = bool(s["down"])
+	down_at = float(s["down_at"])

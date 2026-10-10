@@ -38,6 +38,7 @@ const WORLD_METHODS := {
 	"withdraw": ["player"],
 	"resolve": [],
 	"begin_turn": [],
+	"apply_resolution": ["result"],
 	"in_bounds": ["px", "py"],
 	"bounds_center": [],
 	"band_height": ["band"],
@@ -51,9 +52,9 @@ const WORLD_SIGNALS := {
 	"turn_resolved": ["turn", "histories", "events"],
 	"unit_left_bounds": ["unit_id", "turn", "step_index"],
 }
-const WORLD_PROPERTIES := ["units", "bounds", "turn", "phase", "players", "ready", "rules", "last_error", "quiet"]
+const WORLD_PROPERTIES := ["units", "bounds", "turn", "phase", "players", "ready", "rules", "last_error", "quiet", "rng_seed"]
 # The demo-plan's unit fields, plus what Track S adds.
-const UNIT_FIELDS := ["id", "type", "side", "controller", "x", "y", "heading", "speed", "altitude_band", "plan", "history", "def", "out_of_bounds"]
+const UNIT_FIELDS := ["id", "type", "side", "controller", "x", "y", "heading", "speed", "altitude_band", "plan", "history", "def", "out_of_bounds", "health", "down", "down_at"]
 const STATE_KEYS := ["x", "y", "heading", "speed", "altitude_band", "turn", "clamped", "limits", "step", "t", "planned", "out_of_bounds"]
 const REACHABLE_KEYS := ["step_dt", "speed", "turn_max", "turn_rate", "turn_radius", "speed_lo", "speed_hi", "speed_lo_full_turn", "speed_hi_full_turn", "bands", "outline"]
 
@@ -73,7 +74,7 @@ func setup(_main) -> void:
 	eq(w.turn, 1, "a new world is on turn 1")
 	check(w.units is Dictionary, "units is a Dictionary keyed by unit id")
 
-	_check_methods(Unit.new(), {"state": [], "apply_state": ["s"], "to_dict": []}, "Unit")
+	_check_methods(Unit.new(), {"state": [], "apply_state": ["s"], "to_dict": [], "net_state": [], "apply_net_state": ["s"]}, "Unit")
 	_check_methods(AiDumb.new(w), {"attach": [], "plan_turn": [], "ok": []}, "AiDumb")
 	var env_methods := {"turn_rate": ["speed"], "turn_radius": ["speed"], "reachable": ["state", "step_dt", "outline_samples"], "clamp_step": ["state", "request", "step_dt"]}
 
@@ -96,6 +97,8 @@ func setup(_main) -> void:
 	eq(d["controller"], "player", "controller is player or ai")
 	eq(d["altitude_band"], "medium", "a new unit starts in its type's start band")
 	eq(d["speed"], 100.0, "a new unit starts at its type's cruise speed")
+	eq(u.health, u.def.health, "a new unit starts with its type's health")
+	check(u.health > 0 and not u.down and is_nan(u.down_at), "a new unit is up, with no down time")
 
 	var s := w.plan_step(id, 0, Vector2(1100.0, 1010.0))
 	for k: String in STATE_KEYS:
@@ -120,6 +123,33 @@ func setup(_main) -> void:
 	if got.size() == 1:
 		eq(got[0][0], 1, "turn_resolved carries the turn number")
 		eq(got[0][1], out["histories"], "turn_resolved carries the same histories resolve() returns")
+	check(out.has("units") and (out["units"] as Dictionary).has(id), "resolve() returns every unit's net_state")
+
+	# The network contract: a client World applies the host's result as if it
+	# had resolved the turn itself.
+	var c := World.new()
+	c.add_player("client")
+	c.add_unit({"type": "light_fighter", "side": "allies", "controller": "player", "x": 1000.0, "y": 1000.0, "heading": 0.0})
+	var got_c: Array = []
+	c.turn_resolved.connect(func(t: int, h: Dictionary, e: Array) -> void: got_c.append([t, h, e]))
+	check(c.apply_resolution(out), "apply_resolution takes the host's resolve() result")
+	eq(c.phase, World.PHASE_RESOLVED, "after apply_resolution the client is resolved")
+	var host_s: Dictionary = u.net_state()
+	var client_s: Dictionary = c.units[id].net_state()
+	check(is_nan(host_s["down_at"]) and is_nan(client_s["down_at"]), "down_at stays NAN for a unit that did not go down")
+	host_s.erase("down_at")
+	client_s.erase("down_at")
+	eq(client_s, host_s, "the client's unit ends where the host's did")
+	eq(c.units[id].history, u.history, "the client's unit carries the host's history")
+	eq(got_c.size(), 1, "apply_resolution fires turn_resolved once")
+	if got_c.size() == 1:
+		eq(got_c[0][1], out["histories"], "with the host's histories")
+	c.quiet = true
+	check(not c.apply_resolution(out), "apply_resolution refuses outside the planning phase")
+	c.begin_turn()
+	w.begin_turn()
+	check(not c.apply_resolution(out), "apply_resolution refuses a result for another turn")
+	c.quiet = false
 	var smp := w.sample(id, 2.5)
 	for k: String in ["x", "y", "heading", "speed", "altitude_band", "height_m"]:
 		check(smp.has(k), "sample() has '%s'" % k)
