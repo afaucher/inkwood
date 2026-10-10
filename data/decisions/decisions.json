@@ -1291,6 +1291,26 @@
       ],
       "status": "proposed by the lead (built for Alex's playtest), not decided",
       "notes": "Alex's words that it answers: 'The bomb controls are wildly bad. It is VERY hard to see what is happening. Dropping the bomb shouldn't be a separate control scheme. We have a drop button but I can't get it to highlight. There is a huge nebulus red blob _ahead_ of the plane but nothing connects I am selecting the bomb special on step 2 with this red blob. And it moves with subsequent steps?? What is happening?' Why it failed: Drop needed a target first and inside the step's cone, the only hint was a line on the card; the blob was that step's bomb cone drawn as a wash (a bomb released at 400 m carries about 770 m) plus Track T's faint preview cone; the card followed the LAST PLACED step, so the blob jumped to each new step."
+    },
+    {
+      "id": "lettering-rules",
+      "date": "2026-10-10",
+      "area": "UI, Lettering",
+      "question": "The four questions after the cleanup: 1 the far-zoom whole-flight tracks, 2 the step labels' layout, 3 the dorsal turret's hidden overhead cone, 4 the remaining small italic text",
+      "board": "none (said in chat, on the tmp/declutter/ shots)",
+      "options": [],
+      "chosen": "1 the whole-flight tracks stay off at every zoom; 2 step labels on two lines with no step number; 3 open: hiding the overhead cone may not be enough, a more robust solution is wanted; 4 all lettering readable or left off",
+      "parameters": {
+        "far_zoom_tracks": "off (Alex: 'Leave them off.')",
+        "step_label": "two lines, no step number (Alex: '2 lines. Remove the step # as well')",
+        "overhead_cone": "OPEN: hidden on the map for now (proposed default); Alex: 'Is that what the dashed line was? We might need a more robust solution.'",
+        "small_text": "readable or left off (Alex: 'Readable or leave it off')"
+      },
+      "applied_to": [
+        "in progress"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex, to the lead's four questions after the cleanup: '1. Leave them off. 2. 2 lines. Remove the step # as well 3. Is that what the dashed line was? We might need a more robust solution. 4. Readable or leave it off'"
     }
   ]
 }
