@@ -11,7 +11,8 @@
   "unit_art": {
     "_proposed": true,
     "_reason": "The unit sheet's plane generators (reference/mockups/unit_sheet.html genPlane/buildPlane/drawPlane), ported to scripts/ui/unit_marker_art.gd. variant is the sheet's variant letter as an index (0 = a, the sheet's default view of each type); stipple is the sheet's stipple knob at its default. bake_margin_px holds the wobble and line width inside the texture. A marker is baked once per type, side and scale and re-baked only when the host's scale drifts past rebake_ratio either way (a zoom), never per frame; min/max_bake_ppm bound the bake. cache_max (proposed 2026-10-09, fix pass) bounds the cache of baked arts, least recently used out first: three silhouettes x two sides at a few scales each is a dozen entries, so 48 is room to spare and a zoom can no longer grow it without limit.",
-    "variant": { "light_fighter": 0, "heavy_fighter": 0, "bomber": 0 },
+    "variant": { "light_fighter": 0, "heavy_fighter": 0, "bomber": 0, "anti_aircraft_battery": 0, "radio_tower": 0 },
+    "_variant_u3": "PROPOSED by Track U3 (the strike, 2026-10-10): the anti-aircraft battery and the radio tower are drawn from the unit sheet's default view of each, as the planes and the tank are (the tank keeps its code default of 0). Their sheet indices (feeding the seed) are 4 and 6, scripts/ui/unit_marker_art.gd STATICS.",
     "stipple": 1,
     "bake_margin_px": 4,
     "rebake_ratio": 1.15,
@@ -71,6 +72,15 @@
     "plan_glyph_px": 18,
     "plan_glyph_dot_px": 2.4,
     "name_clip_gap_px": 8,
+    "bombs": {
+      "_proposed": true,
+      "_reason": "PROPOSED by Track U3 (the strike, 2026-10-10; design doc UI table: a roster row carries 'special readiness'). A unit with bombs (World.bombs_left) shows its bomb load at the right of the row's second line: one small bomb mark per DROP the type carries, filled for a drop still to make and an outline for one spent, then 'x n' for the bombs in each drop (Alex: 'multiple passes make sense'; smaller bombers carry fewer, both per drop and in drops). Ink only. Like the health pips, the drops shown during a playback are the ones the unit had when the turn began, and one empties as its bomb_release event passes: a resolve does not spoil a release the player has not seen. Only the players' own units are listed, so an enemy's load is never shown. Sizes in px.",
+      "mark_w_px": 6.0,
+      "mark_h_px": 11.0,
+      "mark_gap_px": 4.0,
+      "per_drop_text": "x %d",
+      "per_drop_gap_px": 5.0
+    },
     "group": {
       "_proposed": true,
       "_reason": "PROPOSED by Track U2 (Alex 2026-10-09: 'we want a group by for needs orders'). A group-by control in the roster header (a button that cycles the modes) puts the rows under small headings, so co-op players can split up the work. Built modes: 'none' (the world's order, no headings; the default, proposed) and 'needs_orders' (headings needs orders / planned / down). The doc's other groupings (domain, unit type, nest) are not built: a mode is an entry in 'modes' and a branch in roster.gd _group_key. The choice is a per-player VIEW setting kept in the Roster, never in the World and never sent over the network. THE RULE THAT KEEPS A ROW STILL (proposed): the grouped layout is recomputed at once when planning starts, when the mode changes and when units are added or removed; at any other change (an edit by this or another player) it is recomputed only while the pointer is NOT over the roster, and the row of the SELECTED unit keeps the group it was in until another unit is selected. While the pointer is over the roster nothing moves; the roster catches up when the pointer leaves. During the playback the layout is held. Sizes in px.",
@@ -108,16 +118,20 @@
   "orders": {
     "_proposed": true,
     "_reason": "The motion-planning card under the roster: the selected unit's next step, an altitude control for the step just placed (dive / level / climb, one band per step as the units' bands_per_step allows), undo the last step, clear the plan, and the turn's Ready (commit for the local player; pressing it again withdraws). Sizes in px.",
-    "height_px": 238,
+    "height_px": 258,
     "button_h_px": 26,
     "ready_h_px": 34,
-    "row_gap_px": 8
+    "row_gap_px": 8,
+    "drop_line_px": 20,
+    "_u3": "PROPOSED by Track U3 (the strike): the Drop control joins Dive / Level / Climb as a fourth button of the first row (Alex: bombing is 'per step, just like diving'), disabled for a unit with no bombs or none left; under that row a line (drop_line_px, kept for every unit so the card never changes size) says what the Drop control does for the step it acts on: the spread and the release of a drop planned, or why there is none. height_px grew 238 -> 258 for it."
   },
 
   "marker": {
     "_proposed": true,
     "_reason": "Something on screen for every unit (exit criterion 6): the plane in ink at true scale, its shadow away from the sun by its drawn height (Alex: the gap is the altitude cue), a side mark (a small roundel in the side accent tied to the plane by a short leader), and for the selected unit an inked double ring, with a leader line up to its roster row; during a resolve's playback each unit trails the track it has flown (solid) and the rest of its turn (dashed) (design doc, UI and HUD: 'an inked ring drawn around the unit on the map, with a leader line up to its floating panel'). Sizes in px unless named _m.",
     "true_scale": 1.0,
+    "static_scale": 2.0,
+    "_static_scale": "PROPOSED by Track U3 (the strike, 2026-10-10): a STATIC unit (the radio tower, an anti-aircraft battery) is drawn static_scale times the plane rule (true_scale) -- 'at their own scale', as the planes are. Why 2: the planes are drawn up to twice their true size so they stay findable when zoomed out (data/scenarios sandbox view.plane_px, plane_min_px), while a tower 6 m across is 4 px at the planning zoom and the TARGET must read there; 2 puts the tower about as wide as a house and a battery about a house's width. 1.0 is the plain rule. The unit's cast shadow scales with it (it is baked with the art), so the tower's long shadow is always its height x the sun's length at the drawn scale.",
     "ring_pad_px": 5,
     "ring_min_px": 15,
     "ring_tick_px": 4,
@@ -308,13 +322,66 @@
       "decision": "node-hover",
       "_decided": "Alex 2026-10-10 on the board: 'A · Grow and fill' -- mode grow. Still proposed: the 16 px pick radius (was 12), the cursor changes, the place mark.",
       "near_factor": 2.0,
-      "cursor": { "enabled": true, "grab": "pointing_hand", "drag": "drag", "place": "cross" },
+      "cursor": { "enabled": true, "grab": "pointing_hand", "drag": "drag", "place": "cross", "aim": "cross" },
       "place_mark_px": 4.0,
       "grow": { "near_px": 5.0, "range_px": 8.0, "drag_px": 9.0, "line_px": 1.2 },
       "ring": { "near_line_px": 1.3, "range_line_px": 1.9, "near_alpha": 0.85, "second_gap_px": 2.6, "dash_px": 3.0, "tick_px": 4.0 },
       "halo": { "soft_px": 6.0, "ring_px": 6.5 },
       "magnet": { "dot_px": 2.0, "line_px": 1.3, "near_alpha": 0.85, "snap_ring_px": 9.0, "dash_px": 2.5 },
       "label": { "pad_px": 3.0 }
+    }
+  },
+
+  "labels": {
+    "_proposed": true,
+    "_reason": "HEIGHT AND SPEED LABELS (Track U3, 2026-10-10; Alex: height is hard to read from above -- 'make sure that every unit and every node has a height and speed label'). EVERY VALUE HERE IS PROPOSED by Track U3; the lead proposed the compact format. EVERY unit marker the map shows (a player's, an enemy's, whenever the unit is in sight) carries one small inked label under it, its CURRENT height in metres and speed (live through a playback: the pose the marker is drawn at); a STATIC unit (the radio tower, a battery) has its height above the ground (0 m) and no speed. EVERY plan node carries one too: a planned step's lettering is 'n . speed m/s . height m' (the height folded into the existing line), and a carry-on step, which had none, 'speed m/s . height m' (fainter). Never anything about an enemy's PLAN (its nodes are not drawn at all: motion_planner.gd plan_shown); an enemy's current state is visible state. Ink at moderate alpha with the paper under-stroke the hover uses, so the label reads over the grove.",
+    "enabled": true,
+    "height_ref": "sim",
+    "_height_ref": "PROPOSED: what the height means. 'sim' (the default) is the height the SIMULATION flies and bombs by (the altitude band's metres, between two bands during a band change; data/sim/altitude.json): the number the bomb's fall time, throw and spread are computed from, so a player aiming a drop reads the figure that decides it. 'ground' is the height above the terrain under the unit (what the shadow gap shows; Track T's height_at), the same figure where the ground is 0 and a smaller one over a ridge. Alex has not said.",
+    "unit": "%d m · %d",
+    "_unit": "A mobile unit: height in metres, then speed in m/s with the unit left off (the roster beside it says m/s).",
+    "unit_static": "%d m",
+    "node_suffix": " · %d m",
+    "node_carry": "%d m/s · %d m",
+    "hide_below_px_per_m": 0.5,
+    "_hide": "PROPOSED far-zoom rule: labels hide when the map's scale falls under this many screen px per metre (the planning zoom 0.35 at 2 px/m is 0.7 and shows them; 0.5 is zoom 0.25), below which units are a few px apart and a line of lettering each is noise. The far overview (fog-first-option) hides them all.",
+    "below_px": 3.0,
+    "_below": "px between the selection ring's outer ticks and the unit label's top edge.",
+    "halo_px": 3.0
+  },
+
+  "bombs": {
+    "_proposed": true,
+    "_reason": "THE BOMB DROP IN THE INTERFACE (Track U3, the strike, 2026-10-10). In force (Alex 2026-10-10, decisions bomb-release and bomb-load): a drop is 'per step, just like diving. You set the intent in the cone. The accuracy is based on how close you are to the ideal release angle', height is a factor, and a bomber makes several drops ('multiple passes make sense'; smaller bombers carry fewer, per drop and in drops). So: the orders card's Drop control turns a drop on for the step it acts on (the last placed step, or the step whose handle was grabbed last); with it on, the map shows that step's BOMB CONE (World.drop_cone: where this step's release can put the bombs) and the player places the AIM POINT in it, a handle like a step's with the same grow-and-fill hover (Alex's node-hover pick); the planner shows the expected spread at the aim and how close the release is to ideal. EVERY VALUE HERE IS PROPOSED by Track U3; nothing is chosen. The enemy's drops are never shown (the one rule is motion_planner.gd plan_shown).",
+    "text": {
+      "_about": "The orders card's words for the Drop control (orders.drop_line_px) and the lettering at a step with a drop.",
+      "label": "Drop",
+      "place_first": "drop: place a step first",
+      "no_bombs": "",
+      "none_left": "drop: no drops left to plan",
+      "free": "drops free: %d of %d, %d bombs a drop",
+      "on": "drop, step %d: spread %d m, accuracy %d%%",
+      "step_tag": "drop"
+    },
+    "aim": {
+      "_proposed": true,
+      "_reason": "How the bomb cone and the aim mark with its spread are drawn (variants/bomb-aim/ is the board; EVERY VALUE AND RULE IS PROPOSED by Track U3 and nothing is chosen until Alex picks). mode: outline (an inked rim, a dotted fall line and a dashed spread ellipse), wash (the cone as a wash in the side colour, deeper toward the ideal aim, a crosshair and a faint inked spread ellipse: the cone wash Alex chose for guns, used for bombs), stipple (the cone in dots, thinner away from the ideal aim, and the spread as a scatter of dots: where bombs may land) or rings (range rings from the release point through the cone, the aim ring solid). The rim, the crosshair and the ideal mark are common to all four. Colours are palette roles (hue only for the side accent): the interior is the unit's side accent, everything else is ink or paper. Sizes are screen px; distances true metres on the map.",
+      "mode": "wash",
+      "modes": ["outline", "wash", "stipple", "rings"],
+      "decision": "bomb-aim",
+      "_decided": "not yet: variants/bomb-aim/board.json has chosen: null. The mode above is the lead-in recommendation of the board, PROPOSED, so the build gives feedback before Alex picks.",
+      "rim_px": 1.1,
+      "rim_role": { "base": "ink", "alpha": 0.8 },
+      "halo_role": { "base": "paper", "alpha": 0.92 },
+      "mark": { "r_px": 6.0, "tick_px": 5.0, "gap_px": 2.0, "line_px": 1.3, "dot_px": 2.6, "halo_px": 1.8, "role": { "base": "ink" } },
+      "ideal": { "size_px": 3.6, "line_px": 1.0, "role": { "base": "ink", "alpha": 0.75 } },
+      "release": { "dot_px": 2.6, "tie_dash_px": 3.0, "tie_gap_px": 3.0, "tie_px": 0.9, "role": { "base": "ink", "alpha": 0.65 } },
+      "spread": { "_about": "The ellipse that holds most of the drop's stick: sigma_k times the sim's one-bomb scatter (a standard deviation: 2 holds 86 percent of a round scatter), longer along the bomber's heading by half the stick (the bombs of a drop land a few metres apart along it).", "sigma_k": 2.0, "line_px": 1.1, "dash_px": 4.0, "fill_role": { "base": "ink", "alpha": 0.13 }, "edge_role": { "base": "ink", "alpha": 0.85 } },
+      "quiet": { "_about": "The aim of a step that is not the one the card is about, and another player's drop: a small mark, no cone.", "mark_k": 0.7, "alpha": 0.6 },
+      "label": { "enabled": true, "px": 11, "role": { "base": "ink", "alpha": 0.9 }, "halo_px": 4 },
+      "wash": { "_about": "The side colour in `steps` nested copies of the cone, each shrunk toward the ideal aim (to shrink_to of its size at the last), alpha_rim at the edge to alpha_centre at the ideal aim: the more of it, the closer the release is to ideal.", "steps": 5, "alpha_rim": 0.07, "alpha_centre": 0.30, "shrink_to": 0.15 },
+      "stipple": { "_about": "Dots on a jittered grid cell_px square in the cone, kept with the probability of closeness to the ideal aim to the power gamma; the spread is scatter_dots impacts scattered as the expected spread says (a fixed pattern, seeded from the unit and the step, so it does not shimmer).", "cell_px": 6.0, "dot_px": 1.05, "alpha": 0.85, "gamma": 1.7, "scatter_dots": 70, "scatter_dot_px": 1.7 },
+      "rings": { "_about": "Arcs about the release point at every ring_every_m of range inside the cone, dashed and faint, and the aim's own ring solid.", "ring_every_m": 100, "dash_px": 5.0, "gap_px": 4.0, "line_px": 0.9, "alpha": 0.55, "fill_alpha": 0.05 }
     }
   },
 
@@ -395,6 +462,9 @@
     "ink": { "base": "ink" },
     "ink_soft": { "base": "ink", "alpha": 0.72 },
     "ink_faint": { "base": "ink", "alpha": 0.38 },
+    "label_ink": { "base": "ink", "alpha": 0.82 },
+    "label_carry": { "base": "ink", "alpha": 0.58 },
+    "label_halo": { "base": "paper", "alpha": 0.9 },
     "row_selected": { "base": "paper", "toward": "object_fill", "t": 0.35 },
     "button_fill": { "base": "roof_lit" },
     "button_on_fill": { "base": "ink" },
@@ -438,6 +508,7 @@
     "ready": "Enter",
     "climb": "PageUp",
     "dive": "PageDown",
+    "drop": "B",
     "next_unit": "Tab"
   },
 

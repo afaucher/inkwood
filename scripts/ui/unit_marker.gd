@@ -10,6 +10,10 @@ extends Node2D
 # Positions are SCREEN pixels in the layer's space; the layer maps world metres
 # through the host's mapping and calls set_pose() each frame.
 #
+# A STATIC UNIT (the anti-aircraft battery, the radio tower; Track U3): its art is baked already
+# turned by its heading (Art.screen_aligned), so the sprite and its shadow are NOT rotated here, and
+# its shadow mask is the part's cast shadow (a tower's is long), not a footprint offset by height.
+#
 # A unit whose silhouette has no baked art (headless runs, a type the sheet
 # cannot draw yet) still gets a marker: a small inked arrow from _draw, so
 # every unit is on screen (exit criterion 6).
@@ -32,6 +36,10 @@ var selected: bool = false
 # today's.
 var own: bool = false
 var draw_scale: float = 1.0
+# The marker's OWN drawn-size multiplier on top of the plane rule (marker.true_scale): 1.0 for a plane or
+# a tank, data marker.static_scale for a static unit (the tower, a battery: Track U3), so the target and
+# the flak read at the planning zoom. draw_scale carries it (and the stand-out's, for an own plane).
+var base_scale: float = 1.0
 var ring: Dictionary = {}
 var _shapes: Array = []        # UnitStandout.Shape nodes, in the layer's under node
 var _under_parent: Node = null
@@ -93,7 +101,7 @@ func set_standout(spec: Dictionary) -> void:
 			_shapes.append(node)
 	ring = (spec["ring"] as Dictionary) if own else {}
 	# The drawn size takes effect at the next set_pose (k changes, so the art is looked at again).
-	draw_scale = float(spec["scale"]) if own else 1.0
+	draw_scale = (float(spec["scale"]) if own else 1.0) * base_scale
 	_pose_shapes()
 
 func _clear_shapes() -> void:
@@ -135,16 +143,19 @@ func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_off
 		_ensure_art()
 	elif art == null:
 		_ensure_art()
+	elif art.screen_aligned and absf(angle_difference(art.rot, heading_screen + PI / 2.0)) > 0.01:
+		_ensure_art()   # a static unit turned (the camera or the unit): baked again for the new angle
 	var rot := heading_screen + PI / 2.0 + wobble_rad  # the art's nose points to -y
 	if art != null and art.texture != null:
 		var sc := Vector2.ONE * (screen_ppm * k / art.ppm)
+		var sprite_rot := 0.0 if art.screen_aligned else rot   # (a static unit is baked turned)
 		plane.texture = art.texture
 		plane.offset = -art.origin
-		plane.rotation = rot
+		plane.rotation = sprite_rot
 		plane.scale = sc
 		shadow.texture = art.mask
 		shadow.offset = -art.origin
-		shadow.rotation = rot
+		shadow.rotation = sprite_rot
 		shadow.scale = sc
 		shadow.position = screen_pos + shadow_offset_px
 		shadow.visible = visible
@@ -161,12 +172,13 @@ func refresh_shapes() -> void:
 # Re-bake only when the host's scale has drifted past the data's ratio.
 func _ensure_art() -> void:
 	var want: float = screen_ppm * _style.num("marker.true_scale") * draw_scale
+	var turn := screen_heading + PI / 2.0   # (only a static unit's art is baked for it)
 	if art != null:
 		var ratio := want / art.ppm
 		var r: float = _style.num("unit_art.rebake_ratio")
-		if ratio <= r and ratio >= 1.0 / r:
+		if ratio <= r and ratio >= 1.0 / r and not (art.screen_aligned and absf(angle_difference(art.rot, turn)) > 0.01):
 			return
-	var a: UnitMarkerArt.Art = UnitMarkerArt.art_for(_style, silhouette, accent, want)
+	var a: UnitMarkerArt.Art = UnitMarkerArt.art_for(_style, silhouette, accent, want, turn)
 	if a != null:
 		art = a
 

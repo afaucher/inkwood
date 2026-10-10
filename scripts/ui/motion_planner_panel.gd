@@ -7,6 +7,13 @@ extends Control
 # withdraws) with every participant's ready mark (design doc, UI and HUD: "a
 # marker per active player in the persistent HUD showing who has committed").
 #
+# THE DROP CONTROL (Track U3, the strike): a fourth button beside Dive / Level / Climb. Alex:
+# bombing is "per step, just like diving", so it acts on the same step they do (the step the
+# card is about: planner.focus_step()). On, that step carries a bomb drop and the map shows its
+# cone; off, none. Disabled for a unit with no bombs, with no drops left to plan, or with no
+# step placed. Under the first row a line says what it does for that step (the spread and
+# the release of a drop planned, or why there is none): ui.json bombs.text.
+#
 # Buttons are drawn in ink, not Godot Buttons, so they sit in the card's style;
 # input is thin: buttons() lays them out, press_button(name) acts, and
 # _gui_input only finds the button under the pointer.
@@ -72,12 +79,14 @@ func buttons() -> Dictionary:
 	var placed: int = planner.planned_count(id) if planner != null else 0
 	var opts: Dictionary = planner.band_options() if can else {-1: false, 0: false, 1: false}
 	var y := 104.0
-	var bw := (w - 2.0 * gap) / 3.0
+	var bw := (w - 3.0 * gap) / 4.0
 	var cur := _last_step_band_delta()
+	var dopt: Dictionary = planner.drop_options() if can else {"available": false, "on": false}
 	out["dive"] = {"rect": Rect2(pad, y, bw, bh), "label": "Dive", "enabled": bool(opts[-1]), "on": can and placed > 0 and cur < 0}
 	out["level"] = {"rect": Rect2(pad + bw + gap, y, bw, bh), "label": "Level", "enabled": bool(opts[0]), "on": can and placed > 0 and cur == 0}
 	out["climb"] = {"rect": Rect2(pad + 2.0 * (bw + gap), y, bw, bh), "label": "Climb", "enabled": bool(opts[1]), "on": can and placed > 0 and cur > 0}
-	y += bh + gap
+	out["drop"] = {"rect": Rect2(pad + 3.0 * (bw + gap), y, bw, bh), "label": st.text("bombs.text.label"), "enabled": can and bool(dopt["available"]), "on": can and bool(dopt["on"])}
+	y += bh + gap + st.num("orders.drop_line_px")
 	var hw := (w - gap) / 2.0
 	out["undo"] = {"rect": Rect2(pad, y, hw, bh), "label": "Undo step", "enabled": can and placed > 0, "on": false}
 	out["clear"] = {"rect": Rect2(pad + hw + gap, y, hw, bh), "label": "Clear plan", "enabled": can and placed > 0, "on": false}
@@ -96,7 +105,7 @@ func buttons() -> Dictionary:
 func _last_step_band_delta() -> int:
 	if planner == null or selection == null or selection.unit_id == "":
 		return 0
-	var k: int = planner.planned_count() - 1
+	var k: int = planner.focus_step()
 	if k < 0:
 		return 0
 	var u = world.units[selection.unit_id]
@@ -125,6 +134,8 @@ func press_button(name: String) -> bool:
 			planner.change_band(0)
 		"climb":
 			planner.change_band(1)
+		"drop":
+			planner.toggle_drop()
 		"undo":
 			planner.undo()
 		"clear":
@@ -207,6 +218,12 @@ func _draw() -> void:
 	var b := buttons()
 	for name: String in b:
 		_draw_button(b[name], name == "ready", serif)
+	# What the Drop control does for the step the card is about, under the first row of buttons.
+	var cap := bomb_caption()
+	if cap != "":
+		var drop_rect: Rect2 = b["drop"]["rect"]
+		UiInk.text(self, italic, Vector2(pad, drop_rect.end.y + st.num("orders.row_gap_px") + detail * 0.95), cap, detail, ink if _drop_is_on() else soft,
+			HORIZONTAL_ALIGNMENT_LEFT, size.x - 2.0 * pad)
 	# Ready marks: one per participant.
 	var y: float = (b["ready"]["rect"] as Rect2).end.y + 20.0
 	var x := pad
@@ -237,11 +254,40 @@ func _player_label(who: String) -> String:
 		return str(player_name.call(who))
 	return who
 
+func _drop_is_on() -> bool:
+	var id: String = selection.unit_id if selection != null else ""
+	return planner != null and id != "" and planner.can_plan(id) and bool(planner.drop_options()["on"])
+
+# The line under the first row of buttons: for a unit with bombs, what the Drop control does for
+# the step the card is about -- the spread and the release of the drop planned there, the drops still
+# free, or why there is none. "" for a unit with no bombs (and for no unit).
+func bomb_caption() -> String:
+	var id: String = selection.unit_id if selection != null else ""
+	if planner == null or id == "" or not world.units.has(id) or planner.bombs == null:
+		return ""
+	if not planner.bombs.has_bombs(id) or not planner.can_plan(id):
+		return ""
+	var opt: Dictionary = planner.drop_options()
+	var k := int(opt["step"])
+	if k < 0:
+		return style.text("bombs.text.place_first")
+	if bool(opt["on"]):
+		var info: Dictionary = planner.drop_info(k)
+		if info.is_empty():
+			return ""
+		var sp: Dictionary = info["spread"]
+		var radius := float(sp["across_m"])   # the drawn ellipse's across radius (2 sigma)
+		return style.text("bombs.text.on") % [k + 1, roundi(radius), roundi(float(info["quality"]) * 100.0)]
+	if not bool(opt["available"]):
+		return str(opt["why"])
+	var carried: Dictionary = planner.bombs.bombs_left(id)
+	return style.text("bombs.text.free") % [planner.bombs.drops_free(id, k), int(carried["drops_max"]), int(carried["per_drop"])]
+
 func _altitude_caption() -> String:
 	var id: String = selection.unit_id if selection != null else ""
 	if planner == null or id == "" or not planner.can_plan(id):
 		return "altitude"
-	var k: int = planner.planned_count() - 1
+	var k: int = planner.focus_step()
 	if k < 0:
 		return "altitude: place a step first"
 	var st: Array = planner.states()

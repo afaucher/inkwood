@@ -53,6 +53,27 @@ extends Node
 # never sent. Rows move by the rule in roster.gd (KEEPING A ROW STILL): not
 # under the pointer, not the selected unit's, regrouped when planning starts.
 #
+# THE STRIKE (Track U3, 2026-10-10; Alex: bombing is "per step, just like diving. You set the intent in the
+# cone"; accuracy follows the release angle and the height; several drops; the enemy's plans never shown).
+# setup() mounts and feeds all of it:
+#   bombs      BombSource (bomb_source.gd): the one place the interface asks the World about bombs
+#              (bombs_left, drop_cone, drop_spread), shared by the planner, the card and the roster
+#   bomb_aim   BombAim (bomb_aim.gd), just under the planner: the selected bomber's BOMB CONE, aim, expected
+#              spread and release for the step the card is about (planner.bomb_marks()), in the look data
+#              bombs.aim.mode names (variants/bomb-aim/); its "Marks" child draws the crosshair and the aim
+#              handle's hover over the planes
+#   the orders card has a Drop control beside Dive / Level / Climb (key B): a drop on the step the card is
+#   about (planner.focus_step(): the last placed step, or the step whose handle was grabbed last); the aim is
+#   a handle like a step's (planner.grab_at / begin_aim), held inside the cone, refused outside it
+#   the roster row of a unit with bombs shows its drops left and the bombs in each; during a playback the
+#   marks are the turn's start and one empties as its bomb_release event passes
+#   ground units: the radio tower and the anti-aircraft batteries are markers like the planes (unit_marker_art
+#   _static.gd: baked already turned, with a cast shadow that is as long as the tower is tall), drawn
+#   marker.static_scale times the plane rule; a destroyed one's marker goes at its down event (ui_fate.gd) and
+#   the effects layer's ruin takes its place (combat_feed.gd asks for it, and for the bombs falling and landing
+#   and the flak, when the layer has the calls)
+#   NEVER THE ENEMY'S DROP: every bomb mark goes through planner.plan_shown (see motion_planner.gd).
+#
 # ---------------------------------------------------------------------------
 # HOOKS FOR PART 2 (the combat overlay and the effects layer mount on these
 # without editing this file). All PROPOSED by Track U2, 2026-10-09.
@@ -176,6 +197,8 @@ const HealthArc = preload("res://scripts/ui/health_arc.gd")
 const ConeOverlay = preload("res://scripts/ui/cone_overlay.gd")
 const WingtipTrails = preload("res://scripts/ui/wingtip_trails.gd")
 const HitMarks = preload("res://scripts/ui/hit_marks.gd")
+const BombSource = preload("res://scripts/ui/bomb_source.gd")
+const BombAim = preload("res://scripts/ui/bomb_aim.gd")
 const CombatFeed = preload("res://scripts/ui/combat_feed.gd")
 const ResultCard = preload("res://scripts/ui/result_card.gd")
 const FxLayer = preload("res://scripts/fx/fx_layer.gd")
@@ -202,6 +225,10 @@ var trails: WingtipTrails = null
 var fx: FxLayer = null
 var fx_above: Node2D = null
 var hit_marks: HitMarks = null
+# THE STRIKE (Track U3): the bombs the simulation answers with (shared by the planner, the orders card
+# and the roster) and the node that draws the selected bomber's cone and aim, just under the planner.
+var bombs: BombSource = null
+var bomb_aim: BombAim = null
 var feed: CombatFeed = null
 var result_card: ResultCard = null
 # Player id -> display name (Track A: WorldSync.name_of). The default returns the id.
@@ -237,10 +264,16 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 		cl2.layer = 2
 		add_child(cl2)
 		hud_parent = cl2
+	bombs = BombSource.new()
 	planner = MotionPlanner.new()
 	planner.name = "MotionPlanner"
+	planner.bombs = bombs
 	map_parent.add_child(planner)
 	planner.setup(world, host_mapping, selection, local_player, style)
+	bomb_aim = BombAim.new()   # the bomb cone and the aim: just under the planner, so its hover draws over it
+	map_parent.add_child(bomb_aim)
+	map_parent.move_child(bomb_aim, planner.get_index())
+	bomb_aim.setup(planner, style)
 	marker_layer = UnitMarkerLayer.new()
 	marker_layer.name = "UnitMarkers"
 	map_parent.add_child(marker_layer)
@@ -260,6 +293,7 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
 	roster = Roster.new()
 	roster.name = "Roster"
+	roster.bombs = bombs
 	hud.add_child(roster)
 	roster.setup(world, selection, style)
 	roster.unit_selected.connect(_on_roster_pick)
@@ -280,6 +314,7 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	feed = CombatFeed.new()
 	feed.setup(world, fx, marker_layer, health, style)
 	feed.marks = hit_marks
+	feed.lookahead = _turn_events   # where this turn's bombs land: read ahead from a bomb_release
 	playback_event.connect(feed.on_event)
 	playback_frame.connect(feed.on_frame)
 	orders = MotionPlannerPanel.new()
@@ -424,6 +459,7 @@ func _on_playback_finished(turn_no: int) -> void:
 	feed.end_turn(turn_no)
 	_last_t = -1.0
 	health.clear_shown()
+	bombs.clear_shown()
 	_sync_fx()
 	turn_played.emit(turn_no)
 	if not _pending_result.is_empty():
@@ -450,6 +486,13 @@ func _on_turn_resolved(_turn_no: int, _histories: Dictionary, events: Array) -> 
 		return a[1] < b[1])
 	_next = 0
 	_last_t = -1.0
+
+# The events of the turn being played, in order (for the feed's lookahead).
+func _turn_events() -> Array:
+	var out: Array = []
+	for e: Variant in _events:
+		out.append((e as Array)[2])
+	return out
 
 func _on_phase_changed(phase: String) -> void:
 	if phase == World.PHASE_PLANNING:
@@ -565,6 +608,9 @@ func _show_event_health(ev: Dictionary) -> void:
 	var id := str(ev.get("unit", ""))
 	if id == "" or not world.units.has(id):
 		return
+	if str(ev.get("type", "")) == "bomb_release":
+		bombs.release_seen(id)   # the roster's bomb marks empty as the release is seen (BombSource)
+		return
 	match str(ev.get("type", "")):
 		"hit":
 			if ev.has("health"):
@@ -615,7 +661,10 @@ func map_press(p: Vector2) -> bool:
 	var hit := marker_layer.unit_at(p)
 	if hit != "" and not selection.can_select(hit):
 		hit = ""   # a down unit's marker is not a way to plan it
-	if hit != "" and hit != selection.unit_id and planner.handle_at(p) < 0:
+	# (The strike: inside the selected bomber's bomb cone a press moves the aim, even over an ENEMY's marker
+	# -- aiming at the tower is clicking the tower -- so it must not select that unit instead.)
+	var aiming_at_enemy: bool = hit != "" and world.units.has(hit) and world.units[hit].controller != World.CONTROLLER_PLAYER and planner.in_bomb_cone(p)
+	if hit != "" and hit != selection.unit_id and planner.grab_at(p).is_empty() and not aiming_at_enemy:
 		selection.select(hit)
 		return true
 	if planner.press(p):
@@ -709,6 +758,8 @@ func _key(k: InputEventKey) -> bool:
 		return not planner.change_band(1).is_empty()
 	if name == style.text("keys.dive"):
 		return not planner.change_band(-1).is_empty()
+	if name == style.text("keys.drop"):
+		return not planner.toggle_drop().is_empty()
 	if name == style.text("keys.next_unit"):
 		var ids := roster.selectable_ids()   # (a down unit takes no orders)
 		if ids.is_empty():

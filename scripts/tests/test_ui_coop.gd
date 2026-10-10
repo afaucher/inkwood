@@ -181,10 +181,18 @@ func _check_fate_text() -> void:
 # unit the players control? is the phase planning?) before it is added here.
 func _check_plan_readers() -> void:
 	var rx := RegEx.new()
-	rx.compile("\\.plan\\b|planned_states\\(|\"plan\"\\)|\\.reachable\\(")
+	# (Track U3, the strike: a bomb DROP is part of a step's request, so the bomb cone, the aim and the
+	# spread are plan reads too -- drop_cone / drop_steps are caught the same way. bomb_aim.gd, the
+	# node that draws them, asks the planner's bomb_marks() and nothing else, and so stays off the list.)
+	rx.compile("\\.plan\\b|planned_states\\(|\"plan\"\\)|\\.reachable\\(|drop_cone\\(|drop_steps\\(")
 	# (node_hover_board_shot.gd: a windowed board that saves and restores the plan of the
-	# light fighter, a player unit, it plays itself.)
-	var allowed := ["motion_planner.gd", "roster.gd", "node_hover_board_shot.gd"]
+	# light fighter, a player unit, it plays itself.
+	# bomb_source.gd: the seam that counts a unit's planned drops and asks the World for a step's bomb
+	# cone; it draws nothing, and only the planner -- behind plan_shown -- hands what it reads to a
+	# drawing (test_ui_bombs checks that an AI bomber's drop never reaches bomb_marks()).
+	# bomb_aim_board_shot.gd and bomb_ui_shot.gd: windowed shots that set a player bomber's drop up
+	# and play it themselves.)
+	var allowed := ["motion_planner.gd", "roster.gd", "node_hover_board_shot.gd", "bomb_source.gd", "bomb_aim_board_shot.gd", "bomb_ui_shot.gd"]
 	var checked := 0
 	for root: String in ["res://scripts/ui", "res://scripts/fx"]:
 		for f: String in _gd_files(root):
@@ -285,10 +293,13 @@ func _check_speed_labels(w: World, ui: UnitUI) -> void:
 	var labels := pl.step_labels("p1")
 	eq(labels.size(), 5, "8. a label slot per step")
 	for k in 2:
-		var want := "%d · %d m/s" % [k + 1, roundi(float(st[k]["speed"]))]
+		# (Track U3, 2026-10-10: every node has a height too -- the band's metres, folded into the line; ui.json labels)
+		var want: String = "%d · %d m/s" % [k + 1, roundi(float(st[k]["speed"]))] + UiStyle.shared().text("labels.node_suffix") % roundi(w.band_height(str(st[k]["altitude_band"])))
 		eq((labels[k] as PackedStringArray)[0] if not (labels[k] as PackedStringArray).is_empty() else "", want, "8. step %d's label is its number and the speed it ends at" % (k + 1))
 	check(roundi(float(st[0]["speed"])) != roundi(float(st[1]["speed"])), "8. the two steps end at different speeds (%d, %d)" % [roundi(float(st[0]["speed"])), roundi(float(st[1]["speed"]))])
-	check((labels[2] as PackedStringArray).is_empty(), "8. a carry-on step has no label")
+	var carry: PackedStringArray = labels[2]
+	eq(carry.size(), 1, "8. a carry-on step has a label of its own now: its speed and its height")
+	eq(carry[0], UiStyle.shared().text("labels.node_carry") % [roundi(float(st[2]["speed"])), roundi(w.band_height(str(st[2]["altitude_band"])))], "8. in the data's format")
 	var up := pl.change_band(1)
 	check(not up.is_empty(), "8. step 2 climbs")
 	var l2: PackedStringArray = pl.step_labels("p1")[1]

@@ -10,6 +10,10 @@ extends RefCounted
 # are one texture (the marker layer casts the shadow from art.mask, the footprint).
 # The tank's variant is unit_art.variant.tank when ui.json has it (it does not yet:
 # proposed, Track U to add) and 0, the sheet's default view, when it does not.
+# THE STRIKE'S GROUND UNITS (Track U3, 2026-10-10): the anti-aircraft battery and the radio tower are
+# ported in unit_marker_art_static.gd on top of this file's pen and helpers (STATICS; art_for takes the
+# sprite angle `rot` for them: they never turn, so they are baked already turned, with their cast
+# shadow as the mask: Art.screen_aligned).
 #
 #   sheet                         here
 #   unitSeed(ui, v)               unit_seed(scene_seed, ui, v)
@@ -73,13 +77,28 @@ const TANKS := {
 	"tank": 3,
 }
 
+# THE STATIC GROUND UNITS (Track U3, the strike, 2026-10-10): silhouette id -> the sheet's UNITS index.
+# Drawn by unit_marker_art_static.gd, which preloads THIS file (so this one reaches it with load(),
+# never a preload: two scripts that preload each other hang the run). A static unit never moves and
+# never turns, so its art is baked already turned by its heading (Art.screen_aligned) and its mask is
+# its cast shadow, not its silhouette.
+const STATICS := {
+	"anti_aircraft_battery": 4,
+	"radio_tower": 6,
+}
+
 class Art:
 	var texture: Texture2D = null   # the plane, straight alpha
-	var mask: Texture2D = null      # the silhouette, white, straight alpha
+	var mask: Texture2D = null      # the silhouette, white, straight alpha (a static unit's: its cast shadow)
 	var origin := Vector2.ZERO      # the unit's centre in texture px
 	var ppm: float = 1.0            # the scale it was baked at
 	var size_px := Vector2i.ZERO
 	var extent_m: float = 0.0       # largest distance from the centre to any part, metres
+	# A static unit's art is baked in the SCREEN's frame, already turned by `rot` (radians: the sprite
+	# angle the marker would have turned it by, heading + 90 degrees): the marker does not rotate the
+	# sprite or the mask. False for the planes and the tank (nose up, turned by the marker).
+	var screen_aligned: bool = false
+	var rot: float = 0.0
 
 class Model:
 	var silhouette: String
@@ -125,6 +144,10 @@ class Ink:
 	var glass_shaded: Color
 	var rock: Color         # ROCK: the track links' fill
 	var slope: Color        # slope(CREAM): a sloped plate away from the sun
+	var wall: Color         # WALL: the sandbag ring's fill (Track U3)
+	var wall_slope: Color   # slope(WALL): the sandbags' shaded side
+	var roof: Color         # ROOF: the radio hut's roof
+	var dirt: Color         # DIRT: trodden earth
 	var sd: Vector2         # shadowDir()
 	var light: Vector2      # LX, LY
 
@@ -161,6 +184,17 @@ static func is_plane(silhouette: String) -> bool:
 static func is_tank(silhouette: String) -> bool:
 	return TANKS.has(silhouette)
 
+static func is_static(silhouette: String) -> bool:
+	return STATICS.has(silhouette)
+
+static var _static_script: GDScript = null
+
+# unit_marker_art_static.gd, loaded the first time a static unit needs it.
+static func _statics() -> GDScript:
+	if _static_script == null:
+		_static_script = load("res://scripts/ui/unit_marker_art_static.gd")
+	return _static_script
+
 # The sheet's variant index for a silhouette: ui.json unit_art.variant.<silhouette>;
 # a silhouette ui.json does not list yet (the tank) takes the sheet's default view, 0.
 static func _variant_of(st: RefCounted, silhouette: String) -> int:
@@ -173,9 +207,11 @@ static func _variant_of(st: RefCounted, silhouette: String) -> int:
 
 # The baked art for a silhouette in a side's accent at `ppm`, from the cache or
 # baked now (one InkCanvas frame). null when it cannot be drawn (headless, or a
-# silhouette the sheet has no generator for).
-static func art_for(st: RefCounted, silhouette: String, accent: Color, ppm: float) -> Art:
-	if not (is_plane(silhouette) or is_tank(silhouette)):
+# silhouette the sheet has no generator for). `rot` matters only to a STATIC unit
+# (anti-aircraft battery, radio tower): the sprite angle it is baked turned by (heading + 90 degrees),
+# part of its cache key; the planes and the tank are baked nose up and ignore it.
+static func art_for(st: RefCounted, silhouette: String, accent: Color, ppm: float, rot: float = 0.0) -> Art:
+	if not (is_plane(silhouette) or is_tank(silhouette) or is_static(silhouette)):
 		return null
 	var lo: float = st.num("unit_art.min_bake_ppm")
 	var hi: float = st.num("unit_art.max_bake_ppm")
@@ -183,6 +219,9 @@ static func art_for(st: RefCounted, silhouette: String, accent: Color, ppm: floa
 	var variant := _variant_of(st, silhouette)
 	# The pen is part of the art (outlines go through InkCanvas's pen), so it is part of the key.
 	var key := "%s|%d|%s|%.2f|%s" % [silhouette, variant, accent.to_html(), q, InkCanvas.pen_key()]
+	if is_static(silhouette):
+		rot = wrapf(rot, -PI, PI)
+		key += "|%.3f" % snappedf(rot, 0.005)
 	if _art.has(key):
 		var hit: Art = _art[key]
 		_art.erase(key)   # LRU: a hit moves to the back, the front is evicted first
@@ -190,7 +229,7 @@ static func art_for(st: RefCounted, silhouette: String, accent: Color, ppm: floa
 		return hit
 	if not can_bake():
 		return null
-	var art := _bake(st, model_for(st, silhouette), accent, q)
+	var art := _bake(st, model_for(st, silhouette), accent, q, rot)
 	_art[key] = art
 	_trim(int(st.num("unit_art.cache_max")))
 	return art
@@ -221,6 +260,14 @@ static func model_for(st: RefCounted, silhouette: String, variant: int = -1) -> 
 		m.seed = unit_seed(st.scene_seed, int(TANKS[silhouette]), variant)
 		m.p = gen_tank(Mulberry32.new(m.seed))
 		m.G = build_tank(m.p)
+	elif is_static(silhouette):
+		m.seed = unit_seed(st.scene_seed, int(STATICS[silhouette]), variant)
+		if silhouette == "anti_aircraft_battery":
+			m.p = _statics().gen_aa(Mulberry32.new(m.seed))
+			m.G = _statics().build_aa(m.p)
+		else:
+			m.p = _statics().gen_tower(Mulberry32.new(m.seed))
+			m.G = _statics().build_tower(m.p)
 	else:
 		var spec: Array = PLANES[silhouette]
 		m.seed = unit_seed(st.scene_seed, int(spec[0]), variant)
@@ -1270,6 +1317,10 @@ static func ink_consts(st: RefCounted) -> Ink:
 	# share of the shadow tint mixed in (the prototype's mix(shadowCol, fill, .7)).
 	ink.rock = st.palette["rock_fill"]
 	ink.slope = UiStyle.mix8(st.palette["shadow"], st.palette["object_fill"], 1.0 - float(st.mixes["wall_slope_shadow_mix"]))
+	ink.wall = st.palette["wall_fill"]
+	ink.wall_slope = UiStyle.mix8(st.palette["shadow"], st.palette["wall_fill"], 1.0 - float(st.mixes["wall_slope_shadow_mix"]))
+	ink.roof = st.palette["roof_lit"]
+	ink.dirt = st.palette["dirt"]
 	ink.sd = st.shadow_dir()
 	ink.light = st.detail_light
 	return ink
@@ -1297,7 +1348,9 @@ static func extent_box(M: Model) -> Rect2:
 			hi = hi.max(q)
 	return Rect2(lo, hi - lo)
 
-static func _bake(st: RefCounted, M: Model, accent: Color, ppm: float) -> Art:
+static func _bake(st: RefCounted, M: Model, accent: Color, ppm: float, rot: float = 0.0) -> Art:
+	if is_static(M.silhouette):
+		return _statics().bake(st, M, accent, ppm, rot)
 	var margin: float = st.num("unit_art.bake_margin_px")
 	var box := extent_box(M)
 	var size := Vector2i(ceili(box.size.x * ppm + 2.0 * margin), ceili(box.size.y * ppm + 2.0 * margin))

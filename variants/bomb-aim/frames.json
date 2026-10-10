@@ -1,0 +1,162 @@
+{
+  "id": "bomb-aim",
+  "about": "Every frame of the board as its own PNG at native size (1280 x 720), with its caption. board.png is the sheet of 1:1 crops of these.",
+  "frames": [
+    {
+      "file": "a_outline_play.png",
+      "option": "A",
+      "look": "outline",
+      "title": "A  ·  Ink outline, dotted fall line, dashed spread  ·  planning zoom",
+      "zoom": 0.35,
+      "aim": "ideal",
+      "caption": "Ink outline, dotted fall line, dashed spread: the planning zoom 0.35, the aim at the ideal release angle. All linework and nothing filled, so the village reads straight through. The cone is an inked rim; a dotted line runs from where the bomber lets go (the dot on its path) to the aim; the spread is a dashed ellipse. Accuracy is said by the ellipse's size and the lettering alone.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "b_wash_play.png",
+      "option": "B",
+      "look": "wash",
+      "title": "B  ·  Wash in the side colour, crosshair, faint spread  ·  planning zoom",
+      "zoom": 0.35,
+      "aim": "ideal",
+      "caption": "Wash in the side colour, crosshair, faint spread: the planning zoom 0.35, the aim at the ideal release angle. The cone as a wash in the unit's side colour, deepest round the ideal aim and fading to the rim: the more colour under the aim, the closer the release is to ideal. The same wash Alex chose for the guns' cones (decision cone-overlay), used for bombs. A crosshair at the aim, a faint inked ellipse for the spread.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "c_stipple_play.png",
+      "option": "C",
+      "look": "stipple",
+      "title": "C  ·  Stippled cone, spread as scattered impacts  ·  planning zoom",
+      "zoom": 0.35,
+      "aim": "ideal",
+      "caption": "Stippled cone, spread as scattered impacts: the planning zoom 0.35, the aim at the ideal release angle. The cone in dots, dense toward the ideal aim and thin to the rim; the spread is not an outline but a scatter of dots, the places bombs may land (the same dots every frame, so nothing shimmers). Reads as the bombs' own randomness.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "d_rings_play.png",
+      "option": "D",
+      "look": "rings",
+      "title": "D  ·  Range rings from the release point  ·  planning zoom",
+      "zoom": 0.35,
+      "aim": "ideal",
+      "caption": "Range rings from the release point: the planning zoom 0.35, the aim at the ideal release angle. A faint wash and RANGE RINGS about the release point, one every 100 m through the cone, the aim's own ring solid: the throw is the thing, and this draws it as a distance. The spread is a solid ellipse. The most technical of the four.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "a_outline_close.png",
+      "option": "A",
+      "look": "outline",
+      "title": "A  ·  Ink outline, dotted fall line, dashed spread  ·  zoom 1, ideal aim",
+      "zoom": 1.0,
+      "aim": "ideal",
+      "caption": "Ink outline, dotted fall line, dashed spread: zoom 1.0 over the aim at the ideal release angle (accuracy 100 percent). All linework and nothing filled, so the village reads straight through. The cone is an inked rim; a dotted line runs from where the bomber lets go (the dot on its path) to the aim; the spread is a dashed ellipse. Accuracy is said by the ellipse's size and the lettering alone.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "b_wash_close.png",
+      "option": "B",
+      "look": "wash",
+      "title": "B  ·  Wash in the side colour, crosshair, faint spread  ·  zoom 1, ideal aim",
+      "zoom": 1.0,
+      "aim": "ideal",
+      "caption": "Wash in the side colour, crosshair, faint spread: zoom 1.0 over the aim at the ideal release angle (accuracy 100 percent). The cone as a wash in the unit's side colour, deepest round the ideal aim and fading to the rim: the more colour under the aim, the closer the release is to ideal. The same wash Alex chose for the guns' cones (decision cone-overlay), used for bombs. A crosshair at the aim, a faint inked ellipse for the spread.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "c_stipple_close.png",
+      "option": "C",
+      "look": "stipple",
+      "title": "C  ·  Stippled cone, spread as scattered impacts  ·  zoom 1, ideal aim",
+      "zoom": 1.0,
+      "aim": "ideal",
+      "caption": "Stippled cone, spread as scattered impacts: zoom 1.0 over the aim at the ideal release angle (accuracy 100 percent). The cone in dots, dense toward the ideal aim and thin to the rim; the spread is not an outline but a scatter of dots, the places bombs may land (the same dots every frame, so nothing shimmers). Reads as the bombs' own randomness.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "d_rings_close.png",
+      "option": "D",
+      "look": "rings",
+      "title": "D  ·  Range rings from the release point  ·  zoom 1, ideal aim",
+      "zoom": 1.0,
+      "aim": "ideal",
+      "caption": "Range rings from the release point: zoom 1.0 over the aim at the ideal release angle (accuracy 100 percent). A faint wash and RANGE RINGS about the release point, one every 100 m through the cone, the aim's own ring solid: the throw is the thing, and this draws it as a distance. The spread is a solid ellipse. The most technical of the four.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "a_outline_rim.png",
+      "option": "A",
+      "look": "outline",
+      "title": "A  ·  Ink outline, dotted fall line, dashed spread  ·  zoom 1, aim on the near rim",
+      "zoom": 1.0,
+      "aim": "rim",
+      "caption": "Ink outline, dotted fall line, dashed spread: zoom 1.0, the aim dragged to the cone's near rim: the worst release angle the cone allows. All linework and nothing filled, so the village reads straight through. The cone is an inked rim; a dotted line runs from where the bomber lets go (the dot on its path) to the aim; the spread is a dashed ellipse. Accuracy is said by the ellipse's size and the lettering alone.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "b_wash_rim.png",
+      "option": "B",
+      "look": "wash",
+      "title": "B  ·  Wash in the side colour, crosshair, faint spread  ·  zoom 1, aim on the near rim",
+      "zoom": 1.0,
+      "aim": "rim",
+      "caption": "Wash in the side colour, crosshair, faint spread: zoom 1.0, the aim dragged to the cone's near rim: the worst release angle the cone allows. The cone as a wash in the unit's side colour, deepest round the ideal aim and fading to the rim: the more colour under the aim, the closer the release is to ideal. The same wash Alex chose for the guns' cones (decision cone-overlay), used for bombs. A crosshair at the aim, a faint inked ellipse for the spread.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "c_stipple_rim.png",
+      "option": "C",
+      "look": "stipple",
+      "title": "C  ·  Stippled cone, spread as scattered impacts  ·  zoom 1, aim on the near rim",
+      "zoom": 1.0,
+      "aim": "rim",
+      "caption": "Stippled cone, spread as scattered impacts: zoom 1.0, the aim dragged to the cone's near rim: the worst release angle the cone allows. The cone in dots, dense toward the ideal aim and thin to the rim; the spread is not an outline but a scatter of dots, the places bombs may land (the same dots every frame, so nothing shimmers). Reads as the bombs' own randomness.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "d_rings_rim.png",
+      "option": "D",
+      "look": "rings",
+      "title": "D  ·  Range rings from the release point  ·  zoom 1, aim on the near rim",
+      "zoom": 1.0,
+      "aim": "rim",
+      "caption": "Range rings from the release point: zoom 1.0, the aim dragged to the cone's near rim: the worst release angle the cone allows. A faint wash and RANGE RINGS about the release point, one every 100 m through the cone, the aim's own ring solid: the throw is the thing, and this draws it as a distance. The spread is a solid ellipse. The most technical of the four.",
+      "size": [
+        1280,
+        720
+      ]
+    }
+  ]
+}

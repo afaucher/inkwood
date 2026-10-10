@@ -1,0 +1,297 @@
+{
+  "id": "bomb-aim",
+  "date": "2026-10-10",
+  "area": "UI, Specials",
+  "question": "How are the bomb cone and the aim mark with its spread drawn? Alex's decisions behind the control (bomb-release, bomb-load): a drop is per step like diving, the player sets the intent in the cone, accuracy follows how close the release is to the ideal release angle, height is a factor, a bomber makes several drops.",
+  "source": "scripts/ui/boards/bomb_aim_board_shot.gd: the running sandbox (scripts/app/sandbox.gd) over the real map and the village Track W lays out, through scripts/ui/boards/strike_scene.gd (the radio tower, two batteries and a player bomber added; the drop planned through the planner's own calls), photographed once per option with ONLY data/ui/ui.json bombs.aim.mode changed",
+  "seed": 20261009,
+  "held_constant": {
+    "scene": "the player's bomber (Anvil, medium band, 85 m/s, flying east) with two steps planned and its SECOND step's drop aimed at the radio tower in the village's compound (the cone and the numbers are the simulation's own: World.drop_cone / drop_spread, scripts/sim/bombs.gd); a player fighter beside the tower so the village is in sight; the orders card with Drop on and the roster with the bomber's drops left are in the whole frames",
+    "shots": {
+      "play": "the planning zoom 0.35, the aim at the ideal release angle",
+      "close": "zoom 1.0 over the same aim",
+      "rim": "zoom 1.0, the aim on the cone's near rim (the worst release angle)"
+    },
+    "accuracy_and_spread": {
+      "play": {
+        "accuracy": 1.0,
+        "spread_across_m": 52.0,
+        "sigma_m": 26.0,
+        "stick_m": 30.7
+      },
+      "close": {
+        "accuracy": 1.0,
+        "spread_across_m": 52.0,
+        "sigma_m": 26.0,
+        "stick_m": 30.7
+      },
+      "rim": {
+        "accuracy": 0.4,
+        "spread_across_m": 130.7,
+        "sigma_m": 65.4,
+        "stick_m": 30.7
+      }
+    },
+    "decisions_in_force": "shadow strength 0.44; pen 'shadow_side'; side colours brick red (allies) and slate blue (axis); cones as a colour wash for the selected unit only (Alex, cone-overlay); the node-hover pick 'grow and fill' for every handle, the aim's too; planes at their own scale"
+  },
+  "parameter": "data/ui/ui.json#bombs.aim.mode (outline | wash | stipple | rings) and bombs.aim.<look> for each one's numbers; bombs.aim.spread.sigma_k how many sigmas the drawn ellipse holds",
+  "also_built_behind_every_option": "the aim is a handle (press it, drag it; held inside the cone; nearest handle wins); a press in the cone off every handle moves the aim there; the cursor is a cross there; the orders card line says the spread and the accuracy; the aim handle's hover is the grow-and-fill; the enemy's drops are never drawn; another player's drop shows as a small crosshair with no cone",
+  "options": [
+    {
+      "name": "A",
+      "title": "Ink outline, dotted fall line, dashed spread",
+      "bombs.aim.mode": "outline",
+      "files": [
+        "a_outline_play.png",
+        "a_outline_close.png",
+        "a_outline_rim.png"
+      ],
+      "proposed": true,
+      "description": "All linework and nothing filled, so the village reads straight through. The cone is an inked rim; a dotted line runs from where the bomber lets go (the dot on its path) to the aim; the spread is a dashed ellipse. Accuracy is said by the ellipse's size and the lettering alone.",
+      "parameters": {
+        "rim_px": 1.1,
+        "mark": {
+          "r_px": 6.0,
+          "tick_px": 5.0,
+          "gap_px": 2.0,
+          "line_px": 1.3,
+          "dot_px": 2.6,
+          "halo_px": 1.8,
+          "role": {
+            "base": "ink"
+          }
+        },
+        "ideal": {
+          "size_px": 3.6,
+          "line_px": 1.0,
+          "role": {
+            "base": "ink",
+            "alpha": 0.75
+          }
+        },
+        "release": {
+          "dot_px": 2.6,
+          "tie_dash_px": 3.0,
+          "tie_gap_px": 3.0,
+          "tie_px": 0.9,
+          "role": {
+            "base": "ink",
+            "alpha": 0.65
+          }
+        },
+        "spread": {
+          "sigma_k": 2.0,
+          "line_px": 1.1,
+          "dash_px": 4.0,
+          "fill_role": {
+            "base": "ink",
+            "alpha": 0.13
+          },
+          "edge_role": {
+            "base": "ink",
+            "alpha": 0.85
+          }
+        }
+      }
+    },
+    {
+      "name": "B",
+      "title": "Wash in the side colour, crosshair, faint spread",
+      "bombs.aim.mode": "wash",
+      "files": [
+        "b_wash_play.png",
+        "b_wash_close.png",
+        "b_wash_rim.png"
+      ],
+      "proposed": true,
+      "description": "The cone as a wash in the unit's side colour, deepest round the ideal aim and fading to the rim: the more colour under the aim, the closer the release is to ideal. The same wash Alex chose for the guns' cones (decision cone-overlay), used for bombs. A crosshair at the aim, a faint inked ellipse for the spread.",
+      "parameters": {
+        "rim_px": 1.1,
+        "mark": {
+          "r_px": 6.0,
+          "tick_px": 5.0,
+          "gap_px": 2.0,
+          "line_px": 1.3,
+          "dot_px": 2.6,
+          "halo_px": 1.8,
+          "role": {
+            "base": "ink"
+          }
+        },
+        "ideal": {
+          "size_px": 3.6,
+          "line_px": 1.0,
+          "role": {
+            "base": "ink",
+            "alpha": 0.75
+          }
+        },
+        "release": {
+          "dot_px": 2.6,
+          "tie_dash_px": 3.0,
+          "tie_gap_px": 3.0,
+          "tie_px": 0.9,
+          "role": {
+            "base": "ink",
+            "alpha": 0.65
+          }
+        },
+        "spread": {
+          "sigma_k": 2.0,
+          "line_px": 1.1,
+          "dash_px": 4.0,
+          "fill_role": {
+            "base": "ink",
+            "alpha": 0.13
+          },
+          "edge_role": {
+            "base": "ink",
+            "alpha": 0.85
+          }
+        },
+        "wash": {
+          "steps": 5.0,
+          "alpha_rim": 0.07,
+          "alpha_centre": 0.3,
+          "shrink_to": 0.15
+        }
+      }
+    },
+    {
+      "name": "C",
+      "title": "Stippled cone, spread as scattered impacts",
+      "bombs.aim.mode": "stipple",
+      "files": [
+        "c_stipple_play.png",
+        "c_stipple_close.png",
+        "c_stipple_rim.png"
+      ],
+      "proposed": true,
+      "description": "The cone in dots, dense toward the ideal aim and thin to the rim; the spread is not an outline but a scatter of dots, the places bombs may land (the same dots every frame, so nothing shimmers). Reads as the bombs' own randomness.",
+      "parameters": {
+        "rim_px": 1.1,
+        "mark": {
+          "r_px": 6.0,
+          "tick_px": 5.0,
+          "gap_px": 2.0,
+          "line_px": 1.3,
+          "dot_px": 2.6,
+          "halo_px": 1.8,
+          "role": {
+            "base": "ink"
+          }
+        },
+        "ideal": {
+          "size_px": 3.6,
+          "line_px": 1.0,
+          "role": {
+            "base": "ink",
+            "alpha": 0.75
+          }
+        },
+        "release": {
+          "dot_px": 2.6,
+          "tie_dash_px": 3.0,
+          "tie_gap_px": 3.0,
+          "tie_px": 0.9,
+          "role": {
+            "base": "ink",
+            "alpha": 0.65
+          }
+        },
+        "spread": {
+          "sigma_k": 2.0,
+          "line_px": 1.1,
+          "dash_px": 4.0,
+          "fill_role": {
+            "base": "ink",
+            "alpha": 0.13
+          },
+          "edge_role": {
+            "base": "ink",
+            "alpha": 0.85
+          }
+        },
+        "stipple": {
+          "cell_px": 6.0,
+          "dot_px": 1.05,
+          "alpha": 0.85,
+          "gamma": 1.7,
+          "scatter_dots": 70.0,
+          "scatter_dot_px": 1.7
+        }
+      }
+    },
+    {
+      "name": "D",
+      "title": "Range rings from the release point",
+      "bombs.aim.mode": "rings",
+      "files": [
+        "d_rings_play.png",
+        "d_rings_close.png",
+        "d_rings_rim.png"
+      ],
+      "proposed": true,
+      "description": "A faint wash and RANGE RINGS about the release point, one every 100 m through the cone, the aim's own ring solid: the throw is the thing, and this draws it as a distance. The spread is a solid ellipse. The most technical of the four.",
+      "parameters": {
+        "rim_px": 1.1,
+        "mark": {
+          "r_px": 6.0,
+          "tick_px": 5.0,
+          "gap_px": 2.0,
+          "line_px": 1.3,
+          "dot_px": 2.6,
+          "halo_px": 1.8,
+          "role": {
+            "base": "ink"
+          }
+        },
+        "ideal": {
+          "size_px": 3.6,
+          "line_px": 1.0,
+          "role": {
+            "base": "ink",
+            "alpha": 0.75
+          }
+        },
+        "release": {
+          "dot_px": 2.6,
+          "tie_dash_px": 3.0,
+          "tie_gap_px": 3.0,
+          "tie_px": 0.9,
+          "role": {
+            "base": "ink",
+            "alpha": 0.65
+          }
+        },
+        "spread": {
+          "sigma_k": 2.0,
+          "line_px": 1.1,
+          "dash_px": 4.0,
+          "fill_role": {
+            "base": "ink",
+            "alpha": 0.13
+          },
+          "edge_role": {
+            "base": "ink",
+            "alpha": 0.85
+          }
+        },
+        "rings": {
+          "ring_every_m": 100.0,
+          "dash_px": 5.0,
+          "gap_px": 4.0,
+          "line_px": 0.9,
+          "alpha": 0.55,
+          "fill_alpha": 0.05
+        }
+      }
+    }
+  ],
+  "palette_check": "No option adds a hue. The cone's interior is the unit's SIDE ACCENT (side_a, L 0.551, C 0.100), the same colour as the bomber's roundels and the guns' cone wash; the rim, the fall line, the crosshair, the spread and the lettering are INK (L 0.325) and PAPER (L 0.847, alpha 0.92 for the crosshair's pool and the lettering's halo). Lightness is a ramp off paper: the wash's depth (alpha 0.07 at the rim to 0.30 at the ideal aim) is the accuracy; the spread's ink fill is 0.13. Material is linework: dashes, dots and rings; the only fills are the wash and the spread's faint ink.",
+  "recommendation_proposed": "B, the wash (bombs.aim.mode in data is set to it, PROPOSED, so the build gives feedback before Alex picks): it is the look Alex already chose for the guns' cones, so every cone on the map is one language; its depth is the accuracy, so the cone itself says where the release is good, with no lettering needed; the ink spread ellipse on it stays legible over the village's linework. A is the quietest and leaves the ground readable; C says 'random' best but is heavy on a busy map; D draws the throw as a distance, which suits a player who wants to judge the range.",
+  "frames": "frames.json (every frame whole, with its caption)",
+  "sheet": "board.png (rows A-D: the planning zoom, the close zoom over the ideal aim, the close zoom over a rim aim; a palette strip below)",
+  "chosen": null,
+  "chosen_by": null
+}

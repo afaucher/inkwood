@@ -44,6 +44,8 @@ const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
 const UnitStandout = preload("res://scripts/ui/unit_standout.gd")
 const UiFate = preload("res://scripts/ui/ui_fate.gd")
+const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
+const UiLabels = preload("res://scripts/ui/ui_labels.gd")
 
 var world: World = null
 var mapping: UiMapping = null
@@ -118,6 +120,9 @@ func sync_units() -> void:
 		var u = world.units[id]
 		var m := UnitMarker.new()
 		m.own = u.controller == World.CONTROLLER_PLAYER
+		if UnitMarkerArt.is_static(u.def.silhouette):
+			m.base_scale = style.num("marker.static_scale")   # the tower and the batteries read at the planning zoom
+			m.draw_scale = m.base_scale
 		m.setup(style, id, u.def.silhouette, u.def.size_m, style.side_color(u.side), _shadows, _under)
 		_planes.add_child(m)
 		markers[id] = m
@@ -404,6 +409,29 @@ func _flown_line_replaced(m: UnitMarker) -> bool:
 		return false
 	return m.own or style.text("marker.trails.applies_to") == "all"
 
+# --- Height and speed labels (ui_labels.gd; data labels) ----------------------------------
+
+# The height (m) printed for a unit now: the simulation's, or the ground's by data (labels.height_ref); during a
+# playback the pose the marker is drawn at.
+func unit_height_m(id: String) -> float:
+	var falling := unit_falling(id)
+	var ground := func(pose: Dictionary) -> float:
+		return fall_height_above_ground(pose) if falling else height_above_ground(pose)
+	return UiLabels.height_of(style, world, pose_of(id), ground)
+
+# The label under a unit's marker, "" for a unit that has none (not in the world): "400 m · 100"; a static unit
+# "0 m". The same text whoever's the unit is: an enemy's current state is visible state.
+func unit_label(id: String) -> String:
+	var u = world.units.get(id)
+	if u == null:
+		return ""
+	return UiLabels.unit_text(style, unit_height_m(id), float(pose_of(id).get("speed", 0.0)), u.def.is_static())
+
+# Whether the unit's label is drawn: the marker is on the map (so in sight) and the scale is not the far zoom's.
+func label_shown(id: String) -> bool:
+	var m: UnitMarker = markers.get(id)
+	return m != null and m.visible and UiLabels.shown(style, m.screen_ppm)
+
 # --- Marks: side roundels, the selection ring, the leader line ------------------------
 
 func ring_radius(m: UnitMarker) -> float:
@@ -431,6 +459,15 @@ func _draw_marks() -> void:
 		UiInk.roundel(_marks, bc, badge_r, m.accent, eye, ink)
 		if m.selected:
 			_draw_ring(m, r, ink, leader)
+		if label_shown(id):
+			# Under the ring's ticks and the health arc's reach, centred: the badge is up-left, the leader to the
+			# right, the health arc on a diagonal, the shadow down-right (the paper under-stroke reads over it).
+			var txt := unit_label(id)
+			var px: float = style.num("fonts.small_px")
+			var font: Font = style.font(true)
+			var w := UiInk.text_width(font, txt, px) + 4.0
+			var y := m.position.y + r + style.num("marker.ring_gap_px") + style.num("marker.ring_tick_px") + style.num("labels.below_px") + px
+			UiLabels.draw(_marks, style, font, Vector2(m.position.x - w * 0.5, y), txt, px, style.color("label_ink"), w, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _draw_ring(m: UnitMarker, r: float, ink: Color, leader: Color) -> void:
 	var c := m.position

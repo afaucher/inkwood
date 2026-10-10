@@ -79,6 +79,33 @@ extends Node2D
 # reset whenever there is nothing to grab). Nothing hovers when the selected
 # unit takes no orders: down, an AI unit's, not the planning phase.
 #
+# THE BOMB DROP (Track U3, the strike, 2026-10-10; Alex: bombing is "per step, just like
+# diving. You set the intent in the cone." Accuracy follows how close the bomber is to the ideal
+# release angle, and height; a bomber makes several drops). A step of a unit with bombs may
+# carry a DROP: its request gains {"drop": {"aim": [x, y]}} (metres), and the aim must lie
+# inside that step's BOMB CONE, World.drop_cone (reached through BombSource, the one place the
+# interface asks the simulation about bombs). The calls, all thin like the rest:
+#
+#   set_step_drop(k, on)        turn step k's drop on (the aim starts at the cone's ideal aim) or off
+#   toggle_drop()               the Drop button: the same on the step the card is about
+#   place_aim(k, world_pt)      aim step k's drop at a point; REFUSED ({}) outside the cone
+#   begin_aim(k, pt) / drag_aim(pt) / end_aim()    the aim handle dragged: the aim follows the
+#                               pointer and is held inside the cone (as a step is held in its envelope)
+#   drop_options(k)             {available, on, why}: what the Drop control may do for step k
+#   drop_info(k)                {cone, aim, spread, quality, release, free, ...} for the card
+#   bomb_marks()                the marks the cone node (bomb_aim.gd) draws, in screen px
+#
+# THE STEP THE CARD IS ABOUT (focus_step): Dive / Level / Climb and Drop act on one step, the
+# LAST PLACED STEP until a step's handle (or its aim) is grabbed, then THAT step, until the plan
+# changes shape (a step placed, undone, cleared) or another unit is selected. PROPOSED by U3: the
+# Drop control needs a way to reach the earlier steps of a bomber that makes more than one
+# drop, and the band buttons share it so the card is about one step at a time.
+#
+# Editing a step keeps its drop; if the new path moves the cone off the aim, the aim is moved to
+# the nearest point still inside it (a cone the step no longer has takes the drop off). The aim
+# is part of the plan: editing it, undoing, clearing, Ready and last-edit-wins are the plan's.
+# EVERYTHING DRAWN FOR A DROP goes through plan_shown, so an AI unit's drop is never shown.
+
 signal plan_edited(unit_id: String)
 signal ready_refused(unit_id: String)   # Ready was refused for this unit (or "": the notice was cleared)
 
@@ -88,12 +115,16 @@ const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const Roster = preload("res://scripts/ui/roster.gd")
+const BombSource = preload("res://scripts/ui/bomb_source.gd")
+const UiLabels = preload("res://scripts/ui/ui_labels.gd")
 
 var world: World = null
 var mapping: UiMapping = null
 var selection: RefCounted = null
 var style: UiStyle = null
 var local_player: String = "local"
+# The bombs the simulation (or its stand-in) answers with; UnitUI shares one with the roster and the card.
+var bombs: BombSource = null
 # The unit marker layer, when the planner sits beside one (UnitUI sets it): the
 # ghosts use the art the selected unit's own marker already holds, so a zoom
 # never makes the planner bake art of its own.
@@ -109,6 +140,12 @@ var refused_ms: int = -100000
 const REFUSED_SHOW_MS := 1600
 
 var _drag_index: int = -1
+var _drag_aim: int = -1             # the step whose aim handle is being dragged (-1: none)
+var _focus: int = -1                # the step the card is about; -1: the last placed (see focus_step)
+# The last aim refused for lying outside its cone (metres) and when: drawn for a moment, like the
+# map rule's cross.
+var refused_aim := Vector2.INF
+var refused_aim_ms: int = -100000
 # The mouse cursor shape this planner last asked the engine for (Input.CURSOR_*): the
 # arrow unless a press here would do something; tests read it.
 var cursor_shape: int = Input.CURSOR_ARROW
@@ -128,6 +165,9 @@ func setup(w: World, host_mapping: Variant, sel: RefCounted, player: String = "l
 	local_player = player
 	selection = sel
 	set_mapping(host_mapping)
+	if bombs == null:
+		bombs = BombSource.new()
+	bombs.setup(world, style)
 	if not world.plan_changed.is_connected(_on_plan_changed):
 		world.plan_changed.connect(_on_plan_changed)
 		world.phase_changed.connect(_on_phase_changed)
@@ -184,6 +224,24 @@ func planned_count(id: String = "") -> int:
 		n -= 1
 	return n
 
+# The step the orders card is about (Dive / Level / Climb, Drop): the last placed step, or the
+# step whose handle or aim was grabbed last while that is still a placed step of the selected
+# unit's plan. -1 with nothing placed.
+func focus_step(id: String = "") -> int:
+	if id == "":
+		id = unit_id()
+	var n := planned_count(id)
+	if n <= 0:
+		return -1
+	if id == unit_id() and _focus >= 0 and _focus < n:
+		return _focus
+	return n - 1
+
+func set_focus_step(k: int) -> void:
+	var n := planned_count()
+	_focus = k if k >= 0 and k < n else -1
+	queue_redraw()
+
 # The step the next click places, or -1 when the plan is full or closed.
 func next_step_index(id: String = "") -> int:
 	if id == "":
@@ -232,18 +290,21 @@ func place_point(world_pt: Vector2) -> Dictionary:
 	var k := next_step_index()
 	if k < 0:
 		return {}
+	_focus = -1   # a new step is the last placed: the card is about it
 	return _plan_point(k, world_pt)
 
 func begin_step(world_pt: Vector2) -> Dictionary:
 	var k := next_step_index()
 	if k < 0:
 		return {}
+	_focus = -1
 	_set_drag(k)
 	return _plan_point(k, world_pt)
 
 func begin_edit(k: int, world_pt: Vector2) -> Dictionary:
 	if not can_plan() or k < 0 or k >= planned_count():
 		return {}
+	_focus = k   # the card is about the step whose handle was grabbed
 	_set_drag(k)
 	return _plan_point(k, world_pt)
 
@@ -260,7 +321,7 @@ func end_step() -> Dictionary:
 	return states()[k]
 
 func is_dragging() -> bool:
-	return _drag_index >= 0
+	return _drag_index >= 0 or _drag_aim >= 0
 
 # Step k steers for `world_pt`, keeping the band it asked for (if any).
 func _plan_point(k: int, world_pt: Vector2) -> Dictionary:
@@ -269,6 +330,8 @@ func _plan_point(k: int, world_pt: Vector2) -> Dictionary:
 	var plan: Array = world.units[id].plan
 	if k < plan.size() and (plan[k] as Dictionary).has("altitude_band"):
 		req["altitude_band"] = (plan[k] as Dictionary)["altitude_band"]
+	if k < plan.size() and (plan[k] as Dictionary).has("drop"):
+		req["drop"] = ((plan[k] as Dictionary)["drop"] as Dictionary).duplicate(true)   # a step moved keeps its drop
 	return _commit_step(id, k, req, world_pt)
 
 # World.plan_step with the map rule: a plan with a PLANNED step that ends
@@ -289,6 +352,7 @@ func _commit_step(id: String, k: int, req: Dictionary, asked: Vector2) -> Dictio
 				refused_world = asked
 				refused_ms = Time.get_ticks_msec()
 				return {}
+	_fit_drops(id)
 	_reopen()
 	plan_edited.emit(id)
 	return s
@@ -307,7 +371,7 @@ func set_step_band(k: int, band: String) -> Dictionary:
 # Climb (+1), level (0) or dive (-1) on the last placed step, one band, as far
 # as the unit's own bands go. {} when no step is placed yet.
 func change_band(delta: int) -> Dictionary:
-	var k := planned_count() - 1
+	var k := focus_step()
 	if not can_plan() or k < 0:
 		return {}
 	var bands: Array[String] = world.units[unit_id()].def.envelope.bands
@@ -318,7 +382,7 @@ func change_band(delta: int) -> Dictionary:
 # Which band changes the last placed step can take: {-1: bool, 0: bool, 1: bool}.
 func band_options() -> Dictionary:
 	var out := {-1: false, 0: false, 1: false}
-	var k := planned_count() - 1
+	var k := focus_step()
 	if not can_plan() or k < 0:
 		return out
 	var bands: Array[String] = world.units[unit_id()].def.envelope.bands
@@ -342,6 +406,7 @@ func undo() -> bool:
 	world.clear_plan(id)
 	for i in keep.size():
 		world.plan_step(id, i, keep[i])
+	_focus = -1
 	_set_drag(-1)
 	plan_edited.emit(id)
 	return true
@@ -352,8 +417,245 @@ func clear() -> void:
 		return
 	_reopen()
 	world.clear_plan(id)
+	_focus = -1
 	_set_drag(-1)
 	plan_edited.emit(id)
+
+# --- The bomb drop ----------------------------------------------------------------------------------
+
+# The drop request of step k of a unit ({} when it has none): {"aim": [x, y]}.
+func step_drop(k: int, id: String = "") -> Dictionary:
+	if id == "":
+		id = unit_id()
+	if world == null or not world.units.has(id):
+		return {}
+	var plan: Array = world.units[id].plan
+	if k < 0 or k >= plan.size() or not (plan[k] as Dictionary).has("drop"):
+		return {}
+	var d: Variant = (plan[k] as Dictionary)["drop"]
+	return (d as Dictionary).duplicate(true) if d is Dictionary else {}
+
+# Where step k's drop is aimed (metres); Vector2.INF with no drop or no aim.
+func step_aim(k: int, id: String = "") -> Vector2:
+	var d := step_drop(k, id)
+	return BombSource._v2(d.get("aim"))
+
+func step_has_drop(k: int, id: String = "") -> bool:
+	return not step_drop(k, id).is_empty()
+
+# What the Drop control may do for step k (-1: the step the card is about): {step, available (it
+# may be switched on, or off if it is on), on, why ("" when available, else the reason in words
+# from data bombs.text)}.
+func drop_options(k: int = -2) -> Dictionary:
+	var id := unit_id()
+	var out := {"step": -1, "available": false, "on": false, "why": ""}
+	if k == -2:
+		k = focus_step()
+	out["step"] = k
+	if not can_plan(id):
+		return out
+	if not bombs.has_bombs(id):
+		out["why"] = style.text("bombs.text.no_bombs")
+		return out
+	if k < 0:
+		out["why"] = style.text("bombs.text.place_first")
+		return out
+	var on := step_has_drop(k, id)
+	out["on"] = on
+	if on:
+		out["available"] = true   # switching a drop off is always allowed
+		return out
+	if bombs.drops_free(id, k) <= 0:
+		out["why"] = style.text("bombs.text.none_left")
+		return out
+	if not bool(bombs.cone(id, k)["ok"]):
+		out["why"] = style.text("bombs.text.none_left")
+		return out
+	out["available"] = true
+	return out
+
+# The Drop button: the drop of the step the card is about, on or off. {} when it may not.
+func toggle_drop() -> Dictionary:
+	var k := focus_step()
+	if k < 0:
+		return {}
+	return set_step_drop(k, not step_has_drop(k))
+
+# Turn step k's drop on (aimed at the cone's ideal aim, or its middle) or off. The step must be
+# a placed step of the selected unit's plan, the unit must have a drop free (and a cone for the step).
+# Returns the step's state, or {} when refused.
+func set_step_drop(k: int, on: bool) -> Dictionary:
+	var id := unit_id()
+	if not can_plan(id) or k < 0 or k >= world.steps_per_turn(id):
+		return {}
+	var plan: Array = world.units[id].plan
+	var req: Dictionary = (plan[k] as Dictionary).duplicate(true) if k < plan.size() else {}
+	if not on:
+		if not req.has("drop"):
+			return {}
+		req.erase("drop")
+	else:
+		if req.has("drop"):
+			return world.planned_states(id)[k]   # already on
+		if not bombs.has_bombs(id) or bombs.drops_free(id, k) <= 0:
+			return {}
+		var cone: Dictionary = bombs.cone(id, k)
+		if not bool(cone["ok"]):
+			return {}
+		var aim: Vector2 = cone["ideal_aim"]
+		if not BombSource.inside(cone["polygon"], aim):
+			aim = BombSource._centroid(cone["polygon"])
+			if not BombSource.inside(cone["polygon"], aim):
+				aim = BombSource.nearest_inside(cone["polygon"], aim)
+		req["drop"] = {"aim": [aim.x, aim.y]}
+	_focus = k
+	var u = world.units[id]
+	var s := _commit_step(id, k, req, Vector2(float(u.x), float(u.y)))
+	queue_redraw()
+	return s
+
+# Aim step k's drop at `world_pt`. REFUSED -- {} and the plan as it was, the point marked for a
+# moment -- when the point lies outside the step's bomb cone, when the step has no drop or none can
+# be planned. Returns the step's state when taken.
+func place_aim(k: int, world_pt: Vector2) -> Dictionary:
+	var id := unit_id()
+	if not can_plan(id) or not step_has_drop(k, id):
+		return {}
+	var cone: Dictionary = bombs.cone(id, k)
+	if not bool(cone["ok"]) or not BombSource.inside(cone["polygon"], world_pt):
+		refused_aim = world_pt
+		refused_aim_ms = Time.get_ticks_msec()
+		queue_redraw()
+		return {}
+	return _write_aim(id, k, world_pt)
+
+func _write_aim(id: String, k: int, world_pt: Vector2) -> Dictionary:
+	var plan: Array = world.units[id].plan
+	var req: Dictionary = (plan[k] as Dictionary).duplicate(true)
+	req["drop"] = {"aim": [world_pt.x, world_pt.y]}
+	var u = world.units[id]
+	_focus = k
+	return _commit_step(id, k, req, Vector2(float(u.x), float(u.y)))
+
+# The aim handle dragged: begin_aim takes hold of step k's aim and moves it to `world_pt` (held
+# inside the cone, as a dragged step is held in its envelope), drag_aim follows, end_aim lets go.
+func begin_aim(k: int, world_pt: Vector2) -> Dictionary:
+	var id := unit_id()
+	if not can_plan(id) or not step_has_drop(k, id):
+		return {}
+	_focus = k
+	_set_drag_aim(k)
+	return drag_aim(world_pt)
+
+func drag_aim(world_pt: Vector2) -> Dictionary:
+	var id := unit_id()
+	if _drag_aim < 0 or not can_plan(id) or not step_has_drop(_drag_aim, id):
+		return {}
+	var cone: Dictionary = bombs.cone(id, _drag_aim)
+	if not bool(cone["ok"]):
+		return {}
+	var held := BombSource.nearest_inside(cone["polygon"], world_pt)
+	return _write_aim(id, _drag_aim, held)
+
+func end_aim() -> Dictionary:
+	var k := _drag_aim
+	_set_drag_aim(-1)
+	var id := unit_id()
+	if k < 0 or not can_plan(id) or not step_has_drop(k, id):
+		return {}
+	return world.planned_states(id)[k]
+
+func is_aiming() -> bool:
+	return _drag_aim >= 0
+
+func _set_drag_aim(k: int) -> void:
+	_drag_aim = k
+	if k >= 0:
+		_drag_index = -1
+	_update_hover()
+
+# After a step is edited the cones of the unit's steps are not the same: an aim that lies outside
+# its (new) cone moves to the nearest point inside it, a drop whose step has no cone any more comes
+# off. (The aim is part of the plan, so this is part of the edit.)
+func _fit_drops(id: String) -> void:
+	if bombs == null:
+		return
+	for k in bombs.drop_steps(id):
+		var cone: Dictionary = bombs.cone(id, k)
+		var plan: Array = world.units[id].plan
+		var req: Dictionary = (plan[k] as Dictionary).duplicate(true)
+		if not bool(cone["ok"]):
+			req.erase("drop")
+			world.plan_step(id, k, req)
+			continue
+		var aim := BombSource._v2((req["drop"] as Dictionary).get("aim"))
+		if not aim.is_finite() or not BombSource.inside(cone["polygon"], aim):
+			var fixed := BombSource.nearest_inside(cone["polygon"], aim if aim.is_finite() else cone["ideal_aim"])
+			req["drop"] = {"aim": [fixed.x, fixed.y]}
+			world.plan_step(id, k, req)
+
+# What the card and the map say about step k's drop: {cone (metres), aim, ideal_aim, spread
+# {along_m, across_m, heading}, quality 0..1, release (metres), free (drops still free to plan),
+# source}. {} when step k has no drop.
+func drop_info(k: int = -2) -> Dictionary:
+	var id := unit_id()
+	if k == -2:
+		k = focus_step()
+	if not plan_shown(id) or not step_has_drop(k, id):
+		return {}
+	var cone: Dictionary = bombs.cone(id, k)
+	var aim := step_aim(k, id)
+	if not bool(cone["ok"]) or not aim.is_finite():
+		return {}
+	var info: Dictionary = bombs.aim_info(id, k, aim)
+	return {"step": k, "cone": cone["polygon"], "aim": aim, "ideal_aim": cone["ideal_aim"], "spread": info["spread"],
+		"quality": float(info["quality"]), "release": info["release"], "free": bombs.drops_free(id),
+		"path": cone["path"]}
+
+# The marks for the bomb node, in screen px (the record bomb_aim_art.gd documents): the full
+# cone and aim of the step the card is about (while its drop is on), a small mark for every
+# other drop of the selected unit and of any other player unit. NOTHING for a unit whose plan
+# may not be shown (plan_shown): an AI unit's drops are never drawn.
+func bomb_marks() -> Array:
+	var out: Array = []
+	if world == null or bombs == null or world.phase != World.PHASE_PLANNING:
+		return out
+	var sel := unit_id()
+	for id: String in world.units:
+		if not plan_shown(id) or not bombs.has_bombs(id):
+			continue
+		var focus_k := focus_step(id) if id == sel else -1
+		for k in bombs.drop_steps(id):
+			var rec := _bomb_mark(id, k, k == focus_k)
+			if not rec.is_empty():
+				out.append(rec)
+	return out
+
+func _bomb_mark(id: String, k: int, full: bool) -> Dictionary:
+	var cone: Dictionary = bombs.cone(id, k)
+	var plan: Array = world.units[id].plan
+	var aim := BombSource._v2(((plan[k] as Dictionary)["drop"] as Dictionary).get("aim"))
+	if not bool(cone["ok"]) or not aim.is_finite():
+		return {}
+	var info: Dictionary = bombs.aim_info(id, k, aim)
+	var ppm: float = mapping.px_per_m(aim)
+	var sp: Dictionary = info["spread"]
+	var poly := PackedVector2Array()
+	if full:
+		for q: Vector2 in cone["polygon"]:
+			poly.append(mapping.world_to_screen(q))
+	var rel: Vector2 = info["release"]
+	var u = world.units[id]
+	var quality := float(info["quality"])
+	return {
+		"unit": id, "step": k, "quiet": not full, "side": str(u.side),
+		"cone": poly, "aim": mapping.world_to_screen(aim),
+		"ideal": mapping.world_to_screen(cone["ideal_aim"]) if (cone["ideal_aim"] as Vector2).is_finite() else Vector2.INF,
+		"release": mapping.world_to_screen(rel) if rel.is_finite() else Vector2.INF,
+		"spread": {"a": float(sp["along_m"]) * ppm, "b": float(sp["across_m"]) * ppm, "angle": mapping.screen_angle(aim, float(sp["heading"]))},
+		"quality": quality, "ppm": ppm, "seed": (hash(id) & 0xFFFF) * 31 + k,
+		"label": ("%d%%" % roundi(quality * 100.0)) if full else "",
+	}
 
 # The Ready button: commit for the local player. True when everyone is ready
 # (the World does not resolve by itself; the owner -- UnitUI -- decides when).
@@ -405,6 +707,22 @@ func _refuse_ready(blocked: Dictionary) -> void:
 func nearest_handle(screen_pt: Vector2, max_px: float = INF) -> Dictionary:
 	if not can_plan():
 		return {}
+	var best := _nearest_step_handle(screen_pt, max_px)
+	# The AIM handles of the steps that drop (Track U3) compete on the same terms; a tie goes to a step.
+	var best_d: float = float(best["dist"]) if not best.is_empty() else max_px
+	for k in bombs.drop_steps(unit_id()):
+		var a := step_aim(k)
+		if not a.is_finite():
+			continue
+		var p: Vector2 = mapping.world_to_screen(a)
+		var d := p.distance_to(screen_pt)
+		if d < best_d:
+			best_d = d
+			best = {"step": k, "kind": "aim", "dist": d, "screen": p}
+	return best
+
+# The step handles alone, as this was before aim handles: {step, kind: "step", dist, screen}.
+func _nearest_step_handle(screen_pt: Vector2, max_px: float) -> Dictionary:
 	var st := states()
 	var best := {}
 	var best_d := max_px
@@ -414,14 +732,30 @@ func nearest_handle(screen_pt: Vector2, max_px: float = INF) -> Dictionary:
 		var d := p.distance_to(screen_pt)
 		if d <= best_d:
 			best_d = d
-			best = {"step": k, "dist": d, "screen": p}
+			best = {"step": k, "kind": "step", "dist": d, "screen": p}
 	return best
 
 # Which planned step's handle a press at `screen_pt` would grab: the NEAREST one
 # within planner.handle_px, or -1. (It was the last step within the radius, which
-# took a crowded neighbour's handle from it.)
+# took a crowded neighbour's handle from it.) STEP handles only; grab_at also
+# knows the aim handles.
 func handle_at(screen_pt: Vector2) -> int:
-	return int(nearest_handle(screen_pt, style.num("planner.handle_px")).get("step", -1))
+	return int(_nearest_step_handle(screen_pt, style.num("planner.handle_px")).get("step", -1))
+
+# The handle of any kind a press at `screen_pt` would grab: {step, kind ("step" | "aim"),
+# dist, screen}, or {}.
+func grab_at(screen_pt: Vector2) -> Dictionary:
+	return nearest_handle(screen_pt, style.num("planner.handle_px"))
+
+# Whether a press at `screen_pt` would move the aim of the step the card is about: its drop is on
+# and the point is inside its bomb cone.
+func in_bomb_cone(screen_pt: Vector2) -> bool:
+	var id := unit_id()
+	var k := focus_step(id)
+	if not can_plan(id) or k < 0 or not step_has_drop(k, id):
+		return false
+	var cone: Dictionary = bombs.cone(id, k)
+	return bool(cone["ok"]) and BombSource.inside(cone["polygon"], mapping.screen_to_world(screen_pt))
 
 # Whether a press at `screen_pt` starts a new step: inside the fan, or within
 # capture_px of it.
@@ -439,24 +773,37 @@ func in_fan(screen_pt: Vector2) -> bool:
 	return false
 
 func press(screen_pt: Vector2) -> bool:
-	var k := handle_at(screen_pt)
+	var g := grab_at(screen_pt)
 	var wp: Vector2 = mapping.screen_to_world(screen_pt)
-	if k >= 0:
-		begin_edit(k, wp)
+	if not g.is_empty():
+		if str(g["kind"]) == "aim":
+			begin_aim(int(g["step"]), wp)
+		else:
+			begin_edit(int(g["step"]), wp)
 		return true
 	if in_fan(screen_pt):
 		begin_step(wp)
 		return true
+	if in_bomb_cone(screen_pt):
+		begin_aim(focus_step(), wp)   # (the cone is far from the fan, so they seldom meet; the fan wins where they do)
+		return true
 	return false
 
 func drag(screen_pt: Vector2) -> bool:
-	if not is_dragging():
+	if _drag_aim >= 0:
+		drag_aim(mapping.screen_to_world(screen_pt))
+		return true
+	if _drag_index < 0:
 		return false
 	drag_step(mapping.screen_to_world(screen_pt))
 	return true
 
 func release(screen_pt: Vector2) -> bool:
-	if not is_dragging():
+	if _drag_aim >= 0:
+		drag_aim(mapping.screen_to_world(screen_pt))
+		end_aim()
+		return true
+	if _drag_index < 0:
 		return false
 	drag_step(mapping.screen_to_world(screen_pt))
 	end_step()
@@ -466,6 +813,8 @@ func release(screen_pt: Vector2) -> bool:
 
 func _set_drag(k: int) -> void:
 	_drag_index = k
+	if k >= 0:
+		_drag_aim = -1
 	_update_hover()
 
 # The pointer is at `screen_pt` (this node's space, the map layer's).
@@ -485,28 +834,42 @@ func pointer() -> Vector2:
 # begin_edit), "place" (inside the fan or its capture_px: begin_step) or "" --
 # the rule press() follows.
 func press_action(screen_pt: Vector2) -> String:
-	if handle_at(screen_pt) >= 0:
+	if not grab_at(screen_pt).is_empty():
 		return "grab"
 	if can_plan() and in_fan(screen_pt):
 		return "place"
+	if in_bomb_cone(screen_pt):
+		return "aim"
 	return ""
 
 # The hover state, as data: state ("none" | "near" | "range" | "drag"), step (the
-# handle it is about, -1), dist_px (pointer to that handle), approach (0 at
-# near_factor x handle_px, 1 at handle_px and inside), place (a press would place
-# the next step), action ("grab" | "place" | ""), pointer, handle_screen.
+# handle it is about, -1), kind ("step" | "aim": which handle, "" with none), dist_px
+# (pointer to that handle), approach (0 at near_factor x handle_px, 1 at handle_px and
+# inside), place (a press would place the next step), action ("grab" | "place" | "aim" |
+# ""), pointer, handle_screen.
 func hover() -> Dictionary:
 	if _hover.is_empty():
 		_update_hover()
 	return _hover.duplicate()
 
 func _update_hover() -> void:
-	var h := {"state": "none", "step": -1, "dist_px": INF, "approach": 0.0, "place": false, "action": "",
+	var h := {"state": "none", "step": -1, "kind": "", "dist_px": INF, "approach": 0.0, "place": false, "action": "",
 		"pointer": _pointer, "handle_screen": Vector2.INF}
 	if style != null and world != null and mapping != null and _pointer.is_finite() and can_plan():
 		var radius: float = style.num("planner.handle_px")
 		var near: float = radius * style.num("planner.hover.near_factor")
-		if _drag_index >= 0:
+		if _drag_aim >= 0:
+			var a := step_aim(_drag_aim)
+			if a.is_finite():
+				var pa: Vector2 = mapping.world_to_screen(a)
+				h["handle_screen"] = pa
+				h["dist_px"] = pa.distance_to(_pointer)
+			h["state"] = "drag"
+			h["step"] = _drag_aim
+			h["kind"] = "aim"
+			h["approach"] = 1.0
+			h["action"] = "grab"
+		elif _drag_index >= 0:
 			var st := states()
 			if _drag_index < st.size():
 				var s: Dictionary = st[_drag_index]
@@ -515,12 +878,14 @@ func _update_hover() -> void:
 				h["dist_px"] = p.distance_to(_pointer)
 			h["state"] = "drag"
 			h["step"] = _drag_index
+			h["kind"] = "step"
 			h["approach"] = 1.0
 			h["action"] = "grab"
 		else:
 			var n := nearest_handle(_pointer, near)
 			if not n.is_empty():
 				h["step"] = n["step"]
+				h["kind"] = n["kind"]
 				h["dist_px"] = n["dist"]
 				h["handle_screen"] = n["screen"]
 				if float(n["dist"]) <= radius:
@@ -532,6 +897,8 @@ func _update_hover() -> void:
 			if h["state"] != "range" and in_fan(_pointer):
 				h["place"] = true
 			h["action"] = "grab" if h["state"] == "range" else ("place" if h["place"] else "")
+			if h["action"] == "" and in_bomb_cone(_pointer):
+				h["action"] = "aim"
 	_hover = h
 	_apply_cursor()
 	queue_redraw()
@@ -548,6 +915,8 @@ func _apply_cursor() -> void:
 			key = "planner.hover.cursor.grab"
 		elif str(_hover.get("action", "")) == "place":
 			key = "planner.hover.cursor.place"
+		elif str(_hover.get("action", "")) == "aim":
+			key = "planner.hover.cursor.aim"
 		if key != "":
 			want = int(_CURSORS.get(style.text(key), Input.CURSOR_ARROW))
 	if want != cursor_shape:
@@ -574,11 +943,15 @@ func _on_plan_changed(id: String) -> void:
 
 func _on_phase_changed(_phase: String) -> void:
 	_paths.clear()
+	_focus = -1
+	_drag_aim = -1
 	_set_drag(-1)
 	ready_notice = ""
 	queue_redraw()
 
 func _on_selection(_id: String) -> void:
+	_focus = -1
+	_drag_aim = -1
 	_set_drag(-1)
 	queue_redraw()
 
@@ -710,11 +1083,18 @@ func step_labels(id: String = "") -> Array:
 	for k in st.size():
 		var s: Dictionary = st[k]
 		var lines := PackedStringArray()
+		var with_height: bool = style.flag("labels.enabled")
 		if bool(s["planned"]):
 			var head := str(k + 1)
 			if with_speed:
 				head += " · %d %s" % [roundi(float(s["speed"])), unit_txt]
+			if with_height:
+				head += UiLabels.node_suffix(style, node_height_m(s))   # (Track U3: every node has a height and a speed)
 			lines.append(head)
+		elif with_height:
+			lines.append(UiLabels.carry_text(style, float(s["speed"]), node_height_m(s)))   # a carry-on node: speed and height
+		if step_has_drop(k, id):
+			lines.append(style.text("bombs.text.step_tag"))   # a drop on this step (Track U3)
 		var band := str(s["altitude_band"])
 		if band != prev_band:
 			var up: bool = u.def.envelope.bands.find(band) > u.def.envelope.bands.find(prev_band)
@@ -723,19 +1103,26 @@ func step_labels(id: String = "") -> Array:
 		prev_band = band
 	return out
 
+# The height printed at a plan node (a step state): the simulation's band height, or the ground's by data (ui_labels.gd).
+func node_height_m(s: Dictionary) -> float:
+	var ground := Callable()
+	if marker_layer != null and marker_layer.has_method("height_above_ground"):
+		ground = Callable(marker_layer, "height_above_ground")
+	return UiLabels.height_of(style, world, {"x": s["x"], "y": s["y"], "altitude_band": s["altitude_band"]}, ground)
+
 # --- Hover drawing: ink, paper and the unit's own side accent only ------------------------------
 
 # The step whose lettering is lit (effect "label"): the grabbed or dragged one.
 func _hover_label_step() -> int:
 	var state := str(_hover.get("state", "none"))
-	if (state == "range" or state == "drag") and _hover_effects().has("label"):
+	if (state == "range" or state == "drag") and str(_hover.get("kind", "step")) != "aim" and _hover_effects().has("label"):
 		return int(_hover["step"])
 	return -1
 
 # Under the plan line and the ghosts: the halo's paper pool.
 func _draw_hover_under() -> void:
 	var state := str(_hover.get("state", "none"))
-	if state == "none" or not _hover_effects().has("halo"):
+	if state == "none" or str(_hover.get("kind", "step")) == "aim" or not _hover_effects().has("halo"):
 		return
 	var c: Vector2 = _hover["handle_screen"]
 	var amt := float(_hover["approach"]) * (0.6 if state == "near" else 1.0)
@@ -748,7 +1135,7 @@ func _draw_hover_under() -> void:
 
 func _draw_hover() -> void:
 	var state := str(_hover.get("state", "none"))
-	if state != "none":
+	if state != "none" and str(_hover.get("kind", "step")) != "aim":   # (an aim handle's hover is the bomb node's: over the planes)
 		var c: Vector2 = _hover["handle_screen"]
 		var a := float(_hover["approach"])
 		for fx: String in _hover_effects():
@@ -880,7 +1267,8 @@ func _draw_ghosts(id: String) -> void:
 	var labels := step_labels(id)
 	var font: Font = style.font(true)
 	var small: float = style.num("fonts.small_px")
-	var ink: Color = style.color("ink_soft")
+	var ink: Color = style.color("label_ink")
+	var carry_ink: Color = style.color("label_carry")
 	var hl_k := _hover_label_step()
 	for k in st.size():
 		var s: Dictionary = st[k]
@@ -897,7 +1285,7 @@ func _draw_ghosts(id: String) -> void:
 			draw_texture(art.texture, -art.origin, Color(1.0, 1.0, 1.0, a))
 			draw_set_transform_matrix(Transform2D.IDENTITY)
 		var lines: PackedStringArray = labels[k]
-		if not lines.is_empty():
+		if not lines.is_empty() and UiLabels.shown(style, ppm):   # (the far zoom hides the labels: ui.json labels.hide_below_px_per_m)
 			# Lettering on the sun side of the ghost, clear of the curve's own shadow side.
 			var off: Vector2 = -style.shadow_dir() * (art.extent_m * ppm * scale_k + 6.0 if art != null else 14.0)
 			var base := sp + off + Vector2(-4.0, 0.0)
@@ -915,7 +1303,8 @@ func _draw_ghosts(id: String) -> void:
 					UiInk.text(self, font, base + Vector2(0.0, (small + 1.0) * float(li)), lines[li], small, style.color("hover_ink"))
 			else:
 				for li in lines.size():
-					UiInk.text(self, font, base + Vector2(0.0, (small + 1.0) * float(li)), lines[li], small, ink)
+					# the paper under-stroke the hover uses, so the lettering reads over the grove; a carry-on node's is fainter
+					UiLabels.draw(self, style, font, base + Vector2(0.0, (small + 1.0) * float(li)), lines[li], small, ink if planned else carry_ink)
 
 # The art a ghost of unit `id` is drawn with, scaled by the caller to the ghost's
 # own screen scale. It is the art the unit's MARKER holds (no bake at all, and
@@ -944,9 +1333,15 @@ func _ghost_art(id: String, u: Object, want_ppm: float) -> UnitMarkerArt.Art:
 # The mark for a step refused for leaving the map: a cross where it was asked
 # for, with a short caption, for REFUSED_SHOW_MS.
 func _draw_refused() -> void:
+	var col: Color = style.color("clamp")
+	if refused_aim.is_finite() and Time.get_ticks_msec() - refused_aim_ms <= REFUSED_SHOW_MS:
+		var pa: Vector2 = mapping.world_to_screen(refused_aim)
+		var xa := 5.0
+		draw_line(pa + Vector2(-xa, -xa), pa + Vector2(xa, xa), col, 1.6, true)
+		draw_line(pa + Vector2(-xa, xa), pa + Vector2(xa, -xa), col, 1.6, true)
+		UiInk.text(self, style.font(true), pa + Vector2(9.0, 4.0), "outside the cone", style.num("fonts.small_px"), col)
 	if not refused_world.is_finite() or Time.get_ticks_msec() - refused_ms > REFUSED_SHOW_MS:
 		return
-	var col: Color = style.color("clamp")
 	var p: Vector2 = mapping.world_to_screen(refused_world)
 	var x := 5.0
 	draw_line(p + Vector2(-x, -x), p + Vector2(x, x), col, 1.6, true)

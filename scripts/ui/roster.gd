@@ -73,6 +73,7 @@ const World = preload("res://scripts/sim/world.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
 const UiHealth = preload("res://scripts/ui/ui_health.gd")
+const BombSource = preload("res://scripts/ui/bomb_source.gd")
 
 var world: World = null
 var selection: RefCounted = null
@@ -82,6 +83,9 @@ var playback: Object = null
 var style: UiStyle = null
 # The health the rows show (UnitUI shares it with the ring's arc).
 var health: UiHealth = null
+# The bombs the rows show (UnitUI shares one with the planner and the orders card): a unit with a bomb
+# load shows its drops left and the bombs in each, as marks, at the right of its second line.
+var bombs: BombSource = null
 
 # The grouping this player chose: an id of ui.json roster.group.modes.
 var group_by: String = "none"
@@ -103,6 +107,9 @@ func setup(w: World, sel: RefCounted, st: RefCounted = null) -> void:
 	if health == null:
 		health = UiHealth.new()
 	health.setup(w)
+	if bombs == null:
+		bombs = BombSource.new()
+	bombs.setup(w, style)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	group_by = style.text("roster.group.default")
 	if not selection.changed.is_connected(_on_changed_id):
@@ -177,7 +184,9 @@ func _status_of(id: String, playing: bool) -> String:
 # "flying": a live unit after the planning phase, its plan consumed), has_plan
 # (planning, live, at least one planned step), needs_orders (planning, live, no
 # plan), group (the group key the row is shown under, "" with no headings: not
-# always the status's, see KEEPING A ROW STILL). In the order shown.
+# always the status's, see KEEPING A ROW STILL), and for a unit with bombs (Track U3) bombs: {drops_left
+# (as shown: the turn's start during a playback, one fewer as each bomb_release passes), drops_max,
+# per_drop} -- {} for a unit with none. In the order shown.
 func rows() -> Array[Dictionary]:
 	_fresh()
 	var out: Array[Dictionary] = []
@@ -199,6 +208,7 @@ func rows() -> Array[Dictionary]:
 			"selected": selection != null and selection.unit_id == id,
 			"health": health.shown(id, playing),
 			"health_max": int(u.def.health),
+			"bombs": _bombs_of(id, playing),
 			"down": status == "down",
 			"fate": health.shown_fate(id, playing),
 			"status": status,
@@ -234,6 +244,13 @@ func header_status() -> String:
 	else:
 		txt = style.text("roster.text.needs_orders_many") % n
 	return "Turn %d · %s" % [world.turn, txt]
+
+# The bomb load a row shows ({} for a unit with no bombs).
+func _bombs_of(id: String, playing: bool) -> Dictionary:
+	if bombs == null or not bombs.has_bombs(id):
+		return {}
+	var b := bombs.bombs_left(id)
+	return {"drops_left": bombs.shown_drops(id, playing), "drops_max": int(b["drops_max"]), "per_drop": int(b["per_drop"])}
 
 # The plan status line of a row, as its text.
 func status_text(row: Dictionary) -> String:
@@ -560,6 +577,41 @@ func _draw_heading(e: Dictionary, soft: Color, faint: Color, italic: Font) -> vo
 	var x0 := pad + UiInk.text_width(italic, txt, px) + 8.0
 	draw_line(Vector2(x0, base - 3.0), Vector2(size.x - pad, base - 3.0), faint, 0.6, true)
 
+# The bomb load, right-aligned at `at` (x = the right edge, y = the line's baseline): "x n" (bombs in
+# a drop), and before it one small bomb per drop the type carries, filled while the drop is still to
+# make, an outline once spent. Ink only. Returns the left edge of what it drew.
+func _draw_bombs(at: Vector2, b: Dictionary, ink: Color, soft: Color, italic: Font) -> float:
+	var st := style
+	var w: float = st.num("roster.bombs.mark_w_px")
+	var h: float = st.num("roster.bombs.mark_h_px")
+	var gap: float = st.num("roster.bombs.mark_gap_px")
+	var px: float = st.num("fonts.detail_px")
+	var txt := st.text("roster.bombs.per_drop_text") % int(b["per_drop"])
+	var tw := UiInk.text_width(italic, txt, px)
+	UiInk.text(self, italic, Vector2(at.x - tw, at.y), txt, px, soft)
+	var n := maxi(int(b["drops_max"]), int(b["drops_left"]))
+	var x1 := at.x - tw - st.num("roster.bombs.per_drop_gap_px")
+	var x0 := x1 - (w * float(n) + gap * float(maxi(n - 1, 0)))
+	var cy := at.y - px * 0.34
+	for i in n:
+		_bomb_mark(Vector2(x0 + (w + gap) * float(i) + w * 0.5, cy), w, h, i < int(b["drops_left"]), ink, st.color("pip_empty"))
+	return x0
+
+# One bomb seen from the side, nose down: an ellipse body, a short tail with a crossbar.
+func _bomb_mark(c: Vector2, w: float, h: float, filled: bool, ink: Color, empty: Color) -> void:
+	var body_c := c + Vector2(0.0, h * 0.14)
+	var pts := PackedVector2Array()
+	for i in 14:
+		var a := TAU * float(i) / 14.0
+		pts.append(body_c + Vector2(cos(a) * w * 0.5, sin(a) * h * 0.36))
+	if filled:
+		draw_colored_polygon(pts, ink)
+	else:
+		draw_polyline(UiInk.closed(pts), empty, 1.0, true)
+	var col := ink if filled else empty
+	draw_line(c + Vector2(0.0, -h * 0.5), c + Vector2(0.0, -h * 0.2), col, 1.0, true)
+	draw_line(c + Vector2(-w * 0.45, -h * 0.5), c + Vector2(w * 0.45, -h * 0.5), col, 1.0, true)
+
 func _draw_row(i: int, row: Dictionary, ink_c: Color, soft_c: Color, faint: Color, serif: Font, italic: Font) -> void:
 	var st := style
 	var rr := row_rect(i)
@@ -596,7 +648,11 @@ func _draw_row(i: int, row: Dictionary, ink_c: Color, soft_c: Color, faint: Colo
 	var detail := "%s · %d %s · %s" % [row["type"], roundi(float(row["speed"])), st.text("roster.speed_unit"), row["band"]]
 	if down:
 		detail = str(row["type"])
-	UiInk.text(self, italic, Vector2(tx, y2), detail, st.num("fonts.detail_px"), soft, HORIZONTAL_ALIGNMENT_LEFT, right - tx)
+	var detail_right := right
+	var bomb_row: Dictionary = row.get("bombs", {})
+	if not bomb_row.is_empty() and not down:
+		detail_right = _draw_bombs(Vector2(right, y2), bomb_row, ink, soft, italic) - 8.0
+	UiInk.text(self, italic, Vector2(tx, y2), detail, st.num("fonts.detail_px"), soft, HORIZONTAL_ALIGNMENT_LEFT, detail_right - tx)
 	# Line 3: the plan status; a down unit has the word instead and no step pips.
 	var detail_px: float = st.num("fonts.detail_px")
 	if down or str(row["status"]) == "flying":

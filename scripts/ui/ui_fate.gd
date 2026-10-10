@@ -16,6 +16,10 @@ extends RefCounted
 #   crashed         flew the fall until the history's height reaches 0 (this turn: a time
 #                   after 0) -- or crashed in an earlier turn (the first state is already at
 #                   0 m, so the time reads 0)
+#   destroyed       (Track U3, the strike) a STATIC ground unit at 0 health -- the radio tower, a
+#                   battery -- Unit.FATE_DESTROYED: it does not fall or fly, it stays, down. Its marker
+#                   goes at down_at, as an exploded plane's does, and the effects layer's ruin takes
+#                   its place (Track X); after the turn it is not drawn as a unit at all
 #
 # These are pure statics over a Unit (or anything with the same fields), no nodes.
 
@@ -58,7 +62,7 @@ static func crash_t(u: Object) -> float:
 # turn, the crash time for one that struck the ground, and 0 for one that was gone before.
 static func alive_until(u: Object) -> float:
 	match fate(u):
-		Unit.FATE_EXPLODED:
+		Unit.FATE_EXPLODED, Unit.FATE_DESTROYED:
 			return float(u.get("down_at")) if went_down_this_turn(u) else 0.0
 		Unit.FATE_CRASHED:
 			var c := crash_t(u)
@@ -79,7 +83,7 @@ static func falls_from(u: Object) -> float:
 static func on_map(u: Object, t: float, playing: bool) -> bool:
 	if not playing:
 		var f := fate(u)
-		return f != Unit.FATE_EXPLODED and f != Unit.FATE_CRASHED
+		return f != Unit.FATE_EXPLODED and f != Unit.FATE_CRASHED and f != Unit.FATE_DESTROYED
 	return t < alive_until(u)
 
 # Whether the unit is falling out of control at `t` (or, not playing, right now).

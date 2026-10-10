@@ -38,6 +38,21 @@ extends RefCounted
 #                  (add_scar): the wreck is a fact of the map, the blast is not.
 # A unit outside the player's sight (marker_layer.unit_visible) leaves no smoke and no blast
 # (data combat.fx.smoke_when_hidden): a trail of puffs would give away where it flew.
+#
+# THE STRIKE (Track U3, 2026-10-10; the layer's calls are scripts/fx/fx_layer.gd's header, Track X2). Each is made
+# only when the layer has the call (a fake without it is fine), at the event's game time:
+#   fire, a GROUND shooter at an aircraft      flak_burst(target_pos, the target's height above the ground, t, hit,
+#                                              "<shooter>/<tick>"): a burst beside the plane, in the plane's sight
+#   bomb_release                               bomb_drop() once for each bomb of the stick: from the bomber's place at the
+#                                              bomb's release to where it lands (this turn's, found among the turn's later
+#                                              bomb_impact events, `lookahead`; one that lands in a later turn, in
+#                                              World.bombs_in_flight), the bomb's id = drop_index x 1000 + its index
+#   bomb_impact                                bomb_impact(pos, t, blast_m, bomber, bomb id): the blast, the crater that stays;
+#                                              out of sight (the bomber's), add_crater alone
+#   down, fate "destroyed" (the tower, a battery)   ruin(unit, pos, t, silhouette, size_m, heading); out of sight add_ruin; the
+#                                              marker goes at the event (ui_fate.gd), and a ruin on the ground comes back with
+#                                              restore_wrecks
+# A bomb's fog rule is its BOMBER's: what your bomber drops you see land, what an unseen enemy drops you do not.
 
 const UiFate = preload("res://scripts/ui/ui_fate.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
@@ -49,6 +64,9 @@ var marker_layer: Object = null     # pose_of / height_above_ground / fall_heigh
 var health: RefCounted = null       # UiHealth: the health shown when the turn began
 var style: RefCounted = null
 var marks: Variant = null           # HitMarks, optional
+# The turn being played, as events (Array of Dictionary): the feed reads ahead in it for where this turn's bombs land
+# (UnitUI sets it). An empty Callable: no lookahead, a bomb is then dropped only from World.bombs_in_flight.
+var lookahead: Callable = Callable()
 
 var _turn: int = 0
 var _frac: Dictionary = {}          # unit id -> health fraction as shown now (0 for a unit that is down)
@@ -129,6 +147,11 @@ func on_event(ev: Dictionary) -> void:
 		"fire":
 			if marks != null:
 				marks.add_shot(ev, game_t)
+			_flak(ev, game_t)
+		"bomb_release":
+			_bomb_drops(ev, turn_no)
+		"bomb_impact":
+			_bomb_impact(ev, game_t)
 		"down":
 			if not world.units.has(id):
 				return
@@ -144,6 +167,8 @@ func on_event(ev: Dictionary) -> void:
 			elif fate == Unit.FATE_OUT_OF_CONTROL:
 				_falling[id] = true
 				_ride(id, float(ev.get("t", 0.0)), game_t)
+			elif fate == Unit.FATE_DESTROYED:
+				_destroyed(id, u, ev, game_t)
 		"crash":
 			if not world.units.has(id):
 				return
@@ -157,6 +182,79 @@ func on_event(ev: Dictionary) -> void:
 			else:
 				fx.add_scar(id, pos, game_t, float(u2.def.size_m), hd, _scar_seed(id))
 			_scarred[id] = true
+
+# --- The strike: flak, bombs, a ruin -----------------------------------------------------------
+
+# A ground unit's shot at an aircraft: a burst of flak beside it (or on it, when the roll hit).
+func _flak(ev: Dictionary, game_t: float) -> void:
+	var sid := str(ev.get("unit", ""))
+	var tid := str(ev.get("target", ""))
+	if not fx.has_method("flak_burst") or not world.units.has(sid) or not world.units.has(tid):
+		return
+	if str(world.units[sid].def.domain) == "air" or str(world.units[tid].def.domain) != "air" or not _may_show(tid):
+		return
+	var s: Dictionary = world.sample(tid, float(ev.get("t", 0.0)), "history")
+	var h: float = marker_layer.height_above_ground(s) if not s.is_empty() else float(ev.get("theight_m", 0.0))
+	fx.flak_burst(Vector2(float(ev.get("tx", 0.0)), float(ev.get("ty", 0.0))), h, game_t, bool(ev.get("hit", false)),
+		"%s/%d" % [sid, int(ev.get("tick", 0))], 0.0)
+
+static func _bomb_key(drop_index: int, bomb: int) -> int:
+	return drop_index * 1000 + bomb
+
+# The bombs of a stick that just left, one by one: the layer draws each one falling.
+func _bomb_drops(ev: Dictionary, turn_no: int) -> void:
+	var bomber := str(ev.get("unit", ""))
+	if not fx.has_method("bomb_drop") or not world.units.has(bomber) or not _may_show(bomber):
+		return
+	var drop_index := int(ev.get("drop_index", 0))
+	var t0 := turn_t0(turn_no)
+	# A bomb that lands in a later turn is a record of the World's bombs_in_flight.
+	for rec: Variant in world.bombs_in_flight:
+		var r: Dictionary = rec
+		if str(r.get("unit", "")) == bomber and int(r.get("release_turn", -1)) == turn_no and int(r.get("drop_index", -1)) == drop_index:
+			# (h0 is the sim's height above its 0 m; the layer wants it above the ground under the bomb)
+			var h0 := float(r["h0"])
+			if marker_layer.ground_height.is_valid():
+				h0 = maxf(h0 - float(marker_layer.ground_height.call(float(r["x0"]), float(r["y0"]))), 0.0)
+			fx.bomb_drop(bomber, _bomb_key(drop_index, int(r.get("bomb", 0))), Vector2(float(r["x0"]), float(r["y0"])), h0,
+				t0 + float(r["release_t"]), Vector2(float(r["x"]), float(r["y"])), turn_t0(int(r["impact_turn"])) + float(r["impact_t"]))
+	# One that lands this turn is among the turn's bomb_impact events.
+	if not lookahead.is_valid():
+		return
+	for e: Variant in lookahead.call():
+		var im: Dictionary = e
+		if str(im.get("type", "")) != "bomb_impact" or str(im.get("unit", "")) != bomber or int(im.get("drop_index", -1)) != drop_index \
+				or int(im.get("released_turn", turn_no)) != turn_no or int(im.get("turn", turn_no)) != turn_no:
+			continue
+		var rt := float(im.get("released_t", ev.get("t", 0.0)))
+		var s: Dictionary = world.sample(bomber, rt, "history")
+		if s.is_empty():
+			continue
+		fx.bomb_drop(bomber, _bomb_key(drop_index, int(im.get("bomb", 0))), Vector2(float(s["x"]), float(s["y"])), marker_layer.height_above_ground(s),
+			t0 + rt, Vector2(float(im["x"]), float(im["y"])), t0 + float(im.get("t", rt)))
+
+# A bomb lands: the blast and the crater; out of sight only the crater, quietly.
+func _bomb_impact(ev: Dictionary, game_t: float) -> void:
+	var bomber := str(ev.get("unit", ""))
+	var pos := Vector2(float(ev.get("x", 0.0)), float(ev.get("y", 0.0)))
+	var blast := float(ev.get("blast_m", 45.0))
+	var key := _bomb_key(int(ev.get("drop_index", 0)), int(ev.get("bomb", 0)))
+	if _may_show(bomber):
+		if fx.has_method("bomb_impact"):
+			fx.bomb_impact(pos, game_t, blast, bomber, key)
+	elif fx.has_method("add_crater"):
+		fx.add_crater(bomber, pos, game_t, blast, _scar_seed("%s/%d" % [bomber, key]))
+
+# A static unit at 0 health: its ruin where it stood.
+func _destroyed(id: String, u: Object, ev: Dictionary, game_t: float) -> void:
+	var pos := Vector2(float(ev.get("x", u.x)), float(ev.get("y", u.y)))
+	var kind := str(u.def.silhouette)
+	if _may_show(id):
+		if fx.has_method("ruin"):
+			fx.ruin(id, pos, game_t, kind, float(u.def.size_m), float(u.heading))
+	elif fx.has_method("add_ruin"):
+		fx.add_ruin(id, pos, game_t, kind, float(u.def.size_m), float(u.heading), _scar_seed(id))
+	_scarred[id] = true
 
 # --- Smoke and the fall -----------------------------------------------------------------------
 
@@ -209,6 +307,14 @@ func restore_wrecks(playing: bool, now_game_t: float, clear: bool = false) -> in
 	var n := 0
 	for id: String in world.units:
 		var u = world.units[id]
+		if UiFate.fate(u) == Unit.FATE_DESTROYED and not bool(_scarred.get(id, false)) and fx.has_method("add_ruin"):
+			if playing and is_finite(float(u.down_at)):
+				continue   # destroyed in the turn being played: its event is still to come
+			fx.add_ruin(id, Vector2(float(u.x), float(u.y)), now_game_t - float(style.num("combat.fx.restore_age_s")), str(u.def.silhouette),
+				float(u.def.size_m), float(u.heading), _scar_seed(id))
+			_scarred[id] = true
+			n += 1
+			continue
 		if UiFate.fate(u) != Unit.FATE_CRASHED or bool(_scarred.get(id, false)):
 			continue
 		if playing and UiFate.crash_t(u) > 0.0:
