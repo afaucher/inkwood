@@ -73,6 +73,8 @@ const Geometry = preload("res://scripts/core/geometry.gd")
 const RenderParams = preload("res://scripts/world/render_params.gd")
 const SceneGen = preload("res://scripts/world/scene_gen.gd")
 const TerrainData = preload("res://scripts/world/terrain_data.gd")
+const WorldLayout = preload("res://scripts/world/world_layout.gd")
+const Village = preload("res://scripts/world/village.gd")
 
 # Salt for the per-chunk dart stream (a code constant, not a tunable).
 const CHUNK_SALT := 0x7E44A1
@@ -115,6 +117,12 @@ var _pre: Dictionary = {}      # Vector2i -> Array of trees (pre-border)
 var _final: Dictionary = {}    # Vector2i -> Array of trees
 var _px: Dictionary = {}       # Vector3i(cx, cy, k) -> chains in px
 var _sg: SceneGen              # cr() / max_cr() for the border pass
+var _layout: RefCounted        # the world layout, built on first use (layout())
+var _village: RefCounted       # the village at the current px_per_m (village())
+var _village_ppm := 0.0
+# Whether the world layout shapes the trees (houses, walls, the road and the fields keep them
+# off; the village is thinner). Off, the terrain is what it was before the layout existed.
+var use_layout := true
 
 func _init(seed_v: int, data_path: String = TerrainData.DEFAULT_PATH, params: RenderParams = null) -> void:
 	seed_value = seed_v
@@ -199,6 +207,34 @@ func field_at_node(ix: int, iy: int) -> float:
 	var x: float = float(ix) * cell_m
 	var y: float = float(iy) * cell_m
 	return ValueNoise.fbm(x * noise_per_m, y * noise_per_m, height_seed, octaves)
+
+# The height field at a point in metres: continuous, the same function as field_at_node at the
+# lattice. level_at is exact against the smoothed boundaries; this is the coarse view of them
+# (the world layout's search and route work on it, scripts/world/world_layout.gd).
+func field_at(x: float, y: float) -> float:
+	return ValueNoise.fbm(x * noise_per_m, y * noise_per_m, height_seed, octaves)
+
+# The world layout of this seed (scripts/world/world_layout.gd, data/world/layout.json): made on
+# first use and shared by every Terrain of the seed. It reads this terrain's field and levels only.
+func layout() -> RefCounted:
+	if _layout == null:
+		_layout = WorldLayout.shared(seed_value, self)
+	return _layout
+
+# The village (scripts/world/village.gd) at the current px_per_m: structures, road and fields in
+# map px. null when the layout could not be made (its errors are pushed) or use_layout is off.
+func village() -> RefCounted:
+	if not use_layout:
+		return null
+	if _village == null or _village_ppm != px_per_m:
+		var lay := layout()
+		if not (lay as WorldLayout).ok():
+			push_error("Terrain: no world layout: %s" % [lay.errors])
+			use_layout = false
+			return null
+		_village = Village.new(lay, P, px_per_m)
+		_village_ppm = px_per_m
+	return _village
 
 # --- queries ---------------------------------------------------------------------
 
@@ -701,6 +737,7 @@ func _pre_trees(cx: int, cy: int) -> Array:
 		var ox := float(cx) * cpx
 		var oy := float(cy) * cpx
 		var levels: Array[int] = []
+		var vil: Variant = village()
 		var tries := roundi(cpx * cpx / dart_area_px)
 		for _i in tries:
 			var lx := rng.next() * cpx
@@ -710,11 +747,20 @@ func _pre_trees(cx: int, cy: int) -> Array:
 			var lev := level_at(wx / px_per_m, wy / px_per_m)
 			var f := ValueNoise.fbm(wx * density_per_px, wy * density_per_px, density_seed, density_octaves)
 			var thr: float = veg_threshold[lev]
-			if f < thr or rng.next() > (f - thr) * veg_gain[lev]:
+			var gain: float = veg_gain[lev]
+			# THE WORLD LAYOUT (Track W): the village is thinner, and nothing grows on its
+			# houses, walls, road or fields. Every rejection below comes AFTER the draws it
+			# would have made anyway, so the stream, and every tree away from the village,
+			# is exactly what it was.
+			if vil != null and vil.in_village(wx, wy):
+				gain *= vil.tree_gain
+			if f < thr or rng.next() > (f - thr) * gain:
 				continue
 			var t := gen.make_tree(rng, lx, ly)
 			gen.sync_tree(t)
 			var c := gen.cr(t)
+			if vil != null and vil.blocks_tree(wx, wy, c):
+				continue
 			if not _clear_of_scarps(wx / px_per_m, wy / px_per_m, lev, c / px_per_m):
 				continue
 			if gen.can_place(lx, ly, c, true):
@@ -803,6 +849,7 @@ func trees_in_rect_px(rect: Rect2) -> Array:
 
 # Drops cached chunks (geometry and trees), e.g. to time a cold generation.
 func clear_cache() -> void:
+	_village = null
 	_geo.clear()
 	_pre.clear()
 	_final.clear()

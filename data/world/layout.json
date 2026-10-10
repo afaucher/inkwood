@@ -1,0 +1,113 @@
+{
+  "_about": "The WORLD LAYOUT's rules (scripts/world/world_layout.gd and scripts/world/village.gd read them): where the strike's village goes, its street and the road out of it, the walled compound that holds the radio tower, the houses along the street, the fields round it and the two anti-aircraft battery sites. EVERY VALUE IS PROPOSED by Track W on 2026-10-10. What is Alex's (2026-10-10, decisions strike-target and strike-plan): the target is a radio tower in a village with houses, walls, a road and fields round it, placed by a first world-layout pass, and two anti-aircraft batteries near it; everything about HOW that is laid out is proposed here. Record shape as in data/terrain/terrain.json: {value, _proposed, _reason}; keys starting with _ are documentation. LENGTHS ARE METRES (the layout is scale-free; the structures the village draws are in map px and so scale-dependent, except where a key says px). THE LAYOUT IS MADE ONCE from the seed and these values, from the terrain's field and level_at only (never from trees or the baked map), so it is the same on every machine and in every order.",
+
+  "seed": {
+    "salt": { "value": 4201, "_proposed": true, "_reason": "mixed into the world seed for the layout's streams (village, street, compound, houses, road, fields, batteries each hash their own from it), so no stream is shifted by how many draws another took and the terrain's and the layout's randomness never correlate" }
+  },
+
+  "grid": {
+    "step_m": { "value": 50, "_proposed": true, "_reason": "the coarse field grid the search and the road's route work on: 101 x 101 samples of the terrain's own field over the 5 km map (a few ms). The height noise's lattice is 250 m, so 50 m resolves its bays; a feature narrower than a cell is caught by the exact level_at check on the chosen site and by the road's clearance margin" }
+  },
+
+  "village": {
+    "search": {
+      "edge_margin_m": { "value": 800, "_proposed": true, "_reason": "no village centre closer than this to the map edge: the street, the fields (330 m) and the road's first bend all stay on the map, and a plane starting at an edge is not over the target" },
+      "step_m": { "value": 100, "_proposed": true, "_reason": "candidate centres on a lattice this far apart (about 1,300 over the map); one is picked from the valid ones by a seeded hash, so another seed gives another village" },
+      "centre_distance_m": { "value": [800, 1900], "_proposed": true, "_reason": "preferred distance of the village from the map centre: far enough that the players (who start near the centre in the sandbox) must fly to it (8 to 19 s at a fighter's 100 m/s, two to four turns), near enough to stay well inside the 5 km map. Dropped (any distance) if no candidate is clear" },
+      "clear_radius_m": { "value": 260, "_proposed": true, "_reason": "the disc round the centre that must be low ground (level 0) by the coarse field with margin: the village's polygon reaches 205 m along the street and 125 m across, so 260 m holds it with room. Relaxed by relax_factor if no candidate qualifies" },
+      "clear_margin": { "value": 0.04, "_proposed": true, "_reason": "in field units (the first height threshold is 0.56): every coarse sample in the disc must be under threshold minus this, a cushion for the boundary running between 50 m samples; the exact level_at check on the finished village is what decides" },
+      "relax_factor": { "value": 0.85, "_proposed": true, "_reason": "if no centre qualifies, the clear radius is multiplied by this and the search repeated (from the second repeat on, at any distance from the centre); the first search that finds a village that passes the exact check wins" },
+      "road_tries": { "value": 12, "_proposed": true, "_reason": "a village is accepted when its road runs clear of every cliff; each candidate (and each map edge it may face) is tried in the seeded order and at most this many roads are built before the cleanest so far stands" },
+      "relax_steps": { "value": 4, "_proposed": true, "_reason": "how many times the search relaxes before giving up (a layout error is then reported, never a village on the hills)" }
+    },
+    "street": {
+      "half_length_m": { "value": 170, "_proposed": true, "_reason": "the village street runs this far either side of the centre along the road's direction: 340 m, seven or eight houses a side at the spacing below. The road outside the village starts at the front end" },
+      "jitter_rad": { "value": 0.3, "_proposed": true, "_reason": "the street heads for the chosen map edge's nearest point turned by up to this much either way, so villages are not all square to the map" },
+      "edge_slack_m": { "value": 700, "_proposed": true, "_reason": "the road may leave by any map edge no more than this much further than the nearest one (picked by seed), so the road is not always the shortest way off the map" }
+    },
+    "extent": {
+      "half_length_m": { "value": 205, "_proposed": true, "_reason": "the village polygon's half length along the street: the street plus a margin for the last houses' yards" },
+      "half_width_m": { "value": 125, "_proposed": true, "_reason": "the polygon's half width across the street: holds the houses (29 m off the street), the back row (to 96 m) and the compound (54 m off the street, 32 m deep)" },
+      "exponent": { "value": 2.6, "_proposed": true, "_reason": "a superellipse (2 is an ellipse, large is a rectangle): 2.6 is a rounded block, a settlement's footprint rather than an oval" },
+      "points": { "value": 28, "_proposed": true, "_reason": "vertices of the village polygon" },
+      "wobble": { "value": 0.08, "_proposed": true, "_reason": "a seeded radial wobble, a fraction of the radius, so the outline is hand-made rather than a perfect curve" },
+      "verify_step_m": { "value": 25, "_proposed": true, "_reason": "the village polygon is checked for low ground at this spacing with the terrain's exact level_at; a failing site is skipped for the next candidate" },
+      "cliff_clear_m": { "value": 30, "_proposed": true, "_reason": "and each of those samples must be at least this far from a height boundary (a cliff), so no wall or house stands at a scarp's foot" }
+    }
+  },
+
+  "compound": {
+    "along_frac": { "value": -0.3, "_proposed": true, "_reason": "the radio tower's compound sits at this fraction of the street's half length from the centre (negative: towards the street's far end, away from the road out), so the road runs the length of the village to reach it" },
+    "offset_m": { "value": 54, "_proposed": true, "_reason": "the tower's distance from the street axis, on a seeded side: a 200 px compound is about 60 m deep at 2 px/m, so its wall stands clear of the road (8 m half width) with a lane" },
+    "reserve_radius_m": { "value": 78, "_proposed": true, "_reason": "no house slot, field or battery within this of the tower: the compound's walls (a fort of 200 px is about 100 x 60 m at 2 px/m, its open cell centred on the tower) stay inside it" },
+    "tilt_rad": { "value": 0.12, "_proposed": true, "_reason": "the compound is turned from the street axis by up to this much, so its walls are not parallel to everything" },
+    "fort_size_px": { "value": 200, "_proposed": true, "_reason": "the PROTOTYPE'S makeFort size, in map px (it makes a rounded-rectangle ring this long, a divider wall across it and, four times in five, a smaller ring in the left cell). The prototype uses 340; 200 is a compound rather than a fort. The tower stands in the middle of the open (right) cell, whose centre the village computes from the divider's seeded position" }
+  },
+
+  "houses": {
+    "offset_m": { "value": 29, "_proposed": true, "_reason": "a front-row house's centre this far from the street axis: the prototype's own offset (the road's half width plus 1.5 house sizes, 16 + 42 px) at 2 px/m" },
+    "offset_jitter_m": { "value": 4, "_proposed": true, "_reason": "seeded spread of that offset, either way" },
+    "spacing_m": { "value": 40, "_proposed": true, "_reason": "slots along the street this far apart (a main block is 36 to 50 px long, 18 to 25 m at 2 px/m, a wing sticks out about as far again; closer slots that would overlap are dropped by the village)" },
+    "spacing_jitter_m": { "value": 8, "_proposed": true, "_reason": "seeded spread of the spacing, so the row is not a comb" },
+    "skip_chance": { "value": 0.12, "_proposed": true, "_reason": "chance that a slot is left empty: gaps, gardens, a village that grew" },
+    "end_margin_m": { "value": 25, "_proposed": true, "_reason": "no front-row slot nearer than this to either end of the street" },
+    "back_count": { "value": 9, "_proposed": true, "_reason": "houses placed behind the front rows, off the street, for depth" },
+    "back_offset_m": { "value": [68, 96], "_proposed": true, "_reason": "a back-row house's distance from the street axis, either side" },
+    "rot_jitter_rad": { "value": 0.1, "_proposed": true, "_reason": "a front house is turned from the street by up to this much; a back house by three times as much" },
+    "min_gap_px": { "value": 14, "_proposed": true, "_reason": "in map px: a house is dropped if any corner of it comes closer than this to a wall or another house (the check is the prototype's own signed distance, structures.gd s_dist)" }
+  },
+
+  "road": {
+    "clear_half_m": { "value": 14, "_proposed": true, "_reason": "the road's clearance for the layout (fields and battery sites keep off it): the drawn road's ruts reach 10.9 px and its pebbles 25 px from the middle, 5.5 and 12.5 m at 2 px/m, so 14 m" },
+    "margin": { "value": 0.05, "_proposed": true, "_reason": "in field units: the route only runs where the coarse field is at least this far under the first threshold, so it keeps clear of every scarp (a road does not climb a cliff: there are no ramps yet)" },
+    "margin_scales": { "value": [1.0, 1.6, 2.4, 3.5], "_proposed": true, "_reason": "the road is routed with the margin above times each of these in turn until no point of it comes within cliff_clear_m of a height boundary; the first clean road stands (else the one with fewest such points, which the layout reports)" },
+    "cliff_clear_m": { "value": 12, "_proposed": true, "_reason": "no point of the road nearer than this to a height boundary (a cliff): the road's width is 22 px with its ruts, so 12 m is clear of the contour lines even at 2 px/m" },
+    "upland_weight": { "value": 40, "_proposed": true, "_reason": "the route's cost multiplier where it must cross high ground (if the village is ringed by it): the road crosses a scarp only when there is no other way, and the layout then reports it in diagnostics.road_crossings" },
+    "wiggle": { "value": 0.35, "_proposed": true, "_reason": "the route's cost on each grid cell is 1 + this x a noise, so the road wanders instead of running dead straight to the edge" },
+    "wiggle_noise_per_cell": { "value": 0.22, "_proposed": true, "_reason": "the frequency of that noise per grid cell" },
+    "goal_count": { "value": 5, "_proposed": true, "_reason": "goal points tried along the chosen map edge (the cheapest route wins)" },
+    "goal_spread_m": { "value": 700, "_proposed": true, "_reason": "the goals lie within this of the edge point the street faces" },
+    "simplify_step_m": { "value": 10, "_proposed": true, "_reason": "the grid route is straightened where a straight line stays on clear ground, checked every this many metres" },
+    "smooth_passes": { "value": 3, "_proposed": true, "_reason": "Chaikin corner-cutting passes over the straightened route, the prototype's way of turning a polyline into a hand-drawn curve" },
+    "sample_m": { "value": 10, "_proposed": true, "_reason": "spacing of the points road() returns (the village resamples to the prototype's 3 px for drawing)" },
+    "wander_m": { "value": 14, "_proposed": true, "_reason": "lateral wander of the road, an amplitude: a long smooth drift, not a wobble, so the road is not ruler straight. Dropped to nothing if it would put any point on high ground" },
+    "wander_wavelength_m": { "value": 170, "_proposed": true, "_reason": "the wander's length scale" },
+    "beyond_edge_m": { "value": 120, "_proposed": true, "_reason": "the road runs this far past the map edge, so it leaves the map instead of stopping at it" }
+  },
+
+  "fields": {
+    "count": { "value": 10, "_proposed": true, "_reason": "fields placed round the village" },
+    "attempts": { "value": 800, "_proposed": true, "_reason": "dart throws for them; a village hemmed in by hills gets fewer fields rather than a longer wait" },
+    "ring_m": { "value": [140, 340], "_proposed": true, "_reason": "field centres lie between these distances from the village centre (area-uniform), so the fields hug the village and thin out" },
+    "long_m": { "value": [75, 150], "_proposed": true, "_reason": "a field's long side (a 38 px canopy is 19 m across at 2 px/m, so these are 4 to 8 tree-widths: small strip fields)" },
+    "ratio": { "value": [0.55, 0.85], "_proposed": true, "_reason": "short side over long side" },
+    "corner_jitter": { "value": 0.07, "_proposed": true, "_reason": "each corner moves by up to this fraction of the short side: hand-made quadrilaterals, not rectangles (kept convex)" },
+    "gap_m": { "value": 8, "_proposed": true, "_reason": "clear lane between fields (where a hedge or a ditch would run)" },
+    "village_gap_m": { "value": 10, "_proposed": true, "_reason": "clear space between a field and the village polygon" },
+    "road_gap_m": { "value": 6, "_proposed": true, "_reason": "clear space between a field and the road's clearance (road.clear_half_m)" },
+    "cliff_clear_m": { "value": 25, "_proposed": true, "_reason": "every sample of a field must be low ground at least this far from a height boundary" },
+    "sample_step_m": { "value": 30, "_proposed": true, "_reason": "the exact level_at check on a field's inside is made at this spacing, plus its corners and edge midpoints" },
+    "kind_count": { "value": 4, "_proposed": true, "_reason": "how many crop kinds the fields are dealt (the drawing decides what each kind is: variants/fields)" },
+    "map_margin_m": { "value": 200, "_proposed": true, "_reason": "every corner of a field lies this far inside the map edge" },
+    "turn_chance": { "value": 0.5, "_proposed": true, "_reason": "chance that a field's crop rows run across its long side instead of along it" }
+  },
+
+  "batteries": {
+    "count": { "value": 2, "_proposed": true, "_reason": "anti-aircraft battery sites (Alex 2026-10-10: two batteries)" },
+    "distance_m": { "value": [230, 420], "_proposed": true, "_reason": "distance from the tower: close enough to cover it with flak, a few hundred metres out so a bomber on its run meets them before the tower" },
+    "angle_apart_rad": { "value": [1.7, 4.5], "_proposed": true, "_reason": "the second battery lies this far round the tower from the first (about 100 to 260 degrees), so they cover different approaches" },
+    "apart_min_m": { "value": 280, "_proposed": true, "_reason": "the two sites are at least this far from each other: a few hundred metres apart" },
+    "open_radius_m": { "value": 25, "_proposed": true, "_reason": "a site needs level 0 at its centre and at four points this far round it" },
+    "cliff_clear_m": { "value": 50, "_proposed": true, "_reason": "and no height boundary within this of it" },
+    "village_gap_m": { "value": 15, "_proposed": true, "_reason": "a site lies outside the village polygon grown by this" },
+    "road_gap_m": { "value": 30, "_proposed": true, "_reason": "and this far from the road's middle" },
+    "field_gap_m": { "value": 10, "_proposed": true, "_reason": "and outside every field grown by this: open ground, not a crop" },
+    "map_margin_m": { "value": 300, "_proposed": true, "_reason": "and this far inside the map edge" },
+    "attempts": { "value": 400, "_proposed": true, "_reason": "dart throws per battery; if none lands the distance range is widened by half and tried again" }
+  },
+
+  "clearance": {
+    "tree_clear_cr": { "value": 1.0, "_proposed": true, "_reason": "a tree's centre stays this many of its own collision radii (0.72 of its canopy radius) from a house, a wall and the road's ruts: the prototype's canPlace uses 0.6 (a canopy may then cover half a roof or the ruts); 1.0 keeps canopies off roofs and ruts and lets them brush the edge, as in a village that cut its trees back. The road's own half width (the prototype's 16 px) is added" },
+    "tree_gain_in_village": { "value": 0.35, "_proposed": true, "_reason": "the terrain's tree density inside the village polygon is multiplied by this (a village is lived-in ground: a few orchard trees, not a grove). Trees are kept off houses, walls, the road and the fields whatever the density" }
+  }
+}

@@ -4,7 +4,7 @@ extends "res://scripts/test_support/test_case.gd"
 # no pixels. What it holds the generator to:
 #
 #   DATA         data/terrain/terrain.json parses, every field in it is read by
-#                Terrain + TerrainDraw + TerrainShadows (TerrainData.unused()
+#                Terrain + TerrainDraw + TerrainShadows + VillageDraw (TerrainData.unused()
 #                is empty), and the map bounds come from Track S's
 #                data/sim/turn.json when that file is there.
 #   DETERMINISM  two Terrains on one seed give the same field, the same
@@ -22,12 +22,17 @@ extends "res://scripts/test_support/test_case.gd"
 #   TREES        every tree's level is level_at at its foot, its base is that
 #                level's height (metres and px); trees stand on at least two
 #                levels; none stands on a scarp's slope band.
+#   VILLAGE      (Track W) the cell that holds the radio tower holds houses and walls
+#                (the world layout's village, scripts/world/village.gd) and no tree of it
+#                or of its neighbours stands on one (scripts/tests/test_world_layout.gd
+#                has the rest: roads, fields, bake order, cells far away).
 #
 # The generation timings are printed for the report ([terrain] lines).
 
 const Terrain = preload("res://scripts/world/terrain.gd")
 const TerrainDraw = preload("res://scripts/render/terrain_draw.gd")
 const TerrainShadows = preload("res://scripts/render/terrain_shadows.gd")
+const VillageDraw = preload("res://scripts/render/village_draw.gd")
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 
 const SEED := 20261009
@@ -46,6 +51,7 @@ func setup(_main) -> void:
 	_chunks(c)
 	_agreement(a, c)
 	_trees(a, c)
+	_village(a)
 	print("[terrain] test total %.0f ms" % _ms(t0))
 	finish()
 
@@ -54,7 +60,9 @@ func setup(_main) -> void:
 func _data(a: Terrain) -> void:
 	var td := TerrainDraw.new(a)
 	var ts := TerrainShadows.new(a)
+	var vd := VillageDraw.new(a, a.P)   # Track W: draw.road.* and draw.fields.*
 	check(td.ok(), "terrain draw settings load cleanly: %s" % [td.errors])
+	check(vd.ok(), "the village's field and road settings load cleanly: %s" % [vd.errors])
 	check(a.data.ok(), "no data errors: %s" % [a.data.errors])
 	var unused := a.data.unused()
 	check(unused.is_empty(), "every field of terrain.json is read; unused: %s" % [unused])
@@ -323,6 +331,37 @@ func _trees(t: Terrain, c: Vector2i) -> void:
 	print("[terrain] 3 x 3 block: %d trees, by level %s" % [total, by_level])
 	check(by_level.size() >= 2, "trees stand on at least two levels (%s)" % [by_level])
 	eq(on_slope, 0, "no tree stands on a scarp's slope band")
+
+# --- the village (Track W) -----------------------------------------------------------------------
+
+func _village(t: Terrain) -> void:
+	var vil: Variant = t.village()
+	if not check(vil != null and vil.ok(), "the terrain makes its village from the world layout"):
+		return
+	var site: Vector2 = t.layout().sites().radio_tower
+	var c := t.chunk_of(site.x, site.y)
+	var cell_px := t.chunk_m * t.px_per_m
+	var rect := Rect2(Vector2(c) * cell_px, Vector2(cell_px, cell_px))
+	var houses := 0
+	var walls := 0
+	for s: Dictionary in vil.structs_in_rect(rect):
+		if s.kind == "house":
+			houses += 1
+		else:
+			walls += 1
+	check(houses >= 1 and walls >= 1, "the cell %s that holds the radio tower holds houses (%d) and walls (%d)" % [c, houses, walls])
+	var on := 0
+	var trees := 0
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			for tr: Dictionary in t.trees_in_chunk(c.x + dx, c.y + dy):
+				trees += 1
+				for s: Dictionary in vil.structs:
+					if vil._struct_dist(s, tr.x, tr.y) < 0.0:
+						on += 1
+	check(trees > 50, "the village's 3 x 3 cells have trees (%d)" % trees)
+	eq(on, 0, "no tree stands on a house or a wall (%d trees round the village)" % trees)
+	print("[terrain] village cell %s: %d houses and %d walls in it, %d trees in its 3 x 3 block, none on a structure" % [c, houses, walls, trees])
 
 static func _ms(t0: int) -> float:
 	return (Time.get_ticks_usec() - t0) / 1000.0

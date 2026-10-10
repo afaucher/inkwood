@@ -82,6 +82,83 @@
       "break_thresholds": { "value": [0.0, 0.0, 0.0], "decision": "terrain-passability", "_reason": "Alex 2026-10-09: contour lines unbroken for now; a gap will mean a way through (a ramp in a cliff) once ramps exist. Was proposed: the top line is unbroken, the lower ones break like the wall crest lines" },
       "break_noise_per_px": { "value": 0.015, "_proposed": true, "_reason": "the same broken-line frequency as the hachures (the prototype's rut lines)" },
       "weight": { "value": "road_ruts", "_proposed": true, "_reason": "named linework multiplier for the lines below the top one" }
+    },
+    "road": {
+      "run_margin_px": { "value": 40, "_proposed": true, "_reason": "Track W (2026-10-10): the village's road is drawn per chunk from the samples within this of the chunk (the pebbles reach 25 px from the middle and a rut's tapered end 7 px), so a rut or pebble crossing a chunk border is the same on both sides; the road is the prototype's own (ruts, dirt, pebbles: scripts/render/ink_ground.gd's draw_road, with a stream per sample instead of one stream along the road)" }
+    },
+    "fields": {
+      "style": { "value": "mixed", "choices": ["rows", "hedgerow", "stipple", "mixed"], "_proposed": true, "_reason": "Track W (2026-10-10): the WORKING DEFAULT for how fields are drawn, while variants/fields/ waits for Alex's pick (chosen: null). 'mixed' is the lead's recommendation: a patchwork of ruled crop rows, stipple crops, hedged and fallow fields reads as farmland at play zoom and at far zoom, where one treatment repeated ten times reads as a pattern; rows alone is the cheapest and the plainest" },
+      "styles": {
+        "value": {
+          "rows": { "kinds": [
+            { "rows": "dense", "stipple": "none", "edge": "line", "hedge": 0.0, "tone": "dirt" },
+            { "rows": "light", "stipple": "none", "edge": "line", "hedge": 0.0, "tone": "cream" },
+            { "rows": "dense", "stipple": "none", "edge": "line", "hedge": 0.0, "tone": "none" },
+            { "rows": "dense", "stipple": "none", "edge": "line", "hedge": 0.0, "tone": "dirt" } ] },
+          "hedgerow": { "kinds": [
+            { "rows": "light", "stipple": "none", "edge": "heavy", "hedge": 0.85, "tone": "cream" },
+            { "rows": "none", "stipple": "fallow", "edge": "heavy", "hedge": 0.85, "tone": "none" },
+            { "rows": "light", "stipple": "none", "edge": "heavy", "hedge": 0.85, "tone": "dirt" },
+            { "rows": "none", "stipple": "fallow", "edge": "heavy", "hedge": 0.85, "tone": "cream" } ] },
+          "stipple": { "kinds": [
+            { "rows": "none", "stipple": "crop", "edge": "line", "hedge": 0.0, "tone": "dirt" },
+            { "rows": "none", "stipple": "crop", "edge": "line", "hedge": 0.0, "tone": "cream" },
+            { "rows": "none", "stipple": "crop", "edge": "line", "hedge": 0.0, "tone": "none" },
+            { "rows": "none", "stipple": "fallow", "edge": "line", "hedge": 0.0, "tone": "dirt" } ] },
+          "mixed": { "kinds": [
+            { "rows": "dense", "stipple": "none", "edge": "line", "hedge": 0.0, "tone": "dirt" },
+            { "rows": "none", "stipple": "crop", "edge": "line", "hedge": 0.0, "tone": "cream" },
+            { "rows": "light", "stipple": "none", "edge": "heavy", "hedge": 0.7, "tone": "none" },
+            { "rows": "none", "stipple": "fallow", "edge": "line", "hedge": 0.4, "tone": "dirt" } ] }
+        },
+        "_proposed": true,
+        "_reason": "Track W: each style is four field kinds (the layout deals every field one of kind_count = 4 kinds: data/world/layout.json fields.kind_count), and a kind says which of the ground marks a field carries: crop rows (dense, light or none), stipple (crop dots in rows, fallow dirt, or none), an edge line (line, heavy or none), the share of its edges that carry hedge trees and a tone (the field filled with dirt, darker than the paper, or with the object fill, lighter: the palette's lightness ramp, never a new hue). Every mark is ink or dirt at an alpha step with a named line weight: the palette stays paper, ink and shadow (CLAUDE.md rule 6), material is linework"
+      },
+      "tone": {
+        "dirt_alpha": { "value": 0.12, "_proposed": true, "_reason": "alpha of a dirt-coloured wash under a field (the palette's dirt role over paper: a slightly darker, warmer field): the ground's own dirt dots are 0.15 to 0.4, so a whole field at 0.07 is a quiet tone that holds at play and far zoom, where the rows have thinned to nothing" },
+        "cream_alpha": { "value": 0.22, "_proposed": true, "_reason": "alpha of an object-fill wash under a field (paper lifted one fill-ramp step, the same step the roofs and trees are lifted by): a paler field, stubble or pasture; palette: lightness is a ramp off paper" }
+      },
+      "rows": {
+        "dense": { "spacing_px": { "value": 5, "_proposed": true, "_reason": "crop rows this far apart across the field: 2.5 m at 2 px/m, a seed drill's spacing at the map's own scale; at the prototype's 38 px tree a row is a tenth of a canopy" }, "alpha": { "value": 0.55, "_proposed": true, "_reason": "ink alpha of dense rows: between the road's outer ruts (0.3) and inner (0.6), so a field reads as ground texture and never competes with the road or the contour lines (0.9)" } },
+        "light": { "spacing_px": { "value": 8, "_proposed": true, "_reason": "wider rows, a pasture or young crop" }, "alpha": { "value": 0.38, "_proposed": true, "_reason": "lighter than dense: the road's faintest rut is 0.3, so a light field is quieter than any road line" } },
+        "weight": { "value": "cusp_ticks", "_proposed": true, "_reason": "named linework multiplier for crop rows: the tree's tick weight, 0.75 x, the lightest ink line in the table that is not a hatch" },
+        "inset_px": { "value": 4, "_proposed": true, "_reason": "rows stop this far short of the field's edge (the headland)" },
+        "step_px": { "value": 4, "_proposed": true, "_reason": "a row is a polyline sampled this often, so it can wobble" },
+        "wobble_px": { "value": 0.7, "_proposed": true, "_reason": "sideways wobble of a row, an amplitude: the road ruts' wobble is about 0.6 px at the default hand wobble" },
+        "wobble_noise_per_px": { "value": 0.03, "_proposed": true, "_reason": "frequency of that wobble along the row" },
+        "break_noise_per_px": { "value": 0.05, "_proposed": true, "_reason": "frequency of the pen-lift noise along a row (the prototype's rut lines: 0.045 per 3 px sample)" },
+        "break_threshold": { "value": 0.2, "_proposed": true, "_reason": "a row lifts the pen where that noise is under this (the ruts use 0.3), so a row breaks into hand-drawn lengths" }
+      },
+      "stipple": {
+        "crop": {
+          "row_spacing_px": { "value": 6, "_proposed": true, "_reason": "crop dots stand in rows this far apart" },
+          "dot_spacing_px": { "value": 4.5, "_proposed": true, "_reason": "and this far apart along a row" },
+          "size_px": { "value": [0.8, 1.3], "_proposed": true, "_reason": "dot side, a range: the prototype's dirt stipple is 0.6 to 1.4 px" },
+          "alpha": { "value": [0.35, 0.6], "_proposed": true, "_reason": "ink alpha of a dot, a range: the tree stipple is 0.55" },
+          "keep": { "value": 0.82, "_proposed": true, "_reason": "share of the lattice's dots drawn (the rest are gaps), so the rows are not a printed grid" }
+        },
+        "fallow": {
+          "density_per_px2": { "value": 0.06, "_proposed": true, "_reason": "dirt dots per px squared on a fallow field: the ground's own dirt stipple is 1/12 = 0.083 where its noise is highest, so a fallow field is a dirt patch" },
+          "size_px": { "value": [0.6, 1.4], "_proposed": true, "_reason": "the ground's dirt dot size, 0.6 to 1.4 px" },
+          "alpha": { "value": [0.15, 0.4], "_proposed": true, "_reason": "the ground's dirt alpha, 0.15 to 0.4" }
+        }
+      },
+      "edge": {
+        "line": { "alpha": { "value": 0.6, "_proposed": true, "_reason": "ink alpha of a field's edge: between the hachure (0.75) and the ruts (0.3)" }, "weight": { "value": "cusp_ticks", "_proposed": true, "_reason": "named linework multiplier" } },
+        "heavy": { "alpha": { "value": 0.8, "_proposed": true, "_reason": "a hedged field's edge, firmer: still under the contours' 0.9" }, "weight": { "value": "road_ruts", "_proposed": true, "_reason": "named linework multiplier" } },
+        "step_px": { "value": 4, "_proposed": true, "_reason": "the edge is a polyline sampled this often" },
+        "wobble_px": { "value": 0.8, "_proposed": true, "_reason": "sideways wobble of the edge, an amplitude" },
+        "wobble_noise_per_px": { "value": 0.04, "_proposed": true, "_reason": "frequency of that wobble" },
+        "break_noise_per_px": { "value": 0.05, "_proposed": true, "_reason": "frequency of the pen-lift noise" },
+        "break_threshold": { "value": 0.12, "_proposed": true, "_reason": "an edge lifts the pen where that noise is under this: mostly continuous (an edge is a boundary), with a few gaps" }
+      },
+      "hedge": {
+        "spacing_px": { "value": [12, 18], "_proposed": true, "_reason": "hedge trees along an edge are this far apart, a range" },
+        "scale": { "value": 0.36, "_proposed": true, "_reason": "a hedge tree's radius as a fraction of a tree's (the tree generator at small scale, the doc's own words): about 7 px canopies, 3.5 m at 2 px/m" },
+        "height_frac": { "value": 0.5, "_proposed": true, "_reason": "a hedge tree's height as a fraction of the height a tree of its size would have (art-direction plan: low tree, h about 0.5 r), so its shadow is short" },
+        "gap_chance": { "value": 0.22, "_proposed": true, "_reason": "chance a spot along a hedged edge is left empty (a gate, a gap)" },
+        "end_margin_px": { "value": 6, "_proposed": true, "_reason": "no hedge tree nearer than this to a field corner" }
+      }
     }
   },
 

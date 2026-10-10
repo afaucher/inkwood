@@ -1,0 +1,67 @@
+{
+  "id": "fields",
+  "date": "2026-10-10",
+  "area": "Terrain, Map generation",
+  "question": "How are the fields round the strike's village drawn? (The doc's backlog row: 'Fields and farmland: field patterns, hedgerows and crops as scatter.')",
+  "source": "scripts/render/fields_board.gd over the real map (the terrain provider's own bake, the MapView in a 1280 x 720 viewport) at 2 px/m; only data/terrain/terrain.json draw.fields.style changes between photographs",
+  "seed": 20261009,
+  "parameter": "data/terrain/terrain.json#draw.fields.style (and .styles, .rows, .stipple, .edge, .hedge, .tone: every value a proposed record)",
+  "held_constant": {
+    "layout": "the village at (2000.0, 1400.0) m, its ten fields, the road and the radio tower's compound are the world layout's (data/world/layout.json), identical in every frame; trees keep off fields in every option",
+    "light": "sun azimuth 315, elevation 46; shadow strength 0.44; pen shadow side",
+    "zooms": "1.0 (two frames), 0.35 (play zoom: the camera's start) and 0.2 (far zoom: the full render, above data/view/camera.json far_zoom.topo_below_zoom 0.11); the swatch strips at 2.0, 1:1"
+  },
+  "palette": "ink and dirt at alpha steps read from the data (rows 0.38 to 0.55, edges 0.60 to 0.80, crop dots 0.35 to 0.60, fallow dirt 0.15 to 0.40), washes of dirt (alpha 0.12) or the object fill (alpha 0.22: paper lifted one fill-ramp step); weights are the linework table's own multipliers (cusp ticks 0.75, road ruts 0.8); no new hue and no hex in draw code. Each option's swatch strip puts a field beside a tree, a house, the compound wall and the road, 1:1.",
+  "options": [
+    {
+      "name": "A",
+      "title": "Ruled rows",
+      "draw.fields.style": "rows",
+      "changes": "every field is ruled crop rows in ink at low alpha, a broken edge line, and a quiet wash (dirt or object fill) under it",
+      "proposed": true,
+      "recommended": false,
+      "frames": [
+        "frames/A_close.png"
+      ]
+    },
+    {
+      "name": "B",
+      "title": "Hedgerow edges",
+      "draw.fields.style": "hedgerow",
+      "changes": "fields are bounded by hedges: the tree generator at 0.36 of the usual radius along most edges, a firm edge line, light rows or fallow dirt inside",
+      "proposed": true,
+      "recommended": false,
+      "frames": [
+        "frames/B_close.png"
+      ]
+    },
+    {
+      "name": "C",
+      "title": "Stipple crops",
+      "draw.fields.style": "stipple",
+      "changes": "crops are rows of ink dots (the stipple vocabulary of the tree shading), fallow is dirt dots, a broken edge line",
+      "proposed": true,
+      "recommended": false,
+      "frames": [
+        "frames/C_close.png"
+      ]
+    },
+    {
+      "name": "D",
+      "title": "Mixed (recommended, working default)",
+      "draw.fields.style": "mixed",
+      "changes": "a patchwork: dense rows, stipple crops, a pasture with a hedge on most edges and fallow dirt with a hedge on some, each with its own wash",
+      "proposed": true,
+      "recommended": true,
+      "frames": [
+        "frames/D_close.png"
+      ]
+    }
+  ],
+  "frames": "frames.json: every frame at native size in frames/",
+  "sheet": "board.png (contact sheet of the play-zoom frames, shrunk; the frames are the board)",
+  "recommended": "D (proposed by the lead): a patchwork reads as farmland at every zoom",
+  "chosen": null,
+  "chosen_by": null,
+  "working_default": "D (data/terrain/terrain.json draw.fields.style = mixed), PROPOSED, until Alex picks"
+}

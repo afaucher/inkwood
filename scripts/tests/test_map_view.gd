@@ -29,6 +29,10 @@ extends "res://scripts/test_support/test_case.gd"
 #      (further ahead, nothing behind). In the baker: jobs start nearest first, a
 #      sprite page for a farther chunk is pulled forward when a nearer chunk needs
 #      a sprite on it, and the per-frame cap on submitting pages holds.
+#   6. THE VILLAGE (Track W): the baker tile that holds the radio tower holds the village's houses
+#      and walls (and the stages that cast their shadows), no tree of it stands on one, the road
+#      or a field, a tile far from the village holds none of it, and a tile's content is the same
+#      whatever was generated before it.
 
 const RenderParams = preload("res://scripts/world/render_params.gd")
 const MapView = preload("res://scripts/render/map_view.gd")
@@ -53,6 +57,7 @@ func setup(main) -> void:
 	var t0 := Time.get_ticks_usec()
 	_check_scene_determinism(cfg)
 	_check_terrain_determinism(cfg)
+	_check_village_content(cfg)
 	print("determinism checks: %.0f ms" % ((Time.get_ticks_usec() - t0) / 1000.0))
 	_view = MapView.new(SEED, Rect2(0, 0, 5000, 5000), 2.0, "scene", RenderParams.new())
 	_view.bake_enabled = false
@@ -432,3 +437,61 @@ func _check_terrain_determinism(cfg: Dictionary) -> void:
 	var later: Array = b.chunk_content(X).trees
 	check(first.size() > 0, "terrain provider: the test chunk has trees")
 	check(_sig(first) == _sig(later), "terrain provider: chunk %s's trees are the same whatever was generated first (%d vs %d)" % [X, first.size(), later.size()])
+
+
+# 6. The village in the terrain provider's chunk content, and the stages that bake it.
+func _check_village_content(cfg: Dictionary) -> void:
+	var a := ChunkTerrainProvider.new(SEED, RenderParams.new(), cfg, 2.0)
+	if not check(a.ok(), "terrain provider loads for the village check: %s" % ", ".join(a.errors)):
+		return
+	var names: Array = []
+	for st: Dictionary in a.stages():
+		names.append(st.get("name", st.get("builtin", "")))
+	var i_terrain: int = names.find("terrain_merge")
+	var i_struct: int = names.find("struct_sil")
+	check(i_terrain >= 0 and i_struct > i_terrain and names.find("struct_cut") == i_struct + 1 and names.find("struct_merge") == i_struct + 2 and names.find("tree_sil") == i_struct + 3,
+		"6. the stages cast the village's shadows after the terrain's and before the trees' (%s)" % [names])
+	var vil: Variant = a.village()
+	if not check(vil != null, "6. the provider has a village"):
+		return
+	var site: Vector2 = a.terrain.layout().sites().radio_tower * a.px_per_m()
+	var cp := float(a.chunk_px)
+	var c := Vector2i(floori(site.x / cp), floori(site.y / cp))
+	var first: Dictionary = a.chunk_content(c)
+	var houses := 0
+	var walls := 0
+	for s: Dictionary in first.structs:
+		if s.kind == "house":
+			houses += 1
+		else:
+			walls += 1
+	check(houses >= 1 and walls >= 1, "6. the tile %s that holds the radio tower holds houses (%d) and walls (%d)" % [c, houses, walls])
+	var on := 0
+	for t: Dictionary in first.trees:
+		for s: Dictionary in first.structs:
+			if vil._struct_dist(s, t.x, t.y) < 0.0:
+				on += 1
+		if vil.blocks_tree(t.x, t.y, float(t.r) * a.P.tree_collision_radius) and not t.get("hedge", false):
+			on += 1
+	eq(on, 0, "6. no tree of the tile stands on a house or a wall, on the road, or in a field (%d trees)" % (first.trees as Array).size())
+	# a tile far from everything: none of it
+	var far := Vector2i(0, 0)
+	var rect := Rect2(Vector2(far) * cp, Vector2(cp, cp)).grow(a.ts.reach_px())
+	eq((vil.structs_in_rect(rect) as Array).size(), 0, "6. a tile in the map's corner holds none of the village's structures")
+	eq((vil.fields_in_rect(rect) as Array).size(), 0, "6. nor its fields")
+	check((vil.road_runs_in_rect(rect, 40.0) as Array).is_empty(), "6. nor its road")
+	# the same whatever was generated first
+	var b := ChunkTerrainProvider.new(SEED, RenderParams.new(), cfg, 2.0)
+	for d: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1)]:
+		b.chunk_content(c + d)
+	var later: Dictionary = b.chunk_content(c)
+	check(_sig(first.trees) == _sig(later.trees), "6. the village tile's trees are the same whatever was generated first (%d)" % (first.trees as Array).size())
+	var sig_structs := func(list: Array) -> Array:
+		var out: Array = []
+		for s: Dictionary in list:
+			out.append("%s|%d|%d|%d" % [s.kind, int(s.seed), int(s.bx), int(s.by)])
+		out.sort()
+		return out
+	check(sig_structs.call(first.structs) == sig_structs.call(later.structs), "6. and so are its structures (%d)" % (first.structs as Array).size())
+	print("[map_view] village tile %s: %d houses, %d walls and %d trees in its content; %d stages (%s)" % [
+		c, houses, walls, (first.trees as Array).size(), names.size(), ", ".join(names.slice(i_terrain, i_struct + 4))])
