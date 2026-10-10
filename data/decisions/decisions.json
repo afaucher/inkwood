@@ -698,7 +698,7 @@
         "the proposed orange",
         "more research first"
       ],
-      "chosen": "rejected: it looks cartoony on this palette; research first",
+      "chosen": "no fire for now: just smoke (after rejecting the orange and seeing six researched treatments)",
       "parameters": {
         "data/fx/fx.json#accents.fire": "rejected; stays as a placeholder until the research and a new board round"
       },
@@ -706,7 +706,7 @@
         "research in progress: docs/proposals/fire-in-ink.md"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'The fire is not okay. It looks cartoony on this color palate. Let's do some more research.'"
+      "notes": "Alex: 'The fire is not okay. It looks cartoony on this color palate. Let's do some more research.' Later the same day, after the research (docs/proposals/fire-in-ink.md, six treatments): 'No fire for now. Just smoke.' -- explosions and crashes are smoke events; the fire machinery stays behind a data switch, off."
     },
     {
       "id": "water-stepped-depth",
@@ -762,13 +762,15 @@
       ],
       "chosen": "D, one ribbon between the wingtips",
       "parameters": {
-        "marker.trails.mode": "ribbon"
+        "marker.trails.mode": "ribbon",
+        "marker.trails.applies_to": "all (every moving unit in sight, each in its side colour)",
+        "falling_units": "a plane out of control keeps leaving its trail until it crashes"
       },
       "applied_to": [
         "data/ui/ui.json#marker.trails.mode"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'D · One ribbon between the wingtips'. Still proposed and open: own planes only, a one-turn window, whether the whole-flight line stops at the last turn's start, the trail's overlap with the cone wash behind a selected plane, a trail for a falling plane."
+      "notes": "Alex: 'D · One ribbon between the wingtips'. Still proposed and open: own planes only, a one-turn window, whether the whole-flight line stops at the last turn's start, the trail's overlap with the cone wash behind a selected plane, a trail for a falling plane. Alex 2026-10-10: '2 all moving units' (trails on every moving unit, not only the players'); '5 yes' (a plane falling out of control leaves a trail)."
     },
     {
       "id": "node-hover",
