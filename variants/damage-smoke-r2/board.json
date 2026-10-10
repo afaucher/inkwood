@@ -1217,6 +1217,6 @@
     }
   ],
   "sheet": "board.png (contact sheet, shrunk), compare.png (C0 beside each option), option_<X>.png (each at full size); every frame at native size in frames/, listed in frames.json",
-  "chosen": null,
-  "chosen_by": null
+  "chosen": "W1, soft white to grey",
+  "chosen_by": "Alex, 2026-10-10"
 }

@@ -802,20 +802,32 @@
       "date": "2026-10-10",
       "area": "Effects",
       "question": "How does damage smoke look?",
-      "board": "variants/damage-smoke/ (round 1); variants/damage-smoke-r2/ (round 2, in progress)",
+      "board": "variants/damage-smoke/ (round 1); variants/damage-smoke-r2/ (round 2)",
       "options": [
         "A lobed puffs",
         "B stipple plume",
         "C contour rings",
-        "D ink wash"
+        "D ink wash",
+        "round 2: C0 today's C",
+        "C1 smooth billows",
+        "C2 open contours",
+        "C3 streaming band",
+        "C4 cool wash core",
+        "C5 dashed rings breaking with age",
+        "C6 combined",
+        "W1 soft white to grey",
+        "W2 soft grey",
+        "W3 soft white"
       ],
-      "chosen": "new round: C, contour rings, leads, but it looks too much like trees",
-      "parameters": {},
+      "chosen": "W1, soft white to grey (round 2)",
+      "parameters": {
+        "data/fx/fx.json#working_default.smoke": "W1"
+      },
       "applied_to": [
-        "round 2 in progress (Track X)"
+        "data/fx/fx.json#working_default.smoke"
       ],
-      "status": "new round (Alex)",
-      "notes": "Alex: 'Contour rings for smoke is the current leader but it looks too much like trees.'"
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Contour rings for smoke is the current leader but it looks too much like trees.' Round 2, Alex: 'Let's also try a basic translucent, white and gray smoke', then 'W1 · Soft white to grey'."
     },
     {
       "id": "relative-velocity-odds",

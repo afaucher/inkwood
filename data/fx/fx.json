@@ -462,9 +462,9 @@
   "working_default": {
     "_about": "The option each effect runs until Alex chooses (so the layer has something to draw). NOT A DECISION.",
     "smoke": {
-      "value": "A",
-      "_proposed": true,
-      "_reason": "the art plan's proposed treatment, as a working default only"
+      "value": "W1",
+      "decision": "damage-smoke",
+      "_reason": "Alex 2026-10-10 on round 2 (variants/damage-smoke-r2/): 'W1 · Soft white to grey'. Translucent stepped washes, no outline, rings or scallops: fresh smoke white and thickest, greying toward the ink and thinning in three stages; thick smoke casts a shadow"
     },
     "crash": {
       "value": "A",
