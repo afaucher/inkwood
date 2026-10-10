@@ -1,0 +1,177 @@
+{
+  "_about": "The enemy AI's numbers (scripts/sim/ai_pilot.gd and its helpers ai_params.gd, ai_sense.gd, ai_steer.gd, ai_cone.gd; the mission rules read the 'mission' section, scripts/sim/mission.gd). EVERY VALUE IS PROPOSED by Track E, 2026-10-09, for the first fight's Intercept scenario. Alex's decisions behind the shape (design doc, Enemy AI): enemies have mission goals and pursue them, take secondary opportunities, and are built from states and criteria (patrol, engage when an enemy is spotted, disengage when disengagement criteria are met); enemy units use the same rules as player units. Not decided and NOT designed here: target priority (an escort takes the enemy nearest the unit it protects, a placeholder rule, not a priority scheme). Record shape: every number is {\"value\", \"_proposed\": true, \"_reason\"} until a decision id replaces _proposed (scripts/sim/records.gd). Distances in metres, angles in degrees, times in seconds or turns as the key says.",
+
+  "knowledge": {
+    "_about": "What the AI knows of the players' units (fog for the AI, proposed): a unit is known while it is inside sight_range_m (data/units/*.json, a circle, no line of sight) of any living AI unit; outside that the AI keeps the last seen position for memory_turns and then forgets it. The AI never reads a player's plan.",
+    "memory_turns": {
+      "value": 3,
+      "_proposed": true,
+      "_reason": "a contact lost from sight is chased to where it was last seen for three turns (15 s) and then forgotten; long enough to follow a fighter round a short evasion, short enough that the AI does not hunt a ghost across the map"
+    }
+  },
+
+  "common": {
+    "edge_margin_turn_radii": {
+      "value": 1.5,
+      "_proposed": true,
+      "_reason": "the same margin and reason as data/sim/ai_dumb.json: turning back from an edge met head-on needs one turn radius of forward room, half a radius more covers the speed the turn has not yet bled off. In radii so a bomber's wide turn gets a wide margin"
+    }
+  },
+
+  "strike": {
+    "_about": "Role strike (the bomber): fly the route to the target, hold the band, never chase. Alarmed, it weaves and moves to the band farthest from the nearest known threat.",
+    "capture_radius_m": {
+      "value": 300,
+      "_proposed": true,
+      "_reason": "a waypoint counts as reached inside this: about two bomber steps at cruise (142 m each) and well under its 487 m turn radius, so the route cuts a corner rather than looping to hit the exact point"
+    },
+    "speed_fraction_of_cruise": {
+      "value": 1.0,
+      "_proposed": true,
+      "_reason": "the bomber flies at its cruise speed (data/units/bomber.json), the speed it recovers to after a weave; a fraction so a scenario or a later decision can rush or ease it"
+    },
+    "threat_radius_m": {
+      "value": 700,
+      "_proposed": true,
+      "_reason": "a known enemy inside this raises the alarm: just beyond the bomber's own 650 m sight, so it is armed by what the whole formation sees, and about the reach of a light fighter's guns (450 m) plus a turn's closing"
+    },
+    "evade_turns": {
+      "value": 2,
+      "_proposed": true,
+      "_reason": "once alarmed (a threat in range, or its own health fell) the bomber keeps evading for this many turns, the alarmed turn included, so one lost contact does not end the weave at once"
+    },
+    "weave_amplitude_deg": {
+      "value": 20,
+      "_proposed": true,
+      "_reason": "the heading swings this far either side of the bearing to the waypoint: a bomber turns 16.7 degrees per step at cruise, so 20 degrees costs a few steps of full turn per swing and about a tenth of its forward speed (cos 20 = 0.94)"
+    },
+    "weave_half_period_steps": {
+      "value": 3,
+      "_proposed": true,
+      "_reason": "the weave changes side every three steps, one bomber turn (3 steps), so the swing is a full turn long and an attacker cannot ignore it"
+    },
+    "evade_changes_band": {
+      "value": true,
+      "_proposed": true,
+      "_reason": "an alarmed bomber moves to the band whose height is farthest from the nearest known threat, within evade_max_band_offset bands of the band it holds (one band per step): a fighter's guns cover a narrow slice of height, so a band change forces it to match again. It stays put when its own band is already the farthest"
+    },
+    "evade_max_band_offset": {
+      "value": 1,
+      "_proposed": true,
+      "_reason": "an evading bomber strays at most one band from the band it holds: a climb costs it 35 m/s a band and a dive gains only 20, and a first try with no limit (two bands down and back) cost it three turns on a 12-turn route. One band down and back costs about one"
+    },
+    "orbit_turn_fraction": {
+      "value": 0.6,
+      "_proposed": true,
+      "_reason": "after reaching its target the bomber circles it at this fraction of its available turn (a circle about 800 m across at cruise); nothing in the first fight depends on it, since reaching the target ends the mission"
+    }
+  },
+
+  "escort": {
+    "_about": "Role escort (a fighter): hold a station beside the unit it protects, engage an enemy that comes close to either, break off by health, leash or a run of turns without a firing chance, return to station.",
+    "station_forward_m": {
+      "value": -150,
+      "_proposed": true,
+      "_reason": "metres along the protected unit's heading, negative is behind: a little behind the bomber, so the escort sees what approaches its tail and sits inside the dorsal and tail turrets' cover"
+    },
+    "station_right_m": {
+      "value": 250,
+      "_proposed": true,
+      "_reason": "metres to the protected unit's right (clockwise on screen): wide enough to be clear of its wake and its turrets' line of fire, close enough to be inside its 650 m sight and the engage radius"
+    },
+    "station_tolerance_m": {
+      "value": 150,
+      "_proposed": true,
+      "_reason": "a returning escort counts as back on station inside this, about one and a half fighter steps at cruise"
+    },
+    "align_range_m": {
+      "value": 300,
+      "_proposed": true,
+      "_reason": "inside this range of its station the escort blends its heading from 'at the station' to 'the protected unit's heading', so it ends up flying alongside instead of orbiting the point"
+    },
+    "catchup_time_s": {
+      "value": 5,
+      "_proposed": true,
+      "_reason": "the speed correction closes the gap to the station (or to the wanted range from a target) in about one turn"
+    },
+    "engage_radius_protect_m": {
+      "value": 700,
+      "_proposed": true,
+      "_reason": "an enemy seen within this of the protected unit is engaged: a little outside the bomber's 650 m sight, about the reach of a fighter's gun plus a turn's closing, so the escort goes before the enemy can shoot"
+    },
+    "engage_radius_self_m": {
+      "value": 600,
+      "_proposed": true,
+      "_reason": "an enemy seen within this of the escort itself is engaged: inside the fighter's own 800 m sight, so only enemies it really sees"
+    },
+    "leash_m": {
+      "value": 1200,
+      "_proposed": true,
+      "_reason": "break off when farther than this from the protected unit: about two sight ranges of the bomber, a dozen seconds of fighter flight home, so the bomber is never left alone for more than a turn or two"
+    },
+    "break_off_health_fraction": {
+      "value": 0.5,
+      "_proposed": true,
+      "_reason": "break off, and stay on station for the rest of the mission, below half health: a light fighter (3 pips) at 1 pip, a heavy (5) at 2. Strictly below, so a half-health plane still fights"
+    },
+    "no_chance_turns": {
+      "value": 4,
+      "_proposed": true,
+      "_reason": "break off after this many engaged turns in a row in which the escort's own plan never brings the target into its forward cone: long enough to close from the engage radius, short enough to give up a fighter that is out-running it"
+    },
+    "engage_range_fraction": {
+      "value": 0.6,
+      "_proposed": true,
+      "_reason": "the range it tries to hold behind the target, as a fraction of the forward weapon's range: inside the range, where a cone is wider across and hits are likelier, but not on top of the target"
+    },
+    "forward_mount_tolerance_deg": {
+      "value": 45,
+      "_proposed": true,
+      "_reason": "a weapon whose mount is within this of the nose is a forward weapon; the longest-ranged one sets the cone the escort steers to bring the target into"
+    },
+    "match_band": {
+      "value": true,
+      "_proposed": true,
+      "_reason": "an engaging escort moves to the target's altitude band: the cone is as narrow in height as across, and the bands are hundreds of metres apart, so a fighter in another band cannot hit"
+    }
+  },
+
+  "fallback_weapons": {
+    "_about": "PLACEHOLDER cones, used only for a unit type whose UnitDef has no weapons yet (Track C adds def.weapons; this section is then dead and should be deleted). Copied from variants/engagement-cones/weapons_proposed.json, the forward weapon of each type: the cone's centre bearing from the nose (mount), half angles across and in height, the centre elevation, and the range.",
+    "light_fighter": {
+      "mount_deg": { "value": 0, "_proposed": true, "_reason": "wing guns point straight ahead (weapons_proposed.json: wing_guns, mount 0)" },
+      "half_across_deg": { "value": 10, "_proposed": true, "_reason": "weapons_proposed.json: wing_guns across 10" },
+      "elevation_deg": { "value": 0, "_proposed": true, "_reason": "weapons_proposed.json: wing_guns elev 0" },
+      "half_height_deg": { "value": 8, "_proposed": true, "_reason": "weapons_proposed.json: wing_guns height 8" },
+      "range_m": { "value": 450, "_proposed": true, "_reason": "weapons_proposed.json: wing_guns range 450" }
+    },
+    "heavy_fighter": {
+      "mount_deg": { "value": 0, "_proposed": true, "_reason": "nose cannon points straight ahead (weapons_proposed.json: nose_cannon, mount 0)" },
+      "half_across_deg": { "value": 7, "_proposed": true, "_reason": "weapons_proposed.json: nose_cannon across 7" },
+      "elevation_deg": { "value": 0, "_proposed": true, "_reason": "weapons_proposed.json: nose_cannon elev 0" },
+      "half_height_deg": { "value": 6, "_proposed": true, "_reason": "weapons_proposed.json: nose_cannon height 6" },
+      "range_m": { "value": 600, "_proposed": true, "_reason": "weapons_proposed.json: nose_cannon range 600" }
+    },
+    "bomber": {
+      "mount_deg": { "value": 0, "_proposed": true, "_reason": "nose gun points straight ahead (weapons_proposed.json: nose_gun, mount 0)" },
+      "half_across_deg": { "value": 30, "_proposed": true, "_reason": "weapons_proposed.json: nose_gun across 30" },
+      "elevation_deg": { "value": 0, "_proposed": true, "_reason": "weapons_proposed.json: nose_gun elev 0" },
+      "half_height_deg": { "value": 25, "_proposed": true, "_reason": "weapons_proposed.json: nose_gun height 25" },
+      "range_m": { "value": 350, "_proposed": true, "_reason": "weapons_proposed.json: nose_gun range 350" }
+    }
+  },
+
+  "mission": {
+    "_about": "Read by scripts/sim/mission.gd.",
+    "sample_dt_s": {
+      "value": 0.25,
+      "_proposed": true,
+      "_reason": "a 'unit within a radius of a point' condition looks at the unit's path every quarter second of the turn, not only at the end: a bomber at its top speed (120 m/s) moves 30 m between samples, far less than any target radius, so it cannot slip through"
+    },
+    "target_radius_m": {
+      "value": 300,
+      "_proposed": true,
+      "_reason": "the default radius of a unit_within condition that names none: the bomber counts as over its target inside 300 m, about two of its steps at cruise"
+    }
+  }
+}
