@@ -1274,6 +1274,19 @@ static func ink_consts(st: RefCounted) -> Ink:
 	ink.light = st.detail_light
 	return ink
 
+# The drawn wing's half-span in the art's own metres: the largest |x| of the wing outline
+# (x to starboard, nose up). A wingtip is that far from the centre line on the drawn plane,
+# whatever the zoom: a screen distance of half_span_m x px-per-metre x marker.true_scale.
+# 0 for a silhouette with no wing (a tank). Wingtip trails start here.
+static func half_span_m(st: RefCounted, silhouette: String) -> float:
+	if not is_plane(silhouette):
+		return 0.0
+	var m := model_for(st, silhouette)
+	var hx := 0.0
+	for q: Vector2 in m.G.wing:
+		hx = maxf(hx, absf(q.x))
+	return hx
+
 # Where the model reaches, metres, nose up: G.ext's bounding box.
 static func extent_box(M: Model) -> Rect2:
 	var lo := Vector2(1e9, 1e9)

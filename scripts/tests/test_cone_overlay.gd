@@ -38,6 +38,7 @@ var _frame := 0
 var _saved_mode := ""
 var _saved_enemy := ""
 var _counts := {}
+var _setup_done := false     # set at the end of setup(): a runtime error in setup() ends it silently
 
 func setup(_main) -> void:
 	_st = UiStyle.shared() as UiStyle
@@ -182,6 +183,7 @@ func setup(_main) -> void:
 	# 5. Every style draws, in both layers.
 	_sel.select("p2")
 	_next = 0
+	_setup_done = true
 	timeout_seconds = 60.0
 
 func _sel_cones(id: String) -> Array:
@@ -214,6 +216,7 @@ func _finished_all() -> bool:
 
 func _done() -> void:
 	_next = _modes.size() + 2
+	check(_setup_done, "setup() ran to its end (a runtime error would have ended it early, leaving every assertion above unrun)")
 	var last_fill := -1
 	var last_marks := -1
 	for m: String in _modes:

@@ -41,6 +41,12 @@ extends Node
 # (UiSelection.allow); a selection that goes down is let go when planning
 # starts again.
 #
+# NODE HOVER (Alex 2026-10-10: "a visual indicator for selecting path nodes"): every
+# mouse motion is fed to the planner (set_pointer), unless a card is under the pointer
+# (over_card) or the pointer leaves the window, and the planner shows and says what a
+# press would do (planner.hover(), planner.cursor_shape): grab the NEAREST step's
+# handle, place the next step, or nothing. Style: ui.json planner.hover.mode.
+#
 # GROUP BY (Alex: "a group by for needs orders"): the roster header's button
 # cycles ui.json roster.group.modes (roster.set_group_by(id) from code). It is
 # this player's VIEW setting, held in the Roster only -- never in the World,
@@ -422,14 +428,38 @@ func _to_map(viewport_pt: Vector2) -> Vector2:
 # press that starts a drag stays in _unhandled_input: a card on top is clicked,
 # not planned through.
 func _input(event: InputEvent) -> void:
-	if world == null or planner == null or not planner.is_dragging():
+	if world == null or planner == null:
+		return
+	if not planner.is_dragging():
+		# The planner's hover: where the pointer is, unless a card is under it (a card is
+		# clicked, not planned through) -- every motion is seen here, GUI or not.
+		if event is InputEventMouseMotion:
+			var pos := (event as InputEventMouseMotion).position
+			if over_card(pos):
+				planner.clear_pointer()
+			else:
+				planner.set_pointer(_to_map(pos))
 		return
 	if event is InputEventMouseMotion:
+		planner.set_pointer(_to_map((event as InputEventMouseMotion).position))
 		map_drag(_to_map((event as InputEventMouseMotion).position))
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT and not (event as InputEventMouseButton).pressed:
 		map_release(_to_map((event as InputEventMouseButton).position))
+		planner.set_pointer(_to_map((event as InputEventMouseButton).position))
 		get_viewport().set_input_as_handled()
+
+# Whether a viewport point is on the roster or the orders card.
+func over_card(viewport_pt: Vector2) -> bool:
+	for c: Control in [roster, orders]:
+		if c != null and c.is_visible_in_tree() and c.get_global_rect().has_point(viewport_pt):
+			return true
+	return false
+
+func _notification(what: int) -> void:
+	# The pointer left the window: nothing is hovered.
+	if what == NOTIFICATION_WM_MOUSE_EXIT and planner != null:
+		planner.clear_pointer()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if world == null:

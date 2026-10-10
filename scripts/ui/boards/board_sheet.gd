@@ -104,6 +104,26 @@ static func oklch(c: Color) -> Vector3:
 		h += 360.0
 	return Vector3(L, sqrt(A * A + B * B), h)
 
+# sRGB Color -> Vector3(L, a, b), OKLab: the space distances are measured in.
+static func oklab(c: Color) -> Vector3:
+	var r := _lin(c.r)
+	var g := _lin(c.g)
+	var bl := _lin(c.b)
+	var l_ := pow(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * bl, 1.0 / 3.0)
+	var m_ := pow(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * bl, 1.0 / 3.0)
+	var s_ := pow(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * bl, 1.0 / 3.0)
+	return Vector3(0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+		1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+		0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_)
+
+# The distance between two colours in OKLab (about 0.02 is just noticeable, 0.1 plainly different).
+static func delta_ok(c1: Color, c2: Color) -> float:
+	return oklab(c1).distance_to(oklab(c2))
+
+# `fg` at its own alpha laid over `bg` (opaque result).
+static func over(fg: Color, bg: Color) -> Color:
+	return Color(bg.r + (fg.r - bg.r) * fg.a, bg.g + (fg.g - bg.g) * fg.a, bg.b + (fg.b - bg.b) * fg.a, 1.0)
+
 static func _lin(v: float) -> float:
 	return v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4)
 

@@ -1,0 +1,103 @@
+{
+  "id": "wingtip-trails",
+  "date": "2026-10-10",
+  "area": "Units, UI",
+  "question": "Alex: 'For locating the players planes, what about wingtip trails in the players color? That cover the past turn.' How should the trails look?",
+  "source": "scripts/ui/boards/trails_board_shot.gd: the running sandbox over the real map with scripts/ui/wingtip_trails.gd, photographed once per option with ONLY data/ui/ui.json marker.trails.mode changed; the same site, camera and planes as variants/own-units-stand-out/",
+  "seed": 20261009,
+  "held_constant": {
+    "scene": "the own-units-stand-out board's three planes (light fighter and heavy fighter player-controlled, bomber AI) over the grove at (3000, 3620) m, at the same places and headings; each flew two real turns ending there (a constant turn per step: light 0.1, heavy -0.08, bomber 0.06 rad), by two World.resolve() calls with the weapons disarmed so nothing is shot down",
+    "views": {
+      "zoom_1": "camera zoom 1.0, 2 px/m map scale (the light fighter 36 px)",
+      "far_play_zoom": "camera zoom 0.35 (the light fighter 14 px); the fog edge is out of the crop",
+      "playback": "zoom 1, 2.5 s into turn 2, playback held"
+    },
+    "decisions_in_force": "own-units-stand-out = A (today's marker); cones = D wash for the selected unit only, no enemy cones; shadow strength 0.44; pen shadow_side; side colours brick red (allies) and slate blue (axis); terrain with contours; planes at their own scale; fog with sight circles",
+    "sandbox_tracks": "OFF in the option frames; ON in the 'how it sits' frames"
+  },
+  "parameter": "data/ui/ui.json#marker.trails.mode (and marker.trails.<mode>, and the common keys); 'none' is today's look and draws nothing",
+  "common_parameters": {
+    "applies_to": "own",
+    "window_turns": 1.0,
+    "sample_s": 0.1,
+    "fade_power": 0.65,
+    "min_alpha": 0.03,
+    "replaces_flown_line": true
+  },
+  "options": [
+    {
+      "name": "A",
+      "title": "Today",
+      "marker.trails.mode": "none",
+      "file": "a_today.png",
+      "proposed": true,
+      "parameters": {}
+    },
+    {
+      "name": "B",
+      "title": "Two thin wingtip lines",
+      "marker.trails.mode": "lines",
+      "file": "b_lines.png",
+      "proposed": true,
+      "parameters": {
+        "line_px": 1.9,
+        "alpha": 0.95
+      }
+    },
+    {
+      "name": "C",
+      "title": "Lines broken at every step",
+      "marker.trails.mode": "steps",
+      "file": "c_steps.png",
+      "proposed": true,
+      "parameters": {
+        "line_px": 1.9,
+        "alpha": 0.95,
+        "gap_px": 6.0
+      }
+    },
+    {
+      "name": "D",
+      "title": "One ribbon between the wingtips",
+      "marker.trails.mode": "ribbon",
+      "file": "d_ribbon.png",
+      "proposed": true,
+      "parameters": {
+        "fill_alpha": 0.36,
+        "edge_px": 1.0,
+        "edge_alpha": 0.7
+      }
+    },
+    {
+      "name": "E",
+      "title": "Twin lines and a rung at each step end",
+      "marker.trails.mode": "rungs",
+      "file": "e_rungs.png",
+      "proposed": true,
+      "parameters": {
+        "line_px": 1.9,
+        "alpha": 0.95,
+        "rung_px": 1.5,
+        "rung_alpha": 0.9
+      }
+    },
+    {
+      "name": "F",
+      "title": "A tapered wake (my own)",
+      "marker.trails.mode": "wake",
+      "file": "f_wake.png",
+      "proposed": true,
+      "parameters": {
+        "line_px_start": 2.6,
+        "line_px_end": 0.8,
+        "converge": 1.0,
+        "alpha": 0.95
+      }
+    }
+  ],
+  "focus_for_how_it_sits": "lines",
+  "palette_check": "The trail spends the side accent (side_a for the players: L 0.551, C 0.100, h 30; the same colour as the roundels, the roster marks and the brick-red cone wash). In OKLab distance (about 0.02 just noticeable, 0.1 plainly different): the trail at full alpha is 0.18 from a contour line and 0.16 from the plane's shadow over paper; at 45% alpha it is 0.14 from the paper, at 10% 0.03 (gone). The enemy's slate-blue trail is 0.16 from the shadow-tinted ground at full alpha but 0.05 at a third of it, so faded over a plane's shadow it drifts toward the shadow tint (a reason, besides Alex's, to keep trails to the players' planes).",
+  "sheet": "board.png (rows A-F: zoom 1 | far play zoom; playback frames; how it sits; a palette strip)",
+  "chosen": null,
+  "chosen_by": null
+}

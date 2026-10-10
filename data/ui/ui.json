@@ -130,6 +130,50 @@
     "leader_line_px": 0.8,
     "playback_speed": 1.0,
     "trail_dt_s": 0.1,
+    "trails": {
+      "_proposed": true,
+      "_reason": "WINGTIP TRAILS (Alex 2026-10-10: 'For locating the players planes, what about wingtip trails in the players color? That cover the past turn.'). The board is variants/wingtip-trails/; EVERY VALUE HERE IS PROPOSED by Track U1 and nothing is chosen until Alex picks. mode: 'none' is today's look and the default (nothing is drawn); lines, steps, ribbon, rungs, wake are the board's options (see their blocks). Each wingtip's line starts AT the drawn wingtip (the wing outline's half-span, in the art's own metres, times the plane's drawn scale, so the two lines sit on the drawn wingtips at every zoom) and follows the unit's path over the last window_turns of play: the whole last resolved turn while planning, a rolling window behind the plane while a turn plays back. Drawn in the unit's side accent (side_a for the players, side_b for the enemy), fading from the plane to nothing at the far end. applies_to: 'own' = the player-controlled units only (Alex: 'the players planes'), 'all' = every unit in sight. Sizes in screen px. The trail is recorded from World history (World.sample at sample_s) when a turn is resolved, so it exists only for turns this client has seen resolve.",
+      "mode": "none",
+      "modes": ["none", "lines", "steps", "ribbon", "rungs", "wake"],
+      "applies_to": "own",
+      "window_turns": 1.0,
+      "sample_s": 0.1,
+      "fade_power": 0.65,
+      "min_alpha": 0.03,
+      "replaces_flown_line": true,
+      "_replaces": "While a trail mode other than none is on, the marker layer does not draw its own solid ink line of the track flown so far this turn during playback (the trail is that, at the wingtips); the dashed rest-of-turn line stays. The sandbox's whole-flight track (scripts/app/sandbox_tracks.gd, Track A's) is not touched by this switch: see the board's report for how it should stop at the last turn's start.",
+      "lines": {
+        "_about": "Two thin solid lines, one per wingtip, fading to nothing over the window.",
+        "line_px": 1.9,
+        "alpha": 0.95
+      },
+      "steps": {
+        "_about": "The same, broken at each step's end so the steps read: a gap of gap_px at every step end (the planes' own step times).",
+        "line_px": 1.9,
+        "alpha": 0.95,
+        "gap_px": 6
+      },
+      "ribbon": {
+        "_about": "One soft band between the wingtips in the side colour, fading over the window, with a hairline along each edge.",
+        "fill_alpha": 0.36,
+        "edge_px": 1.0,
+        "edge_alpha": 0.7
+      },
+      "rungs": {
+        "_about": "Twin lines and a short rung across the wingtips at every step's end (the plane's own wing, left behind where each step ended).",
+        "line_px": 1.9,
+        "alpha": 0.95,
+        "rung_px": 1.5,
+        "rung_alpha": 0.9
+      },
+      "wake": {
+        "_about": "A tapered wake: the lines start at the wingtips and narrow and draw together toward the centre line as they age (converge 1 meets it at the end of the window), like a wake or a contrail, fading to nothing.",
+        "line_px_start": 2.6,
+        "line_px_end": 0.8,
+        "converge": 1.0,
+        "alpha": 0.95
+      }
+    },
     "standout": {
       "_proposed": true,
       "_reason": "How the players' own units stand out on busy ground (Alex 2026-10-09: 'a comparison board for figuring out how to make your own units stand out visually on the busy background'; the heavy fighter is faint over trees). The board is variants/own-units-stand-out/; EVERY VALUE HERE IS PROPOSED by Track U1 and nothing is chosen until Alex picks. mode names ONE effect, or several joined with '+' (for example 'halo+ring'); 'none' is today's marker and the default, drawn exactly as before. The effects apply to the player-controlled units only (controller 'player': every co-op player's planes), never to the AI's. Colours are palette roles ({base, alpha, toward, t}, as in the roles block): hue stays reserved for paper, ink, shadow and the side accents, so the halo and the lift are PAPER, the rim is INK, the ring is the unit's own side accent. Sizes are screen px at the plane's drawn size.",
@@ -231,7 +275,7 @@
     },
     "_reason": "The motion plan on the map (Alex: motion is a curve of steps; each step is a point inside the envelope; inertia applies). The next step's reachable region as an inked fan with ribs; the plan as an inked curve (planned steps solid, carry-on steps dashed) with a ghost of the unit at every step end; a clamped step shows a fine dashed tie from the point asked for to where the envelope put it. A press within capture_px of the fan starts a step; a press within handle_px of a planned step's end re-drags that step. Sizes in px.",
     "capture_px": 40,
-    "handle_px": 12,
+    "handle_px": 16,
     "fan_line_px": 1.2,
     "rib_line_px": 0.7,
     "path_line_px": 1.6,
@@ -247,7 +291,20 @@
     "others_carry_line_px": 0.8,
     "others_dot_px": 1.9,
     "_reason_u2": "PROPOSED by Track U2. others_*: every OTHER player unit's plan stays on the map all the time during planning (co-op: everyone sees what has plans and what does not): thin and quiet, a solid line with a dot at each planned step's end, the carry-on rest dashed (a unit with no plan shows only the dashed flight, 'flies on'). others_alpha was 0.35 at the full path width; now 0.55 at about two thirds of it. speed_labels: the lettering at a planned step's ghost carries the speed the step ends at, 'n · 120 m/s' (unit: roster.speed_unit). An AI-controlled unit's plan is never drawn (motion_planner.gd plan_shown).",
-    "speed_labels": true
+    "speed_labels": true,
+    "hover": {
+      "_proposed": true,
+      "_reason": "PROPOSED by Track U2 (Alex 2026-10-10: 'we also need a visual indicator for selecting path nodes; it is hard to tell when you are close enough'). Feedback for what a press here would do. As the pointer comes within near_factor x handle_px of a planned step's handle the handle shows (APPROACHING); inside handle_px (IN RANGE) it shows unmistakably that a press grabs THIS handle (the nearest one: crowded handles go to the closest); the highlight stays while the step is dragged. The mouse cursor follows (cursor.*): a pointing hand over a grabbable handle, a grabbing hand while dragging, a cross where a press would place the next step (the fan and its capture_px), the arrow otherwise; it is reset when the pointer leaves, the plan closes or the unit cannot take orders. mode is one or more effects joined with '+': grow (the handle's dot grows and fills), ring (a ring round the handle that closes in on the pointer's distance and locks at handle_px, where a second rule joins it), halo (a paper pool behind the handle that erases the busy ground), magnet (a line from the pointer to the handle), label (the step's lettering gets a paper plate and full ink). Every effect is ink, paper or the unit's own side accent (palette rule 6). The board variants/node-hover/ shows the options at four pointer states and two zooms; the default here is the recommended one, PROPOSED, nothing is chosen. handle_px (the pick radius) was 12 and is 16 PROPOSED: a 24 px target is the least a mouse needs and is small for a trackpad or a finger; with the nearest handle winning, a bigger radius no longer costs the neighbour step anything, and the ring now SHOWS the radius; 16 px still clears the next step's fan at the start zoom (its near edge is 31 px from the last handle at minimum speed). Sizes in px.",
+      "mode": "ring+label",
+      "near_factor": 2.0,
+      "cursor": { "enabled": true, "grab": "pointing_hand", "drag": "drag", "place": "cross" },
+      "place_mark_px": 4.0,
+      "grow": { "near_px": 5.0, "range_px": 8.0, "drag_px": 9.0, "line_px": 1.2 },
+      "ring": { "near_line_px": 1.3, "range_line_px": 1.9, "near_alpha": 0.85, "second_gap_px": 2.6, "dash_px": 3.0, "tick_px": 4.0 },
+      "halo": { "soft_px": 6.0, "ring_px": 6.5 },
+      "magnet": { "dot_px": 2.0, "line_px": 1.3, "near_alpha": 0.85, "snap_ring_px": 9.0, "dash_px": 2.5 },
+      "label": { "pad_px": 3.0 }
+    }
   },
 
   "roles": {
@@ -270,6 +327,8 @@
     "ring_health": { "base": "ink" },
     "ring_health_empty": { "base": "ink", "alpha": 0.3 },
     "row_down": { "base": "ink", "alpha": 0.4 },
+    "hover_ink": { "base": "ink" },
+    "hover_paper": { "base": "paper", "alpha": 0.92 },
     "fan_fill": { "base": "ink", "alpha": 0.1 },
     "fan_line": { "base": "ink", "alpha": 0.78 },
     "fan_rib": { "base": "ink", "alpha": 0.2 },

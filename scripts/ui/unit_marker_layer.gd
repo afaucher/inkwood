@@ -286,7 +286,7 @@ func _draw() -> void:
 			k += 1
 		past.append(here)
 		rest.insert(0, here)
-		if past.size() > 1:
+		if past.size() > 1 and not _flown_line_replaced(markers[id] as UnitMarker):
 			draw_polyline(past, flown, 1.2, true)
 		if rest.size() > 1:
 			UiInk.dashed(self, rest, ahead, 1.0, 4.0, 4.0)
@@ -312,6 +312,13 @@ func _draw_under() -> void:
 		UiInk.ink_line(_under, UiInk.circle_pts(m.position, r, 48), true, col, float(spec["width_px"]), seed_value, 0.5)
 		UiInk.ink_line(_under, UiInk.circle_pts(m.position, r + float(spec["width_px"]) * 0.5 + float(spec["rim_px"]) * 0.4, 52),
 			true, spec["rim_color"], float(spec["rim_px"]), seed_value + 7, 0.5)
+
+# Wingtip trails (data marker.trails, scripts/ui/wingtip_trails.gd) carry the track flown so
+# far at the wingtips; with them on, the solid ink line down the middle of it is not drawn.
+func _flown_line_replaced(m: UnitMarker) -> bool:
+	if style.text("marker.trails.mode") == "none" or not style.flag("marker.trails.replaces_flown_line"):
+		return false
+	return m.own or style.text("marker.trails.applies_to") == "all"
 
 # --- Marks: side roundels, the selection ring, the leader line ------------------------
 

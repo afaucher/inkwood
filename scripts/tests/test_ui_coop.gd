@@ -182,7 +182,9 @@ func _check_fate_text() -> void:
 func _check_plan_readers() -> void:
 	var rx := RegEx.new()
 	rx.compile("\\.plan\\b|planned_states\\(|\"plan\"\\)|\\.reachable\\(")
-	var allowed := ["motion_planner.gd", "roster.gd"]
+	# (node_hover_board_shot.gd: a windowed board that saves and restores the plan of the
+	# light fighter, a player unit, it plays itself.)
+	var allowed := ["motion_planner.gd", "roster.gd", "node_hover_board_shot.gd"]
 	var checked := 0
 	for root: String in ["res://scripts/ui", "res://scripts/fx"]:
 		for f: String in _gd_files(root):
