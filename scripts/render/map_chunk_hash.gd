@@ -9,15 +9,24 @@ extends SceneTree
 #   INKWOOD_STEAM=off Godot_console.exe --path . --script res://scripts/render/map_chunk_hash.gd -- out=tmp/village/hash_after.json
 #   ... -- out=<file> chunks="1,1;3,3;8,3"      (default: a 4 x 4 grid over the map plus three more)
 #   ... -- out=<file> compare=<file from an earlier run>    (prints same / DIFFERENT per tile)
+#   ... -- out=<file> repeat=5      (THE DETERMINISM CHECK: bakes the list 5 times in this one
+#                                    process, a fresh MapView each pass, prints any tile whose hash
+#                                    changed between passes and exits 1 if one did, else 0)
 #
 # THE PROCEDURE for "before and after": extract the commit before the change into a scratch folder
 # (git archive HEAD scripts data project.godot scenes addons steam_appid.txt | tar -x -C tmp/village/base;
 # copy this file in; import it once with --headless --import), run this tool in both trees with the
-# same list, and compare. WHAT TO EXPECT (measured 2026-10-10, 19 tiles, three runs of each tree):
-# SHA-256 of a tile's bytes, mipmaps and all, is the same in every run for 14 tiles; a tile the
-# village reaches differs, always, the same way; and the HEAD tree ITSELF gives a different hash on
-# one or two tiles per run (a pre-existing flake in the baker's read-back, not in this change), so
-# a tile that differs once and matches on a rerun is that flake, not a difference.
+# same list, and compare. WHAT TO EXPECT (measured 2026-10-10, 19 tiles): SHA-256 of a tile's bytes,
+# mipmaps and all, is the same in every run for every tile, so ANY tile that differs is a difference.
+#
+# THE FLAKE THAT WAS (fixed 2026-10-10, InkCanvas.collect_async): 1 to 4 tiles in 19 per run
+# baked with a shadow mask cut wrong -- a receiver's tree shadows missing (the upland's, often), or
+# uncut, or the whole terrain shade opaque. The hashing below is what exposed it: get_image() is a
+# SYNCHRONOUS read-back, which makes the RenderingDevice flush and run the other tiles' pending
+# asynchronous read-back callbacks inside that flush, and those callbacks freed their canvases
+# there. Keep hashing the way it is: repeat=5 is the regression check for that (on the code
+# before the fix it flagged 8 of the 19 tiles and exited 1; scripts/tests/test_ink_canvas_readback.gd
+# is the headless half).
 
 const MapView = preload("res://scripts/render/map_view.gd")
 const RenderParams = preload("res://scripts/world/render_params.gd")
@@ -50,24 +59,38 @@ func _list() -> Array[Vector2i]:
 func _run() -> void:
 	for _i in 5:
 		await process_frame
-	var view = MapView.new(20261009, Rect2(), 0.0, "", RenderParams.new())
-	view.bake_enabled = false
-	view.input_enabled = false
-	var baker = view.baker
 	var list := _list()
-	for i in list.size():
-		baker.request(list[i], float(i))
-	var t0 := Time.get_ticks_msec()
-	var left := list.size()
-	while left > 0 and Time.get_ticks_msec() - t0 < 900000:
-		await process_frame
-		for r: Dictionary in baker.step(6000):
-			out["map:%d,%d" % [r.c.x, r.c.y]] = _hash(r.texture)
-			left -= 1
-	print("[hash] %d of %d tiles baked in %d ms" % [list.size() - left, list.size(), Time.get_ticks_msec() - t0])
-	var reached := _reached(view, list)
-	baker.clear()
-	view.free()
+	var passes := maxi(1, int(opts.get("repeat", "1")))
+	var reached := {}
+	var changed: Array[String] = []
+	for p in passes:
+		var view = MapView.new(20261009, Rect2(), 0.0, "", RenderParams.new())
+		view.bake_enabled = false
+		view.input_enabled = false
+		var baker = view.baker
+		for i in list.size():
+			baker.request(list[i], float(i))
+		var t0 := Time.get_ticks_msec()
+		var left := list.size()
+		var got := {}
+		while left > 0 and Time.get_ticks_msec() - t0 < 900000:
+			await process_frame
+			for r: Dictionary in baker.step(6000):
+				got["map:%d,%d" % [r.c.x, r.c.y]] = _hash(r.texture)
+				left -= 1
+		print("[hash] pass %d: %d of %d tiles baked in %d ms" % [p + 1, list.size() - left, list.size(), Time.get_ticks_msec() - t0])
+		if p == 0:
+			out = got
+			reached = _reached(view, list)
+		else:
+			for k: String in out:
+				if got.get(k) != out[k] and not changed.has(k):
+					changed.append(k)
+					print("[hash] %s CHANGED in pass %d" % [k, p + 1])
+		if got.size() != list.size():
+			changed.append("(pass %d baked %d of %d)" % [p + 1, got.size(), list.size()])
+		baker.clear()
+		view.free()
 	var path := str(opts.get("out", "tmp/village/hash.json"))
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	var f := FileAccess.open(path, FileAccess.WRITE)
@@ -76,7 +99,9 @@ func _run() -> void:
 	print("[hash] wrote %d hashes to %s" % [out.size(), path])
 	if opts.has("compare"):
 		_compare(str(opts["compare"]), reached)
-	quit(0)
+	if passes > 1:
+		print("[hash] %d passes: %s" % [passes, "every tile identical in every pass" if changed.is_empty() else "NOT DETERMINISTIC: %s" % [changed]])
+	quit(0 if changed.is_empty() else 1)
 
 # Which tiles the village reaches (its structures, fields, road or hedge trees within shadow reach).
 func _reached(view, list: Array[Vector2i]) -> Dictionary:

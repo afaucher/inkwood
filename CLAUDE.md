@@ -357,6 +357,18 @@ Properties of Godot and PowerShell, not of that game. Entries marked
 - **`RenderingServer.texture_2d_get` stalls on every frame in flight**
   (measured 2026-10-09: ~190 ms per sprite page). Use
   `RenderingDevice.texture_get_data_async` for read-backs.
+- **Free nothing inside a `texture_get_data_async` callback** (2026-10-10).
+  A synchronous read-back anywhere (`Texture2D.get_image`,
+  `RenderingServer.texture_2d_get`, `InkCanvas.render_all`) makes the
+  RenderingDevice flush every frame in flight and run the pending async
+  callbacks INSIDE that flush; a viewport or canvas item freed there made
+  canvases drawn afterwards come out wrong, by timing: 1 to 4 of 19 map tiles
+  per run baked with a shadow mask uncut, empty or opaque. Variants measured
+  (6 runs each): freeing the RIDs there breaks it, releasing materials and
+  textures there alone does not, a deferred free fixes it. `InkCanvas.collect_async`
+  only builds the Image in the callback and leaves the free and the caller's
+  callback to the message queue; checks: `test_ink_canvas_readback`,
+  `map_chunk_hash.gd repeat=5`.
 - **A viewport left at UPDATE_ALWAYS redraws until it is freed**; bake
   viewports use UPDATE_ONCE (2026-10-09).
 - **A CanvasGroup costs a render pass over its whole render target**, so

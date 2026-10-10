@@ -295,6 +295,15 @@ func collect_image() -> Image:
 # has in flight -- measured 2026-10-09: 100-300 ms of main thread per read-back
 # while chunks bake, against ~0 for this. Falls back to the synchronous read
 # where there is no RenderingDevice (the Compatibility renderer).
+#
+# The engine's callback only makes the Image: freeing the canvas and calling
+# `callback` wait for the message queue (_pixels_arrived). The engine calls back
+# from inside its own frame processing, and whenever anything reads back
+# SYNCHRONOUSLY meanwhile (a get_image(), texture_2d_get, render_all) from inside
+# that call's flush of every frame in flight; a viewport or canvas item freed
+# there made canvases drawn afterwards come out wrong (2026-10-10: 1 to 4 of 19
+# map tiles per run baked with a shadow mask uncut, empty or opaque, whichever
+# canvas the timing hit). test_ink_canvas_readback, map_chunk_hash.gd repeat=5.
 func collect_async(callback: Callable) -> void:
 	assert(_active and not _done, "InkCanvas.collect_async: submit() it first, and collect once")
 	var vp := _vp_lo if _vp_lo.is_valid() else _vp_hi
@@ -307,8 +316,16 @@ func collect_async(callback: Callable) -> void:
 	var h := size.y
 	var me := self  # alive until the pixels arrive
 	rd.texture_get_data_async(rd_tex, 0, func(data: PackedByteArray) -> void:
+		me._pixels_arrived(Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, data), callback))
+
+# Where the engine's read-back callback lands: nothing freed and no caller code
+# run here (collect_async says why). The deferred call holds the canvas, so it
+# is not freed when the engine drops its callback either.
+func _pixels_arrived(img: Image, callback: Callable) -> void:
+	var me := self
+	(func() -> void:
 		me._free()
-		callback.call(Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, data)))
+		callback.call(img)).call_deferred()
 
 # The prototype's offscreen canvas: a fresh canvas of `canvas_size`, handed to
 # `draw` (which receives this canvas), rendered and read back.
@@ -1146,9 +1163,9 @@ func _collect() -> Image:
 
 # IDEMPOTENT: a canvas can be freed from two places -- the baker's _discard_job
 # (a bake cleared mid-flight: a scale, pen or pool knob, Esc, a closing window)
-# and the async read-back callback that still holds the canvas (collect_async's
-# `me`) -- and the second free must not free_rid what the first freed (each
-# produced an engine error per RID).
+# and the async read-back's deferred landing that still holds the canvas
+# (_pixels_arrived) -- and the second free must not free_rid what the first
+# freed (each produced an engine error per RID).
 func _free() -> void:
 	if _done:
 		return
