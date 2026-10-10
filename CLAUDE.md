@@ -224,6 +224,16 @@ Properties of Godot and PowerShell, not of that game. Entries marked
 - **A frame-gated test whose `finish()` sits outside its own gate does not
   fail, it passes early** *(inherited)*, and every assertion above it is dead
   code. An `if` around an assertion is a silent skip.
+- **A test whose dependency fails to compile can PASS with nothing tested**
+  (observed 2026-10-09 by the networking track, while another track's
+  world.gd was mid-edit): the first runtime error aborts the test's coroutine
+  in silence and `finish()` still runs. Check `can_instantiate()` on the
+  scripts a test depends on, and have the body return a sentinel the test
+  asserts at the end (test_world_sync, test_net_sandbox, test_net_wire do).
+- **Loopback RPCs arrive about one frame later**, so a race cannot be made
+  by timing in one process: inject the competing message by calling the
+  handler. And one process has ONE default MultiplayerAPI, so Main's Join is
+  covered only by the two-window check.
 - **`FileAccess.store_line` buffers** *(inherited)*: a file being written may
   read back as 0 lines until it is flushed or closed.
 - **Transparent viewports hold PREMULTIPLIED colour** (measured 2026-10-09 in
@@ -318,7 +328,9 @@ is made in BOTH twins; `tar_pack.ps1` is the one Windows-only helper, because
 - **Every networked test binds its own port**; the gate runs tests in parallel,
   so two tests sharing a port is an intermittent failure that reads as a
   networking bug. Allocated: `test_enet_loopback` 28777,
-  `test_network_session` 28778. Pick the next free one and add it here.
+  `test_network_session` 28778, `test_world_sync` 28779, `test_net_sandbox`
+  28780; the manual two-window check (`tmp/net/run_check.ps1`, not in the
+  gate) uses 28790. Pick the next free one and add it here.
 - **Only `scripts/net/steam_manager.gd` calls `Steam.*`.** Everything else asks
   `NetworkManager`, because the gate may have no Steam client and anything that
   reaches past that boundary is untestable the moment it is written.
