@@ -16,8 +16,10 @@ extends "res://scripts/test_support/test_case.gd"
 #      unchanged when the map scale halves and true_scale doubles (the sandbox's own-scale rule)
 #   4. THE WINDOW: the whole last turn while planning, fading from the plane (age 0, full) to
 #      the far end; a rolling window while a turn plays back, reaching back into the turn before
-#   5. WHOSE: own units only ("own"); every unit in sight with "all"; none for a unit out of
-#      sight or a down one
+#   5. WHOSE: own units only ("own"); every unit in sight with "all", which is what the data
+#      holds (Alex 2026-10-10: trails on all moving units); none for a unit out of sight. A
+#      DOWN unit keeps its trail (an out-of-control plane's follows the fall; see
+#      test_ui_trails_combat.gd for that, and for the trail running up to the plane)
 #   6. THE STEP ENDS are marked: one per step of the unit's turn
 #   7. EVERY STYLE DRAWS TO THE END; the marker layer drops its solid flown line only when a
 #      trail replaces it
@@ -58,6 +60,7 @@ func setup(_main) -> void:
 	_modes = _st.lookup("marker.trails.modes")
 	# Alex 2026-10-10 (decision wingtip-trails): D, one ribbon between the wingtips.
 	eq(_saved["mode"], "ribbon", "the data holds Alex's choice: the ribbon")
+	eq(_saved["applies"], "all", "the data holds Alex's choice: every moving unit in sight, not only the players'")
 	check(_modes.has("none") and _modes.size() >= 5, "the data lists the modes: %s" % str(_modes))
 
 	_w = World.new()
@@ -92,8 +95,10 @@ func setup(_main) -> void:
 	check(_tr._buf.has("p1") and (_tr._buf["p1"]["t"] as PackedFloat64Array).size() > 20, "the turns are recorded all the same, so a trail can be switched on mid-game")
 	eq(_tr.failed_draws, 0, "mode none draws nothing, whole")
 
-	# 2. The trail follows the history at the wingtips.
+	# 2. The trail follows the history at the wingtips. (The checks of sections 2 to 4 pick the
+	# players' planes, so the unit set is "own" here; section 5 turns to "all".)
 	_data("mode", "lines")
+	_data("applies_to", "own")
 	var items := _tr.collect()
 	eq(items.size(), 2, "lines: the two player planes have a trail, the AI's does not")
 	var k: float = _st.num("marker.true_scale")

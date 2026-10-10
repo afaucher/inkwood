@@ -110,6 +110,43 @@ extends Node
 #                                                         inset; sidebar_rect() -> Rect2 in HUD
 #                                                         space. See the camera note below.
 #
+# ---------------------------------------------------------------------------
+# COMBAT ON SCREEN (Track U2, the first fight, part 2): setup() mounts and feeds all of it, so a
+# host only builds UnitUI as before.
+#
+#   MOUNTED, bottom to top, in the map parent (map_parent's children):
+#     trails                      WingtipTrails: one ribbon between the wingtips, to the plane's
+#                                 position now, for every unit in sight, falling ones included --
+#                                 HERE, under the smoke, while marker.trails.under_smoke is true
+#                                 (PROPOSED: a ribbon over white smoke on the same centre line nearly
+#                                 hides it); with it false the ribbon sits just under the planes,
+#                                 after the cones (apply_trail_order() moves it)
+#     fx (ground, shadows, air)   the effects layer, Track X's FxLayer: damage smoke, the blast, the
+#                                 wreck; below the planner and the planes
+#     planner                     (as before)
+#     cones                       ConeOverlay: the SELECTED unit's cones as a colour wash (its
+#                                 interior here, under the planes; its "Marks" child, the rim and
+#                                 the hardpoints, above them); range_factor is combat.gd's own
+#     marker_layer                (as before; an exploded plane is gone from down_at, a falling one
+#                                 flies on and rocks, a crashed one is gone at the crash)
+#     fx_above                    the effects layer's bursts, over the planes
+#     overlay                     the health arc, then the hit marks (ink on a unit when it is hit)
+#   FED from the playback: damage smoke along a damaged plane's path, explode_midair on a down event
+#   of fate exploded, falling() every frame for an out-of-control plane, impact() on a crash; a
+#   late joiner's wrecks come back with add_scar (restore_wrecks). The calls, their times and the
+#   fog rule are scripts/ui/combat_feed.gd's header. Nothing in it is fire: Alex, "just smoke".
+#
+#   THE END OF A MISSION: show_result(Mission.evaluate()'s dictionary) draws the card (VICTORY /
+#   DEFEAT, the reason in words, two buttons) and locks planning input; the buttons emit
+#   result_play_again and result_menu for the host to wire. A result handed over while a turn
+#   plays waits for its playback to end. hide_result() takes the card down and unlocks.
+#   PLAYER NAMES: player_name is a Callable (player id -> display String; the default returns the
+#   id); the orders card's ready marks print it for the other players. A host that has names
+#   (Track A: WorldSync.name_of) sets it: ui.player_name = world_sync.name_of.
+#   TRAILS AND THE WHOLE-FLIGHT LINE: trail_start_t(id) is the game time the ribbon begins at; a
+#   track drawn for the whole flight (Track A's sandbox_tracks.gd) stops there.
+# ---------------------------------------------------------------------------
+#
 # CAMERA NOTE (the roster must not cover the map at full zoom-out): UnitUI
 # cannot fix this alone -- at the camera's zoom-out limit ("fit_map") the map
 # fills the whole view, and the sidebar is a card on top of it. CameraController
@@ -123,6 +160,8 @@ signal ready_pressed(all_ready: bool)
 signal turn_played(turn: int)
 signal playback_frame(t: float, turn: int)
 signal playback_event(event: Dictionary)
+signal result_play_again
+signal result_menu
 
 const World = preload("res://scripts/sim/world.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
@@ -134,6 +173,13 @@ const MotionPlanner = preload("res://scripts/ui/motion_planner.gd")
 const MotionPlannerPanel = preload("res://scripts/ui/motion_planner_panel.gd")
 const Roster = preload("res://scripts/ui/roster.gd")
 const HealthArc = preload("res://scripts/ui/health_arc.gd")
+const ConeOverlay = preload("res://scripts/ui/cone_overlay.gd")
+const WingtipTrails = preload("res://scripts/ui/wingtip_trails.gd")
+const HitMarks = preload("res://scripts/ui/hit_marks.gd")
+const CombatFeed = preload("res://scripts/ui/combat_feed.gd")
+const ResultCard = preload("res://scripts/ui/result_card.gd")
+const FxLayer = preload("res://scripts/fx/fx_layer.gd")
+const Combat = preload("res://scripts/sim/combat.gd")
 
 var world: World = null
 var style: UiStyle = null
@@ -151,6 +197,19 @@ var hud: Control = null
 var overlay: Node2D = null
 var health: UiHealth = null
 var health_arc: HealthArc = null
+var cones: ConeOverlay = null
+var trails: WingtipTrails = null
+var fx: FxLayer = null
+var fx_above: Node2D = null
+var hit_marks: HitMarks = null
+var feed: CombatFeed = null
+var result_card: ResultCard = null
+# Player id -> display name (Track A: WorldSync.name_of). The default returns the id.
+var player_name: Callable = func(id: String) -> String: return id
+
+var _pending_result: Dictionary = {}
+var _fx_k: float = -1.0
+var _fx_t: float = -1.0
 
 # This turn's events, [t, order, event] sorted by t; _next is the first one not yet fired.
 var _events: Array = []
@@ -192,6 +251,7 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	marker_layer.playback_started.connect(_on_playback_started)
 	world.turn_resolved.connect(_on_turn_resolved)
 	world.phase_changed.connect(_on_phase_changed)
+	_mount_combat(map_parent, host_mapping)
 
 	hud = Control.new()
 	hud.name = "Hud"
@@ -214,20 +274,101 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	health_arc = HealthArc.new()
 	overlay.add_child(health_arc)
 	health_arc.setup(world, marker_layer, selection, style, health)
+	hit_marks = HitMarks.new()
+	overlay.add_child(hit_marks)
+	hit_marks.setup(world, marker_layer, style)
+	feed = CombatFeed.new()
+	feed.setup(world, fx, marker_layer, health, style)
+	feed.marks = hit_marks
+	playback_event.connect(feed.on_event)
+	playback_frame.connect(feed.on_frame)
 	orders = MotionPlannerPanel.new()
 	orders.name = "Orders"
 	hud.add_child(orders)
 	orders.setup(world, planner, selection, local_player, style)
 	orders.ready_action = press_ready
 	orders.playback = marker_layer
+	orders.player_name = func(id: String) -> String: return str(player_name.call(id))
+	result_card = ResultCard.new()
+	hud.add_child(result_card)   # last: over the roster and the orders card
+	result_card.setup(style, world)
+	result_card.play_again.connect(func() -> void: result_play_again.emit())
+	result_card.menu.connect(func() -> void: result_menu.emit())
 	hud.resized.connect(layout)
 	roster.resized.connect(layout)
 	layout()
+	restore_wrecks()
+	_sync_fx()
+
+# Mounts the combat pieces round the markers (see COMBAT ON SCREEN above); called by setup()
+# once the planner and the marker layer are in `map_parent`.
+func _mount_combat(map_parent: Node, host_mapping: Variant) -> void:
+	# The effects layer: its ground, shadow and air passes under the planner, its bursts over the planes.
+	fx_above = Node2D.new()
+	fx_above.name = "FxAbove"
+	map_parent.add_child(fx_above)
+	fx = FxLayer.new()
+	fx.setup(host_mapping, int(world.rng_seed))
+	var smoke := style.text("combat.fx.select_smoke")
+	var crash := style.text("combat.fx.select_crash")
+	var smoke_opt := smoke if smoke != "" else fx.data.working_default("smoke")
+	# The crash's own smoke (a falling plane's trail, the burst's cloud, the wreck's column) follows the
+	# damage smoke unless the data names another: one smoke for the whole game (proposed).
+	var crash_smoke := style.text("combat.fx.select_crash_smoke")
+	fx.select(smoke_opt, crash if crash != "" else fx.data.working_default("crash"), crash_smoke if crash_smoke != "" else smoke_opt)
+	fx.mount(map_parent, fx_above)
+	map_parent.move_child(fx, planner.get_index())
+	# The cones, then the trails, just under the markers.
+	cones = ConeOverlay.new()
+	map_parent.add_child(cones)
+	map_parent.move_child(cones, marker_layer.get_index())
+	cones.setup(world, host_mapping, selection, style)
+	cones.marker_layer = marker_layer
+	cones.unit_visible = _unit_in_sight
+	cones.range_factor = _range_factor
+	trails = WingtipTrails.new()
+	map_parent.add_child(trails)
+	map_parent.move_child(trails, marker_layer.get_index())
+	trails.setup(world, host_mapping, marker_layer, style)
+	trails.unit_visible = _unit_in_sight
+	apply_trail_order()
+
+# Puts the wingtip ribbon under the smoke (data marker.trails.under_smoke true: before the effects
+# layer) or just under the planes (false: after the cones). Idempotent; setup() calls it, and a host
+# that changes the data at run time calls it again.
+func apply_trail_order() -> void:
+	var parent := trails.get_parent()
+	if parent == null:
+		return
+	if style.flag("marker.trails.under_smoke"):
+		if trails.get_index() > fx.get_index():
+			parent.move_child(trails, fx.get_index())
+	else:
+		var target := marker_layer.get_index()
+		if trails.get_index() < target:
+			target -= 1
+		parent.move_child(trails, target)
+
+# The fog's say, read from the marker layer when asked (the host sets marker_layer.unit_visible
+# after setup()).
+func _unit_in_sight(id: String) -> bool:
+	return not marker_layer.unit_visible.is_valid() or bool(marker_layer.unit_visible.call(id))
+
+# The odds' fall past a weapon's effective range: combat.gd's own range factor with the
+# rules' own overshoot while the "range" factor is in use; a hard edge at the effective range
+# when it is not (as Combat.reach reads it).
+func _range_factor(weapon: Object, distance_m: float) -> float:
+	if world.combat.odds_factors.has("range"):
+		return Combat.range_factor(weapon, distance_m, float(world.combat.factor_params().get("range_overshoot", 0.0)))
+	return 1.0 if distance_m <= float(weapon.effective_range_m) else 0.0
 
 func set_mapping(host_mapping: Variant) -> void:
 	mapping = UiMapping.from(host_mapping) as UiMapping
 	marker_layer.set_mapping(host_mapping)
 	planner.set_mapping(host_mapping)
+	cones.set_mapping(host_mapping)
+	trails.set_mapping(host_mapping)
+	fx.set_mapping(host_mapping)
 
 # The sidebar column: roster at the top right, orders under it.
 func layout() -> void:
@@ -262,7 +403,7 @@ func sidebar_rect() -> Rect2:
 # --- The turn ----------------------------------------------------------------------
 
 func press_ready() -> void:
-	if world.phase != World.PHASE_PLANNING:
+	if world.phase != World.PHASE_PLANNING or input_locked():
 		return
 	if world.is_ready(local_player):
 		world.withdraw(local_player)
@@ -280,15 +421,21 @@ func _on_playback_finished(turn_no: int) -> void:
 	# the clock reads the turn's length once, and the shown health is the unit's own again.
 	_fire_events_until(INF)
 	playback_frame.emit(world.rules.turn_seconds, turn_no)
+	feed.end_turn(turn_no)
 	_last_t = -1.0
 	health.clear_shown()
+	_sync_fx()
 	turn_played.emit(turn_no)
+	if not _pending_result.is_empty():
+		_present_result(_pending_result)   # handed over while the turn played: now it is over
 	if auto_begin_turn and world.phase == World.PHASE_RESOLVED:
 		world.begin_turn()
 
-func _on_playback_started(_turn_no: int) -> void:
+func _on_playback_started(turn_no: int) -> void:
 	_next = 0
 	_last_t = -1.0
+	if feed != null:
+		feed.begin_turn(turn_no)
 
 func _on_turn_resolved(_turn_no: int, _histories: Dictionary, events: Array) -> void:
 	_events.clear()
@@ -338,6 +485,70 @@ func poll_playback() -> void:
 func _process(_delta: float) -> void:
 	if world != null:
 		poll_playback()
+		_sync_fx()
+
+# The effects layer's two per-frame inputs: the drawn scale (marker.true_scale) and the game time
+# (the playback's while one runs, else the start of the turn being planned). The layer is only
+# told when one changes.
+func _sync_fx() -> void:
+	if fx == null or feed == null:
+		return
+	if fx.field.world_seed != int(world.rng_seed):
+		fx.field.world_seed = int(world.rng_seed)   # a seed a host sets after setup() (the network's) is followed
+	var k: float = style.num("marker.true_scale")
+	var t := game_time()
+	if k != _fx_k or t != _fx_t:
+		_fx_k = k
+		_fx_t = t
+		fx.true_scale = k
+		fx.set_time(t)
+
+# Game seconds, the effects' clock: (turn - 1) x turn_seconds + the second of the turn playing.
+func game_time() -> float:
+	return feed.game_time(is_playing(), marker_layer.playback_turn, marker_layer.playback_t)
+
+# Wrecks already on the ground (a client that joined late finds crashed units whose crash it
+# never saw): each gets its scar back. Called by setup(); a host that rebuilt the effects layer
+# calls it with clear = true. Returns how many it put back. Scars sit at world positions, so a
+# change of scale (set_mapping) needs none of this.
+func restore_wrecks(clear: bool = false) -> int:
+	return feed.restore_wrecks(is_playing(), game_time(), clear)
+
+# Game seconds at which the wingtip ribbon of a unit begins (NAN: it has none). The whole-flight
+# line of a plane stops there so the two never draw the same stretch twice.
+func trail_start_t(id: String) -> float:
+	return trails.start_t(id)
+
+# --- The end of a mission ---------------------------------------------------------------------
+
+# Shows the end-of-mission card for Mission.evaluate()'s result ({state, reason, turn, t}); a
+# state other than "won" or "lost" shows nothing. Planning input is locked while it shows. Called
+# while a turn is still playing, it waits for the playback to end.
+func show_result(result: Dictionary) -> void:
+	var state := str(result.get("state", ""))
+	if state != "won" and state != "lost":
+		return
+	if is_playing():
+		_pending_result = result.duplicate(true)
+		return
+	_present_result(result)
+
+func _present_result(result: Dictionary) -> void:
+	_pending_result = {}
+	result_card.show_result(result)
+	orders.locked = true
+	orders.queue_redraw()
+	planner.clear_pointer()
+
+# Takes the card down and gives planning back.
+func hide_result() -> void:
+	_pending_result = {}
+	result_card.hide_result()
+	orders.locked = false
+	orders.queue_redraw()
+
+func input_locked() -> bool:
+	return result_card != null and result_card.is_showing()
 
 func _fire_events_until(t: float) -> void:
 	while _next < _events.size() and float((_events[_next] as Array)[0]) <= t:
@@ -399,6 +610,8 @@ func screen_pos_now(id: String) -> Vector2:
 # --- Map input (screen points in the map layers' space) ------------------------------
 
 func map_press(p: Vector2) -> bool:
+	if input_locked():
+		return false
 	var hit := marker_layer.unit_at(p)
 	if hit != "" and not selection.can_select(hit):
 		hit = ""   # a down unit's marker is not a way to plan it
@@ -413,10 +626,10 @@ func map_press(p: Vector2) -> bool:
 	return false
 
 func map_drag(p: Vector2) -> bool:
-	return planner.drag(p)
+	return not input_locked() and planner.drag(p)
 
 func map_release(p: Vector2) -> bool:
-	return planner.release(p)
+	return not input_locked() and planner.release(p)
 
 func _to_map(viewport_pt: Vector2) -> Vector2:
 	return marker_layer.get_global_transform_with_canvas().affine_inverse() * viewport_pt
@@ -429,6 +642,9 @@ func _to_map(viewport_pt: Vector2) -> Vector2:
 # not planned through.
 func _input(event: InputEvent) -> void:
 	if world == null or planner == null:
+		return
+	if input_locked():
+		planner.clear_pointer()
 		return
 	if not planner.is_dragging():
 		# The planner's hover: where the pointer is, unless a card is under it (a card is
@@ -478,6 +694,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 func _key(k: InputEventKey) -> bool:
+	if input_locked():
+		return false
 	var name := OS.get_keycode_string(k.keycode)
 	if name == style.text("keys.undo"):
 		return planner.undo()

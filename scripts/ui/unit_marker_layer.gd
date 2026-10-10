@@ -19,6 +19,14 @@ extends Node2D
 # roundels, the selected unit's inked ring, and its leader line up to its
 # roster row (the design doc's proposed selection treatment).
 #
+# A DOWN UNIT (Track U2, part 2; the rules are scripts/ui/ui_fate.gd's): an exploded unit's
+# marker is gone from down_at (the effects layer takes over); an out-of-control unit's marker
+# keeps flying its sampled path with its shadow gap closing as the sim's fall height drops
+# (fall_height_above_ground) and a slight wobble (data combat.fall, PROPOSED); a crashed
+# unit's marker is gone at the crash (the wreck is the effects layer's scar). After the
+# turn an exploded or crashed unit has no marker at all. A down unit's plan is never drawn
+# (the planner does not draw one for it).
+#
 # SEAMS for other tracks (all optional Callables, all proposed):
 #   ground_height(x, y) -> metres   Track T's height_at: a plane's shadow sits
 #                                   by its height above the ground under it;
@@ -35,6 +43,7 @@ const UiMapping = preload("res://scripts/ui/ui_mapping.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
 const UnitStandout = preload("res://scripts/ui/unit_standout.gd")
+const UiFate = preload("res://scripts/ui/ui_fate.gd")
 
 var world: World = null
 var mapping: UiMapping = null
@@ -58,6 +67,7 @@ var _planes: Node2D
 var _marks: Node2D
 var _standout: Dictionary = {}     # UnitStandout.parse() of the data's mode
 var _standout_mode := ""
+var _lowest_air_m := -1.0          # the lowest sea-level band's height, for the fall's ground blend
 
 func setup(w: World, host_mapping: Variant, sel: RefCounted, st: RefCounted = null) -> void:
 	style = (st if st != null else UiStyle.shared()) as UiStyle
@@ -131,8 +141,20 @@ func pose_of(id: String) -> Dictionary:
 		return world.sample(id, playback_t, "history")
 	var u = world.units[id]
 	var s: Dictionary = u.state()
-	s["height_m"] = world.band_height(u.altitude_band)
+	# A unit falling out of control has a continuous height of its own, not its nearest band's.
+	s["height_m"] = float(u.fall_height_m) if is_finite(float(u.fall_height_m)) else world.band_height(u.altitude_band)
 	return s
+
+# Whether the unit is on the map as a plane right now (UiFate: an exploded unit goes at
+# down_at, a crashed one at the crash, and neither is a plane once the turn has played).
+func unit_on_map(id: String) -> bool:
+	var u = world.units.get(id)
+	return u != null and UiFate.on_map(u, playback_t, is_playing())
+
+# Whether the unit is falling out of control right now (the sim's fall height applies).
+func unit_falling(id: String) -> bool:
+	var u = world.units.get(id)
+	return u != null and UiFate.falling_at(u, playback_t, is_playing())
 
 # Height above the surface under the unit, for its shadow.
 func height_above_ground(pose: Dictionary) -> float:
@@ -144,24 +166,67 @@ func height_above_ground(pose: Dictionary) -> float:
 		h -= float(ground_height.call(float(pose["x"]), float(pose["y"])))
 	return h
 
+# The height of a FALLING unit above the ground under it. The sim's fall height is already
+# above the ground (it has no terrain: the plane falls to 0 m); the band the plane left was
+# measured from sea level, so the ground under it is taken off that, and the offset is
+# blended away as the plane nears the ground (full above the lowest air band, nothing at
+# 0 m) so the shadow gap closes smoothly at down_at and again at the crash (PROPOSED).
+func fall_height_above_ground(pose: Dictionary) -> float:
+	var h := maxf(float(pose.get("height_m", 0.0)), 0.0)
+	if not ground_height.is_valid():
+		return h
+	if _lowest_air_m < 0.0:
+		_lowest_air_m = INF
+		for band: String in world.rules.band_height_m:
+			if str(world.rules.band_reference.get(band, "sea_level")) == "sea_level" and float(world.rules.band_height_m[band]) > 0.0:
+				_lowest_air_m = minf(_lowest_air_m, float(world.rules.band_height_m[band]))
+	var g := float(ground_height.call(float(pose["x"]), float(pose["y"])))
+	var blend := 1.0 if not is_finite(_lowest_air_m) else clampf(h / _lowest_air_m, 0.0, 1.0)
+	return maxf(h - g * blend, 0.0)
+
+# The extra rotation of a falling unit's plane (radians; data combat.fall): a wobble that
+# rocks it either side of its heading, eased in over ramp_s after it goes down, and a slow
+# spin (0 by default). On the playback's own clock, so a scrub shows the same angle; the
+# phase is the game clock, so it carries on across turns, and the unit's id offsets it so two
+# falling planes do not rock together.
+func fall_wobble(id: String) -> float:
+	if not is_playing() or not unit_falling(id):
+		return 0.0
+	var u = world.units[id]
+	var turn_s: float = world.rules.turn_seconds
+	var game_t := float(playback_turn - 1) * turn_s + playback_t
+	var phase := float(hash(id) & 0xFF) / 255.0 * TAU
+	var amp := deg_to_rad(style.num("combat.fall.wobble_deg"))
+	if UiFate.went_down_this_turn(u):
+		var ramp := maxf(style.num("combat.fall.ramp_s"), 1e-3)
+		var f := clampf((playback_t - float(u.down_at)) / ramp, 0.0, 1.0)
+		amp *= f * f * (3.0 - 2.0 * f)
+	var w := amp * sin(TAU * style.num("combat.fall.wobble_hz") * game_t + phase)
+	return w + deg_to_rad(style.num("combat.fall.spin_dps")) * maxf(playback_t - UiFate.falls_from(u), 0.0)
+
 func update_poses() -> void:
 	if world == null:
 		return
 	if world.units.size() != markers.size():
 		sync_units()
 	apply_standout()
+	var playing := is_playing()
 	for id: String in markers:
 		var m: UnitMarker = markers[id]
-		var vis := not unit_visible.is_valid() or bool(unit_visible.call(id))
+		var u = world.units[id]
+		var vis := UiFate.on_map(u, playback_t, playing) and (not unit_visible.is_valid() or bool(unit_visible.call(id)))
 		m.visible = vis
 		if not vis:
 			m.shadow.visible = false
+			m.refresh_shapes()
 			continue
 		var pose := pose_of(id)
 		var wp := Vector2(float(pose["x"]), float(pose["y"]))
 		var sp: Vector2 = mapping.world_to_screen(wp)
-		var off: Vector2 = shadow_offset_px(wp, height_above_ground(pose), m.draw_scale)
-		m.set_pose(sp, mapping.screen_angle(wp, float(pose["heading"])), mapping.px_per_m(wp), off)
+		var falling := UiFate.falling_at(u, playback_t, playing)
+		var h := fall_height_above_ground(pose) if falling else height_above_ground(pose)
+		var off: Vector2 = shadow_offset_px(wp, h, m.draw_scale)
+		m.set_pose(sp, mapping.screen_angle(wp, float(pose["heading"])), mapping.px_per_m(wp), off, fall_wobble(id))
 	_marks.queue_redraw()
 	if not (_standout["ring"] as Dictionary).is_empty() or _ring_drawn:
 		_under.queue_redraw()
@@ -263,33 +328,52 @@ func _draw() -> void:
 		return
 	var flown: Color = style.color("trail")
 	var ahead: Color = style.color("trail_ahead")
-	var step: float = maxf(0.02, style.num("marker.trail_dt_s"))  # never 0: the loop below steps by it
-	var turn_s: float = world.rules.turn_seconds
 	for id: String in markers:
 		if not (markers[id] as UnitMarker).visible:
 			continue
-		var now := pose_of(id)
-		var here: Vector2 = mapping.world_to_screen(Vector2(float(now["x"]), float(now["y"])))
-		var past := PackedVector2Array()
-		var rest := PackedVector2Array()
-		var k := 0
-		while true:
-			var t := minf(float(k) * step, turn_s)
-			var s := world.sample(id, t, "history")
-			var p: Vector2 = mapping.world_to_screen(Vector2(float(s["x"]), float(s["y"])))
-			if t < playback_t:
-				past.append(p)
-			else:
-				rest.append(p)
-			if t >= turn_s:
-				break
-			k += 1
-		past.append(here)
-		rest.insert(0, here)
+		var tr := track_points(id)
+		var past: PackedVector2Array = tr["past"]
+		var rest: PackedVector2Array = tr["rest"]
 		if past.size() > 1 and not _flown_line_replaced(markers[id] as UnitMarker):
 			draw_polyline(past, flown, 1.2, true)
 		if rest.size() > 1:
 			UiInk.dashed(self, rest, ahead, 1.0, 4.0, 4.0)
+
+# The track of a unit through the turn being played, in screen px: {past: where it has flown (the plane's
+# place last), rest: the rest of the turn (the plane's place first)}. The rest is the dashed line ahead,
+# and what it shows is PROPOSED (data marker.ahead_line): a player's own planes only -- the enemy's
+# plan is never shown, and the rest of its turn is its plan -- and a unit that goes down this turn
+# has a line only up to the moment it goes down (a fall, a blast or an end beyond it is not shown
+# ahead of time: a resolve does not spoil a death any more than a hit).
+func track_points(id: String) -> Dictionary:
+	var step: float = maxf(0.02, style.num("marker.trail_dt_s"))  # never 0: the loop below steps by it
+	var turn_s: float = world.rules.turn_seconds
+	var u = world.units[id]
+	var m: UnitMarker = markers[id]
+	var limit := minf(UiFate.alive_until(u), UiFate.falls_from(u))
+	var ahead_shown := m.own or style.text("marker.ahead_line.applies_to") == "all"
+	var now := pose_of(id)
+	var here: Vector2 = mapping.world_to_screen(Vector2(float(now["x"]), float(now["y"])))
+	var past := PackedVector2Array()
+	var rest := PackedVector2Array()
+	var k := 0
+	while true:
+		var t := minf(float(k) * step, turn_s)
+		var s := world.sample(id, t, "history")
+		var p: Vector2 = mapping.world_to_screen(Vector2(float(s["x"]), float(s["y"])))
+		if t < playback_t:
+			past.append(p)
+		elif ahead_shown and t < limit:
+			rest.append(p)
+		if t >= turn_s:
+			break
+		k += 1
+	past.append(here)
+	if ahead_shown and playback_t < limit:
+		rest.insert(0, here)
+	else:
+		rest.clear()
+	return {"past": past, "rest": rest}
 
 # --- Under: the side rings (the shapes are nodes of their own) -----------------------------
 

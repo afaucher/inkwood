@@ -42,6 +42,13 @@ var shadow: Sprite2D           # lives in the layer's shadow group, not under th
 
 var screen_ppm: float = 1.0    # the host's px per metre where the unit is
 var screen_heading: float = 0.0
+# A plane falling out of control rocks and slowly spins (data combat.fall, PROPOSED): extra
+# rotation in radians on the sprite, its shadow and the stand-out shapes -- not on the unit's
+# heading, which the ring, the trails and the cones read.
+var wobble: float = 0.0
+# The shadow's screen offset the layer last gave set_pose: the altitude cue, readable even where
+# there is no baked art to place the shadow sprite (a headless run).
+var shadow_offset := Vector2.ZERO
 var _checked_k: float = -1.0   # the marker.true_scale the art was last checked against
 var _style: UiStyle
 var _fallback_ink := Color.BLACK
@@ -99,7 +106,7 @@ func _pose_shapes() -> void:
 	if _shapes.is_empty():
 		return
 	var show := visible and art != null and art.mask != null
-	var rot := screen_heading + PI / 2.0
+	var rot := screen_heading + PI / 2.0 + wobble
 	var sc := Vector2.ZERO
 	if art != null:
 		sc = Vector2.ONE * (screen_ppm * _style.num("marker.true_scale") * draw_scale / art.ppm)
@@ -110,10 +117,13 @@ func _pose_shapes() -> void:
 			shape.pose(position, rot, sc.x, art.mask, art.origin, art.extent_m * art.ppm)
 
 # Pose the marker: screen position of the unit, the screen angle of its
-# heading, the host's px per metre there, and the shadow's screen offset.
-func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_offset_px: Vector2) -> void:
+# heading, the host's px per metre there, and the shadow's screen offset. `wobble_rad`
+# turns the drawn plane (and its shadow) off its heading; 0 for a plane under control.
+func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_offset_px: Vector2, wobble_rad: float = 0.0) -> void:
 	position = screen_pos
 	screen_heading = heading_screen
+	wobble = wobble_rad
+	shadow_offset = shadow_offset_px
 	var k: float = _style.num("marker.true_scale") * draw_scale
 	# The art is baked for ppm x true_scale (x the stand-out scale, 1.0 unless
 	# "larger" is on), so a change of ANY of them re-checks it
@@ -125,7 +135,7 @@ func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_off
 		_ensure_art()
 	elif art == null:
 		_ensure_art()
-	var rot := heading_screen + PI / 2.0  # the art's nose points to -y
+	var rot := heading_screen + PI / 2.0 + wobble_rad  # the art's nose points to -y
 	if art != null and art.texture != null:
 		var sc := Vector2.ONE * (screen_ppm * k / art.ppm)
 		plane.texture = art.texture
@@ -142,6 +152,11 @@ func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_off
 		shadow.visible = false
 	_pose_shapes()
 	queue_redraw()
+
+# Hides (or shows again) the stand-out shapes with the marker: a marker the layer hides
+# (fog, a unit that exploded) is not posed any more, so its shapes follow its visibility here.
+func refresh_shapes() -> void:
+	_pose_shapes()
 
 # Re-bake only when the host's scale has drifted past the data's ratio.
 func _ensure_art() -> void:

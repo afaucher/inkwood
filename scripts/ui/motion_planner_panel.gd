@@ -27,6 +27,11 @@ var playback: Object = null
 # What Ready does. UnitUI points it at its own press_ready (commit, then resolve
 # when everyone is in); alone, the panel commits through the planner.
 var ready_action: Callable = Callable()
+# Player id -> the name to print (UnitUI.player_name, which Track A points at WorldSync.name_of):
+# the ready marks print it for every player but this one ("you") and the AI. Empty: the id.
+var player_name: Callable = Callable()
+# Every button is off (the end-of-mission card is up: planning input is locked).
+var locked: bool = false
 
 func setup(w: World, motion_planner: MotionPlanner, sel: RefCounted, player: String = "local", st: RefCounted = null) -> void:
 	style = (st if st != null else UiStyle.shared()) as UiStyle
@@ -82,6 +87,9 @@ func buttons() -> Dictionary:
 	out["ready"] = {"rect": Rect2(pad, y, w, st.num("orders.ready_h_px")),
 		"label": ("Ready  -  press to withdraw" if planning else "Ready") if is_ready else "Ready",
 		"enabled": planning, "on": is_ready and planning}
+	if locked:
+		for key: String in out:
+			out[key]["enabled"] = false
 	return out
 
 # The band change the last placed step makes: -1 dive, 0 level, +1 climb.
@@ -202,9 +210,9 @@ func _draw() -> void:
 	# Ready marks: one per participant.
 	var y: float = (b["ready"]["rect"] as Rect2).end.y + 20.0
 	var x := pad
-	for who: String in world.participants():
-		var label := "you" if who == local_player else ("AI" if who == World.AI_PLAYER else who)
-		var ready := world.is_ready(who)
+	for mark: Dictionary in ready_marks():
+		var label: String = mark["label"]
+		var ready: bool = mark["ready"]
 		var c := Vector2(x + 5.0, y - 4.0)
 		draw_circle(c, 5.0, ink, false, 1.0, true)
 		if ready:
@@ -212,6 +220,22 @@ func _draw() -> void:
 		var txt := "%s %s" % [label, "ready" if ready else "planning"]
 		UiInk.text(self, italic, Vector2(x + 14.0, y), txt, detail, ink if ready else soft)
 		x += 14.0 + UiInk.text_width(italic, txt, detail) + 16.0
+
+# One record per participant, as the ready marks print them: {who, label, ready}. The label is
+# "you" for this player, "AI" for the AI, else the player's name (player_name).
+func ready_marks() -> Array:
+	var out: Array = []
+	if world == null:
+		return out
+	for who: String in world.participants():
+		out.append({"who": who, "ready": world.is_ready(who),
+			"label": "you" if who == local_player else ("AI" if who == World.AI_PLAYER else _player_label(who))})
+	return out
+
+func _player_label(who: String) -> String:
+	if player_name.is_valid():
+		return str(player_name.call(who))
+	return who
 
 func _altitude_caption() -> String:
 	var id: String = selection.unit_id if selection != null else ""

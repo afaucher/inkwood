@@ -19,7 +19,19 @@ extends Node2D
 #   - while a turn PLAYS BACK: a rolling window of the same length behind the plane's
 #     position now, so the trail grows from the plane and its tail is the end of the turn
 #     before (that is why it keeps the turns it has seen resolve, not only the last).
-# A unit that has not flown (no history yet) has no trail; neither does a down unit.
+# A unit that has not flown (no history yet) has no trail. A plane that goes down OUT OF
+# CONTROL keeps its trail: the ribbon follows the sampled fall path to the ground (Alex
+# 2026-10-10, decision wingtip-trails). An exploded unit's trail stops at down_at and a crashed
+# one's at the crash; what was left behind fades as the window rolls on, as any trail does.
+#
+# THE TRAIL IS TO THE CURRENT POSITION (Alex 2026-10-10): the ribbon's front edge is always
+# the plane's wingtips, now -- at the end of the last turn while planning, at the playback
+# clock while a turn plays. Two things keep it so: the head is sampled AT the clock (not at
+# the last recorded sample before it), and this node processes after the marker layer and
+# UnitUI (process_priority 20), so the clock it reads is the one the plane is drawn at, not
+# last frame's (a frame behind is a gap of speed x dt: 1.7 m, 6 px, at 100 m/s).
+# start_t(id) is where the ribbon BEGINS in game seconds, for the whole-flight line (Track A's
+# sandbox_tracks.gd) to stop at, so the two do not draw the same stretch twice.
 #
 # WHERE THE LINES START. At the drawn wingtips: the wing outline's half-span (UnitMarkerArt.
 # half_span_m, in the art's own metres) times the plane's drawn scale (marker.true_scale, and
@@ -41,6 +53,7 @@ const World = preload("res://scripts/sim/world.gd")
 const UiMapping = preload("res://scripts/ui/ui_mapping.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
+const UiFate = preload("res://scripts/ui/ui_fate.gd")
 
 var world: World = null
 var mapping: UiMapping = null
@@ -58,6 +71,9 @@ var _recorded_end := 0.0     # game seconds at the end of the latest turn record
 var _sig := ""
 var _items: Array = []
 var _span: Dictionary = {}   # silhouette -> the drawn wing's half-span, art metres
+
+func _init() -> void:
+	process_priority = 20   # after the marker layer (0) and UnitUI (10): the clock the planes were drawn at
 
 func setup(w: World, host_mapping: Variant, markers: Object = null, st: RefCounted = null) -> void:
 	world = w
@@ -95,13 +111,23 @@ func record_turn(turn_no: int) -> void:
 		var u = world.units[id]
 		if u.history.size() < 2:
 			continue
-		var times: Array = []
+		# An exploded unit's record ends at down_at, a crashed one's at the crash; one gone
+		# before this turn began adds nothing (what it left stays and fades).
+		var gone := UiFate.alive_until(u)
+		if gone <= 0.0:
+			continue
+		var limit := minf(turn_s, gone)
+		var times: Array = [limit]
 		var n := ceili(turn_s / dt)
 		for k in n + 1:
-			times.append(minf(float(k) * dt, turn_s))
+			var tk := minf(float(k) * dt, turn_s)
+			if tk <= limit + 1e-9:
+				times.append(tk)
 		var steps_here: Array = []
 		for hs: Dictionary in u.history:
 			var ht := float(hs.get("t", 0.0))
+			if ht > limit + 1e-9:
+				continue
 			times.append(ht)
 			if int(hs.get("step", -1)) >= 0:
 				steps_here.append(t0 + ht)
@@ -219,7 +245,7 @@ func collect() -> Array:
 	var min_alpha: float = style.num("marker.trails.min_alpha")
 	for id: String in _buf:
 		var u = world.units.get(id)
-		if u == null or u.down or u.def == null:
+		if u == null or u.def == null:
 			continue
 		var is_own: bool = u.controller == World.CONTROLLER_PLAYER
 		if applies == "own" and not is_own:
@@ -282,6 +308,22 @@ func collect() -> Array:
 			"half_span_px": (left[0] as Vector2).distance_to(right[0]) * 0.5,
 		})
 	return out
+
+# Game seconds at which the ribbon of a unit BEGINS (its far end), NAN when it has none (the
+# mode is none, the unit is not covered by applies_to, or nothing was recorded for it). The
+# whole-flight line is drawn up to this time and the ribbon from it. Fog is not looked at:
+# the caller knows what is drawn.
+func start_t(id: String) -> float:
+	if world == null or style.text("marker.trails.mode") == "none" or not _buf.has(id):
+		return NAN
+	var u = world.units.get(id)
+	if u == null or (style.text("marker.trails.applies_to") == "own" and u.controller != World.CONTROLLER_PLAYER):
+		return NAN
+	var ts: PackedFloat64Array = (_buf[id] as Dictionary)["t"]
+	if ts.size() < 2:
+		return NAN
+	var win := maxf(style.num("marker.trails.window_turns") * float(world.rules.turn_seconds), 0.05)
+	return maxf(now() - win, ts[0])
 
 func _half_span(silhouette: String) -> float:
 	if not _span.has(silhouette):

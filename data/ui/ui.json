@@ -130,19 +130,26 @@
     "leader_line_px": 0.8,
     "playback_speed": 1.0,
     "trail_dt_s": 0.1,
+    "ahead_line": {
+      "_proposed": true,
+      "_reason": "PROPOSED by Track U2 (combat on screen): the dashed line the marker layer draws ahead of a plane during a playback, the rest of the turn it is about to fly. applies_to 'own' draws it for the players' own planes only (Alex: the enemy's plans are never shown, and the rest of an enemy's turn is its plan; 'all' is what it was). Whatever the setting, a unit that goes down this turn has the line only up to the moment it goes down, and a unit already down has none: a fall, a blast, a phantom path beyond it would spoil the death before it is seen, as the pips are held back so that a hit is not.",
+      "applies_to": "own"
+    },
     "trails": {
       "_proposed": true,
       "_reason": "WINGTIP TRAILS (Alex 2026-10-10: 'For locating the players planes, what about wingtip trails in the players color? That cover the past turn.'). The board is variants/wingtip-trails/; EVERY VALUE HERE IS PROPOSED by Track U1 and nothing is chosen until Alex picks. mode: 'none' is today's look and the default (nothing is drawn); lines, steps, ribbon, rungs, wake are the board's options (see their blocks). Each wingtip's line starts AT the drawn wingtip (the wing outline's half-span, in the art's own metres, times the plane's drawn scale, so the two lines sit on the drawn wingtips at every zoom) and follows the unit's path over the last window_turns of play: the whole last resolved turn while planning, a rolling window behind the plane while a turn plays back. Drawn in the unit's side accent (side_a for the players, side_b for the enemy), fading from the plane to nothing at the far end. applies_to: 'own' = the player-controlled units only (Alex: 'the players planes'), 'all' = every unit in sight. Sizes in screen px. The trail is recorded from World history (World.sample at sample_s) when a turn is resolved, so it exists only for turns this client has seen resolve.",
       "mode": "ribbon",
       "decision": "wingtip-trails",
-      "_decided": "Alex 2026-10-10 on the board: 'D · One ribbon between the wingtips' -- mode ribbon. Still proposed: own planes only, a one-turn window, the whole-flight line giving way to the trail for the last turn, the overlap with the cone wash, and no trail for a falling plane.",
+      "_decided": "Alex 2026-10-10 on the board (decision 'wingtip-trails'): 'D · One ribbon between the wingtips' -- mode ribbon; '2 all moving units' -- applies_to all (every unit in sight through the fog, each in its own side colour); '5 yes' -- a plane falling OUT OF CONTROL keeps leaving its trail, the ribbon following the sampled fall path to the crash (an exploded unit's trail stops at down_at and a crashed one's at the crash, then fades as the window rolls on); and 'the trail is to the current position' -- the ribbon runs right up to the plane, now (the end of the last turn while planning, the playback clock while a turn plays), and the whole-flight line stops where the ribbon starts (WingtipTrails.start_t). Still proposed: a one-turn window and the overlap with the cone wash.",
       "modes": ["none", "lines", "steps", "ribbon", "rungs", "wake"],
-      "applies_to": "own",
+      "applies_to": "all",
       "window_turns": 1.0,
       "sample_s": 0.1,
       "fade_power": 0.65,
       "min_alpha": 0.03,
       "replaces_flown_line": true,
+      "under_smoke": true,
+      "_under_smoke": "PROPOSED by Track U2 (2026-10-10), on the effects track's finding: Alex chose the smoke W1, soft white to grey, and the ribbon in the side colour, drawn over white smoke along the same centre line, nearly hides it. true = the ribbon is drawn UNDER the effects layer (ribbon, then ground marks, shadows and smoke, then the planner and the cone wash, then the planes, then the bursts on top); false = the ribbon over the smoke, just under the planes, as it was mounted first. Alex has not ruled on this. UnitUI.apply_trail_order() reads it (setup() calls it; a host that changes the value at run time calls it again).",
       "_replaces": "While a trail mode other than none is on, the marker layer does not draw its own solid ink line of the track flown so far this turn during playback (the trail is that, at the wingtips); the dashed rest-of-turn line stays. The sandbox's whole-flight track (scripts/app/sandbox_tracks.gd, Track A's) is not touched by this switch: see the board's report for how it should stop at the last turn's start.",
       "lines": {
         "_about": "Two thin solid lines, one per wingtip, fading to nothing over the window.",
@@ -311,6 +318,74 @@
     }
   },
 
+  "combat": {
+    "_proposed": true,
+    "_reason": "COMBAT ON SCREEN (Track U2, the first fight, part 2, 2026-10-10). EVERY VALUE HERE IS PROPOSED by Track U2; none is a decision. In force (Alex): a downed plane either explodes mid air or goes out of control and crashes eventually; a crash is an explosion, then a smoking wreck; particles are fast flashes with a very slow decay; no fire for now, just smoke (so everything drawn here is ink and paper); the enemy's plans are never shown; the design doc's damage rule: 'a brief ink mark on the unit when hit, following the fast-flash, slow-decay rule; pips drop on the card'. Times are game seconds (a turn is 5), sizes px unless named _m.",
+    "fall": {
+      "_about": "A plane falling out of control (marker layer): its marker keeps flying the sim's sampled path with its shadow gap closing as the sim's fall height drops, and it rocks: a wobble of wobble_deg either side of its heading at wobble_hz (the phase is the game clock and the unit's id, so planes do not rock together), eased in over ramp_s after it goes down, plus a slow spin of spin_dps (0 = none). The sim already spirals it at fall_turn_rate_dps (data/sim/combat.json), so the rock is slight. An exploded plane's marker is gone from down_at and a crashed one's at the crash; neither has a plan drawn.",
+      "wobble_deg": 7.0,
+      "wobble_hz": 1.1,
+      "spin_dps": 0.0,
+      "ramp_s": 0.5
+    },
+    "hit_mark": {
+      "_about": "The brief ink mark on a unit when it is hit (a 'hit' event as the playback clock passes it). FAST FLASH, VERY SLOW DECAY: at once, a flash of paper (a pool that knocks the busy ground out, gone in flash_s) with the ink burst on it at full strength; the ink then fades over life_s along (1 - age / life_s) ^ decay_power. A burst of rays short strokes round a dot, wobbled by hand, sized radius_k x the plane's drawn radius (not under min_radius_px or over max_radius_px; a hit that took more pips than one is damage_k bigger per extra pip), set spot_k of the plane's radius off its centre in a direction picked by the hit (the unit's id and the event's time), in the plane's own frame so it rides with the plane. Ink and paper only. The mark's clock is the playback's while a turn plays; when the turn is over it carries on in real time (at the playback speed) until it is gone, and a new turn clears what is left. A unit that is not drawn (fog, or exploded at that moment) shows none.",
+      "enabled": true,
+      "flash_s": 0.16,
+      "flash_k": 1.2,
+      "life_s": 3.2,
+      "decay_power": 0.9,
+      "rays": 7,
+      "ray_inner_k": 0.14,
+      "ray_outer_k": 1.0,
+      "radius_k": 0.5,
+      "min_radius_px": 5.0,
+      "max_radius_px": 28.0,
+      "damage_k": 0.25,
+      "spot_k": 0.45,
+      "line_px": 1.5,
+      "dot_px": 1.7
+    },
+    "tracers": {
+      "_about": "A faint streak for each shot (a 'fire' event, one per roll), from the muzzle to the target (a miss carries on past it by miss_overshoot_k of the distance, off the line by the roll's own miss). OFF BY DEFAULT (proposed): a dogfight rolls dozens of shots a turn, so streaks would bury the map in lines that only echo what the hit marks, the pips and the cone wash already say, and a shot is a roll against the odds, not a bullet that was aimed. The switch is here for Alex to look at.",
+      "enabled": false,
+      "life_s": 0.22,
+      "line_px": 0.9,
+      "miss_overshoot_k": 0.35,
+      "max_live": 60
+    },
+    "fx": {
+      "_about": "The effects layer (scripts/fx/fx_layer.gd, Track X) as UnitUI mounts it. select_smoke / select_crash: the options to run, '' = fx.json's working defaults (the smoke is Alex's W1, decision damage-smoke; fire is off, decision fire-colour; the crash option is still open). select_crash_smoke: the smoke a crash draws (a falling plane's trail, the burst's cloud, the wreck's column); '' = the same as the damage smoke, so the game has one smoke (PROPOSED by the lead). restore_age_s: a wreck put back by a client that joined late (or after a rebuild) is given the age this many game seconds, so it is already a settled scar and its embers are long out. smoke_when_hidden: false = a unit outside the player's sight leaves no smoke and no blast on the map (a trail of puffs would give away where it flew); a crash out of sight still puts its scar down quietly.",
+      "select_smoke": "",
+      "select_crash": "",
+      "select_crash_smoke": "",
+      "restore_age_s": 600.0,
+      "smoke_when_hidden": false
+    },
+    "result": {
+      "_about": "The end-of-mission card (UnitUI.show_result with Mission.evaluate()'s shape {state, reason, turn, t}): a veil over the map and the sidebar, a card in the UI's style with the verdict, the reason in plain words and two buttons. reasons turns the mission's own reason string into words: the first pattern (a regular expression) that matches wins, and %s in its text is the display name of the unit the pattern captured in lower case ('bomber'; the captured text itself if it is not a unit of the world). No pattern matching shows the mission's own words. Planning input is locked while it shows. Sizes in px.",
+      "width_px": 430,
+      "height_px": 236,
+      "title_px": 26,
+      "reason_px": 19,
+      "button_h_px": 34,
+      "text": {
+        "won_title": "V I C T O R Y",
+        "lost_title": "D E F E A T",
+        "won_sub": "mission accomplished",
+        "lost_sub": "mission failed",
+        "turn": "on turn %d",
+        "again": "Play again",
+        "menu": "Back to the menu"
+      },
+      "reasons": [
+        { "pattern": "^(.+) came within .* of the target$", "text": "the %s reached its target" },
+        { "pattern": "^all player units are down$", "text": "both fighters down" },
+        { "pattern": "^(.+) is down$", "text": "%s down" }
+      ]
+    }
+  },
+
   "roles": {
     "_proposed": true,
     "_reason": "Every colour the interface draws, as a palette role. Cards are the object fill (cream) on the paper map; text and rules are the ink at the sheet's alpha steps; the selected row is the paper itself showing through; the fan is a faint ink wash; shadows are the map's shadow tint at the map's shadow strength.",
@@ -329,6 +404,10 @@
     "health_pip": { "base": "ink" },
     "health_pip_empty": { "base": "ink", "alpha": 0.32 },
     "ring_health": { "base": "ink" },
+    "hit_ink": { "base": "ink" },
+    "hit_flash": { "base": "paper", "alpha": 0.9 },
+    "tracer": { "base": "ink", "alpha": 0.55 },
+    "result_veil": { "base": "ink", "alpha": 0.28 },
     "ring_health_empty": { "base": "ink", "alpha": 0.3 },
     "row_down": { "base": "ink", "alpha": 0.4 },
     "hover_ink": { "base": "ink" },
