@@ -1160,6 +1160,21 @@
       ],
       "status": "open: Alex is weighing two answers, not decided",
       "notes": "Alex: 'That means it might leave the cone and completely not fire' and then 'Or just be a bad shot'."
+    },
+    {
+      "id": "playtest-strike-1",
+      "date": "2026-10-10",
+      "area": "Playtest, UI, Fog, Performance",
+      "question": "Alex's first playtest of the Strike (build v2026-10-10.134839): what changes?",
+      "board": "none (playtest notes in chat)",
+      "options": [],
+      "chosen": "the fog and map must be prerendered: panning while paused must not hang or paint in; the thin flown-path line is removed (the ribbon trails stay); the leader line to the roster is removed; the planner's clamp mark (the X where the pointer was left while dragging, and its dashed line) is removed; weapon arcs can be toggled off; the lettering next to planes must be readable; sight follows the pilot: an exploded plane stops revealing, a falling one keeps a reduced sight that depends on its height until it hits; the bomb controls must not be a separate control scheme (redesign pending)",
+      "parameters": {},
+      "applied_to": [
+        "in progress: Track P (prerender), Track C (lines, toggle, lettering), Track S (sight of downed planes)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Drawing the fog is still extremely slow. I thought we prerendered everything? Just scrolling around a map while the game is paused hangs and slowly paints in the colors then the contour lines. ... This should be cheap to render.' 'The bomb controls are wildly bad. It is VERY hard to see what is happening. Dropping the bomb shouldn't be a separate control scheme. We have a 'drop' button but I can't get it to highlight. There is a huge nebulus red blob _ahead_ of the plane but nothing connects 'I am selecting the bomb special on step 2' with this red blob. And it moves with subsequent steps??' 'There are too many extraneous lines being drawn as well': the bomber's dashed arcs to either side (unclear what they cover); 'We need to be able to toggle off the weapon arcs'; the thin red/blue line after the ribbon 'Remove that line'; 'The bomber has a thin black line that just goes to the top right corner? Lets identify that and remove it'; the dashed line to a little X: 'The little X is where I left the mouse when dragging the point. We don't care about that at all.'; 'The text next to each plane is unreadable using the small thin font - these MUST be read to be useful'. 'A destroyed plane keeps the fog away. Ideally we have this track the pilot. So a destroyed plane should loose the fog. One disabled and falling should keep it but with reduced distance until it hits. (take height into account too).'"
     }
   ]
 }
