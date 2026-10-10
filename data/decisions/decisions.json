@@ -989,13 +989,50 @@
         "labels on every unit and node",
         "a side-view indicator (Alex's harder idea, being described)"
       ],
-      "chosen": "every unit and every plan node gets a height and speed label (the easy part); a side-view indicator is under consideration",
+      "chosen": "every unit and every plan node gets a height and speed label (the easy part); a side-view indicator showing only the firing cone and the targeted enemy's straight-line position (see side-view-look)",
       "parameters": {},
       "applied_to": [
-        "Track U3, in progress"
+        "data/ui/ui.json labels.*",
+        "scripts/ui/ui_labels.gd (Track U3, 7c0627e)"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'I'm wondering about height aiming. I think it's going to be challenging. I think the easy thing to do is to make sure that every unit and every node has a height and speed label. The harder thing I'm wondering about is if there makes sense to have a side view indicator that only shows' (message cut off)."
+      "notes": "Alex: 'I'm wondering about height aiming. I think it's going to be challenging. I think the easy thing to do is to make sure that every unit and every node has a height and speed label. The harder thing I'm wondering about is if there makes sense to have a side view indicator that only shows ... the firing cone and the relative straight line position of the targeted enemy.' Then: 'Let's mock that up and see what that might look like.' The mock-up was the Inkwood Side View page (tmp/sideview/make.py)."
+    },
+    {
+      "id": "side-view-look",
+      "date": "2026-10-10",
+      "area": "UI, Height",
+      "question": "How does the side-view indicator look (the mock-up's A ink outline, B colour wash, C ruled)?",
+      "board": "the Inkwood Side View mock-up (tmp/sideview/make.py): four scenes x three looks",
+      "options": [
+        "A ink outline",
+        "B colour wash",
+        "C ruled (wash plus bands, ticks and the ideal release angle)"
+      ],
+      "chosen": "B colour wash, in a style identical to the top-down map; units, the tower and every other thing reduced to indicators -- no side-view art",
+      "parameters": {
+        "look": "wash (the same side-colour wash as the map's cone overlay)",
+        "style": "identical to the top-down view: the same palette roles, wash, ink and lettering",
+        "units": "indicators only (no side-view silhouettes or other side-view assets)"
+      },
+      "applied_to": [
+        "not built yet"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'For the side view I like the color wash. Keep the style identical to the top down. Reduce the icons (plane, tower, etc) to just indicators. I don't want side view assets.' What the panel shows as its target depends on special-targeting (open)."
+    },
+    {
+      "id": "special-targeting",
+      "date": "2026-10-10",
+      "area": "Specials, UI",
+      "question": "How does a special (the bomb today) get its target, and how is its area of effect shown?",
+      "board": "none yet (options in chat)",
+      "options": [],
+      "chosen": null,
+      "parameters": {},
+      "applied_to": [],
+      "status": "open",
+      "notes": "Alex: 'For bombs, I expected area of effect as well. This implies each step might have a target which is either a unit or point. But this is only for specials. Let's look at our options here. Maybe a targeting selection is the right call. Specials use the current selection to set their target.' And: 'For selection, does this imply we have both a player unit and enemy unit selection?'"
     }
   ]
 }
