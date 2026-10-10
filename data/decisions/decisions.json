@@ -932,13 +932,13 @@
       "options": [
         "(direction, not options)"
       ],
-      "chosen": "Alex's working guess, not a decision: most things never change, so a static pass should be doable; things like trees will eventually be dynamic, so the map can be several layers combined, recomputing only the one that changed. Used as the frame for explaining the map pipeline.",
+      "chosen": "the layer model (ground, structures, trees, the fog's contour map ahead of time, live) is the basis for now; Alex: 'that looks good for now'",
       "parameters": {},
       "applied_to": [
         "map generation explainer and layer plan (in progress)"
       ],
-      "status": "working hypothesis (Alex)",
-      "notes": "Alex: 'For the map, I think I need to better understand how we generate maps to understand what the problem is. Most things don't change at all so a static pass should be doable. Thinks like trees eventually are dynamic so we could have multiple layers to combine and only recompute one.' Then: 'I am guessing with the layering idea. Use it as a basis for my current understanding.' Added: 'The fog layer should also be static and can be done completely ahead of time.' (The fog's contour map depends only on the terrain; the sight mask and its edge stay live.)"
+      "status": "accepted as the working basis (Alex)",
+      "notes": "Alex: 'For the map, I think I need to better understand how we generate maps to understand what the problem is. Most things don't change at all so a static pass should be doable. Thinks like trees eventually are dynamic so we could have multiple layers to combine and only recompute one.' Then: 'I am guessing with the layering idea. Use it as a basis for my current understanding.' Added: 'The fog layer should also be static and can be done completely ahead of time.' (The fog's contour map depends only on the terrain; the sight mask and its edge stay live.) Then: 'Otherwise that looks good for now. We just need it smooth enough to play. Perf is secondary and we can focus on it as we scale up complexity.'"
     },
     {
       "id": "memory-budget",
@@ -960,6 +960,24 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Honestly I am not worried about ram footprint for now.'"
+    },
+    {
+      "id": "perf-secondary",
+      "date": "2026-10-10",
+      "area": "Performance",
+      "question": "How much performance work, and when?",
+      "board": "none (said in chat)",
+      "options": [
+        "optimise ahead",
+        "smooth enough to play; performance as complexity grows"
+      ],
+      "chosen": "smooth enough to play; performance is secondary and gets attention as complexity scales up",
+      "parameters": {},
+      "applied_to": [
+        "the next layer: build layers only where something must change; disk saving, the fog ahead of time and the 32-core test wait"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'We just need it smooth enough to play. Perf is secondary and we can focus on it as we scale up complexity.'"
     }
   ]
 }
