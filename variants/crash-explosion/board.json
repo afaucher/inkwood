@@ -1,0 +1,1215 @@
+{
+  "id": "crash-explosion",
+  "date": "2026-10-09",
+  "area": "Effects",
+  "question": "How does a downed plane look: exploding in mid air, or out of control and crashing? Each option is one consistent treatment of the mid-air explosion, the fall, and the ground impact. (Alex 2026-10-09: 'Dead planes should either explode mid air or lose control by players and crash eventually'; fast flashes, very slow decay)",
+  "source": "scripts/fx/fx_board.gd over the real map (terrain provider) at 2 px/m, planes at the sandbox's own scale (36 px at zoom 1)",
+  "seed": 20261009,
+  "parameter": "data/fx/fx.json#crash.options (every value a proposed record)",
+  "held_constant": {
+    "midair": "a light fighter exploding at 400 m at (3050, 2480) m",
+    "out_of_control": "a stand-in for the sim's spiral: 120 m radius, 40 degrees per second clockwise, drifting east at 18 m/s, height 400 m x (1 - (t/14)^1.5), a crash at 14 s at the spiral's end; the plane's own art and shadow are the unit markers' (drawn by the board)",
+    "light": "sun azimuth 315, elevation 46; shadow strength 0.44; shadow gap 1% of the height above ground",
+    "pen": "shadow side",
+    "fire_accent": [
+      0.72,
+      0.14,
+      56.0
+    ]
+  },
+  "frames": {
+    "midair": [
+      {
+        "dt": -0.4,
+        "zoom": 1.0,
+        "cap": "just before"
+      },
+      {
+        "dt": 0.0,
+        "zoom": 1.0,
+        "cap": "0 s"
+      },
+      {
+        "dt": 0.1,
+        "zoom": 1.0,
+        "cap": "0.1 s"
+      },
+      {
+        "dt": 0.3,
+        "zoom": 1.0,
+        "cap": "0.3 s"
+      },
+      {
+        "dt": 1.0,
+        "zoom": 1.0,
+        "cap": "1 s"
+      },
+      {
+        "dt": 3.0,
+        "zoom": 1.0,
+        "cap": "3 s"
+      },
+      {
+        "dt": 5.0,
+        "zoom": 0.35,
+        "cap": "one turn later"
+      },
+      {
+        "dt": 15.0,
+        "zoom": 0.35,
+        "cap": "three turns later"
+      },
+      {
+        "dt": 40.0,
+        "zoom": 0.35,
+        "cap": "eight turns later"
+      }
+    ],
+    "out_of_control": [
+      {
+        "t": 0.5,
+        "cap": "0.5 s"
+      },
+      {
+        "t": 3.0,
+        "cap": "3 s"
+      },
+      {
+        "t": 6.0,
+        "cap": "6 s (turn 2)"
+      },
+      {
+        "t": 9.0,
+        "cap": "9 s"
+      },
+      {
+        "t": 12.0,
+        "cap": "12 s (turn 3)"
+      },
+      {
+        "t": 13.8,
+        "cap": "13.8 s (a moment before)"
+      }
+    ],
+    "impact": [
+      {
+        "dt": 0.0,
+        "zoom": 1.0,
+        "cap": "0 s"
+      },
+      {
+        "dt": 0.1,
+        "zoom": 1.0,
+        "cap": "0.1 s"
+      },
+      {
+        "dt": 0.3,
+        "zoom": 1.0,
+        "cap": "0.3 s"
+      },
+      {
+        "dt": 1.0,
+        "zoom": 1.0,
+        "cap": "1 s"
+      },
+      {
+        "dt": 3.0,
+        "zoom": 1.0,
+        "cap": "3 s"
+      },
+      {
+        "dt": 5.0,
+        "zoom": 1.0,
+        "cap": "one turn later: the wreck smoking"
+      },
+      {
+        "dt": 15.0,
+        "zoom": 1.0,
+        "cap": "three turns later: still smoking"
+      },
+      {
+        "dt": 40.0,
+        "zoom": 0.35,
+        "cap": "eight turns later (wide)"
+      },
+      {
+        "dt": 90.0,
+        "zoom": 1.0,
+        "cap": "eighteen turns later: what stays"
+      }
+    ]
+  },
+  "options": [
+    {
+      "name": "A",
+      "label": "Stipple burst",
+      "note": "The art plan's proposed treatment throughout. Mid-air: a fire disc with a cream core, short radial hatch and flung ink stipple, then lobed smoke left in the sky; pieces fall with shadows closing on them. Out of control: a heavy lobed trail and a small flame, embers shed. Impact: the same burst with a ring of dust dots, a billow, then a wreck (fuselage, wings, engine, tail on dirt-stipple scorch with ink hatch) that keeps smoking for about twelve turns: a lobed column thinning from heavy grey to a wisp, a few embers glowing on the scar.",
+      "file": "option_A.png",
+      "parameters": {
+        "burst": {
+          "form": "stipple",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.3,
+            2.2,
+            3.5,
+            5.0,
+            7.5
+          ],
+          "end_s": 10.0,
+          "radius_frac": 1.1,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.35
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.3,
+              0.55
+            ],
+            [
+              0.8,
+              0.0
+            ]
+          ],
+          "core_curve": [
+            [
+              0.0,
+              0.2
+            ],
+            [
+              0.1,
+              0.55
+            ],
+            [
+              0.25,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.pale",
+          "core_role": "burst.core",
+          "outline_scale": 1.0,
+          "dots": 170.0,
+          "dot_px": 0.95,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.35,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              1.0
+            ],
+            [
+              4.0,
+              0.75
+            ],
+            [
+              10.0,
+              0.3
+            ]
+          ],
+          "spread": 1.3,
+          "hatch": 18.0,
+          "hatch_len": [
+            1.1,
+            1.55
+          ],
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.6,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              0.8
+            ],
+            [
+              5.0,
+              0.45
+            ],
+            [
+              10.0,
+              0.2
+            ]
+          ],
+          "hatch_s": 0.2,
+          "ground_ring": true,
+          "ring_s": 0.6,
+          "ring_r": 1.7,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              2.0,
+              0.8
+            ],
+            [
+              6.0,
+              0.35
+            ],
+            [
+              10.0,
+              0.0
+            ]
+          ]
+        },
+        "midair": {
+          "radius_scale": 1.0,
+          "plume": {
+            "smoke_option": "A",
+            "count": 7.0,
+            "interval_s": 0.3,
+            "delay_s": 0.2,
+            "radius_frac": [
+              0.75,
+              1.1
+            ],
+            "spread_frac": 0.5,
+            "life_s": 40.0,
+            "grow": [
+              0.55,
+              1.5
+            ],
+            "hold": 0.2,
+            "fade_power": 1.5,
+            "tone": 1.0
+          },
+          "debris": {
+            "count": 9.0,
+            "speed_mps": [
+              10.0,
+              45.0
+            ],
+            "gravity_mps2": 25.0,
+            "drag_tau_s": 2.0,
+            "shard_frac": 0.3,
+            "shard_variants": 3.0,
+            "fill_role": "burst.shard",
+            "rest_s": 10.0,
+            "spin_dps": [
+              -360.0,
+              360.0
+            ]
+          }
+        },
+        "falling": {
+          "smoke_option": "A",
+          "tone": 1.0,
+          "intensity": 0.5,
+          "life_s": 14.0,
+          "interval_s": 0.09,
+          "flame": {
+            "enabled": true,
+            "frames": 3.0,
+            "flicker_hz": 7.0,
+            "length_frac": 0.95,
+            "width_frac": 0.4,
+            "fire_role": "fire",
+            "core_role": "burst.core",
+            "ember_px": 1.4,
+            "ember_every_s": 0.2,
+            "ember_life_s": 1.6
+          }
+        },
+        "impact": {
+          "radius_scale": 1.0,
+          "plume": {
+            "smoke_option": "A",
+            "count": 11.0,
+            "interval_s": 0.3,
+            "delay_s": 0.25,
+            "radius_frac": [
+              0.5,
+              0.85
+            ],
+            "spread_frac": 0.55,
+            "life_s": 48.0,
+            "grow": [
+              0.55,
+              1.6
+            ],
+            "hold": 0.22,
+            "fade_power": 1.5,
+            "tone": 2.0
+          },
+          "smolder": {
+            "smoke_option": "A",
+            "duration_s": 60.0,
+            "delay_s": 0.9,
+            "interval_s": [
+              0.4,
+              1.8
+            ],
+            "radius_frac": [
+              0.42,
+              0.22
+            ],
+            "tone_edges_frac": [
+              0.1,
+              0.4
+            ],
+            "life_s": 26.0,
+            "grow": [
+              0.7,
+              1.7
+            ],
+            "hold": 0.25,
+            "fade_power": 1.4,
+            "wind_jitter_mps": 1.1,
+            "rise_mps": 4.0
+          },
+          "scar": {
+            "wreck_pieces": [
+              "fuselage",
+              "wing",
+              "wing",
+              "engine",
+              "tail"
+            ],
+            "wreck_spread": 0.7,
+            "wreck_fill_role": "wreck.fill",
+            "wreck_char_role": "wreck.char",
+            "wreck_shade_role": "wreck.shade",
+            "wreck_scale": 1.35,
+            "radius_frac": 0.95,
+            "variants": 4.0,
+            "stretch": 1.35,
+            "dots_per_px2": 0.5,
+            "dot_px": 0.65,
+            "core_bias": 0.7,
+            "hatch": 30.0,
+            "hatch_weight": 1.1,
+            "crater": false,
+            "dot_role": "scar.dot",
+            "dot_soft_role": "scar.dot.soft",
+            "hatch_role": "ink.hatch",
+            "embers": 4.0,
+            "ember_life_s": 22.0,
+            "ember_spread_frac": 0.55
+          }
+        }
+      }
+    },
+    {
+      "name": "B",
+      "label": "Lobed fireball",
+      "note": "The explosion is a smoke puff that starts as fire: lobes in the fire accent cool through pale fire and cream into the plume's first puffs, so the flash and the smoke are one drawing. Out of control: a heavy lobed trail, a flame, embers. Impact: the same fireball with a dust ring, then the wreck smoking on a broader scar in the same lobed smoke, thinning over twelve turns.",
+      "file": "option_B.png",
+      "parameters": {
+        "burst": {
+          "form": "lobed",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.3,
+            2.2,
+            3.5,
+            5.0,
+            7.5
+          ],
+          "end_s": 10.0,
+          "radius_frac": 1.0,
+          "fire_role": "fire",
+          "puff": {
+            "form": "lobed",
+            "variants": 1.0,
+            "lobes_min": 6.0,
+            "lobes_max": 8.0,
+            "lobe_d": 0.36,
+            "lobe_d_var": 0.2,
+            "lobe_r": 0.3,
+            "lobe_r_var": 0.2,
+            "crown_r": 0.5,
+            "lobe_amp": 0.1,
+            "lobe_amp_var": 0.08,
+            "scallop_base": 3.5,
+            "scallop_div": 4.0,
+            "outline_weight_of": "tree_outline",
+            "outline_scale": 1.1,
+            "outline_ref_px": 14.0,
+            "outline_min_scale": 0.55,
+            "outline_role": "ink",
+            "outline_union": false,
+            "underside": true,
+            "lit_shift": 0.18,
+            "lit_roles": [
+              "fire",
+              "fire.pale",
+              "burst.core",
+              "smoke.a.lit.1"
+            ],
+            "shade_roles": [
+              "fire.shade",
+              "fire.dim",
+              "smoke.a.shade.0",
+              "smoke.a.shade.1"
+            ],
+            "ticks": true,
+            "stipple_per_r": 0.2,
+            "stipple_role": "ink.soft",
+            "rings": 0.0,
+            "ring_role": "ink.ring"
+          },
+          "stage_edges_s": [
+            0.12,
+            0.4,
+            1.2
+          ],
+          "grow_curve": [
+            [
+              0.0,
+              0.35
+            ],
+            [
+              0.12,
+              0.8
+            ],
+            [
+              0.5,
+              1.0
+            ],
+            [
+              3.0,
+              1.12
+            ],
+            [
+              10.0,
+              1.2
+            ]
+          ],
+          "embers": 10.0,
+          "ember_px": 1.0,
+          "ember_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.6,
+              0.6
+            ],
+            [
+              1.5,
+              0.0
+            ]
+          ],
+          "dot_px": 0.95,
+          "dot_soft_role": "ink.soft",
+          "ground_ring": true,
+          "ring_s": 0.6,
+          "ring_r": 1.6,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              2.0,
+              0.8
+            ],
+            [
+              6.0,
+              0.35
+            ],
+            [
+              10.0,
+              0.0
+            ]
+          ]
+        },
+        "midair": {
+          "radius_scale": 1.2,
+          "plume": {
+            "smoke_option": "A",
+            "count": 6.0,
+            "interval_s": 0.35,
+            "delay_s": 0.3,
+            "radius_frac": [
+              0.8,
+              1.15
+            ],
+            "spread_frac": 0.5,
+            "life_s": 42.0,
+            "grow": [
+              0.6,
+              1.5
+            ],
+            "hold": 0.2,
+            "fade_power": 1.5,
+            "tone": 1.0
+          },
+          "debris": {
+            "count": 8.0,
+            "speed_mps": [
+              8.0,
+              40.0
+            ],
+            "gravity_mps2": 25.0,
+            "drag_tau_s": 2.0,
+            "shard_frac": 0.3,
+            "shard_variants": 3.0,
+            "fill_role": "burst.shard",
+            "rest_s": 10.0,
+            "spin_dps": [
+              -360.0,
+              360.0
+            ]
+          }
+        },
+        "falling": {
+          "smoke_option": "A",
+          "tone": 1.0,
+          "intensity": 0.5,
+          "life_s": 14.0,
+          "interval_s": 0.08,
+          "flame": {
+            "enabled": true,
+            "frames": 3.0,
+            "flicker_hz": 6.0,
+            "length_frac": 1.1,
+            "width_frac": 0.45,
+            "fire_role": "fire",
+            "core_role": "burst.core",
+            "ember_px": 1.4,
+            "ember_every_s": 0.16,
+            "ember_life_s": 1.8
+          }
+        },
+        "impact": {
+          "radius_scale": 1.0,
+          "plume": {
+            "smoke_option": "A",
+            "count": 12.0,
+            "interval_s": 0.28,
+            "delay_s": 0.35,
+            "radius_frac": [
+              0.55,
+              0.9
+            ],
+            "spread_frac": 0.6,
+            "life_s": 48.0,
+            "grow": [
+              0.55,
+              1.7
+            ],
+            "hold": 0.22,
+            "fade_power": 1.5,
+            "tone": 2.0
+          },
+          "smolder": {
+            "smoke_option": "A",
+            "duration_s": 60.0,
+            "delay_s": 0.9,
+            "interval_s": [
+              0.38,
+              1.7
+            ],
+            "radius_frac": [
+              0.45,
+              0.24
+            ],
+            "tone_edges_frac": [
+              0.1,
+              0.4
+            ],
+            "life_s": 26.0,
+            "grow": [
+              0.7,
+              1.7
+            ],
+            "hold": 0.25,
+            "fade_power": 1.4,
+            "wind_jitter_mps": 1.1,
+            "rise_mps": 4.0
+          },
+          "scar": {
+            "wreck_pieces": [
+              "fuselage",
+              "wing",
+              "wing",
+              "engine",
+              "tail"
+            ],
+            "wreck_spread": 0.8,
+            "wreck_fill_role": "wreck.fill",
+            "wreck_char_role": "wreck.char",
+            "wreck_shade_role": "wreck.shade",
+            "wreck_scale": 1.35,
+            "radius_frac": 1.05,
+            "variants": 4.0,
+            "stretch": 1.35,
+            "dots_per_px2": 0.42,
+            "dot_px": 0.65,
+            "core_bias": 0.6,
+            "hatch": 24.0,
+            "hatch_weight": 1.1,
+            "crater": false,
+            "dot_role": "scar.dot",
+            "dot_soft_role": "scar.dot.soft",
+            "hatch_role": "ink.hatch",
+            "embers": 5.0,
+            "ember_life_s": 24.0,
+            "ember_spread_frac": 0.6
+          }
+        }
+      }
+    },
+    {
+      "name": "C",
+      "label": "Woodcut blast",
+      "note": "A ruled spiky star: fire accent over a cream inner star, heavy ink outline, long radial rays and a dashed shock ring; the star goes hollow (ink only) and thins over many seconds. The smoke is the ink wash, a dark column. Impact: the star, a dashed ring and rays, then the wreck smoking in a broken crater ring as a dark ink-wash column that greys out over twelve turns; out of control the plane trails the dark smoke and a flame.",
+      "file": "option_C.png",
+      "parameters": {
+        "burst": {
+          "form": "starburst",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.3,
+            2.2,
+            3.5,
+            5.0,
+            7.5
+          ],
+          "end_s": 10.0,
+          "radius_frac": 1.15,
+          "spikes": 14.0,
+          "inner_frac": 0.48,
+          "outer_var": 0.55,
+          "star_curve": [
+            [
+              0.0,
+              0.5
+            ],
+            [
+              0.06,
+              1.0
+            ],
+            [
+              0.5,
+              1.05
+            ],
+            [
+              3.0,
+              1.1
+            ]
+          ],
+          "fire_curve": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.2,
+              1.0
+            ],
+            [
+              0.45,
+              0.3
+            ],
+            [
+              0.9,
+              0.0
+            ]
+          ],
+          "core_curve": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.12,
+              1.0
+            ],
+            [
+              0.2,
+              0.0
+            ]
+          ],
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.8
+            ],
+            [
+              4.0,
+              0.5
+            ],
+            [
+              10.0,
+              0.3
+            ]
+          ],
+          "outline_scale": 1.15,
+          "fire_role": "fire",
+          "pale_role": "fire.pale",
+          "core_role": "burst.core",
+          "rays": 12.0,
+          "ray_s": 0.25,
+          "ray_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.8
+            ],
+            [
+              4.0,
+              0.4
+            ],
+            [
+              8.0,
+              0.0
+            ]
+          ],
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.5,
+          "ring_s": 0.5,
+          "ring_r": 1.9,
+          "ring_keep": [
+            [
+              0.0,
+              0.9
+            ],
+            [
+              1.2,
+              0.5
+            ],
+            [
+              3.0,
+              0.0
+            ]
+          ],
+          "dots": 80.0,
+          "dot_px": 0.95,
+          "dot_s": 0.4,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              3.0,
+              0.8
+            ],
+            [
+              10.0,
+              0.35
+            ]
+          ],
+          "ground_ring": true
+        },
+        "midair": {
+          "radius_scale": 1.0,
+          "plume": {
+            "smoke_option": "D",
+            "count": 7.0,
+            "interval_s": 0.3,
+            "delay_s": 0.2,
+            "radius_frac": [
+              0.75,
+              1.1
+            ],
+            "spread_frac": 0.5,
+            "life_s": 40.0,
+            "grow": [
+              0.55,
+              1.5
+            ],
+            "hold": 0.2,
+            "fade_power": 1.5,
+            "tone": 1.0
+          },
+          "debris": {
+            "count": 10.0,
+            "speed_mps": [
+              10.0,
+              50.0
+            ],
+            "gravity_mps2": 25.0,
+            "drag_tau_s": 2.0,
+            "shard_frac": 0.3,
+            "shard_variants": 3.0,
+            "fill_role": "burst.shard",
+            "rest_s": 10.0,
+            "spin_dps": [
+              -360.0,
+              360.0
+            ]
+          }
+        },
+        "falling": {
+          "smoke_option": "D",
+          "tone": 1.0,
+          "intensity": 0.5,
+          "life_s": 14.0,
+          "interval_s": 0.09,
+          "flame": {
+            "enabled": true,
+            "frames": 3.0,
+            "flicker_hz": 8.0,
+            "length_frac": 0.9,
+            "width_frac": 0.38,
+            "fire_role": "fire",
+            "core_role": "burst.core",
+            "ember_px": 1.4,
+            "ember_every_s": 0.2,
+            "ember_life_s": 1.6
+          }
+        },
+        "impact": {
+          "radius_scale": 1.0,
+          "plume": {
+            "smoke_option": "D",
+            "count": 11.0,
+            "interval_s": 0.3,
+            "delay_s": 0.25,
+            "radius_frac": [
+              0.5,
+              0.85
+            ],
+            "spread_frac": 0.55,
+            "life_s": 52.0,
+            "grow": [
+              0.55,
+              1.6
+            ],
+            "hold": 0.25,
+            "fade_power": 1.5,
+            "tone": 2.0
+          },
+          "smolder": {
+            "smoke_option": "D",
+            "duration_s": 60.0,
+            "delay_s": 0.9,
+            "interval_s": [
+              0.42,
+              1.8
+            ],
+            "radius_frac": [
+              0.42,
+              0.22
+            ],
+            "tone_edges_frac": [
+              0.1,
+              0.4
+            ],
+            "life_s": 26.0,
+            "grow": [
+              0.7,
+              1.7
+            ],
+            "hold": 0.25,
+            "fade_power": 1.4,
+            "wind_jitter_mps": 1.1,
+            "rise_mps": 4.0
+          },
+          "scar": {
+            "wreck_pieces": [
+              "fuselage",
+              "wing",
+              "engine"
+            ],
+            "wreck_spread": 0.45,
+            "wreck_fill_role": "wreck.fill",
+            "wreck_char_role": "wreck.char",
+            "wreck_shade_role": "wreck.shade",
+            "wreck_scale": 1.35,
+            "radius_frac": 0.9,
+            "variants": 4.0,
+            "stretch": 1.35,
+            "dots_per_px2": 0.55,
+            "dot_px": 0.65,
+            "core_bias": 0.65,
+            "hatch": 34.0,
+            "hatch_weight": 1.15,
+            "crater": true,
+            "dot_role": "scar.dot",
+            "dot_soft_role": "scar.dot.soft",
+            "hatch_role": "ink.hatch",
+            "embers": 4.0,
+            "ember_life_s": 24.0,
+            "ember_spread_frac": 0.55
+          }
+        }
+      }
+    },
+    {
+      "name": "D",
+      "label": "Restrained",
+      "note": "The quiet baseline: a small flash, one thin ink ring and a few dots; smoke is the stipple plume (no shadow). Out of control: a thin stipple trail and no flame. Impact: a small ring, then a wreck on a faint scorch smoking as a thin stipple column for eight turns, no embers. Least intrusive, least readable at planning zoom.",
+      "file": "option_D.png",
+      "parameters": {
+        "burst": {
+          "form": "ring",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.3,
+            2.2,
+            3.5,
+            5.0,
+            7.5
+          ],
+          "end_s": 8.0,
+          "radius_frac": 0.8,
+          "flash_s": 0.08,
+          "fire_curve": [
+            [
+              0.0,
+              0.3
+            ],
+            [
+              0.08,
+              0.65
+            ],
+            [
+              0.3,
+              0.25
+            ],
+            [
+              0.6,
+              0.0
+            ]
+          ],
+          "core_curve": [
+            [
+              0.0,
+              0.15
+            ],
+            [
+              0.08,
+              0.4
+            ],
+            [
+              0.2,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.pale",
+          "core_role": "burst.core",
+          "outline_scale": 1.0,
+          "ring_s": 0.6,
+          "ring_r": 1.2,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              2.0,
+              0.6
+            ],
+            [
+              6.0,
+              0.2
+            ],
+            [
+              8.0,
+              0.0
+            ]
+          ],
+          "dots": 40.0,
+          "dot_px": 0.95,
+          "dot_s": 0.5,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              3.0,
+              0.8
+            ],
+            [
+              8.0,
+              0.3
+            ]
+          ],
+          "ground_ring": false
+        },
+        "midair": {
+          "radius_scale": 1.0,
+          "plume": {
+            "smoke_option": "B",
+            "count": 5.0,
+            "interval_s": 0.4,
+            "delay_s": 0.2,
+            "radius_frac": [
+              0.8,
+              1.1
+            ],
+            "spread_frac": 0.5,
+            "life_s": 36.0,
+            "grow": [
+              0.6,
+              1.4
+            ],
+            "hold": 0.2,
+            "fade_power": 1.5,
+            "tone": 1.0
+          },
+          "debris": {
+            "count": 5.0,
+            "speed_mps": [
+              8.0,
+              30.0
+            ],
+            "gravity_mps2": 25.0,
+            "drag_tau_s": 2.0,
+            "shard_frac": 0.24,
+            "shard_variants": 3.0,
+            "fill_role": "burst.shard",
+            "rest_s": 6.0,
+            "spin_dps": [
+              -360.0,
+              360.0
+            ]
+          }
+        },
+        "falling": {
+          "smoke_option": "B",
+          "tone": 1.0,
+          "intensity": 0.5,
+          "life_s": 14.0,
+          "interval_s": 0.12,
+          "flame": {
+            "enabled": false,
+            "frames": 3.0,
+            "flicker_hz": 6.0,
+            "length_frac": 0.8,
+            "width_frac": 0.35,
+            "fire_role": "fire",
+            "core_role": "burst.core",
+            "ember_px": 1.4,
+            "ember_every_s": 0.0,
+            "ember_life_s": 1.0
+          }
+        },
+        "impact": {
+          "radius_scale": 1.0,
+          "plume": {
+            "smoke_option": "B",
+            "count": 7.0,
+            "interval_s": 0.35,
+            "delay_s": 0.3,
+            "radius_frac": [
+              0.55,
+              0.85
+            ],
+            "spread_frac": 0.5,
+            "life_s": 40.0,
+            "grow": [
+              0.6,
+              1.5
+            ],
+            "hold": 0.22,
+            "fade_power": 1.5,
+            "tone": 2.0
+          },
+          "smolder": {
+            "smoke_option": "B",
+            "duration_s": 40.0,
+            "delay_s": 0.9,
+            "interval_s": [
+              0.45,
+              1.8
+            ],
+            "radius_frac": [
+              0.7,
+              0.4
+            ],
+            "tone_edges_frac": [
+              0.1,
+              0.4
+            ],
+            "life_s": 22.0,
+            "grow": [
+              0.7,
+              1.7
+            ],
+            "hold": 0.25,
+            "fade_power": 1.4,
+            "wind_jitter_mps": 1.1,
+            "rise_mps": 3.0
+          },
+          "scar": {
+            "wreck_pieces": [
+              "fuselage",
+              "wing"
+            ],
+            "wreck_spread": 0.6,
+            "wreck_fill_role": "wreck.fill",
+            "wreck_char_role": "wreck.char",
+            "wreck_shade_role": "wreck.shade",
+            "wreck_scale": 1.35,
+            "radius_frac": 0.75,
+            "variants": 4.0,
+            "stretch": 1.35,
+            "dots_per_px2": 0.3,
+            "dot_px": 0.6,
+            "core_bias": 0.75,
+            "hatch": 14.0,
+            "hatch_weight": 0.9,
+            "crater": false,
+            "dot_role": "scar.dot",
+            "dot_soft_role": "scar.dot.soft",
+            "hatch_role": "ink.hatch",
+            "embers": 0.0,
+            "ember_life_s": 10.0,
+            "ember_spread_frac": 0.5
+          }
+        }
+      }
+    }
+  ],
+  "sheet": "board.png (every option, scaled), option_<X>.png (each at full size, with the palette row and the specimen strip)",
+  "chosen": null,
+  "chosen_by": null
+}

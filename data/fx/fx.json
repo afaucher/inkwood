@@ -1,0 +1,4183 @@
+{
+  "_about": "Effects data (Track X, scripts/fx/): damage smoke and the three-phase crash (mid-air explosion, out of control, ground impact). EVERY VALUE IS A PROPOSED VALUE RECORD {value, _proposed, _reason}, made 2026-10-09; none is a decision until Alex chooses from variants/damage-smoke/ and variants/crash-explosion/ and the choice is recorded in data/decisions/decisions.json. Decisions in force it obeys: particles are designed in style, FAST FLASHES WITH A VERY SLOW DECAY (Alex); everything is ink on parchment; shadow strength 0.44; pen 'shadow side'; a plane's shadow falls as if it flew at 1% of its altitude and its gap follows the drawn size.",
+  "accents": {
+    "_about": "The fire accent, PROPOSED, in OKLCH beside the two side accents of data/params/render_defaults.json (side_a oklch(0.551 0.100 30), side_b oklch(0.551 0.100 260), equal lightness and chroma, Alex). Fire is lighter and more chromatic than the sides, as a flash is: it appears only in the flash, the fireball and the embers, and everything that comes after it is ink, dirt and paper-light fill.",
+    "fire": {
+      "oklch": {
+        "value": [
+          0.72,
+          0.14,
+          56
+        ],
+        "_proposed": true,
+        "_reason": "an orange between the brick red (hue 30) and the paper's yellow (hue 90), hue 56; lightness 0.72 sits well above the sides' 0.551 and chroma 0.14 above their 0.100, so it reads as light, not as a team colour; inside the sRGB gamut"
+      }
+    }
+  },
+  "roles": {
+    "_about": "Every colour the effects draw, as a palette role (working rule 6; docs/proposals/palette-architecture.md). base is a colour of data/params/render_defaults.json (paper, ink, object_fill, wall_fill, rock_fill, roof_lit, dirt, shadow = the chosen tint, side_a, side_b) or `fire`, the effects' accent defined below; toward + t mixes toward another palette colour; shade names one of the palette's own shadow-mix fractions (roof_shaded_shadow_mix 0.42, wall_slope_shadow_mix 0.30) and mixes the shadow tint in by it; alpha is a number (the palette's alpha steps: stipple 0.55, rings 0.88, dirt 0.15-0.40) or the name of a render parameter. Resolved in the order toward, shade, alpha by scripts/fx/fx_style.gd. ALL PROPOSED (Track X, 2026-10-09).",
+    "ink": {
+      "base": "ink",
+      "_proposed": true,
+      "_reason": "the palette's ink exactly: the drawing layer's pen is applied to strokes of this colour"
+    },
+    "ink.soft": {
+      "base": "ink",
+      "alpha": 0.55,
+      "_proposed": true,
+      "_reason": "stipple: the palette's ink at alpha 0.55 (tree stipple)"
+    },
+    "ink.faint": {
+      "base": "ink",
+      "alpha": 0.4,
+      "_proposed": true,
+      "_reason": "ink at alpha 0.40, the dirt-stipple band's top (hatch is 0.50)"
+    },
+    "ink.hatch": {
+      "base": "ink",
+      "alpha": 0.5,
+      "_proposed": true,
+      "_reason": "short hatch strokes: ink at alpha 0.50 (palette alpha steps)"
+    },
+    "ink.ring": {
+      "base": "ink",
+      "alpha": 0.88,
+      "_proposed": true,
+      "_reason": "contour rings: ink at alpha 0.88 (the tree's inner rings)"
+    },
+    "dirt.soft": {
+      "base": "dirt",
+      "alpha": 0.4,
+      "_proposed": true,
+      "_reason": "dirt stipple at alpha 0.40, the top of the palette's dirt band (0.15-0.40)"
+    },
+    "dirt.faint": {
+      "base": "dirt",
+      "alpha": 0.15,
+      "_proposed": true,
+      "_reason": "dirt stipple at alpha 0.15, the bottom of the palette's dirt band"
+    },
+    "paper": {
+      "base": "paper",
+      "_proposed": true,
+      "_reason": "the paper itself"
+    },
+    "smoke.a.lit.0": {
+      "base": "object_fill",
+      "toward": "shadow",
+      "t": 0.16,
+      "_proposed": true,
+      "_reason": "thin smoke: the object fill a sixth of the way to the shadow tint, a pale cool neutral that is not tree cream"
+    },
+    "smoke.a.lit.1": {
+      "base": "object_fill",
+      "toward": "dirt",
+      "t": 0.25,
+      "_proposed": true,
+      "_reason": "medium smoke: the object fill a quarter of the way to the dirt ink, a warm grey"
+    },
+    "smoke.a.lit.2": {
+      "base": "object_fill",
+      "toward": "dirt",
+      "t": 0.5,
+      "_proposed": true,
+      "_reason": "heavy smoke: the object fill half way to the dirt ink; lighter than ink, darker than any building fill"
+    },
+    "smoke.a.shade.0": {
+      "base": "object_fill",
+      "toward": "shadow",
+      "t": 0.34,
+      "shade": "roof_shaded_shadow_mix",
+      "_proposed": true,
+      "_reason": "the underside: the lit fill a third of the way to the shadow tint and the roof-shaded share of it again, as a shaded roof"
+    },
+    "smoke.a.shade.1": {
+      "base": "object_fill",
+      "toward": "dirt",
+      "t": 0.42,
+      "shade": "roof_shaded_shadow_mix",
+      "_proposed": true,
+      "_reason": "the underside of the medium tone"
+    },
+    "smoke.a.shade.2": {
+      "base": "object_fill",
+      "toward": "dirt",
+      "t": 0.68,
+      "shade": "roof_shaded_shadow_mix",
+      "_proposed": true,
+      "_reason": "the underside of the heavy tone"
+    },
+    "smoke.b.underlay": {
+      "base": "object_fill",
+      "alpha": 0.42,
+      "_proposed": true,
+      "_reason": "a faint pale patch under the dots so the ground's own stipple does not read as smoke"
+    },
+    "smoke.c.fill.0": {
+      "base": "object_fill",
+      "alpha": 0.3,
+      "_proposed": true,
+      "_reason": "see-through: the object fill at a third of its strength"
+    },
+    "smoke.c.fill.1": {
+      "base": "object_fill",
+      "alpha": 0.45,
+      "_proposed": true,
+      "_reason": "see-through, a little more body"
+    },
+    "smoke.c.fill.2": {
+      "base": "object_fill",
+      "alpha": 0.6,
+      "_proposed": true,
+      "_reason": "see-through, most body"
+    },
+    "smoke.d.lit.0": {
+      "base": "ink",
+      "alpha": 0.14,
+      "_proposed": true,
+      "_reason": "an ink wash: ink at alpha 0.14"
+    },
+    "smoke.d.lit.1": {
+      "base": "ink",
+      "alpha": 0.28,
+      "_proposed": true,
+      "_reason": "an ink wash: ink at alpha 0.28"
+    },
+    "smoke.d.lit.2": {
+      "base": "ink",
+      "alpha": 0.46,
+      "_proposed": true,
+      "_reason": "an ink wash: ink at alpha 0.46"
+    },
+    "smoke.d.shade.0": {
+      "base": "ink",
+      "alpha": 0.26,
+      "_proposed": true,
+      "_reason": "the wash's underside, a step darker"
+    },
+    "smoke.d.shade.1": {
+      "base": "ink",
+      "alpha": 0.42,
+      "_proposed": true,
+      "_reason": "the wash's underside, a step darker"
+    },
+    "smoke.d.shade.2": {
+      "base": "ink",
+      "alpha": 0.62,
+      "_proposed": true,
+      "_reason": "the wash's underside, a step darker"
+    },
+    "fire": {
+      "base": "fire",
+      "_proposed": true,
+      "_reason": "the proposed fire accent itself (oklch 0.72 0.14 56)"
+    },
+    "fire.pale": {
+      "base": "fire",
+      "toward": "object_fill",
+      "t": 0.55,
+      "_proposed": true,
+      "_reason": "fire half way to the object fill: the hot edge cooling"
+    },
+    "fire.dim": {
+      "base": "fire",
+      "toward": "dirt",
+      "t": 0.45,
+      "_proposed": true,
+      "_reason": "fire cooling toward the dirt ink"
+    },
+    "fire.shade": {
+      "base": "fire",
+      "toward": "ink",
+      "t": 0.3,
+      "_proposed": true,
+      "_reason": "a fireball's underside: fire toward the ink"
+    },
+    "burst.core": {
+      "base": "object_fill",
+      "_proposed": true,
+      "_reason": "the white-hot core: the object fill, the palest colour on the map"
+    },
+    "burst.shard": {
+      "base": "object_fill",
+      "_proposed": true,
+      "_reason": "a broken piece of plane: the object fill with an ink outline"
+    },
+    "ink.dot": {
+      "base": "ink",
+      "alpha": 0.85,
+      "_proposed": true,
+      "_reason": "burst stipple: the palette's ink at alpha 0.85, heavier than the tree's 0.55 because a blast is the loudest mark on the map"
+    },
+    "ink.full": {
+      "base": "ink",
+      "_proposed": true,
+      "_reason": "hatch and rays at full ink; their strength is carried by the age curves"
+    },
+    "wreck.fill": {
+      "base": "wall_fill",
+      "toward": "dirt",
+      "t": 0.35,
+      "_proposed": true,
+      "_reason": "a piece of wreck: the wall fill, the plain building tone, a third of the way to the dirt ink (soot)"
+    },
+    "wreck.char": {
+      "base": "dirt",
+      "alpha": 0.9,
+      "_proposed": true,
+      "_reason": "burnt metal: the dirt ink"
+    },
+    "wreck.shade": {
+      "base": "ink",
+      "alpha": 0.3,
+      "_proposed": true,
+      "_reason": "the wreck's drop shadow on the burnt ground: ink at alpha 0.30"
+    },
+    "scar.dot": {
+      "base": "dirt",
+      "alpha": 0.4,
+      "_proposed": true,
+      "_reason": "burnt-ground stipple: dirt at alpha 0.40 (the art plan's terrain.burnt)"
+    },
+    "scar.dot.soft": {
+      "base": "ink",
+      "alpha": 0.15,
+      "_proposed": true,
+      "_reason": "the lighter burnt stipple: ink at alpha 0.15"
+    }
+  },
+  "common": {
+    "_about": "Numbers every effect shares.",
+    "max_puffs": {
+      "value": 600,
+      "_proposed": true,
+      "_reason": "the layer's cap on live puffs; the oldest go first (deterministically)"
+    },
+    "rebake_ratio": {
+      "value": 1.15,
+      "_proposed": true,
+      "_reason": "the baked sprites are re-baked when the plane's drawn px per metre has drifted past this ratio either way (the UI's unit_art.rebake_ratio)"
+    },
+    "min_bake_ppm": {
+      "value": 1.0,
+      "_proposed": true,
+      "_reason": "lowest drawn px per metre a bake is made at"
+    },
+    "max_bake_ppm": {
+      "value": 30.0,
+      "_proposed": true,
+      "_reason": "highest drawn px per metre a bake is made at"
+    },
+    "ref_plane_m": {
+      "value": 9.0,
+      "_proposed": true,
+      "_reason": "the light fighter's size_m: effects are sized by the plane's size_m over this"
+    },
+    "size_exp": {
+      "value": 0.75,
+      "_proposed": true,
+      "_reason": "how fast a burst grows with the plane's size: (size_m / ref_plane_m) ^ this, so a 20 m bomber's blast is bigger but not 2.2 times"
+    },
+    "ppm_step": {
+      "value": 0.25,
+      "_proposed": true,
+      "_reason": "a bake's px-per-metre is rounded to a multiple of this, so a slow zoom does not bake every frame"
+    },
+    "min_shadow_px": {
+      "value": 1.5,
+      "_proposed": true,
+      "_reason": "a shadow whose offset is smaller than this many px is not drawn (it would hide under its puff)"
+    }
+  },
+  "working_default": {
+    "_about": "The option each effect runs until Alex chooses (so the layer has something to draw). NOT A DECISION.",
+    "smoke": {
+      "value": "A",
+      "_proposed": true,
+      "_reason": "the art plan's proposed treatment, as a working default only"
+    },
+    "crash": {
+      "value": "A",
+      "_proposed": true,
+      "_reason": "the art plan's proposed treatment (stipple burst plus hatch strokes with a fire accent), as a working default only"
+    }
+  },
+  "smoke": {
+    "_about": "Damage smoke (Alex 2026-10-09: 'damage smoke and crash explosions'). A damaged plane trails puffs along its flight path; they stay in the world at the plane's altitude, drift, and fade slowly over turns. Four proposed options for Alex's board (variants/damage-smoke/); NONE IS CHOSEN. Intensity = floor + (1 - floor) x (1 - health fraction), none at full health.",
+    "options": {
+      "A": {
+        "form": {
+          "value": "lobed",
+          "_proposed": true,
+          "_reason": "lobes built like the tree generator's: scallop outline, fill, rings"
+        },
+        "variants": {
+          "value": 4,
+          "_proposed": true,
+          "_reason": "baked puffs per tone; a trail picks among them so no two neighbours repeat"
+        },
+        "radius_frac": {
+          "value": [
+            0.26,
+            0.62
+          ],
+          "_proposed": true,
+          "_reason": "puff radius as a fraction of the plane's size_m at intensity 0 and 1 (a 9 m fighter: 1.8 to 4.5 m): drawn at the plane's own scale like the plane"
+        },
+        "interval_s": {
+          "value": [
+            0.3,
+            0.07
+          ],
+          "_proposed": true,
+          "_reason": "seconds between puffs at intensity 0 and 1; at 100 m/s a puff every 40 m (a wisp) to every 10 m (a solid trail)"
+        },
+        "life_s": {
+          "value": [
+            24,
+            40
+          ],
+          "_proposed": true,
+          "_reason": "seconds a puff lasts at intensity 0 and 1: about 5 turns for a wisp, 8 for a heavy trail ('slow decay over turns', Alex's fast flash / very slow decay)"
+        },
+        "grow": {
+          "value": [
+            0.85,
+            1.6
+          ],
+          "_proposed": true,
+          "_reason": "scale at birth and at death: the puff swells as it hangs"
+        },
+        "grow_tau": {
+          "value": 0.2,
+          "_proposed": true,
+          "_reason": "how fast it swells, as a share of its life: it takes most of its growth in the first fifth"
+        },
+        "hold": {
+          "value": 0.15,
+          "_proposed": true,
+          "_reason": "share of the life at full strength before the slow fade starts"
+        },
+        "fade_power": {
+          "value": 1.6,
+          "_proposed": true,
+          "_reason": "how the fade bends: above 1 it lingers, then goes"
+        },
+        "alpha_steps": {
+          "value": [],
+          "_proposed": true,
+          "_reason": "empty: the fade is continuous; a list: the fade in those alpha steps only"
+        },
+        "intensity_floor": {
+          "value": 0.3,
+          "_proposed": true,
+          "_reason": "the first lost pip already shows a thin trail; the last pip a heavy one"
+        },
+        "tone_edges": {
+          "value": [
+            0.45,
+            0.78
+          ],
+          "_proposed": true,
+          "_reason": "intensity at which the puff steps to the middle and to the heavy tone"
+        },
+        "wind_mps": {
+          "value": [
+            2.5,
+            1.0
+          ],
+          "_proposed": true,
+          "_reason": "a steady drift in world metres per second (x east, y south): smoke drifts a little"
+        },
+        "wind_jitter_mps": {
+          "value": 0.6,
+          "_proposed": true,
+          "_reason": "per-puff spread of that drift, so a trail does not slide as one sheet"
+        },
+        "ground_shadow": {
+          "value": true,
+          "_proposed": true,
+          "_reason": "whether a puff casts a shadow on the ground by the altitude rule (1% of its height, away from the sun)"
+        },
+        "tail_frac": {
+          "value": 0.35,
+          "_proposed": true,
+          "_reason": "where the smoke leaves the plane, as a share of its size behind its centre"
+        },
+        "lobes_min": {
+          "value": 4,
+          "_proposed": true,
+          "_reason": "outer lobes round the centre (the tree has 3-7)"
+        },
+        "lobes_max": {
+          "value": 6,
+          "_proposed": true,
+          "_reason": "outer lobes round the centre"
+        },
+        "lobe_d": {
+          "value": 0.36,
+          "_proposed": true,
+          "_reason": "lobe offset from the centre, as a share of the puff radius (the tree's 0.36)"
+        },
+        "lobe_d_var": {
+          "value": 0.14,
+          "_proposed": true,
+          "_reason": "random addition to that (the tree's 0.14)"
+        },
+        "lobe_r": {
+          "value": 0.34,
+          "_proposed": true,
+          "_reason": "lobe radius as a share of the puff radius (the tree's 0.34)"
+        },
+        "lobe_r_var": {
+          "value": 0.18,
+          "_proposed": true,
+          "_reason": "random addition to that (the tree's 0.16)"
+        },
+        "crown_r": {
+          "value": 0.52,
+          "_proposed": true,
+          "_reason": "the crown lobe on top (the tree's 0.48)"
+        },
+        "lobe_amp": {
+          "value": 0.07,
+          "_proposed": true,
+          "_reason": "cusp depth of a lobe's scallop: softer than a tree's 0.13, so smoke is rounder than foliage"
+        },
+        "lobe_amp_var": {
+          "value": 0.07,
+          "_proposed": true,
+          "_reason": "random addition to the cusp depth"
+        },
+        "scallop_base": {
+          "value": 3.5,
+          "_proposed": true,
+          "_reason": "scallops round a lobe = max(5, round(base + R / div)); the tree's is 4.5 + R/3"
+        },
+        "scallop_div": {
+          "value": 4.0,
+          "_proposed": true,
+          "_reason": "see scallop_base"
+        },
+        "outline_weight_of": {
+          "value": "tree_outline",
+          "_proposed": true,
+          "_reason": "the render_defaults linework multiplier the outline takes: the tree's outline weight"
+        },
+        "outline_scale": {
+          "value": 1.0,
+          "_proposed": true,
+          "_reason": "extra multiplier on that weight"
+        },
+        "outline_ref_px": {
+          "value": 14,
+          "_proposed": true,
+          "_reason": "a puff of this radius (px) takes the full outline weight; a smaller one takes proportionally less, so a tiny puff is not all outline"
+        },
+        "outline_min_scale": {
+          "value": 0.55,
+          "_proposed": true,
+          "_reason": "the least a small puff's outline weight is scaled to"
+        },
+        "outline_role": {
+          "value": "ink",
+          "_proposed": true,
+          "_reason": "the outline colour role"
+        },
+        "outline_union": {
+          "value": false,
+          "_proposed": true,
+          "_reason": "wash form only: one outline round the merged silhouette instead of every lobe's"
+        },
+        "underside": {
+          "value": true,
+          "_proposed": true,
+          "_reason": "a shadow-tint underside on the side away from the light (the proposed treatment)"
+        },
+        "lit_shift": {
+          "value": 0.16,
+          "_proposed": true,
+          "_reason": "the lit part's offset toward the light as a share of the lobe radius; the crescent left is the underside"
+        },
+        "lit_roles": {
+          "value": [
+            "smoke.a.lit.0",
+            "smoke.a.lit.1",
+            "smoke.a.lit.2"
+          ],
+          "_proposed": true,
+          "_reason": "fill roles by tone"
+        },
+        "shade_roles": {
+          "value": [
+            "smoke.a.shade.0",
+            "smoke.a.shade.1",
+            "smoke.a.shade.2"
+          ],
+          "_proposed": true,
+          "_reason": "underside roles by tone"
+        },
+        "ticks": {
+          "value": true,
+          "_proposed": true,
+          "_reason": "short cusp ticks toward the centre, as on a tree"
+        },
+        "stipple_per_r": {
+          "value": 0.5,
+          "_proposed": true,
+          "_reason": "stipple dots on the shadow side per px of lobe radius (the tree's 0.6)"
+        },
+        "stipple_role": {
+          "value": "ink.soft",
+          "_proposed": true,
+          "_reason": "stipple colour role"
+        },
+        "rings": {
+          "value": 0,
+          "_proposed": true,
+          "_reason": "nested broken contour rings per lobe (the tree has 3)"
+        },
+        "ring_role": {
+          "value": "ink.ring",
+          "_proposed": true,
+          "_reason": "ring colour role"
+        },
+        "_label": "Lobed puffs",
+        "_note": "The art plan's proposed treatment: puffs built like the tree generator's lobes, a paper-light fill, an ink scallop outline, a shadow-tint underside. Three tones climb toward the dirt ink as health falls. Casts a ground shadow."
+      },
+      "B": {
+        "form": {
+          "value": "stipple",
+          "_proposed": true,
+          "_reason": "ink dots and short hatch strokes only; no fill, no outline"
+        },
+        "variants": {
+          "value": 4,
+          "_proposed": true,
+          "_reason": "baked puffs per tone; a trail picks among them so no two neighbours repeat"
+        },
+        "radius_frac": {
+          "value": [
+            0.34,
+            0.8
+          ],
+          "_proposed": true,
+          "_reason": "puff radius as a fraction of the plane's size_m at intensity 0 and 1 (a 9 m fighter: 1.8 to 4.5 m): drawn at the plane's own scale like the plane; wider than the lobed puff because a dot cloud needs room"
+        },
+        "interval_s": {
+          "value": [
+            0.3,
+            0.07
+          ],
+          "_proposed": true,
+          "_reason": "seconds between puffs at intensity 0 and 1; at 100 m/s a puff every 40 m (a wisp) to every 10 m (a solid trail)"
+        },
+        "life_s": {
+          "value": [
+            24,
+            40
+          ],
+          "_proposed": true,
+          "_reason": "seconds a puff lasts at intensity 0 and 1: about 5 turns for a wisp, 8 for a heavy trail ('slow decay over turns', Alex's fast flash / very slow decay)"
+        },
+        "grow": {
+          "value": [
+            0.85,
+            1.6
+          ],
+          "_proposed": true,
+          "_reason": "scale at birth and at death: the puff swells as it hangs"
+        },
+        "grow_tau": {
+          "value": 0.2,
+          "_proposed": true,
+          "_reason": "how fast it swells, as a share of its life: it takes most of its growth in the first fifth"
+        },
+        "hold": {
+          "value": 0.15,
+          "_proposed": true,
+          "_reason": "share of the life at full strength before the slow fade starts"
+        },
+        "fade_power": {
+          "value": 1.6,
+          "_proposed": true,
+          "_reason": "how the fade bends: above 1 it lingers, then goes"
+        },
+        "alpha_steps": {
+          "value": [
+            1.0,
+            0.55,
+            0.3,
+            0.15
+          ],
+          "_proposed": true,
+          "_reason": "the fade in the palette's alpha steps (1, stipple 0.55, 0.30, dirt 0.15): ink fades in whole steps, not as a smooth wash"
+        },
+        "intensity_floor": {
+          "value": 0.3,
+          "_proposed": true,
+          "_reason": "the first lost pip already shows a thin trail; the last pip a heavy one"
+        },
+        "tone_edges": {
+          "value": [
+            0.45,
+            0.78
+          ],
+          "_proposed": true,
+          "_reason": "intensity at which the puff steps to the middle and to the heavy tone"
+        },
+        "wind_mps": {
+          "value": [
+            2.5,
+            1.0
+          ],
+          "_proposed": true,
+          "_reason": "a steady drift in world metres per second (x east, y south): smoke drifts a little"
+        },
+        "wind_jitter_mps": {
+          "value": 0.6,
+          "_proposed": true,
+          "_reason": "per-puff spread of that drift, so a trail does not slide as one sheet"
+        },
+        "ground_shadow": {
+          "value": false,
+          "_proposed": true,
+          "_reason": "a dot cloud casts no shadow: no ground shadow"
+        },
+        "tail_frac": {
+          "value": 0.35,
+          "_proposed": true,
+          "_reason": "where the smoke leaves the plane, as a share of its size behind its centre"
+        },
+        "lobes_min": {
+          "value": 4,
+          "_proposed": true,
+          "_reason": "outer lobes round the centre (the tree has 3-7)"
+        },
+        "lobes_max": {
+          "value": 6,
+          "_proposed": true,
+          "_reason": "outer lobes round the centre"
+        },
+        "lobe_d": {
+          "value": 0.36,
+          "_proposed": true,
+          "_reason": "lobe offset from the centre, as a share of the puff radius (the tree's 0.36)"
+        },
+        "lobe_d_var": {
+          "value": 0.14,
+          "_proposed": true,
+          "_reason": "random addition to that (the tree's 0.14)"
+        },
+        "lobe_r": {
+          "value": 0.34,
+          "_proposed": true,
+          "_reason": "lobe radius as a share of the puff radius (the tree's 0.34)"
+        },
+        "lobe_r_var": {
+          "value": 0.18,
+          "_proposed": true,
+          "_reason": "random addition to that (the tree's 0.16)"
+        },
+        "crown_r": {
+          "value": 0.52,
+          "_proposed": true,
+          "_reason": "the crown lobe on top (the tree's 0.48)"
+        },
+        "lobe_amp": {
+          "value": 0.07,
+          "_proposed": true,
+          "_reason": "cusp depth of a lobe's scallop: softer than a tree's 0.13, so smoke is rounder than foliage"
+        },
+        "lobe_amp_var": {
+          "value": 0.07,
+          "_proposed": true,
+          "_reason": "random addition to the cusp depth"
+        },
+        "scallop_base": {
+          "value": 3.5,
+          "_proposed": true,
+          "_reason": "scallops round a lobe = max(5, round(base + R / div)); the tree's is 4.5 + R/3"
+        },
+        "scallop_div": {
+          "value": 4.0,
+          "_proposed": true,
+          "_reason": "see scallop_base"
+        },
+        "outline_weight_of": {
+          "value": "tree_outline",
+          "_proposed": true,
+          "_reason": "the render_defaults linework multiplier the outline takes: the tree's outline weight"
+        },
+        "outline_scale": {
+          "value": 1.0,
+          "_proposed": true,
+          "_reason": "extra multiplier on that weight"
+        },
+        "outline_ref_px": {
+          "value": 14,
+          "_proposed": true,
+          "_reason": "a puff of this radius (px) takes the full outline weight; a smaller one takes proportionally less, so a tiny puff is not all outline"
+        },
+        "outline_min_scale": {
+          "value": 0.55,
+          "_proposed": true,
+          "_reason": "the least a small puff's outline weight is scaled to"
+        },
+        "outline_role": {
+          "value": "ink",
+          "_proposed": true,
+          "_reason": "the outline colour role"
+        },
+        "outline_union": {
+          "value": false,
+          "_proposed": true,
+          "_reason": "wash form only: one outline round the merged silhouette instead of every lobe's"
+        },
+        "underside": {
+          "value": true,
+          "_proposed": true,
+          "_reason": "a shadow-tint underside on the side away from the light (the proposed treatment)"
+        },
+        "lit_shift": {
+          "value": 0.16,
+          "_proposed": true,
+          "_reason": "the lit part's offset toward the light as a share of the lobe radius; the crescent left is the underside"
+        },
+        "lit_roles": {
+          "value": [
+            "smoke.a.lit.0",
+            "smoke.a.lit.1",
+            "smoke.a.lit.2"
+          ],
+          "_proposed": true,
+          "_reason": "fill roles by tone"
+        },
+        "shade_roles": {
+          "value": [
+            "smoke.a.shade.0",
+            "smoke.a.shade.1",
+            "smoke.a.shade.2"
+          ],
+          "_proposed": true,
+          "_reason": "underside roles by tone"
+        },
+        "ticks": {
+          "value": true,
+          "_proposed": true,
+          "_reason": "short cusp ticks toward the centre, as on a tree"
+        },
+        "stipple_per_r": {
+          "value": 0.5,
+          "_proposed": true,
+          "_reason": "stipple dots on the shadow side per px of lobe radius (the tree's 0.6)"
+        },
+        "stipple_role": {
+          "value": "ink.soft",
+          "_proposed": true,
+          "_reason": "stipple colour role"
+        },
+        "rings": {
+          "value": 0,
+          "_proposed": true,
+          "_reason": "nested broken contour rings per lobe (the tree has 3)"
+        },
+        "ring_role": {
+          "value": "ink.ring",
+          "_proposed": true,
+          "_reason": "ring colour role"
+        },
+        "underlay_role": {
+          "value": "smoke.b.underlay",
+          "_proposed": true,
+          "_reason": "the faint pale patch under the dots"
+        },
+        "patch_r": {
+          "value": 0.8,
+          "_proposed": true,
+          "_reason": "the patch's radius as a share of the puff radius"
+        },
+        "core_bias": {
+          "value": 0.8,
+          "_proposed": true,
+          "_reason": "dot radius = r x random ^ this: below 1 the dots gather toward the middle (1 would be even by distance, 0.5 even by area)"
+        },
+        "dots_per_px2": {
+          "value": [
+            0.07,
+            0.13,
+            0.22
+          ],
+          "_proposed": true,
+          "_reason": "dots per square px by tone: how dense the cloud is"
+        },
+        "dot_px": {
+          "value": 0.6,
+          "_proposed": true,
+          "_reason": "dot radius in px: the nib is a constant size, only the count changes"
+        },
+        "dot_role": {
+          "value": "ink.soft",
+          "_proposed": true,
+          "_reason": "dot colour role (stipple alpha 0.55)"
+        },
+        "dot_soft_role": {
+          "value": "dirt.soft",
+          "_proposed": true,
+          "_reason": "the lighter dots (dirt at 0.40) mixed in"
+        },
+        "shadow_bias": {
+          "value": 0.7,
+          "_proposed": true,
+          "_reason": "how strongly the dots gather on the side away from the light, 0 even .. 1 one-sided"
+        },
+        "hatch_count": {
+          "value": [
+            2,
+            4,
+            7
+          ],
+          "_proposed": true,
+          "_reason": "short hatch strokes by tone"
+        },
+        "hatch_role": {
+          "value": "ink.hatch",
+          "_proposed": true,
+          "_reason": "hatch colour role (hatch alpha 0.50)"
+        },
+        "hatch_weight": {
+          "value": 0.75,
+          "_proposed": true,
+          "_reason": "hatch line weight multiplier (the cusp ticks' 0.75)"
+        },
+        "_label": "Stipple plume",
+        "_note": "No fill and no outline: ink dots, thicker on the shadow side, and short hatch strokes over a faint pale patch. Denser as health falls. Fades in whole alpha steps. No ground shadow."
+      },
+      "C": {
+        "form": {
+          "value": "lobed",
+          "_proposed": true,
+          "_reason": "lobes built like the tree generator's: scallop outline, fill, rings"
+        },
+        "variants": {
+          "value": 4,
+          "_proposed": true,
+          "_reason": "baked puffs per tone; a trail picks among them so no two neighbours repeat"
+        },
+        "radius_frac": {
+          "value": [
+            0.28,
+            0.66
+          ],
+          "_proposed": true,
+          "_reason": "puff radius as a fraction of the plane's size_m at intensity 0 and 1 (a 9 m fighter: 1.8 to 4.5 m): drawn at the plane's own scale like the plane"
+        },
+        "interval_s": {
+          "value": [
+            0.3,
+            0.07
+          ],
+          "_proposed": true,
+          "_reason": "seconds between puffs at intensity 0 and 1; at 100 m/s a puff every 40 m (a wisp) to every 10 m (a solid trail)"
+        },
+        "life_s": {
+          "value": [
+            24,
+            40
+          ],
+          "_proposed": true,
+          "_reason": "seconds a puff lasts at intensity 0 and 1: about 5 turns for a wisp, 8 for a heavy trail ('slow decay over turns', Alex's fast flash / very slow decay)"
+        },
+        "grow": {
+          "value": [
+            0.85,
+            1.6
+          ],
+          "_proposed": true,
+          "_reason": "scale at birth and at death: the puff swells as it hangs"
+        },
+        "grow_tau": {
+          "value": 0.2,
+          "_proposed": true,
+          "_reason": "how fast it swells, as a share of its life: it takes most of its growth in the first fifth"
+        },
+        "hold": {
+          "value": 0.15,
+          "_proposed": true,
+          "_reason": "share of the life at full strength before the slow fade starts"
+        },
+        "fade_power": {
+          "value": 1.6,
+          "_proposed": true,
+          "_reason": "how the fade bends: above 1 it lingers, then goes"
+        },
+        "alpha_steps": {
+          "value": [],
+          "_proposed": true,
+          "_reason": "empty: the fade is continuous; a list: the fade in those alpha steps only"
+        },
+        "intensity_floor": {
+          "value": 0.3,
+          "_proposed": true,
+          "_reason": "the first lost pip already shows a thin trail; the last pip a heavy one"
+        },
+        "tone_edges": {
+          "value": [
+            0.45,
+            0.78
+          ],
+          "_proposed": true,
+          "_reason": "intensity at which the puff steps to the middle and to the heavy tone"
+        },
+        "wind_mps": {
+          "value": [
+            2.5,
+            1.0
+          ],
+          "_proposed": true,
+          "_reason": "a steady drift in world metres per second (x east, y south): smoke drifts a little"
+        },
+        "wind_jitter_mps": {
+          "value": 0.6,
+          "_proposed": true,
+          "_reason": "per-puff spread of that drift, so a trail does not slide as one sheet"
+        },
+        "ground_shadow": {
+          "value": false,
+          "_proposed": true,
+          "_reason": "see-through smoke casts no shadow"
+        },
+        "tail_frac": {
+          "value": 0.35,
+          "_proposed": true,
+          "_reason": "where the smoke leaves the plane, as a share of its size behind its centre"
+        },
+        "lobes_min": {
+          "value": 4,
+          "_proposed": true,
+          "_reason": "outer lobes round the centre (the tree has 3-7)"
+        },
+        "lobes_max": {
+          "value": 6,
+          "_proposed": true,
+          "_reason": "outer lobes round the centre"
+        },
+        "lobe_d": {
+          "value": 0.36,
+          "_proposed": true,
+          "_reason": "lobe offset from the centre, as a share of the puff radius (the tree's 0.36)"
+        },
+        "lobe_d_var": {
+          "value": 0.14,
+          "_proposed": true,
+          "_reason": "random addition to that (the tree's 0.14)"
+        },
+        "lobe_r": {
+          "value": 0.34,
+          "_proposed": true,
+          "_reason": "lobe radius as a share of the puff radius (the tree's 0.34)"
+        },
+        "lobe_r_var": {
+          "value": 0.18,
+          "_proposed": true,
+          "_reason": "random addition to that (the tree's 0.16)"
+        },
+        "crown_r": {
+          "value": 0.52,
+          "_proposed": true,
+          "_reason": "the crown lobe on top (the tree's 0.48)"
+        },
+        "lobe_amp": {
+          "value": 0.07,
+          "_proposed": true,
+          "_reason": "cusp depth of a lobe's scallop: softer than a tree's 0.13, so smoke is rounder than foliage"
+        },
+        "lobe_amp_var": {
+          "value": 0.07,
+          "_proposed": true,
+          "_reason": "random addition to the cusp depth"
+        },
+        "scallop_base": {
+          "value": 3.5,
+          "_proposed": true,
+          "_reason": "scallops round a lobe = max(5, round(base + R / div)); the tree's is 4.5 + R/3"
+        },
+        "scallop_div": {
+          "value": 4.0,
+          "_proposed": true,
+          "_reason": "see scallop_base"
+        },
+        "outline_weight_of": {
+          "value": "tree_outline",
+          "_proposed": true,
+          "_reason": "the render_defaults linework multiplier the outline takes: the tree's outline weight"
+        },
+        "outline_scale": {
+          "value": 0.85,
+          "_proposed": true,
+          "_reason": "a lighter outline than a tree's: the rings carry the form"
+        },
+        "outline_ref_px": {
+          "value": 14,
+          "_proposed": true,
+          "_reason": "a puff of this radius (px) takes the full outline weight; a smaller one takes proportionally less, so a tiny puff is not all outline"
+        },
+        "outline_min_scale": {
+          "value": 0.55,
+          "_proposed": true,
+          "_reason": "the least a small puff's outline weight is scaled to"
+        },
+        "outline_role": {
+          "value": "ink",
+          "_proposed": true,
+          "_reason": "the outline colour role"
+        },
+        "outline_union": {
+          "value": false,
+          "_proposed": true,
+          "_reason": "wash form only: one outline round the merged silhouette instead of every lobe's"
+        },
+        "underside": {
+          "value": false,
+          "_proposed": true,
+          "_reason": "no underside: the puff is see-through"
+        },
+        "lit_shift": {
+          "value": 0.16,
+          "_proposed": true,
+          "_reason": "the lit part's offset toward the light as a share of the lobe radius; the crescent left is the underside"
+        },
+        "lit_roles": {
+          "value": [
+            "smoke.c.fill.0",
+            "smoke.c.fill.1",
+            "smoke.c.fill.2"
+          ],
+          "_proposed": true,
+          "_reason": "see-through fill roles by tone"
+        },
+        "shade_roles": {
+          "value": [
+            "smoke.c.fill.0",
+            "smoke.c.fill.1",
+            "smoke.c.fill.2"
+          ],
+          "_proposed": true,
+          "_reason": "unused: this option has no underside"
+        },
+        "ticks": {
+          "value": true,
+          "_proposed": true,
+          "_reason": "cusp ticks"
+        },
+        "stipple_per_r": {
+          "value": 0.0,
+          "_proposed": true,
+          "_reason": "no stipple"
+        },
+        "stipple_role": {
+          "value": "ink.soft",
+          "_proposed": true,
+          "_reason": "stipple colour role"
+        },
+        "rings": {
+          "value": 2,
+          "_proposed": true,
+          "_reason": "two nested broken rings per lobe (the tree has 3)"
+        },
+        "ring_role": {
+          "value": "ink.ring",
+          "_proposed": true,
+          "_reason": "ring colour role"
+        },
+        "_label": "Contour rings",
+        "_note": "See-through smoke: a thin scalloped outline, two broken contour rings per lobe (the tree's floret rings) and a faint pale wash; the map shows through. More body as health falls. No ground shadow."
+      },
+      "D": {
+        "form": {
+          "value": "wash",
+          "_proposed": true,
+          "_reason": "lobes washed with the ink at the palette's alpha steps"
+        },
+        "variants": {
+          "value": 4,
+          "_proposed": true,
+          "_reason": "baked puffs per tone; a trail picks among them so no two neighbours repeat"
+        },
+        "radius_frac": {
+          "value": [
+            0.26,
+            0.62
+          ],
+          "_proposed": true,
+          "_reason": "puff radius as a fraction of the plane's size_m at intensity 0 and 1 (a 9 m fighter: 1.8 to 4.5 m): drawn at the plane's own scale like the plane"
+        },
+        "interval_s": {
+          "value": [
+            0.3,
+            0.07
+          ],
+          "_proposed": true,
+          "_reason": "seconds between puffs at intensity 0 and 1; at 100 m/s a puff every 40 m (a wisp) to every 10 m (a solid trail)"
+        },
+        "life_s": {
+          "value": [
+            24,
+            40
+          ],
+          "_proposed": true,
+          "_reason": "seconds a puff lasts at intensity 0 and 1: about 5 turns for a wisp, 8 for a heavy trail ('slow decay over turns', Alex's fast flash / very slow decay)"
+        },
+        "grow": {
+          "value": [
+            0.85,
+            1.6
+          ],
+          "_proposed": true,
+          "_reason": "scale at birth and at death: the puff swells as it hangs"
+        },
+        "grow_tau": {
+          "value": 0.2,
+          "_proposed": true,
+          "_reason": "how fast it swells, as a share of its life: it takes most of its growth in the first fifth"
+        },
+        "hold": {
+          "value": 0.15,
+          "_proposed": true,
+          "_reason": "share of the life at full strength before the slow fade starts"
+        },
+        "fade_power": {
+          "value": 1.6,
+          "_proposed": true,
+          "_reason": "how the fade bends: above 1 it lingers, then goes"
+        },
+        "alpha_steps": {
+          "value": [],
+          "_proposed": true,
+          "_reason": "empty: the fade is continuous; a list: the fade in those alpha steps only"
+        },
+        "intensity_floor": {
+          "value": 0.3,
+          "_proposed": true,
+          "_reason": "the first lost pip already shows a thin trail; the last pip a heavy one"
+        },
+        "tone_edges": {
+          "value": [
+            0.45,
+            0.78
+          ],
+          "_proposed": true,
+          "_reason": "intensity at which the puff steps to the middle and to the heavy tone"
+        },
+        "wind_mps": {
+          "value": [
+            2.5,
+            1.0
+          ],
+          "_proposed": true,
+          "_reason": "a steady drift in world metres per second (x east, y south): smoke drifts a little"
+        },
+        "wind_jitter_mps": {
+          "value": 0.6,
+          "_proposed": true,
+          "_reason": "per-puff spread of that drift, so a trail does not slide as one sheet"
+        },
+        "ground_shadow": {
+          "value": true,
+          "_proposed": true,
+          "_reason": "dark smoke is dense: it casts the ground shadow"
+        },
+        "tail_frac": {
+          "value": 0.35,
+          "_proposed": true,
+          "_reason": "where the smoke leaves the plane, as a share of its size behind its centre"
+        },
+        "lobes_min": {
+          "value": 4,
+          "_proposed": true,
+          "_reason": "outer lobes round the centre (the tree has 3-7)"
+        },
+        "lobes_max": {
+          "value": 6,
+          "_proposed": true,
+          "_reason": "outer lobes round the centre"
+        },
+        "lobe_d": {
+          "value": 0.36,
+          "_proposed": true,
+          "_reason": "lobe offset from the centre, as a share of the puff radius (the tree's 0.36)"
+        },
+        "lobe_d_var": {
+          "value": 0.14,
+          "_proposed": true,
+          "_reason": "random addition to that (the tree's 0.14)"
+        },
+        "lobe_r": {
+          "value": 0.34,
+          "_proposed": true,
+          "_reason": "lobe radius as a share of the puff radius (the tree's 0.34)"
+        },
+        "lobe_r_var": {
+          "value": 0.18,
+          "_proposed": true,
+          "_reason": "random addition to that (the tree's 0.16)"
+        },
+        "crown_r": {
+          "value": 0.52,
+          "_proposed": true,
+          "_reason": "the crown lobe on top (the tree's 0.48)"
+        },
+        "lobe_amp": {
+          "value": 0.07,
+          "_proposed": true,
+          "_reason": "cusp depth of a lobe's scallop: softer than a tree's 0.13, so smoke is rounder than foliage"
+        },
+        "lobe_amp_var": {
+          "value": 0.07,
+          "_proposed": true,
+          "_reason": "random addition to the cusp depth"
+        },
+        "scallop_base": {
+          "value": 3.5,
+          "_proposed": true,
+          "_reason": "scallops round a lobe = max(5, round(base + R / div)); the tree's is 4.5 + R/3"
+        },
+        "scallop_div": {
+          "value": 4.0,
+          "_proposed": true,
+          "_reason": "see scallop_base"
+        },
+        "outline_weight_of": {
+          "value": "tree_outline",
+          "_proposed": true,
+          "_reason": "the render_defaults linework multiplier the outline takes: the tree's outline weight"
+        },
+        "outline_scale": {
+          "value": 1.0,
+          "_proposed": true,
+          "_reason": "extra multiplier on that weight"
+        },
+        "outline_ref_px": {
+          "value": 14,
+          "_proposed": true,
+          "_reason": "a puff of this radius (px) takes the full outline weight; a smaller one takes proportionally less, so a tiny puff is not all outline"
+        },
+        "outline_min_scale": {
+          "value": 0.55,
+          "_proposed": true,
+          "_reason": "the least a small puff's outline weight is scaled to"
+        },
+        "outline_role": {
+          "value": "ink",
+          "_proposed": true,
+          "_reason": "the outline colour role"
+        },
+        "outline_union": {
+          "value": true,
+          "_proposed": true,
+          "_reason": "one clean outline round the washed silhouette"
+        },
+        "underside": {
+          "value": true,
+          "_proposed": true,
+          "_reason": "a darker underside in the wash"
+        },
+        "lit_shift": {
+          "value": 0.16,
+          "_proposed": true,
+          "_reason": "the lit part's offset toward the light as a share of the lobe radius; the crescent left is the underside"
+        },
+        "lit_roles": {
+          "value": [
+            "smoke.d.lit.0",
+            "smoke.d.lit.1",
+            "smoke.d.lit.2"
+          ],
+          "_proposed": true,
+          "_reason": "ink wash roles by tone"
+        },
+        "shade_roles": {
+          "value": [
+            "smoke.d.shade.0",
+            "smoke.d.shade.1",
+            "smoke.d.shade.2"
+          ],
+          "_proposed": true,
+          "_reason": "the wash's darker underside by tone"
+        },
+        "ticks": {
+          "value": false,
+          "_proposed": true,
+          "_reason": "no cusp ticks: the washed silhouette is outlined once"
+        },
+        "stipple_per_r": {
+          "value": 0.35,
+          "_proposed": true,
+          "_reason": "stipple dots, fewer than the lobed puff"
+        },
+        "stipple_role": {
+          "value": "ink.soft",
+          "_proposed": true,
+          "_reason": "stipple colour role"
+        },
+        "rings": {
+          "value": 0,
+          "_proposed": true,
+          "_reason": "nested broken contour rings per lobe (the tree has 3)"
+        },
+        "ring_role": {
+          "value": "ink.ring",
+          "_proposed": true,
+          "_reason": "ring colour role"
+        },
+        "_label": "Ink wash",
+        "_note": "Lobes washed with the ink itself at the palette's alpha steps (0.14, 0.28, 0.46), an ink scallop outline: the heavy trail reads dark from far off. Casts a ground shadow."
+      }
+    }
+  },
+  "crash": {
+    "_about": "The crash in three phases (Alex 2026-10-09: 'Dead planes should either explode mid air or lose control by players and crash eventually'). The sim rolls a downed plane's fate: EXPLODED (down event, fate exploded: a burst at the plane's altitude, debris, smoke left in the sky) or OUT_OF_CONTROL (the sim flies a descending spiral over turns, then a crash event: a burst on the ground, a plume, a scar). The fall's path and height come from World.sample; the effects draw what rides on it: trail smoke, flame, embers, and the shadow gap closing on the plane's own shadow (the marker layer's). Four proposed options, each one consistent treatment of all three phases, for Alex's board (variants/crash-explosion/); NONE IS CHOSEN.",
+    "options": {
+      "A": {
+        "_label": "Stipple burst",
+        "_note": "The art plan's proposed treatment throughout. Mid-air: a fire disc with a cream core, short radial hatch and flung ink stipple, then lobed smoke left in the sky; pieces fall with shadows closing on them. Out of control: a heavy lobed trail and a small flame, embers shed. Impact: the same burst with a ring of dust dots, a billow, then a wreck (fuselage, wings, engine, tail on dirt-stipple scorch with ink hatch) that keeps smoking for about twelve turns: a lobed column thinning from heavy grey to a wisp, a few embers glowing on the scar.",
+        "burst": {
+          "form": {
+            "value": "stipple",
+            "_proposed": true,
+            "_reason": "the art plan's proposed procedural form: a stipple burst plus short hatch strokes with a fire accent"
+          },
+          "frames_s": {
+            "value": [
+              0.0,
+              0.05,
+              0.1,
+              0.18,
+              0.3,
+              0.5,
+              0.8,
+              1.3,
+              2.2,
+              3.5,
+              5.0,
+              7.5
+            ],
+            "_proposed": true,
+            "_reason": "the flipbook's frames, seconds after the flash: dense in the first half second (a FAST flash), then sparse out to the end (a VERY SLOW decay)"
+          },
+          "end_s": {
+            "value": 10.0,
+            "_proposed": true,
+            "_reason": "the flipbook is shown until this age; after it the plume and the scar carry on"
+          },
+          "radius_frac": {
+            "value": 1.1,
+            "_proposed": true,
+            "_reason": "burst radius as a share of the plane's size_m, scaled by (size_m / 9) ^ size_exp: a 9 m fighter's burst is this many metres across the radius"
+          },
+          "flash_s": {
+            "value": 0.1,
+            "_proposed": true,
+            "_reason": "the length of the flash: the burst is at full strength in this long"
+          },
+          "fire_curve": {
+            "value": [
+              [
+                0,
+                0.35
+              ],
+              [
+                0.1,
+                0.9
+              ],
+              [
+                0.3,
+                0.55
+              ],
+              [
+                0.8,
+                0.0
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "fire disc radius as a share of the burst radius by age ([t, share])"
+          },
+          "core_curve": {
+            "value": [
+              [
+                0,
+                0.2
+              ],
+              [
+                0.1,
+                0.55
+              ],
+              [
+                0.25,
+                0.0
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "white-hot core radius as a share of the burst radius by age ([t, share])"
+          },
+          "fire_role": {
+            "value": "fire",
+            "_proposed": true,
+            "_reason": "colour role of the fire"
+          },
+          "pale_role": {
+            "value": "fire.pale",
+            "_proposed": true,
+            "_reason": "colour role of the cooling fire"
+          },
+          "core_role": {
+            "value": "burst.core",
+            "_proposed": true,
+            "_reason": "colour role of the white-hot core"
+          },
+          "outline_scale": {
+            "value": 1.0,
+            "_proposed": true,
+            "_reason": "extra weight on the burst's outline"
+          },
+          "dots": {
+            "value": 170,
+            "_proposed": true,
+            "_reason": "stipple dots flung out"
+          },
+          "dot_px": {
+            "value": 0.95,
+            "_proposed": true,
+            "_reason": "dot radius in px: the nib is a constant size"
+          },
+          "dot_role": {
+            "value": "ink.dot",
+            "_proposed": true,
+            "_reason": "dot colour role"
+          },
+          "dot_soft_role": {
+            "value": "ink.soft",
+            "_proposed": true,
+            "_reason": "the lighter dots' role"
+          },
+          "dot_s": {
+            "value": 0.35,
+            "_proposed": true,
+            "_reason": "seconds the dots take to reach their reach (ease-out)"
+          },
+          "dot_keep": {
+            "value": [
+              [
+                0,
+                1.0
+              ],
+              [
+                1.5,
+                1.0
+              ],
+              [
+                4,
+                0.75
+              ],
+              [
+                10,
+                0.3
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "the share of dots still there at age t ([t, share]): they thin very slowly"
+          },
+          "spread": {
+            "value": 1.3,
+            "_proposed": true,
+            "_reason": "how far the stipple reaches, as a share of the burst radius"
+          },
+          "hatch": {
+            "value": 18,
+            "_proposed": true,
+            "_reason": "short radial hatch strokes"
+          },
+          "hatch_len": {
+            "value": [
+              1.1,
+              1.55
+            ],
+            "_proposed": true,
+            "_reason": "hatch stroke radial extent, as a share of the burst radius"
+          },
+          "hatch_role": {
+            "value": "ink.full",
+            "_proposed": true,
+            "_reason": "hatch colour role (ink alpha 0.50)"
+          },
+          "hatch_weight": {
+            "value": 1.6,
+            "_proposed": true,
+            "_reason": "hatch weight multiplier on the cusp-tick weight"
+          },
+          "hatch_alpha": {
+            "value": [
+              [
+                0,
+                1.0
+              ],
+              [
+                1.5,
+                0.8
+              ],
+              [
+                5,
+                0.45
+              ],
+              [
+                10,
+                0.2
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "hatch strength by age ([t, alpha])"
+          },
+          "hatch_s": {
+            "value": 0.2,
+            "_proposed": true,
+            "_reason": "seconds the hatch takes to reach out"
+          },
+          "ground_ring": {
+            "value": true,
+            "_proposed": true,
+            "_reason": "an impact only: a ring of dust dots running outward on the ground"
+          },
+          "ring_s": {
+            "value": 0.6,
+            "_proposed": true,
+            "_reason": "seconds the ring takes to run out"
+          },
+          "ring_r": {
+            "value": 1.7,
+            "_proposed": true,
+            "_reason": "the ring's final radius, as a share of the burst radius"
+          },
+          "ring_keep": {
+            "value": [
+              [
+                0,
+                1.0
+              ],
+              [
+                2,
+                0.8
+              ],
+              [
+                6,
+                0.35
+              ],
+              [
+                10,
+                0.0
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "the ring's strength by age ([t, share])"
+          }
+        },
+        "midair": {
+          "radius_scale": {
+            "value": 1.0,
+            "_proposed": true,
+            "_reason": "the burst's radius in the air, as a multiple of the burst group's"
+          },
+          "plume": {
+            "smoke_option": {
+              "value": "A",
+              "_proposed": true,
+              "_reason": "the damage-smoke option whose puffs make this plume: paper-light lobes, the same smoke the damaged plane left"
+            },
+            "count": {
+              "value": 7,
+              "_proposed": true,
+              "_reason": "puffs of the plume"
+            },
+            "interval_s": {
+              "value": 0.3,
+              "_proposed": true,
+              "_reason": "seconds between plume puffs: it billows over the first moments, it does not appear at once"
+            },
+            "delay_s": {
+              "value": 0.2,
+              "_proposed": true,
+              "_reason": "seconds after the flash before the first puff"
+            },
+            "radius_frac": {
+              "value": [
+                0.75,
+                1.1
+              ],
+              "_proposed": true,
+              "_reason": "puff radius [first, last] as a share of the plane's size_m"
+            },
+            "spread_frac": {
+              "value": 0.5,
+              "_proposed": true,
+              "_reason": "how far from the burst centre a puff may start, as a share of the plane's size_m"
+            },
+            "life_s": {
+              "value": 40,
+              "_proposed": true,
+              "_reason": "seconds a puff lasts: very slow decay, about 10 turns (5 s each)"
+            },
+            "grow": {
+              "value": [
+                0.55,
+                1.5
+              ],
+              "_proposed": true,
+              "_reason": "scale of a puff at birth and at death"
+            },
+            "hold": {
+              "value": 0.2,
+              "_proposed": true,
+              "_reason": "share of the life at full strength"
+            },
+            "fade_power": {
+              "value": 1.5,
+              "_proposed": true,
+              "_reason": "how the fade bends"
+            },
+            "tone": {
+              "value": 1,
+              "_proposed": true,
+              "_reason": "the smoke tone (0 thin, 1 medium, 2 heavy) the plume is drawn in"
+            }
+          },
+          "debris": {
+            "count": {
+              "value": 9,
+              "_proposed": true,
+              "_reason": "pieces thrown out of a mid-air explosion"
+            },
+            "speed_mps": {
+              "value": [
+                10,
+                45
+              ],
+              "_proposed": true,
+              "_reason": "horizontal launch speed range of a piece, m/s"
+            },
+            "gravity_mps2": {
+              "value": 25,
+              "_proposed": true,
+              "_reason": "how fast a piece falls: a deliberate, cosmetic gravity, below the real 9.8 x a few so the fall reads over a turn"
+            },
+            "drag_tau_s": {
+              "value": 2.0,
+              "_proposed": true,
+              "_reason": "time constant of the horizontal slowing, s"
+            },
+            "shard_frac": {
+              "value": 0.3,
+              "_proposed": true,
+              "_reason": "piece size as a share of the plane's size_m"
+            },
+            "shard_variants": {
+              "value": 3,
+              "_proposed": true,
+              "_reason": "baked piece shapes"
+            },
+            "fill_role": {
+              "value": "burst.shard",
+              "_proposed": true,
+              "_reason": "piece fill role"
+            },
+            "rest_s": {
+              "value": 10.0,
+              "_proposed": true,
+              "_reason": "seconds a landed piece lies on the ground before it is gone (0: gone at once)"
+            },
+            "spin_dps": {
+              "value": [
+                -360,
+                360
+              ],
+              "_proposed": true,
+              "_reason": "tumble rate range of a piece in degrees per second"
+            }
+          }
+        },
+        "falling": {
+          "smoke_option": {
+            "value": "A",
+            "_proposed": true,
+            "_reason": "the damage-smoke option whose puffs trail a falling plane: heavy lobed puffs"
+          },
+          "tone": {
+            "value": 1,
+            "_proposed": true,
+            "_reason": "the smoke tone of the trail (0 thin, 1 medium, 2 heavy)"
+          },
+          "intensity": {
+            "value": 0.5,
+            "_proposed": true,
+            "_reason": "smoke intensity of the trail, 0..1: puff radius and the option's interval follow it; 0.5 is a heavy trail that does not bury the plane"
+          },
+          "life_s": {
+            "value": 14,
+            "_proposed": true,
+            "_reason": "seconds a trail puff lasts: shorter than the plume's (the trail of a plane that is going down is a few turns long, the plume at the crash stays)"
+          },
+          "interval_s": {
+            "value": 0.09,
+            "_proposed": true,
+            "_reason": "seconds between trail puffs while out of control"
+          },
+          "flame": {
+            "enabled": {
+              "value": true,
+              "_proposed": true,
+              "_reason": "fire on the plane while it falls"
+            },
+            "frames": {
+              "value": 3,
+              "_proposed": true,
+              "_reason": "baked flame shapes, shown in turn"
+            },
+            "flicker_hz": {
+              "value": 7.0,
+              "_proposed": true,
+              "_reason": "how often the flame changes shape"
+            },
+            "length_frac": {
+              "value": 0.95,
+              "_proposed": true,
+              "_reason": "flame length as a share of the plane's size_m"
+            },
+            "width_frac": {
+              "value": 0.4,
+              "_proposed": true,
+              "_reason": "flame width as a share of its length"
+            },
+            "fire_role": {
+              "value": "fire",
+              "_proposed": true,
+              "_reason": "flame colour role"
+            },
+            "core_role": {
+              "value": "burst.core",
+              "_proposed": true,
+              "_reason": "flame core role"
+            },
+            "ember_px": {
+              "value": 1.4,
+              "_proposed": true,
+              "_reason": "ember radius in px"
+            },
+            "ember_every_s": {
+              "value": 0.2,
+              "_proposed": true,
+              "_reason": "seconds between embers shed behind a burning plane (0: none)"
+            },
+            "ember_life_s": {
+              "value": 1.6,
+              "_proposed": true,
+              "_reason": "seconds an ember lasts"
+            }
+          }
+        },
+        "impact": {
+          "radius_scale": {
+            "value": 1.0,
+            "_proposed": true,
+            "_reason": "the burst's radius on the ground, as a multiple of the burst group's"
+          },
+          "plume": {
+            "smoke_option": {
+              "value": "A",
+              "_proposed": true,
+              "_reason": "the damage-smoke option whose puffs make this plume: a heavy column of lobes that thickens, then hangs"
+            },
+            "count": {
+              "value": 11,
+              "_proposed": true,
+              "_reason": "puffs of the plume"
+            },
+            "interval_s": {
+              "value": 0.3,
+              "_proposed": true,
+              "_reason": "seconds between plume puffs: it billows over the first moments, it does not appear at once"
+            },
+            "delay_s": {
+              "value": 0.25,
+              "_proposed": true,
+              "_reason": "seconds after the flash before the first puff"
+            },
+            "radius_frac": {
+              "value": [
+                0.5,
+                0.85
+              ],
+              "_proposed": true,
+              "_reason": "puff radius [first, last] as a share of the plane's size_m"
+            },
+            "spread_frac": {
+              "value": 0.55,
+              "_proposed": true,
+              "_reason": "how far from the burst centre a puff may start, as a share of the plane's size_m"
+            },
+            "life_s": {
+              "value": 48,
+              "_proposed": true,
+              "_reason": "seconds a puff lasts: very slow decay, about 10 turns (5 s each)"
+            },
+            "grow": {
+              "value": [
+                0.55,
+                1.6
+              ],
+              "_proposed": true,
+              "_reason": "scale of a puff at birth and at death"
+            },
+            "hold": {
+              "value": 0.22,
+              "_proposed": true,
+              "_reason": "share of the life at full strength"
+            },
+            "fade_power": {
+              "value": 1.5,
+              "_proposed": true,
+              "_reason": "how the fade bends"
+            },
+            "tone": {
+              "value": 2,
+              "_proposed": true,
+              "_reason": "the smoke tone (0 thin, 1 medium, 2 heavy) the plume is drawn in"
+            }
+          },
+          "smolder": {
+            "smoke_option": {
+              "value": "A",
+              "_proposed": true,
+              "_reason": "the damage-smoke option whose puffs smoulder from the wreck: paper-light lobes, heavy then grey then thin"
+            },
+            "duration_s": {
+              "value": 60,
+              "_proposed": true,
+              "_reason": "seconds the wreck keeps smoking: about 12 turns (5 s each); Alex: 'an explosion, then smoking'"
+            },
+            "delay_s": {
+              "value": 0.9,
+              "_proposed": true,
+              "_reason": "seconds after the crash before the column starts (the billow comes first)"
+            },
+            "interval_s": {
+              "value": [
+                0.4,
+                1.8
+              ],
+              "_proposed": true,
+              "_reason": "seconds between puffs of the column at its start and at its end: it thins out slowly"
+            },
+            "radius_frac": {
+              "value": [
+                0.42,
+                0.22
+              ],
+              "_proposed": true,
+              "_reason": "puff radius [at the start, at the end] as a share of the plane's size_m: the column narrows as the wreck burns out"
+            },
+            "tone_edges_frac": {
+              "value": [
+                0.1,
+                0.4
+              ],
+              "_proposed": true,
+              "_reason": "share of the duration at which the column steps from the heavy tone to the medium and to the thin: it greys out over turns"
+            },
+            "life_s": {
+              "value": 26,
+              "_proposed": true,
+              "_reason": "seconds a column puff lasts: long, so it trails downwind in a streak"
+            },
+            "grow": {
+              "value": [
+                0.7,
+                1.7
+              ],
+              "_proposed": true,
+              "_reason": "scale of a column puff at birth and at death"
+            },
+            "hold": {
+              "value": 0.25,
+              "_proposed": true,
+              "_reason": "share of the life at full strength"
+            },
+            "fade_power": {
+              "value": 1.4,
+              "_proposed": true,
+              "_reason": "how the fade bends"
+            },
+            "wind_jitter_mps": {
+              "value": 1.1,
+              "_proposed": true,
+              "_reason": "per-puff spread of the drift, so the column fans out downwind instead of stacking"
+            },
+            "rise_mps": {
+              "value": 4.0,
+              "_proposed": true,
+              "_reason": "how fast a column puff rises, m/s: a smoke column goes up, so its shadow gap opens slowly"
+            }
+          },
+          "scar": {
+            "wreck_pieces": {
+              "value": [
+                "fuselage",
+                "wing",
+                "wing",
+                "engine",
+                "tail"
+              ],
+              "_proposed": true,
+              "_reason": "the pieces of wreck lying in the scar, drawn once with it (the art plan's fx.wreck: fill, ink broken outline, burnt dirt): burnt ground: dirt stipple and ink hatch, no fill"
+            },
+            "wreck_spread": {
+              "value": 0.7,
+              "_proposed": true,
+              "_reason": "how far from the centre the pieces lie, as a share of the scar radius"
+            },
+            "wreck_fill_role": {
+              "value": "wreck.fill",
+              "_proposed": true,
+              "_reason": "wreck fill role"
+            },
+            "wreck_char_role": {
+              "value": "wreck.char",
+              "_proposed": true,
+              "_reason": "burnt metal role"
+            },
+            "wreck_shade_role": {
+              "value": "wreck.shade",
+              "_proposed": true,
+              "_reason": "wreck drop shadow role"
+            },
+            "wreck_scale": {
+              "value": 1.35,
+              "_proposed": true,
+              "_reason": "wreck piece size as a multiple of the plane's size_m times 0.5 (a fuselage 0.44 x that)"
+            },
+            "radius_frac": {
+              "value": 0.95,
+              "_proposed": true,
+              "_reason": "scar radius as a share of the plane's size_m: burnt ground: dirt stipple and ink hatch, no fill"
+            },
+            "variants": {
+              "value": 4,
+              "_proposed": true,
+              "_reason": "baked scar shapes; a crash picks one by its seed and turns it"
+            },
+            "stretch": {
+              "value": 1.35,
+              "_proposed": true,
+              "_reason": "how much longer the blot is along the plane's heading than across it: a crash skids"
+            },
+            "dots_per_px2": {
+              "value": 0.5,
+              "_proposed": true,
+              "_reason": "stipple density at the centre-weighted average, dots per square px"
+            },
+            "dot_px": {
+              "value": 0.65,
+              "_proposed": true,
+              "_reason": "dot radius in px"
+            },
+            "core_bias": {
+              "value": 0.7,
+              "_proposed": true,
+              "_reason": "dot radius = r x random ^ this: below 1 the dots gather in the middle"
+            },
+            "hatch": {
+              "value": 30,
+              "_proposed": true,
+              "_reason": "short ink hatch strokes, thickest on the shadow side"
+            },
+            "hatch_weight": {
+              "value": 1.1,
+              "_proposed": true,
+              "_reason": "hatch weight multiplier"
+            },
+            "crater": {
+              "value": false,
+              "_proposed": true,
+              "_reason": "a broken ink ring round the blot"
+            },
+            "dot_role": {
+              "value": "scar.dot",
+              "_proposed": true,
+              "_reason": "dirt stipple role (dirt at 0.40)"
+            },
+            "dot_soft_role": {
+              "value": "scar.dot.soft",
+              "_proposed": true,
+              "_reason": "the lighter stipple's role (ink at 0.15)"
+            },
+            "hatch_role": {
+              "value": "ink.hatch",
+              "_proposed": true,
+              "_reason": "hatch role (ink at 0.50)"
+            },
+            "embers": {
+              "value": 4,
+              "_proposed": true,
+              "_reason": "fire-accent embers that glow on the scar after the crash (0: none)"
+            },
+            "ember_life_s": {
+              "value": 22,
+              "_proposed": true,
+              "_reason": "seconds the embers last: a very slow decay, in turns"
+            },
+            "ember_spread_frac": {
+              "value": 0.55,
+              "_proposed": true,
+              "_reason": "how far from the centre an ember may sit, as a share of the scar radius"
+            }
+          }
+        }
+      },
+      "B": {
+        "_label": "Lobed fireball",
+        "_note": "The explosion is a smoke puff that starts as fire: lobes in the fire accent cool through pale fire and cream into the plume's first puffs, so the flash and the smoke are one drawing. Out of control: a heavy lobed trail, a flame, embers. Impact: the same fireball with a dust ring, then the wreck smoking on a broader scar in the same lobed smoke, thinning over twelve turns.",
+        "burst": {
+          "form": {
+            "value": "lobed",
+            "_proposed": true,
+            "_reason": "a fireball built like a smoke puff: lobes that start in the fire accent and cool into the plume's first puffs"
+          },
+          "frames_s": {
+            "value": [
+              0.0,
+              0.05,
+              0.1,
+              0.18,
+              0.3,
+              0.5,
+              0.8,
+              1.3,
+              2.2,
+              3.5,
+              5.0,
+              7.5
+            ],
+            "_proposed": true,
+            "_reason": "the flipbook's frames, seconds after the flash: dense in the first half second (a FAST flash), then sparse out to the end (a VERY SLOW decay)"
+          },
+          "end_s": {
+            "value": 10.0,
+            "_proposed": true,
+            "_reason": "the flipbook is shown until this age; after it the plume and the scar carry on"
+          },
+          "radius_frac": {
+            "value": 1.0,
+            "_proposed": true,
+            "_reason": "burst radius as a share of the plane's size_m, scaled by (size_m / 9) ^ size_exp: a 9 m fighter's burst is this many metres across the radius"
+          },
+          "fire_role": {
+            "value": "fire",
+            "_proposed": true,
+            "_reason": "colour role of the fire"
+          },
+          "puff": {
+            "form": {
+              "value": "lobed",
+              "_proposed": true,
+              "_reason": "a fireball is a puff: the same lobe generator"
+            },
+            "variants": {
+              "value": 1,
+              "_proposed": true,
+              "_reason": "unused: a fireball is baked per frame"
+            },
+            "lobes_min": {
+              "value": 6,
+              "_proposed": true,
+              "_reason": "outer lobes of the fireball"
+            },
+            "lobes_max": {
+              "value": 8,
+              "_proposed": true,
+              "_reason": "outer lobes of the fireball"
+            },
+            "lobe_d": {
+              "value": 0.36,
+              "_proposed": true,
+              "_reason": "lobe offset from the centre as a share of the burst radius"
+            },
+            "lobe_d_var": {
+              "value": 0.2,
+              "_proposed": true,
+              "_reason": "random addition"
+            },
+            "lobe_r": {
+              "value": 0.3,
+              "_proposed": true,
+              "_reason": "lobe radius as a share of the burst radius"
+            },
+            "lobe_r_var": {
+              "value": 0.2,
+              "_proposed": true,
+              "_reason": "random addition"
+            },
+            "crown_r": {
+              "value": 0.5,
+              "_proposed": true,
+              "_reason": "the crown lobe"
+            },
+            "lobe_amp": {
+              "value": 0.1,
+              "_proposed": true,
+              "_reason": "cusp depth: a little deeper than smoke, a boil"
+            },
+            "lobe_amp_var": {
+              "value": 0.08,
+              "_proposed": true,
+              "_reason": "random addition"
+            },
+            "scallop_base": {
+              "value": 3.5,
+              "_proposed": true,
+              "_reason": "scallops per lobe: base"
+            },
+            "scallop_div": {
+              "value": 4.0,
+              "_proposed": true,
+              "_reason": "scallops per lobe: divisor"
+            },
+            "outline_weight_of": {
+              "value": "tree_outline",
+              "_proposed": true,
+              "_reason": "linework multiplier of the outline"
+            },
+            "outline_scale": {
+              "value": 1.1,
+              "_proposed": true,
+              "_reason": "extra weight"
+            },
+            "outline_ref_px": {
+              "value": 14,
+              "_proposed": true,
+              "_reason": "full outline weight from this radius up"
+            },
+            "outline_min_scale": {
+              "value": 0.55,
+              "_proposed": true,
+              "_reason": "the least a small lobe's outline is scaled to"
+            },
+            "outline_role": {
+              "value": "ink",
+              "_proposed": true,
+              "_reason": "outline role"
+            },
+            "outline_union": {
+              "value": false,
+              "_proposed": true,
+              "_reason": "every lobe is outlined"
+            },
+            "underside": {
+              "value": true,
+              "_proposed": true,
+              "_reason": "the underside"
+            },
+            "lit_shift": {
+              "value": 0.18,
+              "_proposed": true,
+              "_reason": "lit part's offset toward the light"
+            },
+            "lit_roles": {
+              "value": [
+                "fire",
+                "fire.pale",
+                "burst.core",
+                "smoke.a.lit.1"
+              ],
+              "_proposed": true,
+              "_reason": "the fireball's fill by stage: fire, pale fire, cream, the plume's medium tone"
+            },
+            "shade_roles": {
+              "value": [
+                "fire.shade",
+                "fire.dim",
+                "smoke.a.shade.0",
+                "smoke.a.shade.1"
+              ],
+              "_proposed": true,
+              "_reason": "the underside by stage"
+            },
+            "ticks": {
+              "value": true,
+              "_proposed": true,
+              "_reason": "cusp ticks"
+            },
+            "stipple_per_r": {
+              "value": 0.2,
+              "_proposed": true,
+              "_reason": "stipple dots on the shadow side"
+            },
+            "stipple_role": {
+              "value": "ink.soft",
+              "_proposed": true,
+              "_reason": "stipple role"
+            },
+            "rings": {
+              "value": 0,
+              "_proposed": true,
+              "_reason": "no rings"
+            },
+            "ring_role": {
+              "value": "ink.ring",
+              "_proposed": true,
+              "_reason": "ring role"
+            }
+          },
+          "stage_edges_s": {
+            "value": [
+              0.12,
+              0.4,
+              1.2
+            ],
+            "_proposed": true,
+            "_reason": "ages at which the fireball steps from fire to pale fire to cream to the plume's tone"
+          },
+          "grow_curve": {
+            "value": [
+              [
+                0,
+                0.35
+              ],
+              [
+                0.12,
+                0.8
+              ],
+              [
+                0.5,
+                1.0
+              ],
+              [
+                3,
+                1.12
+              ],
+              [
+                10,
+                1.2
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "the fireball's radius as a share of the burst radius by age: it balloons in a tenth of a second, then swells very slowly"
+          },
+          "embers": {
+            "value": 10,
+            "_proposed": true,
+            "_reason": "fire-accent sparks thrown off"
+          },
+          "ember_px": {
+            "value": 1.0,
+            "_proposed": true,
+            "_reason": "spark radius in px"
+          },
+          "ember_keep": {
+            "value": [
+              [
+                0,
+                1.0
+              ],
+              [
+                0.6,
+                0.6
+              ],
+              [
+                1.5,
+                0.0
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "the share of sparks still alight by age"
+          },
+          "dot_px": {
+            "value": 0.95,
+            "_proposed": true,
+            "_reason": "dot radius in px: the nib is a constant size"
+          },
+          "dot_soft_role": {
+            "value": "ink.soft",
+            "_proposed": true,
+            "_reason": "the lighter dots' role"
+          },
+          "ground_ring": {
+            "value": true,
+            "_proposed": true,
+            "_reason": "an impact only: a ring of dust dots running outward on the ground"
+          },
+          "ring_s": {
+            "value": 0.6,
+            "_proposed": true,
+            "_reason": "seconds the ring takes to run out"
+          },
+          "ring_r": {
+            "value": 1.6,
+            "_proposed": true,
+            "_reason": "the ring's final radius, as a share of the burst radius"
+          },
+          "ring_keep": {
+            "value": [
+              [
+                0,
+                1.0
+              ],
+              [
+                2,
+                0.8
+              ],
+              [
+                6,
+                0.35
+              ],
+              [
+                10,
+                0.0
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "the ring's strength by age ([t, share])"
+          }
+        },
+        "midair": {
+          "radius_scale": {
+            "value": 1.2,
+            "_proposed": true,
+            "_reason": "a fireball in the air is a little bigger than on the ground"
+          },
+          "plume": {
+            "smoke_option": {
+              "value": "A",
+              "_proposed": true,
+              "_reason": "the damage-smoke option whose puffs make this plume: the same lobed smoke"
+            },
+            "count": {
+              "value": 6,
+              "_proposed": true,
+              "_reason": "puffs of the plume"
+            },
+            "interval_s": {
+              "value": 0.35,
+              "_proposed": true,
+              "_reason": "seconds between plume puffs: it billows over the first moments, it does not appear at once"
+            },
+            "delay_s": {
+              "value": 0.3,
+              "_proposed": true,
+              "_reason": "seconds after the flash before the first puff"
+            },
+            "radius_frac": {
+              "value": [
+                0.8,
+                1.15
+              ],
+              "_proposed": true,
+              "_reason": "puff radius [first, last] as a share of the plane's size_m"
+            },
+            "spread_frac": {
+              "value": 0.5,
+              "_proposed": true,
+              "_reason": "how far from the burst centre a puff may start, as a share of the plane's size_m"
+            },
+            "life_s": {
+              "value": 42,
+              "_proposed": true,
+              "_reason": "seconds a puff lasts: very slow decay, about 10 turns (5 s each)"
+            },
+            "grow": {
+              "value": [
+                0.6,
+                1.5
+              ],
+              "_proposed": true,
+              "_reason": "scale of a puff at birth and at death"
+            },
+            "hold": {
+              "value": 0.2,
+              "_proposed": true,
+              "_reason": "share of the life at full strength"
+            },
+            "fade_power": {
+              "value": 1.5,
+              "_proposed": true,
+              "_reason": "how the fade bends"
+            },
+            "tone": {
+              "value": 1,
+              "_proposed": true,
+              "_reason": "the smoke tone (0 thin, 1 medium, 2 heavy) the plume is drawn in"
+            }
+          },
+          "debris": {
+            "count": {
+              "value": 8,
+              "_proposed": true,
+              "_reason": "pieces thrown out of a mid-air explosion"
+            },
+            "speed_mps": {
+              "value": [
+                8,
+                40
+              ],
+              "_proposed": true,
+              "_reason": "horizontal launch speed range of a piece, m/s"
+            },
+            "gravity_mps2": {
+              "value": 25,
+              "_proposed": true,
+              "_reason": "how fast a piece falls: a deliberate, cosmetic gravity, below the real 9.8 x a few so the fall reads over a turn"
+            },
+            "drag_tau_s": {
+              "value": 2.0,
+              "_proposed": true,
+              "_reason": "time constant of the horizontal slowing, s"
+            },
+            "shard_frac": {
+              "value": 0.3,
+              "_proposed": true,
+              "_reason": "piece size as a share of the plane's size_m"
+            },
+            "shard_variants": {
+              "value": 3,
+              "_proposed": true,
+              "_reason": "baked piece shapes"
+            },
+            "fill_role": {
+              "value": "burst.shard",
+              "_proposed": true,
+              "_reason": "piece fill role"
+            },
+            "rest_s": {
+              "value": 10.0,
+              "_proposed": true,
+              "_reason": "seconds a landed piece lies on the ground before it is gone (0: gone at once)"
+            },
+            "spin_dps": {
+              "value": [
+                -360,
+                360
+              ],
+              "_proposed": true,
+              "_reason": "tumble rate range of a piece in degrees per second"
+            }
+          }
+        },
+        "falling": {
+          "smoke_option": {
+            "value": "A",
+            "_proposed": true,
+            "_reason": "the damage-smoke option whose puffs trail a falling plane: heavy lobed puffs"
+          },
+          "tone": {
+            "value": 1,
+            "_proposed": true,
+            "_reason": "the smoke tone of the trail (0 thin, 1 medium, 2 heavy)"
+          },
+          "intensity": {
+            "value": 0.5,
+            "_proposed": true,
+            "_reason": "smoke intensity of the trail, 0..1: puff radius and the option's interval follow it; 0.5 is a heavy trail that does not bury the plane"
+          },
+          "life_s": {
+            "value": 14,
+            "_proposed": true,
+            "_reason": "seconds a trail puff lasts: shorter than the plume's (the trail of a plane that is going down is a few turns long, the plume at the crash stays)"
+          },
+          "interval_s": {
+            "value": 0.08,
+            "_proposed": true,
+            "_reason": "seconds between trail puffs while out of control"
+          },
+          "flame": {
+            "enabled": {
+              "value": true,
+              "_proposed": true,
+              "_reason": "fire on the plane while it falls"
+            },
+            "frames": {
+              "value": 3,
+              "_proposed": true,
+              "_reason": "baked flame shapes, shown in turn"
+            },
+            "flicker_hz": {
+              "value": 6.0,
+              "_proposed": true,
+              "_reason": "how often the flame changes shape"
+            },
+            "length_frac": {
+              "value": 1.1,
+              "_proposed": true,
+              "_reason": "flame length as a share of the plane's size_m"
+            },
+            "width_frac": {
+              "value": 0.45,
+              "_proposed": true,
+              "_reason": "flame width as a share of its length"
+            },
+            "fire_role": {
+              "value": "fire",
+              "_proposed": true,
+              "_reason": "flame colour role"
+            },
+            "core_role": {
+              "value": "burst.core",
+              "_proposed": true,
+              "_reason": "flame core role"
+            },
+            "ember_px": {
+              "value": 1.4,
+              "_proposed": true,
+              "_reason": "ember radius in px"
+            },
+            "ember_every_s": {
+              "value": 0.16,
+              "_proposed": true,
+              "_reason": "seconds between embers shed behind a burning plane (0: none)"
+            },
+            "ember_life_s": {
+              "value": 1.8,
+              "_proposed": true,
+              "_reason": "seconds an ember lasts"
+            }
+          }
+        },
+        "impact": {
+          "radius_scale": {
+            "value": 1.0,
+            "_proposed": true,
+            "_reason": "the burst's radius on the ground"
+          },
+          "plume": {
+            "smoke_option": {
+              "value": "A",
+              "_proposed": true,
+              "_reason": "the damage-smoke option whose puffs make this plume: a big lobed column"
+            },
+            "count": {
+              "value": 12,
+              "_proposed": true,
+              "_reason": "puffs of the plume"
+            },
+            "interval_s": {
+              "value": 0.28,
+              "_proposed": true,
+              "_reason": "seconds between plume puffs: it billows over the first moments, it does not appear at once"
+            },
+            "delay_s": {
+              "value": 0.35,
+              "_proposed": true,
+              "_reason": "seconds after the flash before the first puff"
+            },
+            "radius_frac": {
+              "value": [
+                0.55,
+                0.9
+              ],
+              "_proposed": true,
+              "_reason": "puff radius [first, last] as a share of the plane's size_m"
+            },
+            "spread_frac": {
+              "value": 0.6,
+              "_proposed": true,
+              "_reason": "how far from the burst centre a puff may start, as a share of the plane's size_m"
+            },
+            "life_s": {
+              "value": 48,
+              "_proposed": true,
+              "_reason": "seconds a puff lasts: very slow decay, about 10 turns (5 s each)"
+            },
+            "grow": {
+              "value": [
+                0.55,
+                1.7
+              ],
+              "_proposed": true,
+              "_reason": "scale of a puff at birth and at death"
+            },
+            "hold": {
+              "value": 0.22,
+              "_proposed": true,
+              "_reason": "share of the life at full strength"
+            },
+            "fade_power": {
+              "value": 1.5,
+              "_proposed": true,
+              "_reason": "how the fade bends"
+            },
+            "tone": {
+              "value": 2,
+              "_proposed": true,
+              "_reason": "the smoke tone (0 thin, 1 medium, 2 heavy) the plume is drawn in"
+            }
+          },
+          "smolder": {
+            "smoke_option": {
+              "value": "A",
+              "_proposed": true,
+              "_reason": "the damage-smoke option whose puffs smoulder from the wreck: the same lobed smoke as the fireball turned into"
+            },
+            "duration_s": {
+              "value": 60,
+              "_proposed": true,
+              "_reason": "seconds the wreck keeps smoking: about 12 turns (5 s each); Alex: 'an explosion, then smoking'"
+            },
+            "delay_s": {
+              "value": 0.9,
+              "_proposed": true,
+              "_reason": "seconds after the crash before the column starts (the billow comes first)"
+            },
+            "interval_s": {
+              "value": [
+                0.38,
+                1.7
+              ],
+              "_proposed": true,
+              "_reason": "seconds between puffs of the column at its start and at its end: it thins out slowly"
+            },
+            "radius_frac": {
+              "value": [
+                0.45,
+                0.24
+              ],
+              "_proposed": true,
+              "_reason": "puff radius [at the start, at the end] as a share of the plane's size_m: the column narrows as the wreck burns out"
+            },
+            "tone_edges_frac": {
+              "value": [
+                0.1,
+                0.4
+              ],
+              "_proposed": true,
+              "_reason": "share of the duration at which the column steps from the heavy tone to the medium and to the thin: it greys out over turns"
+            },
+            "life_s": {
+              "value": 26,
+              "_proposed": true,
+              "_reason": "seconds a column puff lasts: long, so it trails downwind in a streak"
+            },
+            "grow": {
+              "value": [
+                0.7,
+                1.7
+              ],
+              "_proposed": true,
+              "_reason": "scale of a column puff at birth and at death"
+            },
+            "hold": {
+              "value": 0.25,
+              "_proposed": true,
+              "_reason": "share of the life at full strength"
+            },
+            "fade_power": {
+              "value": 1.4,
+              "_proposed": true,
+              "_reason": "how the fade bends"
+            },
+            "wind_jitter_mps": {
+              "value": 1.1,
+              "_proposed": true,
+              "_reason": "per-puff spread of the drift, so the column fans out downwind instead of stacking"
+            },
+            "rise_mps": {
+              "value": 4.0,
+              "_proposed": true,
+              "_reason": "how fast a column puff rises, m/s: a smoke column goes up, so its shadow gap opens slowly"
+            }
+          },
+          "scar": {
+            "wreck_pieces": {
+              "value": [
+                "fuselage",
+                "wing",
+                "wing",
+                "engine",
+                "tail"
+              ],
+              "_proposed": true,
+              "_reason": "the pieces of wreck lying in the scar, drawn once with it (the art plan's fx.wreck: fill, ink broken outline, burnt dirt): a broader burnt patch"
+            },
+            "wreck_spread": {
+              "value": 0.8,
+              "_proposed": true,
+              "_reason": "how far from the centre the pieces lie, as a share of the scar radius"
+            },
+            "wreck_fill_role": {
+              "value": "wreck.fill",
+              "_proposed": true,
+              "_reason": "wreck fill role"
+            },
+            "wreck_char_role": {
+              "value": "wreck.char",
+              "_proposed": true,
+              "_reason": "burnt metal role"
+            },
+            "wreck_shade_role": {
+              "value": "wreck.shade",
+              "_proposed": true,
+              "_reason": "wreck drop shadow role"
+            },
+            "wreck_scale": {
+              "value": 1.35,
+              "_proposed": true,
+              "_reason": "wreck piece size as a multiple of the plane's size_m times 0.5 (a fuselage 0.44 x that)"
+            },
+            "radius_frac": {
+              "value": 1.05,
+              "_proposed": true,
+              "_reason": "scar radius as a share of the plane's size_m: a broader burnt patch"
+            },
+            "variants": {
+              "value": 4,
+              "_proposed": true,
+              "_reason": "baked scar shapes; a crash picks one by its seed and turns it"
+            },
+            "stretch": {
+              "value": 1.35,
+              "_proposed": true,
+              "_reason": "how much longer the blot is along the plane's heading than across it: a crash skids"
+            },
+            "dots_per_px2": {
+              "value": 0.42,
+              "_proposed": true,
+              "_reason": "stipple density at the centre-weighted average, dots per square px"
+            },
+            "dot_px": {
+              "value": 0.65,
+              "_proposed": true,
+              "_reason": "dot radius in px"
+            },
+            "core_bias": {
+              "value": 0.6,
+              "_proposed": true,
+              "_reason": "dot radius = r x random ^ this: below 1 the dots gather in the middle"
+            },
+            "hatch": {
+              "value": 24,
+              "_proposed": true,
+              "_reason": "short ink hatch strokes, thickest on the shadow side"
+            },
+            "hatch_weight": {
+              "value": 1.1,
+              "_proposed": true,
+              "_reason": "hatch weight multiplier"
+            },
+            "crater": {
+              "value": false,
+              "_proposed": true,
+              "_reason": "a broken ink ring round the blot"
+            },
+            "dot_role": {
+              "value": "scar.dot",
+              "_proposed": true,
+              "_reason": "dirt stipple role (dirt at 0.40)"
+            },
+            "dot_soft_role": {
+              "value": "scar.dot.soft",
+              "_proposed": true,
+              "_reason": "the lighter stipple's role (ink at 0.15)"
+            },
+            "hatch_role": {
+              "value": "ink.hatch",
+              "_proposed": true,
+              "_reason": "hatch role (ink at 0.50)"
+            },
+            "embers": {
+              "value": 5,
+              "_proposed": true,
+              "_reason": "fire-accent embers that glow on the scar after the crash (0: none)"
+            },
+            "ember_life_s": {
+              "value": 24,
+              "_proposed": true,
+              "_reason": "seconds the embers last: a very slow decay, in turns"
+            },
+            "ember_spread_frac": {
+              "value": 0.6,
+              "_proposed": true,
+              "_reason": "how far from the centre an ember may sit, as a share of the scar radius"
+            }
+          }
+        }
+      },
+      "C": {
+        "_label": "Woodcut blast",
+        "_note": "A ruled spiky star: fire accent over a cream inner star, heavy ink outline, long radial rays and a dashed shock ring; the star goes hollow (ink only) and thins over many seconds. The smoke is the ink wash, a dark column. Impact: the star, a dashed ring and rays, then the wreck smoking in a broken crater ring as a dark ink-wash column that greys out over twelve turns; out of control the plane trails the dark smoke and a flame.",
+        "burst": {
+          "form": {
+            "value": "starburst",
+            "_proposed": true,
+            "_reason": "a ruled spiky star: the woodcut blast"
+          },
+          "frames_s": {
+            "value": [
+              0.0,
+              0.05,
+              0.1,
+              0.18,
+              0.3,
+              0.5,
+              0.8,
+              1.3,
+              2.2,
+              3.5,
+              5.0,
+              7.5
+            ],
+            "_proposed": true,
+            "_reason": "the flipbook's frames, seconds after the flash: dense in the first half second (a FAST flash), then sparse out to the end (a VERY SLOW decay)"
+          },
+          "end_s": {
+            "value": 10.0,
+            "_proposed": true,
+            "_reason": "the flipbook is shown until this age; after it the plume and the scar carry on"
+          },
+          "radius_frac": {
+            "value": 1.15,
+            "_proposed": true,
+            "_reason": "burst radius as a share of the plane's size_m, scaled by (size_m / 9) ^ size_exp: a 9 m fighter's burst is this many metres across the radius"
+          },
+          "spikes": {
+            "value": 14,
+            "_proposed": true,
+            "_reason": "points of the star"
+          },
+          "inner_frac": {
+            "value": 0.48,
+            "_proposed": true,
+            "_reason": "the star's inner radius as a share of its outer"
+          },
+          "outer_var": {
+            "value": 0.55,
+            "_proposed": true,
+            "_reason": "random spread of the outer radii"
+          },
+          "star_curve": {
+            "value": [
+              [
+                0,
+                0.5
+              ],
+              [
+                0.06,
+                1.0
+              ],
+              [
+                0.5,
+                1.05
+              ],
+              [
+                3,
+                1.1
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "the star's scale by age: it opens in a twentieth of a second, then stays"
+          },
+          "fire_curve": {
+            "value": [
+              [
+                0,
+                1.0
+              ],
+              [
+                0.2,
+                1.0
+              ],
+              [
+                0.45,
+                0.3
+              ],
+              [
+                0.9,
+                0.0
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "star fill by age: above 0.5 fire, between 0 and 0.5 pale fire, 0 hollow ink"
+          },
+          "core_curve": {
+            "value": [
+              [
+                0,
+                1.0
+              ],
+              [
+                0.12,
+                1.0
+              ],
+              [
+                0.2,
+                0.0
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "above 0.5: the inner star is drawn in the core colour"
+          },
+          "outline_alpha": {
+            "value": [
+              [
+                0,
+                1.0
+              ],
+              [
+                1,
+                0.8
+              ],
+              [
+                4,
+                0.5
+              ],
+              [
+                10,
+                0.3
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "the star outline's strength by age: the hollow star thins very slowly"
+          },
+          "outline_scale": {
+            "value": 1.15,
+            "_proposed": true,
+            "_reason": "extra weight on the burst's outline"
+          },
+          "fire_role": {
+            "value": "fire",
+            "_proposed": true,
+            "_reason": "colour role of the fire"
+          },
+          "pale_role": {
+            "value": "fire.pale",
+            "_proposed": true,
+            "_reason": "colour role of the cooling fire"
+          },
+          "core_role": {
+            "value": "burst.core",
+            "_proposed": true,
+            "_reason": "colour role of the white-hot core"
+          },
+          "rays": {
+            "value": 12,
+            "_proposed": true,
+            "_reason": "long radial rays"
+          },
+          "ray_s": {
+            "value": 0.25,
+            "_proposed": true,
+            "_reason": "seconds the rays take to reach out"
+          },
+          "ray_alpha": {
+            "value": [
+              [
+                0,
+                1.0
+              ],
+              [
+                1,
+                0.8
+              ],
+              [
+                4,
+                0.4
+              ],
+              [
+                8,
+                0.0
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "the rays' strength by age"
+          },
+          "hatch_role": {
+            "value": "ink.full",
+            "_proposed": true,
+            "_reason": "hatch colour role (ink alpha 0.50)"
+          },
+          "hatch_weight": {
+            "value": 1.5,
+            "_proposed": true,
+            "_reason": "hatch weight multiplier on the cusp-tick weight"
+          },
+          "ring_s": {
+            "value": 0.5,
+            "_proposed": true,
+            "_reason": "seconds the shock ring takes to run out"
+          },
+          "ring_r": {
+            "value": 1.9,
+            "_proposed": true,
+            "_reason": "the shock ring's final radius, a share of the burst radius"
+          },
+          "ring_keep": {
+            "value": [
+              [
+                0,
+                0.9
+              ],
+              [
+                1.2,
+                0.5
+              ],
+              [
+                3,
+                0.0
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "the shock ring's strength by age"
+          },
+          "dots": {
+            "value": 80,
+            "_proposed": true,
+            "_reason": "debris dots"
+          },
+          "dot_px": {
+            "value": 0.95,
+            "_proposed": true,
+            "_reason": "dot radius in px: the nib is a constant size"
+          },
+          "dot_s": {
+            "value": 0.4,
+            "_proposed": true,
+            "_reason": "seconds the dots take to reach their reach (ease-out)"
+          },
+          "dot_role": {
+            "value": "ink.dot",
+            "_proposed": true,
+            "_reason": "dot colour role"
+          },
+          "dot_soft_role": {
+            "value": "ink.soft",
+            "_proposed": true,
+            "_reason": "the lighter dots' role"
+          },
+          "dot_keep": {
+            "value": [
+              [
+                0,
+                1.0
+              ],
+              [
+                3,
+                0.8
+              ],
+              [
+                10,
+                0.35
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "the share of dots still there at age t ([t, share]): they thin very slowly"
+          },
+          "ground_ring": {
+            "value": true,
+            "_proposed": true,
+            "_reason": "an impact only: a ring of dust dots running outward on the ground"
+          }
+        },
+        "midair": {
+          "radius_scale": {
+            "value": 1.0,
+            "_proposed": true,
+            "_reason": "the burst's radius in the air"
+          },
+          "plume": {
+            "smoke_option": {
+              "value": "D",
+              "_proposed": true,
+              "_reason": "the damage-smoke option whose puffs make this plume: the ink wash, dark"
+            },
+            "count": {
+              "value": 7,
+              "_proposed": true,
+              "_reason": "puffs of the plume"
+            },
+            "interval_s": {
+              "value": 0.3,
+              "_proposed": true,
+              "_reason": "seconds between plume puffs: it billows over the first moments, it does not appear at once"
+            },
+            "delay_s": {
+              "value": 0.2,
+              "_proposed": true,
+              "_reason": "seconds after the flash before the first puff"
+            },
+            "radius_frac": {
+              "value": [
+                0.75,
+                1.1
+              ],
+              "_proposed": true,
+              "_reason": "puff radius [first, last] as a share of the plane's size_m"
+            },
+            "spread_frac": {
+              "value": 0.5,
+              "_proposed": true,
+              "_reason": "how far from the burst centre a puff may start, as a share of the plane's size_m"
+            },
+            "life_s": {
+              "value": 40,
+              "_proposed": true,
+              "_reason": "seconds a puff lasts: very slow decay, about 10 turns (5 s each)"
+            },
+            "grow": {
+              "value": [
+                0.55,
+                1.5
+              ],
+              "_proposed": true,
+              "_reason": "scale of a puff at birth and at death"
+            },
+            "hold": {
+              "value": 0.2,
+              "_proposed": true,
+              "_reason": "share of the life at full strength"
+            },
+            "fade_power": {
+              "value": 1.5,
+              "_proposed": true,
+              "_reason": "how the fade bends"
+            },
+            "tone": {
+              "value": 1,
+              "_proposed": true,
+              "_reason": "the smoke tone (0 thin, 1 medium, 2 heavy) the plume is drawn in"
+            }
+          },
+          "debris": {
+            "count": {
+              "value": 10,
+              "_proposed": true,
+              "_reason": "pieces thrown out of a mid-air explosion"
+            },
+            "speed_mps": {
+              "value": [
+                10,
+                50
+              ],
+              "_proposed": true,
+              "_reason": "horizontal launch speed range of a piece, m/s"
+            },
+            "gravity_mps2": {
+              "value": 25,
+              "_proposed": true,
+              "_reason": "how fast a piece falls: a deliberate, cosmetic gravity, below the real 9.8 x a few so the fall reads over a turn"
+            },
+            "drag_tau_s": {
+              "value": 2.0,
+              "_proposed": true,
+              "_reason": "time constant of the horizontal slowing, s"
+            },
+            "shard_frac": {
+              "value": 0.3,
+              "_proposed": true,
+              "_reason": "piece size as a share of the plane's size_m"
+            },
+            "shard_variants": {
+              "value": 3,
+              "_proposed": true,
+              "_reason": "baked piece shapes"
+            },
+            "fill_role": {
+              "value": "burst.shard",
+              "_proposed": true,
+              "_reason": "piece fill role"
+            },
+            "rest_s": {
+              "value": 10.0,
+              "_proposed": true,
+              "_reason": "seconds a landed piece lies on the ground before it is gone (0: gone at once)"
+            },
+            "spin_dps": {
+              "value": [
+                -360,
+                360
+              ],
+              "_proposed": true,
+              "_reason": "tumble rate range of a piece in degrees per second"
+            }
+          }
+        },
+        "falling": {
+          "smoke_option": {
+            "value": "D",
+            "_proposed": true,
+            "_reason": "the damage-smoke option whose puffs trail a falling plane: the ink wash, dark"
+          },
+          "tone": {
+            "value": 1,
+            "_proposed": true,
+            "_reason": "the smoke tone of the trail (0 thin, 1 medium, 2 heavy)"
+          },
+          "intensity": {
+            "value": 0.5,
+            "_proposed": true,
+            "_reason": "smoke intensity of the trail, 0..1: puff radius and the option's interval follow it; 0.5 is a heavy trail that does not bury the plane"
+          },
+          "life_s": {
+            "value": 14,
+            "_proposed": true,
+            "_reason": "seconds a trail puff lasts: shorter than the plume's (the trail of a plane that is going down is a few turns long, the plume at the crash stays)"
+          },
+          "interval_s": {
+            "value": 0.09,
+            "_proposed": true,
+            "_reason": "seconds between trail puffs while out of control"
+          },
+          "flame": {
+            "enabled": {
+              "value": true,
+              "_proposed": true,
+              "_reason": "fire on the plane while it falls"
+            },
+            "frames": {
+              "value": 3,
+              "_proposed": true,
+              "_reason": "baked flame shapes, shown in turn"
+            },
+            "flicker_hz": {
+              "value": 8.0,
+              "_proposed": true,
+              "_reason": "how often the flame changes shape"
+            },
+            "length_frac": {
+              "value": 0.9,
+              "_proposed": true,
+              "_reason": "flame length as a share of the plane's size_m"
+            },
+            "width_frac": {
+              "value": 0.38,
+              "_proposed": true,
+              "_reason": "flame width as a share of its length"
+            },
+            "fire_role": {
+              "value": "fire",
+              "_proposed": true,
+              "_reason": "flame colour role"
+            },
+            "core_role": {
+              "value": "burst.core",
+              "_proposed": true,
+              "_reason": "flame core role"
+            },
+            "ember_px": {
+              "value": 1.4,
+              "_proposed": true,
+              "_reason": "ember radius in px"
+            },
+            "ember_every_s": {
+              "value": 0.2,
+              "_proposed": true,
+              "_reason": "seconds between embers shed behind a burning plane (0: none)"
+            },
+            "ember_life_s": {
+              "value": 1.6,
+              "_proposed": true,
+              "_reason": "seconds an ember lasts"
+            }
+          }
+        },
+        "impact": {
+          "radius_scale": {
+            "value": 1.0,
+            "_proposed": true,
+            "_reason": "the burst's radius on the ground"
+          },
+          "plume": {
+            "smoke_option": {
+              "value": "D",
+              "_proposed": true,
+              "_reason": "the damage-smoke option whose puffs make this plume: a dark column that hangs"
+            },
+            "count": {
+              "value": 11,
+              "_proposed": true,
+              "_reason": "puffs of the plume"
+            },
+            "interval_s": {
+              "value": 0.3,
+              "_proposed": true,
+              "_reason": "seconds between plume puffs: it billows over the first moments, it does not appear at once"
+            },
+            "delay_s": {
+              "value": 0.25,
+              "_proposed": true,
+              "_reason": "seconds after the flash before the first puff"
+            },
+            "radius_frac": {
+              "value": [
+                0.5,
+                0.85
+              ],
+              "_proposed": true,
+              "_reason": "puff radius [first, last] as a share of the plane's size_m"
+            },
+            "spread_frac": {
+              "value": 0.55,
+              "_proposed": true,
+              "_reason": "how far from the burst centre a puff may start, as a share of the plane's size_m"
+            },
+            "life_s": {
+              "value": 52,
+              "_proposed": true,
+              "_reason": "seconds a puff lasts: very slow decay, about 10 turns (5 s each)"
+            },
+            "grow": {
+              "value": [
+                0.55,
+                1.6
+              ],
+              "_proposed": true,
+              "_reason": "scale of a puff at birth and at death"
+            },
+            "hold": {
+              "value": 0.25,
+              "_proposed": true,
+              "_reason": "share of the life at full strength"
+            },
+            "fade_power": {
+              "value": 1.5,
+              "_proposed": true,
+              "_reason": "how the fade bends"
+            },
+            "tone": {
+              "value": 2,
+              "_proposed": true,
+              "_reason": "the smoke tone (0 thin, 1 medium, 2 heavy) the plume is drawn in"
+            }
+          },
+          "smolder": {
+            "smoke_option": {
+              "value": "D",
+              "_proposed": true,
+              "_reason": "the damage-smoke option whose puffs smoulder from the wreck: the dark ink wash, then a thin grey"
+            },
+            "duration_s": {
+              "value": 60,
+              "_proposed": true,
+              "_reason": "seconds the wreck keeps smoking: about 12 turns (5 s each); Alex: 'an explosion, then smoking'"
+            },
+            "delay_s": {
+              "value": 0.9,
+              "_proposed": true,
+              "_reason": "seconds after the crash before the column starts (the billow comes first)"
+            },
+            "interval_s": {
+              "value": [
+                0.42,
+                1.8
+              ],
+              "_proposed": true,
+              "_reason": "seconds between puffs of the column at its start and at its end: it thins out slowly"
+            },
+            "radius_frac": {
+              "value": [
+                0.42,
+                0.22
+              ],
+              "_proposed": true,
+              "_reason": "puff radius [at the start, at the end] as a share of the plane's size_m: the column narrows as the wreck burns out"
+            },
+            "tone_edges_frac": {
+              "value": [
+                0.1,
+                0.4
+              ],
+              "_proposed": true,
+              "_reason": "share of the duration at which the column steps from the heavy tone to the medium and to the thin: it greys out over turns"
+            },
+            "life_s": {
+              "value": 26,
+              "_proposed": true,
+              "_reason": "seconds a column puff lasts: long, so it trails downwind in a streak"
+            },
+            "grow": {
+              "value": [
+                0.7,
+                1.7
+              ],
+              "_proposed": true,
+              "_reason": "scale of a column puff at birth and at death"
+            },
+            "hold": {
+              "value": 0.25,
+              "_proposed": true,
+              "_reason": "share of the life at full strength"
+            },
+            "fade_power": {
+              "value": 1.4,
+              "_proposed": true,
+              "_reason": "how the fade bends"
+            },
+            "wind_jitter_mps": {
+              "value": 1.1,
+              "_proposed": true,
+              "_reason": "per-puff spread of the drift, so the column fans out downwind instead of stacking"
+            },
+            "rise_mps": {
+              "value": 4.0,
+              "_proposed": true,
+              "_reason": "how fast a column puff rises, m/s: a smoke column goes up, so its shadow gap opens slowly"
+            }
+          },
+          "scar": {
+            "wreck_pieces": {
+              "value": [
+                "fuselage",
+                "wing",
+                "engine"
+              ],
+              "_proposed": true,
+              "_reason": "the pieces of wreck lying in the scar, drawn once with it (the art plan's fx.wreck: fill, ink broken outline, burnt dirt): burnt ground inside a broken crater ring"
+            },
+            "wreck_spread": {
+              "value": 0.45,
+              "_proposed": true,
+              "_reason": "how far from the centre the pieces lie, as a share of the scar radius"
+            },
+            "wreck_fill_role": {
+              "value": "wreck.fill",
+              "_proposed": true,
+              "_reason": "wreck fill role"
+            },
+            "wreck_char_role": {
+              "value": "wreck.char",
+              "_proposed": true,
+              "_reason": "burnt metal role"
+            },
+            "wreck_shade_role": {
+              "value": "wreck.shade",
+              "_proposed": true,
+              "_reason": "wreck drop shadow role"
+            },
+            "wreck_scale": {
+              "value": 1.35,
+              "_proposed": true,
+              "_reason": "wreck piece size as a multiple of the plane's size_m times 0.5 (a fuselage 0.44 x that)"
+            },
+            "radius_frac": {
+              "value": 0.9,
+              "_proposed": true,
+              "_reason": "scar radius as a share of the plane's size_m: burnt ground inside a broken crater ring"
+            },
+            "variants": {
+              "value": 4,
+              "_proposed": true,
+              "_reason": "baked scar shapes; a crash picks one by its seed and turns it"
+            },
+            "stretch": {
+              "value": 1.35,
+              "_proposed": true,
+              "_reason": "how much longer the blot is along the plane's heading than across it: a crash skids"
+            },
+            "dots_per_px2": {
+              "value": 0.55,
+              "_proposed": true,
+              "_reason": "stipple density at the centre-weighted average, dots per square px"
+            },
+            "dot_px": {
+              "value": 0.65,
+              "_proposed": true,
+              "_reason": "dot radius in px"
+            },
+            "core_bias": {
+              "value": 0.65,
+              "_proposed": true,
+              "_reason": "dot radius = r x random ^ this: below 1 the dots gather in the middle"
+            },
+            "hatch": {
+              "value": 34,
+              "_proposed": true,
+              "_reason": "short ink hatch strokes, thickest on the shadow side"
+            },
+            "hatch_weight": {
+              "value": 1.15,
+              "_proposed": true,
+              "_reason": "hatch weight multiplier"
+            },
+            "crater": {
+              "value": true,
+              "_proposed": true,
+              "_reason": "a broken ink ring round the blot"
+            },
+            "dot_role": {
+              "value": "scar.dot",
+              "_proposed": true,
+              "_reason": "dirt stipple role (dirt at 0.40)"
+            },
+            "dot_soft_role": {
+              "value": "scar.dot.soft",
+              "_proposed": true,
+              "_reason": "the lighter stipple's role (ink at 0.15)"
+            },
+            "hatch_role": {
+              "value": "ink.hatch",
+              "_proposed": true,
+              "_reason": "hatch role (ink at 0.50)"
+            },
+            "embers": {
+              "value": 4,
+              "_proposed": true,
+              "_reason": "fire-accent embers that glow on the scar after the crash (0: none)"
+            },
+            "ember_life_s": {
+              "value": 24,
+              "_proposed": true,
+              "_reason": "seconds the embers last: a very slow decay, in turns"
+            },
+            "ember_spread_frac": {
+              "value": 0.55,
+              "_proposed": true,
+              "_reason": "how far from the centre an ember may sit, as a share of the scar radius"
+            }
+          }
+        }
+      },
+      "D": {
+        "_label": "Restrained",
+        "_note": "The quiet baseline: a small flash, one thin ink ring and a few dots; smoke is the stipple plume (no shadow). Out of control: a thin stipple trail and no flame. Impact: a small ring, then a wreck on a faint scorch smoking as a thin stipple column for eight turns, no embers. Least intrusive, least readable at planning zoom.",
+        "burst": {
+          "form": {
+            "value": "ring",
+            "_proposed": true,
+            "_reason": "the restrained form: a small flash, one thin ink ring, a few dots"
+          },
+          "frames_s": {
+            "value": [
+              0.0,
+              0.05,
+              0.1,
+              0.18,
+              0.3,
+              0.5,
+              0.8,
+              1.3,
+              2.2,
+              3.5,
+              5.0,
+              7.5
+            ],
+            "_proposed": true,
+            "_reason": "the flipbook's frames, seconds after the flash: dense in the first half second (a FAST flash), then sparse out to the end (a VERY SLOW decay)"
+          },
+          "end_s": {
+            "value": 8.0,
+            "_proposed": true,
+            "_reason": "the flipbook is shown until this age; after it the plume and the scar carry on"
+          },
+          "radius_frac": {
+            "value": 0.8,
+            "_proposed": true,
+            "_reason": "burst radius as a share of the plane's size_m, scaled by (size_m / 9) ^ size_exp: a 9 m fighter's burst is this many metres across the radius"
+          },
+          "flash_s": {
+            "value": 0.08,
+            "_proposed": true,
+            "_reason": "the length of the flash: the burst is at full strength in this long"
+          },
+          "fire_curve": {
+            "value": [
+              [
+                0,
+                0.3
+              ],
+              [
+                0.08,
+                0.65
+              ],
+              [
+                0.3,
+                0.25
+              ],
+              [
+                0.6,
+                0.0
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "fire disc radius as a share of the burst radius by age ([t, share])"
+          },
+          "core_curve": {
+            "value": [
+              [
+                0,
+                0.15
+              ],
+              [
+                0.08,
+                0.4
+              ],
+              [
+                0.2,
+                0.0
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "white-hot core radius as a share of the burst radius by age ([t, share])"
+          },
+          "fire_role": {
+            "value": "fire",
+            "_proposed": true,
+            "_reason": "colour role of the fire"
+          },
+          "pale_role": {
+            "value": "fire.pale",
+            "_proposed": true,
+            "_reason": "colour role of the cooling fire"
+          },
+          "core_role": {
+            "value": "burst.core",
+            "_proposed": true,
+            "_reason": "colour role of the white-hot core"
+          },
+          "outline_scale": {
+            "value": 1.0,
+            "_proposed": true,
+            "_reason": "extra weight on the burst's outline"
+          },
+          "ring_s": {
+            "value": 0.6,
+            "_proposed": true,
+            "_reason": "seconds the ring takes to run out"
+          },
+          "ring_r": {
+            "value": 1.2,
+            "_proposed": true,
+            "_reason": "the ring's final radius, a share of the burst radius"
+          },
+          "ring_keep": {
+            "value": [
+              [
+                0,
+                1.0
+              ],
+              [
+                2,
+                0.6
+              ],
+              [
+                6,
+                0.2
+              ],
+              [
+                8,
+                0.0
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "the ring's strength by age"
+          },
+          "dots": {
+            "value": 40,
+            "_proposed": true,
+            "_reason": "a few dots"
+          },
+          "dot_px": {
+            "value": 0.95,
+            "_proposed": true,
+            "_reason": "dot radius in px: the nib is a constant size"
+          },
+          "dot_s": {
+            "value": 0.5,
+            "_proposed": true,
+            "_reason": "seconds the dots take to reach their reach (ease-out)"
+          },
+          "dot_role": {
+            "value": "ink.dot",
+            "_proposed": true,
+            "_reason": "dot colour role"
+          },
+          "dot_soft_role": {
+            "value": "ink.soft",
+            "_proposed": true,
+            "_reason": "the lighter dots' role"
+          },
+          "dot_keep": {
+            "value": [
+              [
+                0,
+                1.0
+              ],
+              [
+                3,
+                0.8
+              ],
+              [
+                8,
+                0.3
+              ]
+            ],
+            "_proposed": true,
+            "_reason": "the share of dots still there at age t ([t, share]): they thin very slowly"
+          },
+          "ground_ring": {
+            "value": false,
+            "_proposed": true,
+            "_reason": "no dust ring: the impact is as quiet as the rest"
+          }
+        },
+        "midair": {
+          "radius_scale": {
+            "value": 1.0,
+            "_proposed": true,
+            "_reason": "the burst's radius in the air"
+          },
+          "plume": {
+            "smoke_option": {
+              "value": "B",
+              "_proposed": true,
+              "_reason": "the damage-smoke option whose puffs make this plume: the stipple plume"
+            },
+            "count": {
+              "value": 5,
+              "_proposed": true,
+              "_reason": "puffs of the plume"
+            },
+            "interval_s": {
+              "value": 0.4,
+              "_proposed": true,
+              "_reason": "seconds between plume puffs: it billows over the first moments, it does not appear at once"
+            },
+            "delay_s": {
+              "value": 0.2,
+              "_proposed": true,
+              "_reason": "seconds after the flash before the first puff"
+            },
+            "radius_frac": {
+              "value": [
+                0.8,
+                1.1
+              ],
+              "_proposed": true,
+              "_reason": "puff radius [first, last] as a share of the plane's size_m"
+            },
+            "spread_frac": {
+              "value": 0.5,
+              "_proposed": true,
+              "_reason": "how far from the burst centre a puff may start, as a share of the plane's size_m"
+            },
+            "life_s": {
+              "value": 36,
+              "_proposed": true,
+              "_reason": "seconds a puff lasts: very slow decay, about 10 turns (5 s each)"
+            },
+            "grow": {
+              "value": [
+                0.6,
+                1.4
+              ],
+              "_proposed": true,
+              "_reason": "scale of a puff at birth and at death"
+            },
+            "hold": {
+              "value": 0.2,
+              "_proposed": true,
+              "_reason": "share of the life at full strength"
+            },
+            "fade_power": {
+              "value": 1.5,
+              "_proposed": true,
+              "_reason": "how the fade bends"
+            },
+            "tone": {
+              "value": 1,
+              "_proposed": true,
+              "_reason": "the smoke tone (0 thin, 1 medium, 2 heavy) the plume is drawn in"
+            }
+          },
+          "debris": {
+            "count": {
+              "value": 5,
+              "_proposed": true,
+              "_reason": "pieces thrown out of a mid-air explosion"
+            },
+            "speed_mps": {
+              "value": [
+                8,
+                30
+              ],
+              "_proposed": true,
+              "_reason": "horizontal launch speed range of a piece, m/s"
+            },
+            "gravity_mps2": {
+              "value": 25,
+              "_proposed": true,
+              "_reason": "how fast a piece falls: a deliberate, cosmetic gravity, below the real 9.8 x a few so the fall reads over a turn"
+            },
+            "drag_tau_s": {
+              "value": 2.0,
+              "_proposed": true,
+              "_reason": "time constant of the horizontal slowing, s"
+            },
+            "shard_frac": {
+              "value": 0.24,
+              "_proposed": true,
+              "_reason": "piece size as a share of the plane's size_m"
+            },
+            "shard_variants": {
+              "value": 3,
+              "_proposed": true,
+              "_reason": "baked piece shapes"
+            },
+            "fill_role": {
+              "value": "burst.shard",
+              "_proposed": true,
+              "_reason": "piece fill role"
+            },
+            "rest_s": {
+              "value": 6.0,
+              "_proposed": true,
+              "_reason": "seconds a landed piece lies on the ground before it is gone (0: gone at once)"
+            },
+            "spin_dps": {
+              "value": [
+                -360,
+                360
+              ],
+              "_proposed": true,
+              "_reason": "tumble rate range of a piece in degrees per second"
+            }
+          }
+        },
+        "falling": {
+          "smoke_option": {
+            "value": "B",
+            "_proposed": true,
+            "_reason": "the damage-smoke option whose puffs trail a falling plane: the stipple plume"
+          },
+          "tone": {
+            "value": 1,
+            "_proposed": true,
+            "_reason": "the smoke tone of the trail (0 thin, 1 medium, 2 heavy)"
+          },
+          "intensity": {
+            "value": 0.5,
+            "_proposed": true,
+            "_reason": "smoke intensity of the trail, 0..1: puff radius and the option's interval follow it; 0.5 is a heavy trail that does not bury the plane"
+          },
+          "life_s": {
+            "value": 14,
+            "_proposed": true,
+            "_reason": "seconds a trail puff lasts: shorter than the plume's (the trail of a plane that is going down is a few turns long, the plume at the crash stays)"
+          },
+          "interval_s": {
+            "value": 0.12,
+            "_proposed": true,
+            "_reason": "seconds between trail puffs while out of control"
+          },
+          "flame": {
+            "enabled": {
+              "value": false,
+              "_proposed": true,
+              "_reason": "fire on the plane while it falls"
+            },
+            "frames": {
+              "value": 3,
+              "_proposed": true,
+              "_reason": "baked flame shapes, shown in turn"
+            },
+            "flicker_hz": {
+              "value": 6.0,
+              "_proposed": true,
+              "_reason": "how often the flame changes shape"
+            },
+            "length_frac": {
+              "value": 0.8,
+              "_proposed": true,
+              "_reason": "flame length as a share of the plane's size_m"
+            },
+            "width_frac": {
+              "value": 0.35,
+              "_proposed": true,
+              "_reason": "flame width as a share of its length"
+            },
+            "fire_role": {
+              "value": "fire",
+              "_proposed": true,
+              "_reason": "flame colour role"
+            },
+            "core_role": {
+              "value": "burst.core",
+              "_proposed": true,
+              "_reason": "flame core role"
+            },
+            "ember_px": {
+              "value": 1.4,
+              "_proposed": true,
+              "_reason": "ember radius in px"
+            },
+            "ember_every_s": {
+              "value": 0.0,
+              "_proposed": true,
+              "_reason": "seconds between embers shed behind a burning plane (0: none)"
+            },
+            "ember_life_s": {
+              "value": 1.0,
+              "_proposed": true,
+              "_reason": "seconds an ember lasts"
+            }
+          }
+        },
+        "impact": {
+          "radius_scale": {
+            "value": 1.0,
+            "_proposed": true,
+            "_reason": "the burst's radius on the ground"
+          },
+          "plume": {
+            "smoke_option": {
+              "value": "B",
+              "_proposed": true,
+              "_reason": "the damage-smoke option whose puffs make this plume: a stipple column"
+            },
+            "count": {
+              "value": 7,
+              "_proposed": true,
+              "_reason": "puffs of the plume"
+            },
+            "interval_s": {
+              "value": 0.35,
+              "_proposed": true,
+              "_reason": "seconds between plume puffs: it billows over the first moments, it does not appear at once"
+            },
+            "delay_s": {
+              "value": 0.3,
+              "_proposed": true,
+              "_reason": "seconds after the flash before the first puff"
+            },
+            "radius_frac": {
+              "value": [
+                0.55,
+                0.85
+              ],
+              "_proposed": true,
+              "_reason": "puff radius [first, last] as a share of the plane's size_m"
+            },
+            "spread_frac": {
+              "value": 0.5,
+              "_proposed": true,
+              "_reason": "how far from the burst centre a puff may start, as a share of the plane's size_m"
+            },
+            "life_s": {
+              "value": 40,
+              "_proposed": true,
+              "_reason": "seconds a puff lasts: very slow decay, about 10 turns (5 s each)"
+            },
+            "grow": {
+              "value": [
+                0.6,
+                1.5
+              ],
+              "_proposed": true,
+              "_reason": "scale of a puff at birth and at death"
+            },
+            "hold": {
+              "value": 0.22,
+              "_proposed": true,
+              "_reason": "share of the life at full strength"
+            },
+            "fade_power": {
+              "value": 1.5,
+              "_proposed": true,
+              "_reason": "how the fade bends"
+            },
+            "tone": {
+              "value": 2,
+              "_proposed": true,
+              "_reason": "the smoke tone (0 thin, 1 medium, 2 heavy) the plume is drawn in"
+            }
+          },
+          "smolder": {
+            "smoke_option": {
+              "value": "B",
+              "_proposed": true,
+              "_reason": "the damage-smoke option whose puffs smoulder from the wreck: the stipple plume, thin from the start"
+            },
+            "duration_s": {
+              "value": 40,
+              "_proposed": true,
+              "_reason": "seconds the wreck keeps smoking: about 12 turns (5 s each); Alex: 'an explosion, then smoking'"
+            },
+            "delay_s": {
+              "value": 0.9,
+              "_proposed": true,
+              "_reason": "seconds after the crash before the column starts (the billow comes first)"
+            },
+            "interval_s": {
+              "value": [
+                0.45,
+                1.8
+              ],
+              "_proposed": true,
+              "_reason": "seconds between puffs of the column at its start and at its end: it thins out slowly"
+            },
+            "radius_frac": {
+              "value": [
+                0.7,
+                0.4
+              ],
+              "_proposed": true,
+              "_reason": "puff radius [at the start, at the end] as a share of the plane's size_m: the column narrows as the wreck burns out"
+            },
+            "tone_edges_frac": {
+              "value": [
+                0.1,
+                0.4
+              ],
+              "_proposed": true,
+              "_reason": "share of the duration at which the column steps from the heavy tone to the medium and to the thin: it greys out over turns"
+            },
+            "life_s": {
+              "value": 22,
+              "_proposed": true,
+              "_reason": "seconds a column puff lasts: long, so it trails downwind in a streak"
+            },
+            "grow": {
+              "value": [
+                0.7,
+                1.7
+              ],
+              "_proposed": true,
+              "_reason": "scale of a column puff at birth and at death"
+            },
+            "hold": {
+              "value": 0.25,
+              "_proposed": true,
+              "_reason": "share of the life at full strength"
+            },
+            "fade_power": {
+              "value": 1.4,
+              "_proposed": true,
+              "_reason": "how the fade bends"
+            },
+            "wind_jitter_mps": {
+              "value": 1.1,
+              "_proposed": true,
+              "_reason": "per-puff spread of the drift, so the column fans out downwind instead of stacking"
+            },
+            "rise_mps": {
+              "value": 3.0,
+              "_proposed": true,
+              "_reason": "how fast a column puff rises, m/s: a smoke column goes up, so its shadow gap opens slowly"
+            }
+          },
+          "scar": {
+            "wreck_pieces": {
+              "value": [
+                "fuselage",
+                "wing"
+              ],
+              "_proposed": true,
+              "_reason": "the pieces of wreck lying in the scar, drawn once with it (the art plan's fx.wreck: fill, ink broken outline, burnt dirt): a faint scorch"
+            },
+            "wreck_spread": {
+              "value": 0.6,
+              "_proposed": true,
+              "_reason": "how far from the centre the pieces lie, as a share of the scar radius"
+            },
+            "wreck_fill_role": {
+              "value": "wreck.fill",
+              "_proposed": true,
+              "_reason": "wreck fill role"
+            },
+            "wreck_char_role": {
+              "value": "wreck.char",
+              "_proposed": true,
+              "_reason": "burnt metal role"
+            },
+            "wreck_shade_role": {
+              "value": "wreck.shade",
+              "_proposed": true,
+              "_reason": "wreck drop shadow role"
+            },
+            "wreck_scale": {
+              "value": 1.35,
+              "_proposed": true,
+              "_reason": "wreck piece size as a multiple of the plane's size_m times 0.5 (a fuselage 0.44 x that)"
+            },
+            "radius_frac": {
+              "value": 0.75,
+              "_proposed": true,
+              "_reason": "scar radius as a share of the plane's size_m: a faint scorch"
+            },
+            "variants": {
+              "value": 4,
+              "_proposed": true,
+              "_reason": "baked scar shapes; a crash picks one by its seed and turns it"
+            },
+            "stretch": {
+              "value": 1.35,
+              "_proposed": true,
+              "_reason": "how much longer the blot is along the plane's heading than across it: a crash skids"
+            },
+            "dots_per_px2": {
+              "value": 0.3,
+              "_proposed": true,
+              "_reason": "stipple density at the centre-weighted average, dots per square px"
+            },
+            "dot_px": {
+              "value": 0.6,
+              "_proposed": true,
+              "_reason": "dot radius in px"
+            },
+            "core_bias": {
+              "value": 0.75,
+              "_proposed": true,
+              "_reason": "dot radius = r x random ^ this: below 1 the dots gather in the middle"
+            },
+            "hatch": {
+              "value": 14,
+              "_proposed": true,
+              "_reason": "short ink hatch strokes, thickest on the shadow side"
+            },
+            "hatch_weight": {
+              "value": 0.9,
+              "_proposed": true,
+              "_reason": "hatch weight multiplier"
+            },
+            "crater": {
+              "value": false,
+              "_proposed": true,
+              "_reason": "a broken ink ring round the blot"
+            },
+            "dot_role": {
+              "value": "scar.dot",
+              "_proposed": true,
+              "_reason": "dirt stipple role (dirt at 0.40)"
+            },
+            "dot_soft_role": {
+              "value": "scar.dot.soft",
+              "_proposed": true,
+              "_reason": "the lighter stipple's role (ink at 0.15)"
+            },
+            "hatch_role": {
+              "value": "ink.hatch",
+              "_proposed": true,
+              "_reason": "hatch role (ink at 0.50)"
+            },
+            "embers": {
+              "value": 0,
+              "_proposed": true,
+              "_reason": "fire-accent embers that glow on the scar after the crash (0: none)"
+            },
+            "ember_life_s": {
+              "value": 10,
+              "_proposed": true,
+              "_reason": "seconds the embers last: a very slow decay, in turns"
+            },
+            "ember_spread_frac": {
+              "value": 0.5,
+              "_proposed": true,
+              "_reason": "how far from the centre an ember may sit, as a share of the scar radius"
+            }
+          }
+        }
+      }
+    }
+  }
+}

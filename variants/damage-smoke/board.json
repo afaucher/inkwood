@@ -1,0 +1,407 @@
+{
+  "id": "damage-smoke",
+  "date": "2026-10-09",
+  "area": "Effects",
+  "question": "How does a damaged plane's smoke look, and how does it grow as its health falls? (Alex: 'damage smoke and crash explosions'; particles in style, fast flashes with a very slow decay)",
+  "source": "scripts/fx/fx_board.gd over the real map (terrain provider) at 2 px/m, planes at the sandbox's own scale (36 px at zoom 1)",
+  "seed": 20261009,
+  "parameter": "data/fx/fx.json#smoke.options (every value a proposed record)",
+  "held_constant": {
+    "scene": "a light fighter, 9 m, 400 m up, 100 m/s, turning left 6 degrees per second from (2850, 2470) m; health 2/3 and 1/3",
+    "light": "sun azimuth 315, elevation 46; shadow strength 0.44; shadow of a puff = 1% of its height above ground along the light (aircraft_shadow_altitude_scale 0.01)",
+    "pen": "shadow side",
+    "fire_accent": [
+      0.72,
+      0.14,
+      56.0
+    ],
+    "wind_mps": "per option (data)"
+  },
+  "frames": [
+    {
+      "t": 0.1,
+      "zoom": 1.0,
+      "mode": "follow",
+      "cap": "0.1 s"
+    },
+    {
+      "t": 0.3,
+      "zoom": 1.0,
+      "mode": "follow",
+      "cap": "0.3 s"
+    },
+    {
+      "t": 1.0,
+      "zoom": 1.0,
+      "mode": "follow",
+      "cap": "1 s"
+    },
+    {
+      "t": 3.0,
+      "zoom": 0.35,
+      "mode": "mid",
+      "cap": "3 s"
+    },
+    {
+      "t": 5.0,
+      "zoom": 0.35,
+      "mode": "mid",
+      "cap": "5 s (end of turn 1)"
+    },
+    {
+      "t": 10.0,
+      "zoom": 0.35,
+      "mode": "mid",
+      "cap": "one turn later (10 s)"
+    },
+    {
+      "t": 20.0,
+      "zoom": 0.35,
+      "mode": "mid",
+      "cap": "three turns later (20 s)"
+    }
+  ],
+  "rows": [
+    {
+      "health": 0.6667,
+      "title": "one hit: 2 of 3 pips left (a thin trail)"
+    },
+    {
+      "health": 0.3333,
+      "title": "two hits: 1 of 3 pips left (a heavy trail)"
+    }
+  ],
+  "options": [
+    {
+      "name": "A",
+      "label": "Lobed puffs",
+      "note": "The art plan's proposed treatment: puffs built like the tree generator's lobes, a paper-light fill, an ink scallop outline, a shadow-tint underside. Three tones climb toward the dirt ink as health falls. Casts a ground shadow.",
+      "file": "option_A.png",
+      "parameters": {
+        "form": "lobed",
+        "variants": 4.0,
+        "radius_frac": [
+          0.26,
+          0.62
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": true,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.34,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.07,
+        "lobe_amp_var": 0.07,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 1.0,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": false,
+        "underside": true,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.a.lit.0",
+          "smoke.a.lit.1",
+          "smoke.a.lit.2"
+        ],
+        "shade_roles": [
+          "smoke.a.shade.0",
+          "smoke.a.shade.1",
+          "smoke.a.shade.2"
+        ],
+        "ticks": true,
+        "stipple_per_r": 0.5,
+        "stipple_role": "ink.soft",
+        "rings": 0.0,
+        "ring_role": "ink.ring"
+      }
+    },
+    {
+      "name": "B",
+      "label": "Stipple plume",
+      "note": "No fill and no outline: ink dots, thicker on the shadow side, and short hatch strokes over a faint pale patch. Denser as health falls. Fades in whole alpha steps. No ground shadow.",
+      "file": "option_B.png",
+      "parameters": {
+        "form": "stipple",
+        "variants": 4.0,
+        "radius_frac": [
+          0.34,
+          0.8
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [
+          1.0,
+          0.55,
+          0.3,
+          0.15
+        ],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": false,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.34,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.07,
+        "lobe_amp_var": 0.07,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 1.0,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": false,
+        "underside": true,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.a.lit.0",
+          "smoke.a.lit.1",
+          "smoke.a.lit.2"
+        ],
+        "shade_roles": [
+          "smoke.a.shade.0",
+          "smoke.a.shade.1",
+          "smoke.a.shade.2"
+        ],
+        "ticks": true,
+        "stipple_per_r": 0.5,
+        "stipple_role": "ink.soft",
+        "rings": 0.0,
+        "ring_role": "ink.ring",
+        "underlay_role": "smoke.b.underlay",
+        "patch_r": 0.8,
+        "core_bias": 0.8,
+        "dots_per_px2": [
+          0.07,
+          0.13,
+          0.22
+        ],
+        "dot_px": 0.6,
+        "dot_role": "ink.soft",
+        "dot_soft_role": "dirt.soft",
+        "shadow_bias": 0.7,
+        "hatch_count": [
+          2.0,
+          4.0,
+          7.0
+        ],
+        "hatch_role": "ink.hatch",
+        "hatch_weight": 0.75
+      }
+    },
+    {
+      "name": "C",
+      "label": "Contour rings",
+      "note": "See-through smoke: a thin scalloped outline, two broken contour rings per lobe (the tree's floret rings) and a faint pale wash; the map shows through. More body as health falls. No ground shadow.",
+      "file": "option_C.png",
+      "parameters": {
+        "form": "lobed",
+        "variants": 4.0,
+        "radius_frac": [
+          0.28,
+          0.66
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": false,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.34,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.07,
+        "lobe_amp_var": 0.07,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 0.85,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": false,
+        "underside": false,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "shade_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "ticks": true,
+        "stipple_per_r": 0.0,
+        "stipple_role": "ink.soft",
+        "rings": 2.0,
+        "ring_role": "ink.ring"
+      }
+    },
+    {
+      "name": "D",
+      "label": "Ink wash",
+      "note": "Lobes washed with the ink itself at the palette's alpha steps (0.14, 0.28, 0.46), an ink scallop outline: the heavy trail reads dark from far off. Casts a ground shadow.",
+      "file": "option_D.png",
+      "parameters": {
+        "form": "wash",
+        "variants": 4.0,
+        "radius_frac": [
+          0.26,
+          0.62
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": true,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.34,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.07,
+        "lobe_amp_var": 0.07,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 1.0,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": true,
+        "underside": true,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.d.lit.0",
+          "smoke.d.lit.1",
+          "smoke.d.lit.2"
+        ],
+        "shade_roles": [
+          "smoke.d.shade.0",
+          "smoke.d.shade.1",
+          "smoke.d.shade.2"
+        ],
+        "ticks": false,
+        "stipple_per_r": 0.35,
+        "stipple_role": "ink.soft",
+        "rings": 0.0,
+        "ring_role": "ink.ring"
+      }
+    }
+  ],
+  "sheet": "board.png (every option, scaled), option_<X>.png (each at full size, with the palette row, the specimen strip and the shadow with/without comparison)",
+  "chosen": null,
+  "chosen_by": null
+}
