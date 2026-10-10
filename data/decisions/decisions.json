@@ -1009,17 +1009,18 @@
         "B colour wash",
         "C ruled (wash plus bands, ticks and the ideal release angle)"
       ],
-      "chosen": "B colour wash, in a style identical to the top-down map; units, the tower and every other thing reduced to indicators -- no side-view art",
+      "chosen": "B colour wash, in a style identical to the top-down map; units, the tower and every other thing reduced to indicators -- no side-view art; no weapon labels on the panel for now",
       "parameters": {
         "look": "wash (the same side-colour wash as the map's cone overlay)",
         "style": "identical to the top-down view: the same palette roles, wash, ink and lettering",
-        "units": "indicators only (no side-view silhouettes or other side-view assets)"
+        "units": "indicators only (no side-view silhouettes or other side-view assets)",
+        "weapon_labels": "none for now (noise); revisit when units carry many more hardpoints -- perhaps a dropdown to pick the weapon"
       },
       "applied_to": [
         "not built yet"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'For the side view I like the color wash. Keep the style identical to the top down. Reduce the icons (plane, tower, etc) to just indicators. I don't want side view assets.' What the panel shows as its target depends on special-targeting (open)."
+      "notes": "Alex: 'For the side view I like the color wash. Keep the style identical to the top down. Reduce the icons (plane, tower, etc) to just indicators. I don't want side view assets.' What the panel shows as its target depends on special-targeting (open). Later: 'The side view, let's remove the weapon labels on the graph. It just adds noise for now. We can revisit when we add lots more hardpoints. We might need a drop-down.'"
     },
     {
       "id": "special-targeting",
