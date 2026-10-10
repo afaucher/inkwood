@@ -58,6 +58,10 @@ func plan_turn() -> void:
 		if world.units[id].controller != World.CONTROLLER_AI:
 			continue
 		any = true
+		# A down unit takes no orders (combat: plan_step refuses it); the AI
+		# still readies, or a game whose AI units are all down never resolves.
+		if world.units[id].down:
+			continue
 		_plan_unit(id)
 	if any:
 		world.commit(World.AI_PLAYER)
