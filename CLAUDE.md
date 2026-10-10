@@ -93,6 +93,26 @@ find the enemy bomber in the fog and shoot it down before it reaches the target.
   (`test_ui_combat`, `test_ui_result`, `test_ui_trails_combat`).
 - Every choice Alex made from a board is in `data/decisions/decisions.json`;
   the boards are under `variants/` (their frames are regenerated, not committed).
+
+**The strike plays** (2026-10-10; design doc: Next layer: the strike): the
+menu's scenario selector (the `scenario` knob: strike by default, intercept,
+sandbox) starts the Strike (`data/scenarios/strike.json`): a bomber and two
+fighters destroy a radio tower in a village defended by two flak batteries and
+a patrolling fighter, by a turn limit.
+- Bombing: a drop per step, aimed inside its cone (`scripts/sim/bombs.gd`,
+  `bomb_rules.gd`, `data/sim/bombs.json`); bombs still falling at a turn's end
+  carry over and cross the wire. Static ground units (`radio_tower`,
+  `anti_aircraft_battery`) fire flak on upward cones (`test_ground_units`,
+  `test_bombs`, `test_bomb_carry`; tuning: `scripts/test_support/strike_tuning.gd`).
+- The world layout: `scripts/world/world_layout.gd` places the village, its
+  road and fields and the target sites once per seed (`data/world/layout.json`);
+  a scenario names a site (`"site": "radio_tower"`) rather than copying numbers
+  (`test_world_layout`).
+- On screen: the Drop control (B), the bomb cone and aim, height and speed
+  labels, the ground markers, flak, impacts and the ruin (`test_ui_bombs`,
+  `test_ui_labels`); the scripted run is `scripts/test_support/strike_play.gd`
+  (`test_strike`; shots: `scripts/app/strike_shot.gd`; two windows:
+  `tmp/net/run_check.ps1 -Scenario strike [-Play] [-Exe ...]`).
 Work on a track stays inside the folders it owns and reads other tracks' data
 and public APIs, not their code.
 
@@ -318,6 +338,10 @@ Properties of Godot and PowerShell, not of that game. Entries marked
   (`scripts/render/map_look_hash.gd`), not by the gate.
 - **A Dictionary used as a Dictionary key hashes by CONTENT** (2026-10-10):
   two equal-looking records collide; key by an id instead.
+- **`==` between Dictionaries compares a JSON number and an int as unequal**
+  (2026-10-10): a spec read from JSON holds `20.0`, one built in code `20`, and
+  the two Dictionaries differ. Round-trip both through `JSON.parse_string(
+  JSON.stringify(...))` before comparing (`test_strike` does), or compare by value.
 - **A runtime error inside a `--script` coroutine leaves the process idle
   until killed** (2026-10-10), like a compile error in a dependency.
 - **`RenderingDevice.get_captured_timestamp_gpu_time` is in NANOseconds**,
@@ -387,7 +411,7 @@ is made in BOTH twins; `tar_pack.ps1` is the one Windows-only helper, because
   networking bug. Allocated: `test_enet_loopback` 28777,
   `test_network_session` 28778, `test_world_sync` 28779, `test_net_sandbox`
   28780; the manual two-window check (`tmp/net/run_check.ps1`, not in the
-  gate) uses 28790. `test_net_join_ready` 28781, `test_intercept` 28782. Pick
+  gate) uses 28790. `test_net_join_ready` 28781, `test_intercept` 28782, `test_strike` 28783. Pick
   the next free one and add it here.
 - **Only `scripts/net/steam_manager.gd` calls `Steam.*`.** Everything else asks
   `NetworkManager`, because the gate may have no Steam client and anything that

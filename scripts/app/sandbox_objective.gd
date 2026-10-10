@@ -11,6 +11,11 @@ extends Node2D
 #   var obj := SandboxObjective.new()
 #   mount.add_child(obj)
 #   obj.setup(map_view, style, Vector2(3600, 3900), 300.0)     # metres
+#
+# THE STRIKE (Track A2): the ring can carry its own word ("label": the scenario's objective block names it) and
+# follow a UNIT (world + unit_id): it is the radio tower's ring, and once that unit is down the ring goes -- the
+# ruin the effects layer draws takes its place.
+#   obj.setup(map_view, style, tower_m, 120.0, "TARGET", world, "radio_tower_1")
 
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
@@ -22,14 +27,27 @@ var host: Node2D = null
 var style: UiStyle = null
 var point_m := Vector2.ZERO
 var radius_m := 300.0
+var label := LABEL
+var world: Object = null             # optional: the World, and the unit the ring marks
+var unit_id := ""
 
-func setup(host_view: Node2D, st: RefCounted, target_m: Vector2, radius: float) -> void:
+func setup(host_view: Node2D, st: RefCounted, target_m: Vector2, radius: float, word: String = "", w: Object = null, unit: String = "") -> void:
 	host = host_view
 	style = st as UiStyle
 	point_m = target_m
 	radius_m = radius
+	label = word if word != "" else LABEL
+	world = w
+	unit_id = unit
 	name = "Objective"
 	queue_redraw()
+
+# The ring is drawn unless its unit is down (the radio tower, once bombed: its ruin marks the spot).
+func shown() -> bool:
+	if world == null or unit_id == "":
+		return true
+	var u: Variant = world.units.get(unit_id)
+	return u == null or not bool(u.down)
 
 func _process(_delta: float) -> void:
 	queue_redraw()   # the camera moves; the drawing is a ring and a word
@@ -45,7 +63,7 @@ func screen_ring() -> Dictionary:
 	return {"centre": c, "radius_px": r}
 
 func _draw() -> void:
-	if host == null or style == null:
+	if host == null or style == null or not shown():
 		return
 	var ring := screen_ring()
 	var c: Vector2 = ring["centre"]
@@ -62,5 +80,5 @@ func _draw() -> void:
 	# The word, under the ring.
 	var font: Font = style.font(true)
 	var px: float = style.num("fonts.detail_px")
-	var w := UiInk.text_width(font, LABEL, px)
-	UiInk.text(self, font, Vector2(c.x - w * 0.5, c.y + r + px + 4.0), LABEL, px, Color(ink.r, ink.g, ink.b, 0.9))
+	var w := UiInk.text_width(font, label, px)
+	UiInk.text(self, font, Vector2(c.x - w * 0.5, c.y + r + px + 4.0), label, px, Color(ink.r, ink.g, ink.b, 0.9))

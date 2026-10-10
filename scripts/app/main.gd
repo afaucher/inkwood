@@ -8,8 +8,10 @@ extends Node2D
 # sandbox demo assembled -- LOADED here, not preloaded, so a parse error in any
 # part fails Local and the sandbox's own test, never every test through this
 # file), and Esc goes back to the menu. WHICH scenario it plays is the 'scenario'
-# knob (INKWOOD_SCENARIO): the first fight's Intercept by default, "sandbox" for
-# the old flight toy. Local, Host and Join all start it.
+# knob (INKWOOD_SCENARIO), which the menu's selector sets (Track A2, proposed): the
+# Strike by default (the newest layer), Intercept (the first fight), "sandbox" (the
+# old flight toy). Local, Host and Join all start it; a joiner must have chosen the
+# host's scenario, or the host refuses its hello and says which one it plays.
 #
 # THE RESULT CARD's two buttons come back here: Play again (the sandbox's
 # restart_requested) replaces the sandbox with a fresh one of the same scenario and role
@@ -18,11 +20,20 @@ extends Node2D
 
 const BuildVersion = preload("res://scripts/ui/build_version.gd")
 
+# The menu's scenario selector: the knob's choices in the order the menu lists them, and their words.
+const SCENARIO_ORDER: Array[String] = ["strike", "intercept", "sandbox"]
+const SCENARIO_WORDS := {
+	"strike": "STRIKE: bomb the radio tower",
+	"intercept": "INTERCEPT: shoot down the bomber",
+	"sandbox": "SANDBOX: the flight toy",
+}
+
 @onready var menu: VBoxContainer = $CanvasLayer/Menu
 @onready var status_label: Label = $CanvasLayer/Menu/StatusLabel
 
 # The running sandbox (a Node2D child of this node), or null at the menu.
 var sandbox: Node = null
+var scenario_select: OptionButton = null   # the menu's selector (built by setup_menu, not in the .tscn)
 var _menu_ready := false
 var _local_pressed_ms := 0
 
@@ -56,6 +67,7 @@ func setup_menu() -> void:
 	# .tscn because a headless run returns above this line, so a test never
 	# builds a Label it will not look at.
 	$CanvasLayer.add_child(BuildVersion.make_label())
+	_add_scenario_selector()
 
 	$CanvasLayer/Menu/HostButton.pressed.connect(_on_host_pressed)
 	$CanvasLayer/Menu/JoinButton.pressed.connect(_on_join_pressed)
@@ -74,6 +86,38 @@ func setup_menu() -> void:
 	# INKWOOD_AUTOSTART=local[_shot]: press Local without a click (see _autostart).
 	if DebugSettings.get_choice_name("autostart") != "off":
 		_autostart.call_deferred()
+
+# The scenario selector, under the title: one item per scenario file the knob knows. It SETS the knob
+# (the sandbox reads the knob when it is built), so the menu, INKWOOD_SCENARIO and a test agree, and Play
+# again, which builds a new sandbox from the knob, plays the same scenario.
+func _add_scenario_selector() -> void:
+	var choices: Array = DebugSettings.OPTIONS["scenario"]["choices"]
+	var current := DebugSettings.get_choice_name("scenario")
+	scenario_select = OptionButton.new()
+	scenario_select.name = "ScenarioSelect"
+	scenario_select.tooltip_text = "Which scenario Local, Host and Join start (a joiner must pick the host's)."
+	var at := 0
+	for id: String in SCENARIO_ORDER:
+		if not choices.has(id):
+			continue
+		scenario_select.add_item(str(SCENARIO_WORDS.get(id, id.to_upper())))
+		scenario_select.set_item_metadata(scenario_select.item_count - 1, id)
+		if id == current:
+			at = scenario_select.item_count - 1
+	scenario_select.select(at)
+	scenario_select.item_selected.connect(_on_scenario_selected)
+	menu.add_child(scenario_select)
+	menu.move_child(scenario_select, 1)   # under the title
+
+func _on_scenario_selected(index: int) -> void:
+	var choices: Array = DebugSettings.OPTIONS["scenario"]["choices"]
+	var at := choices.find(str(scenario_select.get_item_metadata(index)))
+	if at >= 0:
+		DebugSettings.set_choice("scenario", at)
+
+# The scenario the next Local / Host / Join starts (the knob's choice).
+func selected_scenario() -> String:
+	return DebugSettings.get_choice_name("scenario")
 
 # Closing the window with the sandbox up: drop its bake jobs first (their worker
 # threads read the map view's baker; the exported build crashed on exit without this).

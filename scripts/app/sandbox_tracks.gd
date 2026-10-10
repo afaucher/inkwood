@@ -12,6 +12,9 @@ extends Node2D
 # the playback has (the markers' own trail shows the rest), so a line never runs
 # ahead of its plane.
 #
+# A STATIC unit (the strike's tower and batteries) flies nothing and has no track: it would only
+# be a dot at the same place for every turn.
+#
 # FOG: a plane the player does not see is not tracked on screen either. A unit
 # of a side with a player-controlled unit is always drawn; any other unit's
 # track only where `point_visible` says that ground is in sight right now.
@@ -81,6 +84,8 @@ func _on_turn_resolved(turn_no: int, _histories: Dictionary, _events: Array) -> 
 	var turn_s: float = world.rules.turn_seconds
 	var t0 := float(turn_no - 1) * turn_s
 	for id: String in world.units:
+		if world.units[id].def.is_static():
+			continue
 		var tr: Dictionary = tracks.get(id, {})
 		if tr.is_empty():
 			tr = {"pts": PackedVector2Array(), "t": PackedFloat64Array(), "marks": PackedInt32Array(),
@@ -141,7 +146,9 @@ func _draw() -> void:
 	if world == null or host == null or tracks.is_empty():
 		return
 	var xf: Transform2D = host.get_global_transform_with_canvas()
-	var ppm: float = host.px_per_m
+	# (A host that has no px_per_m -- a plain Node2D standing in for the map in a test -- draws metres as pixels.)
+	var host_ppm: Variant = host.get("px_per_m")
+	var ppm: float = float(host_ppm) if host_ppm != null else 1.0
 	var limit := playback_limit()
 	var ink: Color = style.color("ink")
 	for id: String in tracks:

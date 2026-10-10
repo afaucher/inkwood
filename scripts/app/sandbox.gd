@@ -15,6 +15,7 @@ extends Node2D
 #   UnitUI                  Track U: markers, roster, fan, orders; mapped through MapView
 #   SandboxTracks           the flown paths (this folder, proposed)
 #   SandboxObjective        the mission's target ring on the map (this folder, proposed)
+#   SandboxClock            "turn 7 of 20" when the mission has a turn limit (this folder, proposed)
 #   SandboxKnobs (F2)       the live knobs (this folder, proposed)
 #   SandboxLoading          "Drawing the map..." until the first view has baked
 #
@@ -23,9 +24,10 @@ extends Node2D
 #   sb.playable                   # signal: the first view is baked, the card is gone
 #   sb.shutdown(); sb.queue_free()   # back to the menu
 #
-# WHICH SCENARIO. data/scenarios/<id>.json, id from the 'scenario' knob (INKWOOD_SCENARIO):
-# "intercept", the first fight, by default (proposed); "sandbox", the flight toy. The scenario
-# says which AI and which mission to attach. The AI plans on the HOST or locally only, never on a
+# WHICH SCENARIO. data/scenarios/<id>.json, id from the 'scenario' knob (INKWOOD_SCENARIO, and the
+# menu's selector, which sets the same knob): "strike" by default (Track A2, proposed: the newest layer),
+# "intercept", the first fight; "sandbox", the flight toy. The scenario says which AI and which mission
+# to attach. The AI plans on the HOST or locally only, never on a
 # client (a client's World would plan and ready up the enemy itself); the Mission is attached
 # everywhere, because it only reads units and histories a client already has: it evaluates after
 # every resolve, applied or its own, and reaches the host's verdict.
@@ -78,6 +80,7 @@ const SandboxTracks = preload("res://scripts/app/sandbox_tracks.gd")
 const SandboxKnobs = preload("res://scripts/app/sandbox_knobs.gd")
 const SandboxLoading = preload("res://scripts/app/sandbox_loading.gd")
 const SandboxHint = preload("res://scripts/app/sandbox_hint.gd")
+const SandboxClock = preload("res://scripts/app/sandbox_clock.gd")
 const SandboxSession = preload("res://scripts/app/sandbox_session.gd")
 const World = preload("res://scripts/sim/world.gd")
 const Mission = preload("res://scripts/sim/mission.gd")
@@ -90,8 +93,8 @@ const UnitUI = preload("res://scripts/ui/unit_ui.gd")
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 
-# The 'scenario' knob's first choice (data/scenarios/<id>.json); DebugSettings.get_choice_name("scenario") is the live one.
-const DEFAULT_SCENARIO := "intercept"
+# The scenario when the 'scenario' knob names none (data/scenarios/<id>.json); DebugSettings.get_choice_name("scenario") is the live one.
+const DEFAULT_SCENARIO := "strike"
 # The knobs the F2 panel lists, in order (each is registered in DebugSettings,
 # section "Sandbox"). line_of_sight is added when the fog layer has it.
 const KNOB_KEYS: Array[String] = ["map_scale", "plane_size", "fog", "fog_edge", "line_of_sight", "pen", "far_zoom", "tree_pool", "playback_speed"]
@@ -112,6 +115,7 @@ var knobs: SandboxKnobs = null
 var loading: SandboxLoading = null    # the blocking card, then hidden
 var note: SandboxLoading = null       # the small "redrawing" note
 var hint: SandboxHint = null          # the keys, for the first seconds
+var clock: SandboxClock = null        # "turn 7 of 20", when the mission has a turn limit
 # NETWORKED (Track N, proposed): "" is Local, exactly as before; "host" or "client"
 # is a session (set by main.gd BEFORE add_child, from NetworkManager). Then the
 # World's player is this peer's ("peer_<id>"), the host resolves and the AI runs
@@ -197,9 +201,13 @@ func _build() -> void:
 		return
 	_ref_size = INF
 	for id: String in ids:
-		_ref_size = minf(_ref_size, float(world.units[id].def.size_m))
+		# (A tower or a battery is drawn at its own scale rule, marker.static_scale; the planes' size rule is the smallest PLANE's.)
+		if not world.units[id].def.is_static():
+			_ref_size = minf(_ref_size, float(world.units[id].def.size_m))
 		if world.units[id].controller == World.CONTROLLER_PLAYER:
 			_revealing[str(world.units[id].side)] = true
+	if is_inf(_ref_size):
+		_ref_size = 9.0
 	var local_player := scenario.local_player
 	if net_role != "":
 		session = SandboxSession.new()
@@ -281,7 +289,7 @@ func _build() -> void:
 	if not target.is_empty():
 		objective = SandboxObjective.new()
 		_mount.add_child(objective)
-		objective.setup(map_view, _style, target["point"], float(target["radius_m"]))
+		objective.setup(map_view, _style, target["point"], float(target["radius_m"]), str(target.get("label", "")), world, str(target.get("unit", "")))
 	tracks = SandboxTracks.new()
 	tracks.name = "Tracks"
 	_mount.add_child(tracks)
@@ -293,8 +301,7 @@ func _build() -> void:
 		session.attach_ui(ui)
 		if "player_name" in ui:
 			ui.set("player_name", session.sync.name_of)   # the cards say "Hal", not "peer_1"
-		if mission != null:
-			session.sync.joined.connect(_on_joined)
+		session.sync.joined.connect(_on_joined)
 	_set_hud_insets()
 	if ui.has_signal("result_play_again"):
 		ui.connect("result_play_again", _on_result_play_again)
@@ -321,7 +328,11 @@ func _build() -> void:
 	hint.name = "Hint"
 	_hud.add_child(hint)
 	hint.headline = scenario.briefing
-	hint.setup(_style, "F2 knobs   ·   Esc menu   ·   right-drag or WASD pans   ·   wheel or Q E zooms   ·   %s readies" % _style.text("keys.ready"), 16.0)
+	hint.setup(_style, _hint_line(), 16.0)
+	clock = SandboxClock.new()
+	clock.name = "Clock"
+	_hud.add_child(clock)
+	clock.setup(_style, world, scenario.turn_limit(), ui.sidebar_width_px())
 	_top = CanvasLayer.new()
 	_top.name = "LoadingLayer"
 	_top.layer = 20
@@ -364,6 +375,17 @@ func _fail(message: String) -> void:
 func ok() -> bool:
 	return errors.is_empty() and world != null
 
+# The keys the first seconds list. The drop key (B) is listed when a unit the players fly carries bombs:
+# it is the one key a new player cannot guess (Track A2: the strike's bomber).
+func _hint_line() -> String:
+	var line := "F2 knobs   ·   Esc menu   ·   right-drag or WASD pans   ·   wheel or Q E zooms   ·   %s readies" % _style.text("keys.ready")
+	for id: String in ids:
+		var u = world.units[id]
+		if u.controller == World.CONTROLLER_PLAYER and u.def.carries_bombs():
+			line += "   ·   %s drops the bombs on the step you are planning" % _style.text("keys.drop")
+			break
+	return line
+
 # --- The frame ---------------------------------------------------------------------------
 
 func _process(delta: float) -> void:
@@ -403,7 +425,7 @@ func _pause_baking_at_overview() -> void:
 # every frame -- which also follows a resized window.
 func _fit_overlays() -> void:
 	var vs := get_viewport().get_visible_rect().size
-	for c: Control in [ui.hud, loading, note, hint]:
+	for c: Control in [ui.hud, loading, note, hint, clock]:
 		if c.size != vs or c.position != Vector2.ZERO:
 			c.position = Vector2.ZERO
 			c.size = vs
@@ -527,7 +549,7 @@ func _frame_start_view() -> void:
 			for corner: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
 				pts.append(p + corner * pad)
 	if scenario.view_flag("start_frame_objective") and objective != null:
-		var reach := objective.radius_m + pad * 0.5
+		var reach := maxf(objective.radius_m + pad * 0.5, float(scenario.objective().get("frame_m", 0.0)))
 		for corner: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
 			pts.append(objective.point_m + corner * reach)
 	if pts.is_empty():
@@ -737,7 +759,12 @@ func _set_hud_insets() -> void:
 # nothing to evaluate: look at what the host's snapshot carries (every unit's state and its LAST turn's
 # history) -- a bomber that is down, the fighters down, or the bomber at the target in that last turn are
 # decided at once, and the card comes up (a decided game is over whoever walks in).
+# And what is already on the ground when the snapshot arrives -- the radio tower's ruin, a crashed plane's
+# scar -- is put back on this machine's effects layer (UnitUI.restore_wrecks: the interface leaves that to
+# whoever applies a snapshot). Not the bomb craters: nothing in the snapshot says where they are.
 func _on_joined() -> void:
+	if ui != null and ui.has_method("restore_wrecks"):
+		ui.call("restore_wrecks", true)
 	if mission != null and mission.state == Mission.PLAYING and world.turn > 1:
 		mission.evaluate({"turn": world.turn - 1})
 

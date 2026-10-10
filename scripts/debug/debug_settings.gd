@@ -66,13 +66,13 @@ const OPTIONS := {
 		"max": 65535,
 		"help": "The UDP port Host binds and Join connects to when the transport is 'enet' (NetworkManager.DEFAULT_PORT). INKWOOD_NET_PORT=28790.",
 	},
-	# --- Scenario (Track A, first fight, proposed) -------------------------------------
+	# --- Scenario (Track A, first fight; Track A2 added the strike, proposed) ---------------
 	"scenario": {
 		"section": "Sandbox",
 		"label": "Scenario",
-		"choices": ["intercept", "sandbox"],
-		"default": 0,
-		"help": "Which data/scenarios/<id>.json Local, Host and Join start. 'intercept' is the first fight (an AI bomber and its escort, a mission, a result card); 'sandbox' is the old flight toy (AiDumb, no mission). Read when a game is built, so set it before pressing Local: INKWOOD_SCENARIO=sandbox. Not a live knob (it is not on the F2 panel).",
+		"choices": ["intercept", "sandbox", "strike"],
+		"default": 2,
+		"help": "Which data/scenarios/<id>.json Local, Host and Join start. 'strike' (the default, proposed: the newest layer) is the bombing mission: a bomber and two fighters against a radio tower in a village, its two flak batteries and a patrolling fighter; 'intercept' is the first fight (an AI bomber and its escort); 'sandbox' is the old flight toy (AiDumb, no mission). The menu's selector sets this knob. Read when a game is built, so set it before pressing Local: INKWOOD_SCENARIO=intercept. Not a live knob (it is not on the F2 panel). Indexes 0 and 1 are the two older scenarios, in the order the tests set them.",
 	},
 	# --- Sandbox knobs (Track A; the F2 panel shows them) ---------------------------
 	# Index 0 is always "data": whatever the data files say (data/scenarios/

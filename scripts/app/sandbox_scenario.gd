@@ -22,7 +22,8 @@ extends RefCounted
 # AI-controlled units and which mission judges the game --
 #
 #   "rng_seed": 7                          the World's combat seed (World.rng_seed); populate() sets it
-#   "briefing": "..."                      (optional) the line the sandbox shows at the start
+#   "briefing": "..."                      (optional) the line the sandbox shows at the start; "{turn_limit}" in it
+#                                          becomes the mission's turn limit (the strike's), so the number is written once
 #   "ai": {"kind": "dumb"}                 the old sandbox's AiDumb (scripts/sim/ai_dumb.gd), or
 #   "ai": {"kind": "pilot", "assignments": {"bomber_1": {"role": "strike", "route": [[x, y], ...],
 #          "target": [x, y]}, "escort_1": {"role": "escort", "protect": "bomber_1"}}}
@@ -37,11 +38,28 @@ extends RefCounted
 #
 # Keys that begin with "_" (_proposed, _reason, ...) are notes and are dropped from the
 # ai and mission blocks.
+#
+# THE STRIKE (Track A2, 2026-10-10): a scenario can place a unit, or a route point, ON THE WORLD LAYOUT's
+# sites (scripts/world/world_layout.gd: WorldLayout.shared(seed).sites()) instead of at copied numbers, so
+# the tower and the batteries stand where the village is whatever the layout rules say --
+#
+#   "site": "radio_tower"                  a unit's position (x and y are then read from the layout; give no x, y)
+#   "site": "aa_battery", "site_index": 1  the layout's list sites have several: the second battery
+#   "dx": 40.0, "dy": -20.0                (optional) metres added to the site
+#   {"site": "radio_tower", "dx": 650.0, "dy": -100.0}   in place of an [x, y] pair in a route or a target
+#
+# and an "objective" block says what the map marks for the players (the strike's mission names a unit, not a
+# point, so it has no 'target' for objective() to read):
+#
+#   "objective": {"unit": "radio_tower_1", "radius_m": 120.0, "frame_m": 300.0, "label": "TARGET"}
+#                                          the ring is drawn at that unit's position; frame_m (optional) is how
+#                                          far round it the opening view must reach; label (optional) the word
 
 const AiDumb = preload("res://scripts/sim/ai_dumb.gd")
 const AiPilot = preload("res://scripts/sim/ai_pilot.gd")
 const AiParams = preload("res://scripts/sim/ai_params.gd")
 const Mission = preload("res://scripts/sim/mission.gd")
+const WorldLayout = preload("res://scripts/world/world_layout.gd")
 
 const SCENARIO_DIR := "res://data/scenarios"
 const CALLSIGNS_PATH := "res://data/names/callsigns.json"
@@ -56,11 +74,15 @@ var briefing: String = ""             # (optional) the line shown at the start
 var ai_kind: String = ""              # AI_DUMB or AI_PILOT
 var ai_assignments: Dictionary = {}   # unit id -> orders, for AI_PILOT
 var mission_spec: Dictionary = {}     # scripts/sim/mission.gd's spec; {} = no mission
+var objective_spec: Dictionary = {}   # the "objective" block: {unit, radius_m, frame_m, label}; {} = none
 var local_player: String = ""
 var sides: Dictionary = {}            # scenario side -> {world_side, callsign_pool}
 var units: Array[Dictionary] = []     # World.add_unit specs, callsigns resolved
 var view: Dictionary = {}             # name -> value (value records flattened)
 var errors: Array[String] = []
+
+var _sites: Dictionary = {}           # the world layout's sites, read on first use (a scenario with no "site" never loads it)
+var _sites_read := false
 
 func _init(scenario_id: String = "sandbox", quiet: bool = false) -> void:
 	id = scenario_id
@@ -105,6 +127,9 @@ func _init(scenario_id: String = "sandbox", quiet: bool = false) -> void:
 			mission_spec = _strip(md)
 		else:
 			_err("'mission' must be an object", quiet)
+	briefing = briefing.replace("{turn_limit}", str(turn_limit()))
+	if d.has("objective"):
+		_read_objective(d["objective"], quiet)
 	var vd: Variant = d.get("view")
 	if vd is Dictionary:
 		for k: String in vd:
@@ -173,10 +198,24 @@ func make_mission(world: Object) -> Mission:
 		return null
 	return Mission.new(world, mission_spec)
 
-# The mission's target as the map shows it: {point: Vector2 (metres), radius_m: float}, or {}
-# when the mission names no target. The radius is the first "unit_within ... of target"
-# condition's own, else data/sim/ai.json mission.target_radius_m.
+# The mission's turn limit (a "turn_limit" condition of its lose list), or 0 when it has none.
+func turn_limit() -> int:
+	var lose: Variant = mission_spec.get("lose")
+	if lose is Array:
+		for c: Variant in (lose as Array):
+			if c is Dictionary and str((c as Dictionary).get("type", "")) == Mission.TYPE_TURN_LIMIT:
+				return int((c as Dictionary).get("turn", 0))
+	return 0
+
+# The mission's target as the map shows it: {point: Vector2 (metres), radius_m: float, frame_m: float,
+# label: String, unit: String}, or {} when the scenario names none. Two sources: an "objective" block (the
+# strike: the ring is round a UNIT's position, e.g. the radio tower) or else the mission's "target" point (the
+# first fight). frame_m is how far round the point the opening view must reach (0 = the ring's own size);
+# label "" = the map's default word. For a mission "target" the radius is the first
+# "unit_within ... of target" condition's own, else data/sim/ai.json mission.target_radius_m.
 func objective() -> Dictionary:
+	if not objective_spec.is_empty():
+		return objective_spec.duplicate()
 	var t: Variant = mission_spec.get("target")
 	if not (t is Array and (t as Array).size() == 2):
 		return {}
@@ -189,7 +228,25 @@ func objective() -> Dictionary:
 				break
 	if radius <= 0.0:
 		radius = AiParams.new(AiParams.DATA_PATH, true).num("mission", "target_radius_m")
-	return {"point": Vector2(float((t as Array)[0]), float((t as Array)[1])), "radius_m": radius}
+	return {"point": Vector2(float((t as Array)[0]), float((t as Array)[1])), "radius_m": radius, "frame_m": 0.0, "label": "", "unit": ""}
+
+# The world layout's site `key` (and `index` for a list site) as a Vector2 in metres, plus (dx, dy); NAN, NAN
+# and an error when the layout has no such site.
+func site_point(key: String, index: int = 0, dx: float = 0.0, dy: float = 0.0, quiet: bool = false) -> Vector2:
+	if not _sites_read:
+		_sites_read = true
+		var layout: RefCounted = WorldLayout.shared(seed_value)
+		if layout == null or not layout.ok():
+			_err("the world layout of seed %d did not load: %s" % [seed_value, str(layout.errors) if layout != null else "null"], quiet)
+		else:
+			_sites = layout.sites()
+	var v: Variant = _sites.get(key)
+	if v is Array and index >= 0 and index < (v as Array).size() and (v as Array)[index] is Vector2:
+		return ((v as Array)[index] as Vector2) + Vector2(dx, dy)
+	if v is Vector2 and index == 0:
+		return (v as Vector2) + Vector2(dx, dy)
+	_err("the world layout has no site '%s' [%d]" % [key, index], quiet)
+	return Vector2(NAN, NAN)
 
 # --- internals --------------------------------------------------------------------------
 
@@ -225,7 +282,53 @@ func _read_ai(d: Dictionary, quiet: bool) -> void:
 		elif not (orders is Dictionary) or str((orders as Dictionary).get("role", "")) == "":
 			_err("ai.assignments.%s needs a \"role\"" % k, quiet)
 		else:
-			ai_assignments[k] = _strip(orders)
+			var cleaned: Dictionary = _strip(orders)
+			if cleaned.has("route"):
+				cleaned["route"] = _points(cleaned["route"], "ai.assignments.%s.route" % k, quiet)
+			if cleaned.has("target"):
+				cleaned["target"] = _point(cleaned["target"], "ai.assignments.%s.target" % k, quiet)
+			ai_assignments[k] = cleaned
+
+# A route: a list of [x, y] pairs and/or {"site": ...} points, as a list of [x, y] pairs.
+func _points(v: Variant, label: String, quiet: bool) -> Array:
+	var out: Array = []
+	if not (v is Array):
+		_err("%s must be a list of points" % label, quiet)
+		return out
+	for p: Variant in (v as Array):
+		out.append(_point(p, label, quiet))
+	return out
+
+# One point: an [x, y] pair, or {"site": key, "site_index": i, "dx": .., "dy": ..} on the world layout.
+func _point(v: Variant, label: String, quiet: bool) -> Variant:
+	if v is Dictionary and (v as Dictionary).has("site"):
+		var d: Dictionary = v
+		var at := site_point(str(d["site"]), int(d.get("site_index", 0)), float(d.get("dx", 0.0)), float(d.get("dy", 0.0)), quiet)
+		return [at.x, at.y]
+	if v is Array and (v as Array).size() == 2:
+		return v
+	_err("%s: a point is [x, y] or {\"site\": ...}" % label, quiet)
+	return [NAN, NAN]
+
+# The "objective" block: {unit, radius_m, frame_m?, label?}. The ring's centre is that unit's position.
+func _read_objective(v: Variant, quiet: bool) -> void:
+	if not (v is Dictionary):
+		_err("'objective' must be an object", quiet)
+		return
+	var d: Dictionary = v
+	var unit_id := _str(d, "unit", quiet, "objective")
+	var at := Vector2(NAN, NAN)
+	for spec: Dictionary in units:
+		if str(spec.get("id", "")) == unit_id:
+			at = Vector2(float(spec["x"]), float(spec["y"]))
+	if is_nan(at.x):
+		_err("objective.unit '%s' is not a unit of the scenario (give the unit an explicit \"id\")" % unit_id, quiet)
+		return
+	var radius := _num(d, "radius_m", quiet, "objective")
+	if not (radius > 0.0):
+		_err("objective.radius_m must be a positive number", quiet)
+		return
+	objective_spec = {"point": at, "radius_m": radius, "frame_m": float(d.get("frame_m", 0.0)), "label": str(d.get("label", "")), "unit": unit_id}
 
 # A copy of a JSON value without the "_" note keys (at every depth).
 static func _strip(v: Variant) -> Variant:
@@ -247,8 +350,14 @@ func _unit_spec(u: Dictionary, i: int, pools: Variant, taken: Dictionary, quiet:
 	var type_id := _str(u, "type", quiet, label)
 	var side := _str(u, "side", quiet, label)
 	var spec := {"type": type_id, "controller": _str(u, "controller", quiet, label)}
-	for k: String in ["x", "y", "heading"]:
-		spec[k] = _num(u, k, quiet, label)
+	if u.has("site"):
+		var at := site_point(str(u["site"]), int(u.get("site_index", 0)), float(u.get("dx", 0.0)), float(u.get("dy", 0.0)), quiet)
+		spec["x"] = at.x
+		spec["y"] = at.y
+		spec["heading"] = _num(u, "heading", quiet, label)
+	else:
+		for k: String in ["x", "y", "heading"]:
+			spec[k] = _num(u, k, quiet, label)
 	if u.has("altitude_band"):
 		spec["altitude_band"] = str(u["altitude_band"])
 	if u.has("speed"):

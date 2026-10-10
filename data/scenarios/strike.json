@@ -1,0 +1,123 @@
+{
+  "_about": "THE STRIKE (Track A2, 2026-10-10): the second scenario, the first with bombing. The players fly ONE bomber and TWO fighters from the far side of the map to a village, where they must destroy a radio tower (the bomber's stick of four, in the cone of a step) in spite of two anti-aircraft batteries and one patrolling enemy fighter. ALEX'S DECISIONS (data/decisions/decisions.json: strike-target, bomb-release, bomb-load, strike-plan): the target is a radio tower; two anti-aircraft batteries (flak on upward cones, strong in the low and medium bands, weak in the high one) and one patrolling enemy fighter defend it; the players fly one bomber and two fighters; win when the tower is destroyed, lose when the bomber is down or at a turn limit; bombing is per step in the cone; no fire. EVERYTHING ELSE HERE IS PROPOSED, and every placement says why. Read by scripts/app/sandbox.gd through scripts/app/sandbox_scenario.gd. Units are in metres on the 5,000 m map (data/sim/turn.json); heading 0 points along +x (east), positive is clockwise on screen. The tower and the batteries are not at copied numbers: they name the WORLD LAYOUT's site keys (scripts/world/world_layout.gd, data/world/layout.json) and are read from it at load, so they stand in the village whatever the layout rules say; the patrol's loop is anchored to the tower's site the same way.",
+
+  "id": "strike",
+  "seed": 20261009,
+  "rng_seed": 7,
+  "_rng_seed_note": "The World's combat seed (hit, flak and bomb-scatter rolls; only the host's World rolls). PROPOSED, and nothing depends on it: the tests search for a seed at run time.",
+  "local_player": "local",
+  "briefing": "STRIKE  -  bring the bomber over the village and destroy the radio tower by turn {turn_limit}; the fighters keep the patrol off it.",
+
+  "sides": {
+    "_about": "Scenario side -> the World's side name (the interface's accent table in data/ui/ui.json knows allies and axis) and the callsign pool (data/names/callsigns.json). side_a is brick red, side_b slate blue (Alex). The players are side_a; the village and its defenders are side_b.",
+    "side_a": { "world_side": "allies", "callsign_pool": "side_a" },
+    "side_b": { "world_side": "axis", "callsign_pool": "side_b" }
+  },
+
+  "units": [
+    {
+      "id": "bomber_1",
+      "type": "bomber", "side": "side_a", "controller": "player", "callsign": "pool",
+      "x": 4020.0, "y": 1990.0, "heading": -2.886, "altitude_band": "medium",
+      "_proposed": true,
+      "_reason": "The players' bomber (Alex: one bomber, two fighters). It starts 2,150 m east-south-east of the tower, 980 m from the east edge and on the far side of the map from the village (the village is in the north-west quarter and its road leaves to the north), heading straight at the tower, in the MEDIUM band. 2,150 m is five turns of cruise (85 m/s, 425 m a turn): the players must fly in, the patrol sees them (800 m) a turn or two before the bomber is in range, and the flak (900 m) reaches the bomber on the last turn of the run-in. Medium because that is the band the tuning table makes a real choice of (scripts/test_support/strike_tuning.gd, table C: low kills the tower on the first pass but takes the flak at its strongest, high is nearly safe from the flak and nearly useless against the tower, 16 percent), so the bomber starts where a pass works and the players can still climb or dive."
+    },
+    {
+      "id": "light_fighter_1",
+      "type": "light_fighter", "side": "side_a", "controller": "player", "callsign": "pool",
+      "x": 3763.0, "y": 2181.0, "heading": -2.886, "altitude_band": "medium",
+      "_proposed": true,
+      "_reason": "Player fighter 1: 200 m ahead of the bomber and 250 m to its left (the south side), on its heading, medium: the fighters start a little ahead because they are faster (100 m/s against 85) and are meant to meet the patrol first. 250 m beside the bomber is the escort's own station width (data/sim/ai.json escort.station_right_m), so the three silhouettes start as a formation inside one another's sight."
+    },
+    {
+      "id": "heavy_fighter_1",
+      "type": "heavy_fighter", "side": "side_a", "controller": "player", "callsign": "pool",
+      "x": 3986.0, "y": 1723.0, "heading": -2.886, "altitude_band": "medium",
+      "_proposed": true,
+      "_reason": "Player fighter 2: the heavy type (5 pips, the cannon), 100 m ahead of the bomber and 250 m to its right (the north side), the side the batteries and the road are on, so between them the two fighters cover both flanks of the run-in."
+    },
+    {
+      "id": "patrol_1",
+      "type": "light_fighter", "side": "side_b", "controller": "ai", "callsign": "pool",
+      "site": "radio_tower", "dx": 650.0, "dy": -150.0, "heading": 2.1,
+      "altitude_band": "medium", "speed": 85.0,
+      "_proposed": true,
+      "_reason": "The one patrolling enemy fighter (Alex). It starts on its own loop (the first waypoint, 650 m east of the tower: the side the players arrive from, so contact comes early), heading for the second waypoint, at the patrol speed (85 m/s, data/sim/ai.json patrol.speed_fraction_of_cruise) in the MEDIUM band, the band the bomber arrives in. A light fighter (3 pips): the escort's own type, so the players' fighters can win the fight, and the AI's patrol role needs a forward weapon."
+    },
+    {
+      "id": "radio_tower_1",
+      "type": "radio_tower", "side": "side_b", "controller": "ai",
+      "site": "radio_tower", "heading": 0.0,
+      "_proposed": true,
+      "_reason": "The target (Alex: a radio tower, in a village): the layout's 'radio_tower' site, the middle of the walled compound in the village (world_layout.gd). 8 pips; a stick at the ideal release angle does 4.8 pips on average from medium (data/units/radio_tower.json)."
+    },
+    {
+      "id": "aa_battery_1",
+      "type": "anti_aircraft_battery", "side": "side_b", "controller": "ai",
+      "site": "aa_battery", "site_index": 0, "heading": 0.0,
+      "_proposed": true,
+      "_reason": "The first of the two batteries (Alex: two): the layout's first 'aa_battery' site, on open low ground a few hundred metres from the tower, clear of the village, the road and the fields (world_layout.gd _make_batteries). Flak reaches 900 m, so both batteries cover the whole bombing run."
+    },
+    {
+      "id": "aa_battery_2",
+      "type": "anti_aircraft_battery", "side": "side_b", "controller": "ai",
+      "site": "aa_battery", "site_index": 1, "heading": 0.0,
+      "_proposed": true,
+      "_reason": "The second battery: the layout's second 'aa_battery' site, on the other side of the tower from the first, so a bomber cannot stay out of both and the flak crosses over the target."
+    }
+  ],
+
+  "ai": {
+    "kind": "pilot",
+    "_proposed": true,
+    "_reason": "The same AI as the first fight (scripts/sim/ai_pilot.gd), with its patrol role (Track S2). The towers and batteries take no assignment: a static unit has no plan to make, and its flak is the combat system's (data/units/anti_aircraft_battery.json).",
+    "assignments": {
+      "patrol_1": {
+        "role": "patrol",
+        "route": [
+          { "site": "radio_tower", "dx": 650.0, "dy": -150.0 },
+          { "site": "radio_tower", "dx": 150.0, "dy": 650.0 },
+          { "site": "radio_tower", "dx": -650.0, "dy": 150.0 },
+          { "site": "radio_tower", "dx": -150.0, "dy": -650.0 }
+        ],
+        "band": "medium",
+        "_reason": "A loop round the tower: four waypoints on a ring 670 m from the tower's site (a square turned a little off the compass), clockwise on screen, 940 m a leg: about two turns a leg and nine turns a lap at 85 m/s, and a ring wide enough that the patrol sees the tower's surroundings (800 m) from every point of it. The legs are three times the light fighter's 286 m turn radius, so the loop flies as a rounded square and not as orbits round the points (patrol.capture_radius_m, 250 m). Anchored to the tower's site, so it follows the village if the layout moves."
+      }
+    }
+  },
+
+  "mission": {
+    "id": "strike",
+    "_proposed": true,
+    "_reason": "The Strike as data (scripts/sim/mission.gd Mission.strike, test_strike checks the two are the same): won when the radio tower is down (Alex), lost when the bomber is down (Alex) or when the turn limit has been played (Alex: 'at a turn limit'; the NUMBER is proposed, below).",
+    "win": [ { "type": "unit_down", "unit": "radio_tower_1" } ],
+    "lose": [
+      { "type": "unit_down", "unit": "bomber_1" },
+      { "type": "turn_limit", "turn": 20, "_reason": "PROPOSED, from the scripted play (scripts/test_support/strike_play.gd, the report's figures): five turns to fly in, and a stick lands (and the tower can fall) at about turn 5 or 6 on the first pass. A second pass is slow because a bomber turns slowly (487 m radius, 10 deg/s at cruise): the half circle alone is 3.6 turns, and the way back in line takes as long again, so the scripted pilot's second drop comes at turn 14 to 15 and a tight human one would come at about 12. The bomber's load is three drops (data/units/bomber.json), so a third pass would end near turn 19 to 20 for a tight pilot. 20 turns is the third pass plus a turn; a lower limit takes the last drops away from a careful player, a much higher one lets a bomber with no bombs left fly about for ever (it is unwinnable then; see the report)." }
+    ]
+  },
+
+  "objective": {
+    "unit": "radio_tower_1",
+    "radius_m": 120.0,
+    "frame_m": 320.0,
+    "label": "TARGET",
+    "_proposed": true,
+    "_reason": "The marker the players are given (design doc, Fog of war: 'map indicators for mission-critical targets may sit on top of both layers'): a ring round the tower, drawn over the fog, so the players know where the village is before they see it. 120 m: wide enough to hold the walled compound (78 m reserved round the site) and the 45 m outer blast ring of the bombs, so 'bomb inside the ring' reads right. frame_m 320: the opening view reaches 320 m round the tower, enough for the village (205 m half-length)."
+  },
+
+  "view": {
+    "_about": "How the sandbox shows this scenario. Each can be flipped at run time from the knob panel (F2) or INKWOOD_<KEY> (scripts/debug/debug_settings.gd); these are the values the knobs call \"data\".",
+    "fog": { "value": true, "_proposed": true, "_reason": "Fog of war is how the batteries and the patrol have to be FOUND (the target ring is the one thing drawn through it); on by default" },
+    "plane_px": { "value": 36, "_proposed": true, "_reason": "Planes are drawn at their own scale, a light fighter about 36 px across at zoom 1 whatever the map scale (decision demo-baseline: planes_drawn_at_own_scale)" },
+    "plane_min_px": { "value": 14, "_proposed": true, "_reason": "A light fighter never draws smaller than this on screen, so the planes stay findable when the view is zoomed out" },
+    "start_zoom_max": { "value": 0.9, "_proposed": true, "_reason": "The opening view frames the players' planes, the first turn's carry-on flight and the village; it does not zoom in past this (the players are 2,000 m from the village, so the zoom is far lower than this anyway)" },
+    "start_pad_m": { "value": 110, "_proposed": true, "_reason": "A margin round every plane and its carry-on end in the opening view, so none sits on the edge of the free area" },
+    "start_look_ahead_turns": { "value": 1, "_proposed": true, "_reason": "The opening view frames this many turns of carry-on flight beyond each PLAYER plane (the enemy's plan is never framed: it would leak it)" },
+    "start_frame_objective": { "value": true, "_proposed": true, "_reason": "The opening view also frames the target ring and the village round it, so the first screen shows where the strike is going" },
+    "track_sample_s": { "value": 0.25, "_proposed": true, "_reason": "Tracks (the flown path of each plane, drawn for the whole game) are sampled from each turn's history this often" },
+    "track_line_px": { "value": 1.6, "_proposed": true, "_reason": "Track line width on screen; ink in the unit's side colour" },
+    "bake_pause_overview": { "value": 0.5, "_proposed": true, "_reason": "The map view stops drawing new chunks once the topographic overview covers this much of the full render (see sandbox.json)" },
+    "result_card_delay_s": { "value": 1.5, "_proposed": true, "_reason": "The result card appears this long after the playback of the deciding turn ends, so the last of the smoke and the ruin are seen before the card covers them" }
+  }
+}

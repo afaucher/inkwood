@@ -448,6 +448,8 @@
       "reasons": [
         { "pattern": "^(.+) came within .* of the target$", "text": "the %s reached its target" },
         { "pattern": "^all player units are down$", "text": "both fighters down" },
+        { "pattern": "^(radio_tower_\\d+) is down$", "text": "the %s is destroyed" },
+        { "pattern": "^turn (\\d+) was played without the objective$", "text": "the tower still stands after turn %s" },
         { "pattern": "^(.+) is down$", "text": "%s down" }
       ]
     }

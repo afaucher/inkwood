@@ -138,7 +138,7 @@ func status_text() -> String:
 	for p: String in sync.world.players:
 		names.append(sync.name_of(p) + (" (you)" if p == player else ""))
 	var who := "HOST" if role == "host" else ("CLIENT" if sync.is_joined() else "CLIENT, joining...")
-	return "%s  %s  turn %d  players: %s" % [who, player, sync.world.turn, ", ".join(names)]
+	return "%s  %s  %s  turn %d  players: %s" % [who, sync.scenario_id, player, sync.world.turn, ", ".join(names)]
 
 func _refresh() -> void:
 	if _label == null:
@@ -205,7 +205,10 @@ func run_check(out: String, timeout_s: float = 90.0) -> String:
 # played to its END across two windows. Each turn the HOST plans both fighters to circle in place (any
 # player edits any plan: the plans go to the client over the wire), and once this window shows those
 # plans both windows ready; nobody fights, so the bomber reaches the target (a loss) in about twelve turns.
-# Then it waits for this window's result card and saves a frame of it to `out`. Returns "" on success.
+# THE STRIKE (Track A2): the host plays the scripted bombing run instead (scripts/test_support/strike_play.gd, loaded
+# when the scenario is "strike": the bomber's run on the tower, the fighters escorting), so the game is WON, in
+# about six turns, over the socket. Then it waits for this window's result card and saves a frame of it to `out`.
+# Returns "" on success.
 func run_game(out: String, timeout_s: float = 900.0) -> String:
 	var t0 := Time.get_ticks_msec()
 	var w: World = sync.world
@@ -214,6 +217,11 @@ func run_game(out: String, timeout_s: float = 900.0) -> String:
 	for i in 40:
 		await get_tree().process_frame
 	var last := 0
+	var strike_planner: RefCounted = null
+	if sync.scenario_id == "strike":
+		var script: Script = load("res://scripts/test_support/strike_play.gd")
+		if script != null and script.can_instantiate():
+			strike_planner = script.call("for_world", w)
 	while not bool(sandbox.call("result_decided")):
 		var came: bool = await _until(func() -> bool: return bool(sandbox.call("result_decided")) \
 			or (w.phase == World.PHASE_PLANNING and not bool(ui.call("is_playing")) and w.turn > last), t0, timeout_s)
@@ -224,10 +232,13 @@ func run_game(out: String, timeout_s: float = 900.0) -> String:
 		last = w.turn
 		print("[Session] %s: planning turn %d" % [role, last])
 		if role == "host":
-			for id: String in w.units:
-				if w.units[id].controller == World.CONTROLLER_PLAYER and not w.units[id].down:
-					for i in w.steps_per_turn(id):
-						w.plan_step(id, i, {"turn": 1.5})
+			if strike_planner != null:
+				strike_planner.call("plan_players")
+			else:
+				for id: String in w.units:
+					if w.units[id].controller == World.CONTROLLER_PLAYER and not w.units[id].down:
+						for i in w.steps_per_turn(id):
+							w.plan_step(id, i, {"turn": 1.5})
 		# Two frames for the edits to go out BEFORE the Ready: WorldSync takes the host player's Ready back when the
 		# flush of an edit made in the same frame runs inside the Ready (a human cannot do both in one frame).
 		await get_tree().process_frame
