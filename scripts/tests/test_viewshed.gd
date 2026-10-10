@@ -16,6 +16,11 @@ extends "res://scripts/test_support/test_case.gd"
 #   TARGETS   visible_from sees a high target over a wall, not a low one; a
 #             plane overhead is seen from a pit though the ground under it is
 #             not; it agrees with the ground mask at random points.
+#   SLIVERS   a feature narrower than one ray and one sample step is caught by
+#             the ray that lands on it and missed by its neighbours: a hidden
+#             needle one ray wide (the closed-up valley shot had one, 225 m long,
+#             behind a 6 x 4 m islet of the upper level). The sweep closes it;
+#             a shadow two rays wide stays; the real terrain has none left.
 #   DETERMINISM  the same grid, eye and range give the same runs.
 #   TERRAIN   a tank in a real valley of the seed sees far less than its
 #             circle, a plane over the same spot sees nearly all of it, trees
@@ -46,6 +51,7 @@ func setup(_main) -> void:
 	_plateau()
 	_trees()
 	_targets()
+	_slivers()
 	_determinism()
 	_consistency()
 	_terrain_sites()
@@ -291,6 +297,120 @@ func _targets() -> void:
 	var sp := vp.compute(Vector2.ZERO, 1.7, 160.0)
 	check(not sp.visible_ground(70.0, 0.0), "(the mask has that ground hidden: the plane is judged by visible_from, not the mask)")
 
+# --- SLIVERS ----------------------------------------------------------------------------------
+
+# The stretches (ray, from, to) of a ray that it does not see and both its neighbours do,
+# longer than min_len metres: what the sliver pass closes. Found without the pass's own
+# interval algebra: the breakpoints of the three rays' runs cut the ray into pieces, and
+# each piece is judged at its midpoint. Adjacent pieces are joined.
+static func one_ray_holes(s: FogViewshed.Shed, min_len: float) -> Array:
+	var out: Array = []
+	for r in s.n:
+		var rm := (r + s.n - 1) % s.n
+		var rp := (r + 1) % s.n
+		var cuts := PackedFloat64Array()
+		for q: int in [rm, r, rp]:
+			for i in int(s.counts[q]):
+				var v := s.run_of(q, i)
+				cuts.append(v.x)
+				cuts.append(v.y)
+		cuts.sort()
+		for i in range(cuts.size() - 1):
+			var lo := cuts[i]
+			var hi := cuts[i + 1]
+			if hi <= lo:
+				continue
+			var mid := 0.5 * (lo + hi)
+			if s.in_runs(r, mid) or not (s.in_runs(rm, mid) and s.in_runs(rp, mid)):
+				continue
+			if not out.is_empty() and int(out[-1].x) == r and absf(out[-1].z - lo) < 1e-9:
+				out[-1] = Vector3(r, out[-1].y, hi)
+			else:
+				out.append(Vector3(r, lo, hi))
+	return out.filter(func(h: Vector3) -> bool: return h.z - h.y > min_len)
+
+# Every distance ray r of `a` sees, `b` sees too (b is a with sight added).
+static func contains_all(b: FogViewshed.Shed, a: FogViewshed.Shed) -> int:
+	var lost := 0
+	for r in a.n:
+		for i in int(a.counts[r]):
+			var v := a.run_of(r, i)
+			for f in [0.0, 0.25, 0.5, 0.75, 1.0]:
+				var d: float = lerpf(v.x, v.y, f * 0.999)
+				if b.in_runs(r, d) == false:
+					lost += 1
+	return lost
+
+# A 10 m pillar on flat ground, as the terrain's exact lookup gives it: its cells hold a
+# mixed code, the exact height says where it stands. Narrower than a sample step (2 m),
+# it is sampled by the rays that land on it and missed by their neighbours.
+func _pillar_engine(pillars: Array[Rect2]) -> FogViewshed:
+	var ground := grid(func(x: float, y: float) -> float:
+		var cell := Rect2(x - CELL * 0.5, y - CELL * 0.5, CELL, CELL)
+		for p in pillars:
+			if cell.intersects(p):
+				return FogViewshed.mixed_code(0.0)
+		return 12.0 if (x > 188.0 and y > 188.0) else 0.0)   # one tall cell out of range: the eye is below 3 x the tallest ground, so lips are exact
+	return engine(ground, PackedFloat32Array(), 0.0, func(x: float, y: float) -> float:
+		for p in pillars:
+			if p.has_point(Vector2(x, y)):
+				return 10.0
+		return 0.0)
+
+func _slivers() -> void:
+	var range_m := 150.0
+	var n := ceili(TAU * range_m / CELL)
+	# Ray 0 (due +x) lands a sample on a 0.8 m square pillar at x = 60; rays 1 and n-1 pass 0.8 m to
+	# either side of it, so only ray 0 is shadowed. Ray n-1 is the same at 80 m, so the sliver
+	# pass has to read across the seam on either side (ray 0's neighbour is ray n-1 and back).
+	var on_ray_0 := Rect2(59.6, -0.4, 0.8, 0.8)
+	var last_at := Vector2.from_angle(-TAU / float(n)) * 80.0
+	var on_ray_last := Rect2(last_at.x - 0.4, last_at.y - 0.4, 0.8, 0.8)
+	var shed_0 := _sliver_case(on_ray_0, 0, 60.4, "ray 0")
+	_sliver_case(on_ray_last, n - 1, 80.4, "ray n-1 (across the seam)")
+	var vs := _pillar_engine([on_ray_0] as Array[Rect2])
+	check(shed_0.visible_ground(100.0, 0.0) and shed_0.visible_ground(100.0, -0.5), "closed: the ground behind a pillar narrower than a ray is seen")
+	# The point query is one exact ray at the target's own bearing: the pillar still hides a target behind it.
+	check(not vs.visible_from(Vector2.ZERO, 2.0, Vector2(100.0, 0.0), 0.0), "visible_from is exact: a target right behind the pillar is hidden")
+	# A shadow two or more rays wide is a shadow: a 2.4 m pillar at 60 m covers rays -1, 0 and 1.
+	var wide := _pillar_engine([Rect2(59.2, -1.2, 2.4, 2.4)] as Array[Rect2])
+	var sw := wide.compute(Vector2.ZERO, 2.0, range_m)
+	check(not sw.visible_ground(100.0, 0.0) and not sw.visible_ground(100.0, 1.3) and not sw.visible_ground(100.0, -1.3), "a shadow three rays wide is kept")
+	check(sw.visible_ground(100.0, 2.6) and sw.visible_ground(100.0, -2.6), "and its sides are seen")
+	# A wall's shadow is not touched by the pass.
+	var wall := grid(func(x: float, y: float) -> float: return 10.0 if WALL.has_point(Vector2(x, y)) else 0.0)
+	var vw := engine(wall)
+	vw.close_slivers = false
+	var w_raw := vw.compute(Vector2.ZERO, 2.0, 150.0)
+	vw.close_slivers = true
+	var w_closed := vw.compute(Vector2.ZERO, 2.0, 150.0)
+	check(contains_all(w_closed, w_raw) == 0 and w_closed.area_m2() - w_raw.area_m2() < 0.002 * w_raw.area_m2(), "a wall's shadow is not closed: %.0f m2 raw, %.0f m2 closed" % [w_raw.area_m2(), w_closed.area_m2()])
+
+# One pillar, raw against closed. Returns the closed shed.
+func _sliver_case(pillar: Rect2, ray: int, edge_m: float, label: String) -> FogViewshed.Shed:
+	var range_m := 150.0
+	var vs := _pillar_engine([pillar] as Array[Rect2])
+	vs.close_slivers = false
+	var raw := vs.compute(Vector2.ZERO, 2.0, range_m)
+	vs.close_slivers = true
+	var s := vs.compute(Vector2.ZERO, 2.0, range_m)
+	var n := s.n
+	# The raw sweep has the artifact: the ray that lands on the pillar loses everything behind it, its neighbours do not.
+	near(raw.run_of(ray, 0).y, edge_m, 0.5, "%s raw: ends at the pillar (%.1f m)" % [label, edge_m])
+	eq(int(raw.counts[ray]), 1, "%s raw: and sees nothing behind it" % label)
+	check(raw.reach_of((ray + 1) % n) > 140.0 and raw.reach_of((ray + n - 1) % n) > 140.0, "%s raw: its neighbours see on to the range" % label)
+	var holes := one_ray_holes(raw, 1.0)
+	eq(holes.size(), 1, "%s raw: one sliver, %.0f m long (%s)" % [label, range_m - edge_m, holes])
+	# The closed sweep has none, and the ground behind the pillar is seen.
+	near(s.reach_of(ray), range_m, 1e-3, "%s closed: the ray sees to the range" % label)
+	eq(int(s.counts[ray]), 1, "%s closed: in one run" % label)
+	var left := one_ray_holes(s, 0.0)
+	eq(left.size(), 0, "%s closed: no one-ray hole is left (%s)" % [label, left])
+	check(contains_all(s, raw) == 0, "%s closed: everything the raw sweep saw is still seen (sight is only added)" % label)
+	check(vs.stats.slivers >= 1, "%s: the engine counts the rays it closed (%d)" % [label, vs.stats.slivers])
+	print("[viewshed] slivers, %s: raw sweep ends at %.1f m with %d one-ray hole, closed reaches %.0f m with %d" % [label, raw.run_of(ray, 0).y, holes.size(), s.reach_of(ray), left.size()])
+	return s
+
 # --- DETERMINISM --------------------------------------------------------------------------------
 
 func _noise_ground() -> PackedFloat32Array:
@@ -400,6 +520,25 @@ func _terrain_sites() -> void:
 				if not tank.visible_ground(q.x, q.y):
 					hidden_up += 1
 	check(tested_up > 4 and hidden_up >= tested_up - 1, "higher ground 250-350 m off the valley floor is out of the tank's sight (%d of %d points hidden)" % [hidden_up, tested_up])
+	# SLIVERS on the real terrain. Left alone, the sweep from the closed-up valley of
+	# fog_los_shot.gd (2280, 1820) leaves a needle on the ray that lands on a 6 x 4 m islet of
+	# the upper level 178 m out (the rest of that ray, to the cliffs at 400 m, hidden between two
+	# rays that see it); no one-ray hole may survive the pass, anywhere, and it only adds sight.
+	var lip_m := 8.0 / float(1 << FogViewshed.BISECT_ITERS) + 0.01     # the pass leaves what is within the lips' precision
+	eq(one_ray_holes(tank, lip_m).size(), 0, "the valley tank's shed has no one-ray sliver")
+	var shot_eye := Vector2(2280.0, 1820.0)
+	vs.close_slivers = false
+	var shot_raw := vs.compute(shot_eye, 2.5, 800.0)
+	vs.close_slivers = true
+	var shot_closed := vs.compute(shot_eye, 2.5, 800.0)
+	var raw_holes := one_ray_holes(shot_raw, lip_m)
+	var left_holes := one_ray_holes(shot_closed, lip_m)
+	eq(left_holes.size(), 0, "the shot's valley: no one-ray sliver is left (%s)" % [left_holes])
+	check(contains_all(shot_closed, shot_raw) == 0, "the shot's valley: the closed shed holds everything the raw sweep saw")
+	var gained := shot_closed.area_m2() - shot_raw.area_m2()
+	check(gained >= 0.0 and gained < 0.01 * circle, "the shot's valley: closing slivers adds a sliver's worth of ground, not a shape (%.0f m2 of %.0f)" % [gained, shot_raw.area_m2()])
+	print("[viewshed] slivers on the real terrain, valley (2280, 1820): raw sweep %d one-ray holes (%.0f m long in all), closed %d; %.0f m2 added to %.0f" % [
+		raw_holes.size(), raw_holes.reduce(func(acc: float, h: Vector3) -> float: return acc + h.z - h.y, 0.0), left_holes.size(), gained, shot_raw.area_m2()])
 	# The same spot from a plane at the low band: it flies over the cliffs.
 	var plane := vs.compute(site.p, 120.0 - vs.ground_at(site.p.x, site.p.y), 800.0)
 	check(plane.area_m2() > 0.8 * circle, "a plane at the low band over the valley sees most of the circle (%.0f%%)" % (100.0 * plane.area_m2() / circle))
@@ -428,6 +567,7 @@ func _terrain_sites() -> void:
 	var far: Vector2 = edge.p + u * edge.far_m
 	check(terrain.level_at(far.x, far.y) == 0, "(the far point is low ground)")
 	check(top.visible_ground(far.x, far.y), "low ground %.0f m out is in sight again" % edge.far_m)
+	eq(one_ray_holes(top, lip_m).size(), 0, "the plateau edge: no one-ray sliver, and its dead ground is still there")
 
 # --- FogVision ---------------------------------------------------------------------------------------------
 

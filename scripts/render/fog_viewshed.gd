@@ -65,6 +65,22 @@ extends RefCounted
 # ground is visible when the ray nearest its bearing has a run holding its
 # distance: the same rule the GPU uses, so the mask and the query agree.
 #
+# SLIVERS. A feature smaller than one sample step (a 6 x 4 m islet of the upper
+# level on a valley floor, a corner of a cliff cell) is sampled by the rays that
+# happen to land on it and missed by their neighbours a metre or two away, so the
+# sweep shadows it on ONE ray: a hidden needle, a ray wide and hundreds of metres
+# long, between two rays that see everything (the closed-up valley shot had one
+# from 175 to 400 m). That is the sampling's phase, not a sight shadow: the
+# resolution of the sweep is a ray. When the sweep is complete, the sliver pass
+# (_close_slivers) lets each ray see what BOTH its neighbours see, over every stretch
+# longer than the lips' precision (step / 2^BISECT_ITERS, a quarter metre): a
+# hidden pattern one ray wide between two visible neighbours is closed, and a
+# shadow two or more rays wide (a wall, a cliff, dead ground) is untouched, since
+# one of the rays inside it always has a hidden neighbour. The rule runs on the
+# data, so the mask, visible_ground and the tests all see the closed shape; it
+# adds sight and never takes it away. close_slivers = false is the raw sweep.
+# visible_from, one exact ray at a target's own bearing, is not filtered.
+#
 # visible_from marches ONE segment with the same profile and the same
 # occluders: the target is seen when the slope to its top is at least M over
 # everything between. A plane overhead is visible from a valley even when the
@@ -79,6 +95,7 @@ const TINY := 1.0e-6
 const NEG := -1.0e9
 const MIXED_BASE := -10000.0    # a cell a level boundary crosses holds MIXED_BASE - its centre height
 const MIXED_BELOW := -5000.0
+const BISECT_ITERS := 5         # halvings of a cliff's bracket in _find_edge: the lip is found to step / 2^5
 
 static var _serial_counter := 0
 
@@ -89,6 +106,7 @@ var eye_clear_m: float
 var rim_m: float
 var exact_below_factor: float
 var canopy := false             # trees occlude too
+var close_slivers := true       # the sliver pass (see SLIVERS); false gives the raw sweep
 var errors: Array[String] = []
 
 var gw := 0                     # grid size in cells
@@ -99,7 +117,7 @@ var ground := PackedFloat32Array()    # [row * gw + col], metres above sea level
 var surface := PackedFloat32Array()   # ground plus canopy columns
 
 var stats := {"computes": 0, "last_ms": 0.0, "last_steps": 0, "chunks_filled": 0, "fill_ms": 0.0,
-	"surface_chunks": 0, "surface_ms": 0.0, "bisects": 0, "exacts": 0}
+	"surface_chunks": 0, "surface_ms": 0.0, "bisects": 0, "exacts": 0, "slivers": 0, "close_ms": 0.0}
 
 # --- the terrain-backed source ---
 var terrain: Object = null
@@ -119,6 +137,12 @@ var _m := NEG
 var _eye_abs := 0.0
 var _out := PackedFloat64Array()
 var _exact_on := false
+# scratch for _close_slivers: the neighbours' runs, their common runs, this ray's, the additions
+var _cs_a := PackedFloat64Array()
+var _cs_b := PackedFloat64Array()
+var _cs_x := PackedFloat64Array()
+var _cs_o := PackedFloat64Array()
+var _cs_m := PackedFloat64Array()
 var _hmax_ground := 0.0         # the tallest ground anywhere in the grid
 var _hmax_surface := 0.0        # the tallest canopy top (or ground) anywhere in what has been filled
 
@@ -486,7 +510,7 @@ func _find_edge(eye: Vector2, ux: float, uy: float, d0: float, d1: float, g0: fl
 	var low_side := g0 > thr
 	var lo := d0
 	var hi := d1
-	for _i in 5:
+	for _i in BISECT_ITERS:
 		var mid := (lo + hi) * 0.5
 		if (_exact(eye.x + ux * mid, eye.y + uy * mid) > thr) == low_side:
 			lo = mid
@@ -646,6 +670,8 @@ func step(s: Shed, budget_us: int) -> bool:
 	s.next_ray = r
 	s.overflow += overflow
 	s.steps += steps
+	if r >= n and close_slivers:
+		_close_slivers(s)
 	s.compute_ms += (Time.get_ticks_usec() - t0) / 1000.0
 	if r >= n:
 		s.complete = true
@@ -653,6 +679,124 @@ func step(s: Shed, budget_us: int) -> bool:
 		stats.last_ms = s.compute_ms
 		stats.last_steps = s.steps
 	return s.complete
+
+# --- the sliver pass ----------------------------------------------------------------------
+
+# Ray r's runs as flat (from, to) pairs in `out` (packed arrays are passed by reference).
+static func _read_ray(runs: PackedFloat32Array, counts: PackedByteArray, n: int, r: int, out: PackedFloat64Array) -> void:
+	out.resize(0)
+	for i in int(counts[r]):
+		var base := ((i >> 1) * n + r) * 4 + (i & 1) * 2
+		out.append(runs[base])
+		out.append(runs[base + 1])
+
+# The finished sweep, cleaned of one-ray slivers (see SLIVERS in the header): every
+# ray gains the stretches that both its neighbours see and it does not, so long as
+# the stretch is longer than the lips' precision. Read from a copy of the sweep, so
+# the result does not depend on the order of the rays, and the ring closes (the last
+# ray's neighbour is the first). A ray whose runs would then exceed RUN_MAX keeps
+# its own. Only adds sight; a shadow two rays wide is never touched.
+func _close_slivers(s: Shed) -> void:
+	var n := s.n
+	if n < 3:
+		return
+	var t0 := Time.get_ticks_usec()
+	var min_len := cell_m * step_cells / float(1 << BISECT_ITERS)
+	var runs := s.runs
+	var counts := s.counts
+	var src_runs: PackedFloat32Array = runs.duplicate()
+	var src_counts: PackedByteArray = counts.duplicate()
+	var closed := 0
+	for r in n:
+		var rm := r - 1 if r > 0 else n - 1
+		var rp := r + 1 if r + 1 < n else 0
+		if src_counts[rm] == 0 or src_counts[rp] == 0:
+			continue
+		_read_ray(src_runs, src_counts, n, rm, _cs_a)
+		_read_ray(src_runs, src_counts, n, rp, _cs_b)
+		# x: what both neighbours see (two sorted run lists, intersected)
+		_cs_x.resize(0)
+		var na := _cs_a.size()
+		var nb := _cs_b.size()
+		var ia := 0
+		var ib := 0
+		while ia < na and ib < nb:
+			var lo := maxf(_cs_a[ia], _cs_b[ib])
+			var a_hi := _cs_a[ia + 1]
+			var b_hi := _cs_b[ib + 1]
+			var hi := minf(a_hi, b_hi)
+			if hi > lo:
+				_cs_x.append(lo)
+				_cs_x.append(hi)
+			if a_hi < b_hi:
+				ia += 2
+			else:
+				ib += 2
+		if _cs_x.is_empty():
+			continue
+		# m: the part of x this ray does not see, in pieces longer than min_len
+		_read_ray(src_runs, src_counts, n, r, _cs_o)
+		var no := _cs_o.size()
+		_cs_m.resize(0)
+		for kx in range(0, _cs_x.size(), 2):
+			var cur := _cs_x[kx]
+			var stop := _cs_x[kx + 1]
+			var io := 0
+			while io < no and cur < stop:
+				if _cs_o[io + 1] <= cur:
+					io += 2
+					continue
+				if _cs_o[io] >= stop:
+					break
+				if _cs_o[io] - cur > min_len:
+					_cs_m.append(cur)
+					_cs_m.append(_cs_o[io])
+				cur = _cs_o[io + 1]
+				io += 2
+			if stop - cur > min_len:
+				_cs_m.append(cur)
+				_cs_m.append(stop)
+		if _cs_m.is_empty():
+			continue
+		# the ray's own runs and the additions, in order, touching ones joined
+		var nm := _cs_m.size()
+		_cs_x.resize(0)
+		var po := 0
+		var pm := 0
+		while po < no or pm < nm:
+			var from: float
+			var to: float
+			if pm >= nm or (po < no and _cs_o[po] <= _cs_m[pm]):
+				from = _cs_o[po]
+				to = _cs_o[po + 1]
+				po += 2
+			else:
+				from = _cs_m[pm]
+				to = _cs_m[pm + 1]
+				pm += 2
+			var last := _cs_x.size()
+			if last >= 2 and from <= _cs_x[last - 1] + 1.0e-9:
+				_cs_x[last - 1] = maxf(_cs_x[last - 1], to)
+			else:
+				_cs_x.append(from)
+				_cs_x.append(to)
+		var cnt := _cs_x.size() >> 1
+		if cnt > RUN_MAX:
+			continue
+		for w in cnt:
+			var base := ((w >> 1) * n + r) * 4 + (w & 1) * 2
+			runs[base] = _cs_x[w * 2]
+			runs[base + 1] = _cs_x[w * 2 + 1]
+		for w in range(cnt, no >> 1):
+			var base := ((w >> 1) * n + r) * 4 + (w & 1) * 2
+			runs[base] = 0.0
+			runs[base + 1] = 0.0
+		counts[r] = cnt
+		closed += 1
+	s.runs = runs
+	s.counts = counts
+	stats.slivers += closed
+	stats.close_ms += (Time.get_ticks_usec() - t0) / 1000.0
 
 # --- the point query ----------------------------------------------------------------------
 
