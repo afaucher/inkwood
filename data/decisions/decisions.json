@@ -792,6 +792,26 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'A · Grow and fill'. Still proposed: the pick radius 16 px (was 12), the cursor changes, the place mark, nearest handle wins."
+    },
+    {
+      "id": "damage-smoke",
+      "date": "2026-10-10",
+      "area": "Effects",
+      "question": "How does damage smoke look?",
+      "board": "variants/damage-smoke/ (round 1); variants/damage-smoke-r2/ (round 2, in progress)",
+      "options": [
+        "A lobed puffs",
+        "B stipple plume",
+        "C contour rings",
+        "D ink wash"
+      ],
+      "chosen": "new round: C, contour rings, leads, but it looks too much like trees",
+      "parameters": {},
+      "applied_to": [
+        "round 2 in progress (Track X)"
+      ],
+      "status": "new round (Alex)",
+      "notes": "Alex: 'Contour rings for smoke is the current leader but it looks too much like trees.'"
     }
   ]
 }
