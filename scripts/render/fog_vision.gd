@@ -39,7 +39,11 @@ extends RefCounted
 # layer does it in setup). Each unit gets an EYE: a ground unit's eye_height_m of
 # its domain above the ground, an aircraft's altitude band height (absolute, so
 # the terrain is mostly below it). A unit's shed is cached and reused until the
-# unit moves recompute_move_m or its eye height changes recompute_height_m.
+# unit moves recompute_move_m or its eye height changes recompute_height_m, or its radius
+# changes by recompute_move_m (a plane falling: its radius shrinks with its height, so the
+# shed is not swept again every frame; is_visible still clips to the circle's own radius).
+# A falling plane's eye is its CURRENT height (World.sample's height_m, or its fall_height_m
+# as it stands), so as it drops behind a hill the ground beyond closes.
 #   is_visible(p)            GROUND: inside a shed (or a circle, without line of sight)
 #   target_visible(x, y, h)  a TARGET h metres above the ground there: visible_from
 #                            from each revealing eye in range -- a plane overhead
@@ -253,7 +257,10 @@ func _state(world: Object, u: Object, t: float, source: String) -> Dictionary:
 		if s.has("x"):
 			return {"x": float(s["x"]), "y": float(s["y"]), "band": str(s.get("altitude_band", u.altitude_band)),
 				"height_m": float(s.get("height_m", NAN))}
-	return {"x": float(u.x), "y": float(u.y), "band": str(u.altitude_band), "height_m": NAN}
+	# As it stands now a plane that is falling is at its fall height, not at its band's (the band is
+	# only the nearest of its own to that height): the eye of a falling plane is its CURRENT height.
+	var fall_h := float(u.fall_height_m)
+	return {"x": float(u.x), "y": float(u.y), "band": str(u.altitude_band), "height_m": fall_h if is_finite(fall_h) else NAN}
 
 # --- circles ---------------------------------------------------------------------------
 
@@ -324,7 +331,7 @@ func _shed_for(key: String, c: Dictionary, vs: FogViewshed) -> FogViewshed.Shed:
 	var entry: Dictionary = _sheds.get(key, {})
 	var shed: FogViewshed.Shed = entry.get("shed")
 	var job: FogViewshed.Shed = entry.get("job")
-	if job == null and shed != null and entry.r == c.r and absf(entry.abs - abs_eye) <= recompute_height_m and shed.eye.distance_to(eye) <= recompute_move_m:
+	if job == null and shed != null and absf(float(entry.r) - float(c.r)) <= recompute_move_m and absf(entry.abs - abs_eye) <= recompute_height_m and shed.eye.distance_to(eye) <= recompute_move_m:
 		stats.reused += 1
 		return shed
 	var t0 := Time.get_ticks_usec()
@@ -367,13 +374,15 @@ func is_visible(p: Vector2) -> bool:
 func is_visible_xy(x: float, y: float) -> bool:
 	for c: Dictionary in circles:
 		var shed: Variant = c.get("shed")
-		if shed != null:
-			if (shed as FogViewshed.Shed).visible_ground(x, y):
-				return true
-			continue
 		var dx: float = x - c.x
 		var dy: float = y - c.y
 		var r: float = c.r
+		if shed != null:
+			# The shed is reused while the radius drifts by less than recompute_move_m (a plane
+			# coming down), so the circle's own radius is the exact limit.
+			if dx * dx + dy * dy <= r * r and (shed as FogViewshed.Shed).visible_ground(x, y):
+				return true
+			continue
 		if dx * dx + dy * dy <= r * r and not _sight_blocked(c, x, y):
 			return true
 	return false

@@ -22,6 +22,12 @@ extends "res://scripts/test_support/test_case.gd"
 #             stop revealing at the bomb.
 #   AI        the enemy AI's knowledge (AiSense) agrees with the fog for every state above: the
 #             distance at which an AI-controlled unit spots a player's plane is the same radius.
+#   LOS       with line of sight ON (real terrain, FogVision.set_line_of_sight): a falling plane's eye is
+#             its CURRENT height (every sample of a resolved fall, and as it stands at the end of a
+#             turn), so as it drops behind a plateau's lip the low ground beyond closes (a frozen
+#             plane at a real plateau edge, lowered step by step: visible while high, hidden once low,
+#             the radius rule still applied on top); and its shed is not swept every frame: it is
+#             reused until its height, position or radius has changed by the data's tolerances.
 #
 # Seeds that give each fate are FOUND, not written down (a retune would move them).
 
@@ -32,6 +38,11 @@ const CombatRules = preload("res://scripts/sim/combat_rules.gd")
 const AiSense = preload("res://scripts/sim/ai_sense.gd")
 const FogVision = preload("res://scripts/render/fog_vision.gd")
 const BombWorlds = preload("res://scripts/test_support/bomb_worlds.gd")
+const Terrain = preload("res://scripts/world/terrain.gd")
+const FogViewshed = preload("res://scripts/render/fog_viewshed.gd")
+const FogSites = preload("res://scripts/render/fog_viewshed_sites.gd")
+
+const TERRAIN_SEED := 20261009
 
 const REF_BASE := 800.0   # a made-up full radius for the hand-made units
 
@@ -40,6 +51,7 @@ var _ref := NAN
 var _floor := NAN
 var _descent := NAN
 var _sections: Array[String] = []
+var _terrain: Terrain
 
 func setup(_main) -> void:
 	timeout_seconds = 120.0
@@ -53,8 +65,9 @@ func setup(_main) -> void:
 	_fog_crash_in_the_turn()
 	_fog_ground()
 	_ai_side()
+	_los_falling()
 	# The sentinel: a section that stopped on a runtime error is missing from this list.
-	eq(_sections, ["data", "rule", "live", "exploded", "falling", "crash", "ground", "ai"], "every section ran to its end")
+	eq(_sections, ["data", "rule", "live", "exploded", "falling", "crash", "ground", "ai", "los_eye", "los_reuse", "los_hill"], "every section ran to its end")
 	finish()
 
 # --- helpers -----------------------------------------------------------------------------
@@ -537,3 +550,190 @@ func _ai_side() -> void:
 		near(_ai_agrees(w3, "ground", "bomber", "%s, destroyed" % kind), 0.0, 0.0, "a destroyed %s has no radius" % kind)
 		check(not _ai_knows(w3, "ground", "bomber", 5.0), "destroyed %s: a plane 5 m away is not seen" % kind)
 	_sections.append("ai")
+
+# --- line of sight on ------------------------------------------------------------------------
+
+# A vision with line of sight ON over the real terrain; sheds swept whole (no frame budget), so
+# a shed is always the one for this very frame.
+func _los_vision() -> FogVision:
+	var v := FogVision.new()
+	v.attach_terrain(_terrain)
+	v.set_line_of_sight(FogVision.LOS_TERRAIN)
+	v.budget_ms = 0.0
+	return v
+
+# The height the resolved fall must have at t of turn `turn_no`, from the fall rate (not from World.sample).
+func _fall_h(turn_no: int, t: float, td: float, h_start: float) -> float:
+	return 400.0 - _descent * (t - td) if turn_no == 1 else h_start - _descent * t
+
+func _los_falling() -> void:
+	_terrain = Terrain.new(TERRAIN_SEED)
+	if not check(_terrain.ok(), "terrain loads: %s" % [_terrain.errors]):
+		return
+	var seed_value := _find_seed("player", "ai", "medium", "out_of_control", 0.3, 2.0)
+	if seed_value < 0:
+		return
+	_los_resolved(seed_value)
+	_los_hill(seed_value)
+
+# A resolved fall over the real terrain, line of sight on: the eye follows the height, and the shed is reused.
+func _los_resolved(seed_value: int) -> void:
+	var w := _victim_world(seed_value, "player", "ai", "medium")
+	var u: Unit = w.units["bomber"]
+	var va := _los_vision()       # sampled coarsely: every sample is a fresh shed
+	var vc := _los_vision()       # sampled at 60 Hz: the sheds are reused
+	check(va.ok() and vc.ok() and va.los_on(), "the vision loads with line of sight on over the terrain: %s %s" % [va.errors, vc.errors])
+	var base := va.sight_radius_m(u)
+	var td := NAN
+	var coarse := 0
+	var frames := 0
+	var computes := 0
+	var drop := 0.0
+	var path := 0.0
+	var dr := 0.0
+	var prev := {}
+	var crashed := false
+	for turn_no in range(1, 9):
+		var h_start := u.fall_height_m          # NAN in turn 1
+		if turn_no > 1:
+			w.begin_turn()
+		_turn(w)
+		if turn_no == 1:
+			td = u.down_at
+		# Coarse: the eye is the sampled height, above the ground there; the shed was swept from it.
+		var times: Array[float] = []
+		for i in 21:
+			times.append(0.25 * float(i))
+		if turn_no == 1:
+			times.append(td)
+			times.sort()
+		for t: float in times:
+			if turn_no == 1 and t < td:
+				continue
+			var h := _fall_h(turn_no, t, td, h_start)
+			if h <= 1e-6:
+				continue
+			va.update_from_world(w, t, "history")
+			var c := _circle(va, "bomber")
+			if not check(not c.is_empty() and c.has("shed"), "turn %d t = %.2f: a circle with a shed" % [turn_no, t]):
+				continue
+			var agl := maxf(h - va.ground_at(c.x, c.y), 0.0)
+			near(c.eye_agl, agl, 1e-6, "turn %d t = %.2f: the eye is %.1f m above the ground (height %.1f m)" % [turn_no, t, agl, h])
+			var shed: FogViewshed.Shed = c.shed
+			near(shed.eye_agl, agl, 1e-6, "turn %d t = %.2f: the shed was swept from that eye" % [turn_no, t])
+			near(shed.eye_abs, va.ground_at(c.x, c.y) + agl, 1e-6, "turn %d t = %.2f: ... at that height above sea level" % [turn_no, t])
+			coarse += 1
+		# As it stands at the end of the turn (no playback time): its fall height, not its band's.
+		va.update_from_world(w)
+		var rest := _circle(va, "bomber")
+		if u.fate == Unit.FATE_CRASHED:
+			check(rest.is_empty(), "turn %d: crashed, no circle as it stands" % turn_no)
+			crashed = true
+		elif check(not rest.is_empty(), "turn %d: still falling, a circle as it stands" % turn_no):
+			var agl_rest := maxf(u.fall_height_m - va.ground_at(rest.x, rest.y), 0.0)
+			near(rest.eye_agl, agl_rest, 1e-6, "turn %d: as it stands the eye is at its fall height (%.1f m, %.1f m above the ground), not at the band's" % [turn_no, u.fall_height_m, agl_rest])
+			coarse += 1
+		# Fine: 60 frames a second, the shed kept while height, place and radius stay within the data's tolerances.
+		for i in 300:
+			var t := float(i) / 60.0
+			var before := int(vc.stats.computed)
+			vc.update_from_world(w, t, "history")
+			var c := _circle(vc, "bomber")
+			if c.is_empty():
+				break
+			if turn_no == 1 and t < td:
+				continue
+			var h := _fall_h(turn_no, t, td, h_start)
+			near(c.r, _expect(base, h), 1e-6, "turn %d frame %d: the radius is exact whatever the shed" % [turn_no, i])
+			check(not vc.is_visible_xy(c.x + c.r + 3.0, c.y) and not vc.is_visible_xy(c.x, c.y - c.r - 3.0), "turn %d frame %d: nothing beyond the circle is in sight, a stale shed or not" % [turn_no, i])
+			frames += 1
+			computes += int(vc.stats.computed) - before
+			var pos := Vector2(c.x, c.y)
+			if not prev.is_empty():
+				path += pos.distance_to(prev.pos)
+				drop += float(prev.h) - h
+				dr += absf(float(prev.r) - float(c.r))
+			prev = {"pos": pos, "h": h, "r": c.r}
+		if crashed:
+			break
+	check(crashed and coarse >= 12, "the fall ran to the crash (%d coarse samples)" % coarse)
+	var bound := 2.0 + ceilf(drop / vc.recompute_height_m) + ceilf(path / vc.recompute_move_m) + ceilf(dr / vc.recompute_move_m)
+	check(frames >= 150, "enough falling frames at 60 Hz (%d)" % frames)
+	check(float(computes) <= bound, "the shed is swept only when the height, place or radius has moved by the tolerances: %d sweeps in %d frames (bound %.0f: %.0f m of height / %s, %.0f m of path / %s, %.0f m of radius / %s)" % [computes, frames, bound, drop, vc.recompute_height_m, path, vc.recompute_move_m, dr, vc.recompute_move_m])
+	check(float(computes) < 0.6 * float(frames), "... and far fewer than one a frame (%d in %d)" % [computes, frames])
+	print("[fog_downed] LOS on: a falling bomber over the real terrain, %d frames at 60 Hz, %d sheds swept (one every %.1f frames); %.0f m of height, %.0f m of path" % [frames, computes, float(frames) / maxf(float(computes), 1.0), drop, path])
+	_sections.append("los_eye")
+	_sections.append("los_reuse")
+
+# A frozen plane at a real plateau edge, lowered step by step: the lip hides the low ground beyond once the eye is low.
+func _los_hill(seed_value: int) -> void:
+	var site := FogSites.find_plateau_edge(_terrain, 950.0, 40.0, 8.0)
+	if not check(float(site.get("score", -INF)) > -INF, "a plateau edge was found in the real terrain (%s)" % site.get("note", "")):
+		return
+	var w := _victim_world(seed_value, "player", "ai", "medium")
+	var u: Unit = w.units["bomber"]
+	_turn(w)
+	check(u.fate == Unit.FATE_OUT_OF_CONTROL, "the bomber is out of control (a real fate)")
+	var P: Vector2 = site.p
+	var dir: Vector2 = site.dir
+	var D: float = site.cliff_m
+	var lvl: int = site.level
+	var top: float = _terrain.heights_m[lvl]
+	# T: ground a few metres past the lip, lower than the plateau.
+	var T := Vector2.INF
+	var k_t := 0.0
+	for k: float in [15.0, 12.0, 10.0, 8.0]:
+		var q := P + dir * (D + k)
+		if _terrain.level_at(q.x, q.y) < lvl:
+			T = q
+			k_t = k
+			break
+	if not check(T != Vector2.INF, "ground below the lip was found"):
+		return
+	var g_t: float = _terrain.heights_m[_terrain.level_at(T.x, T.y)]
+	# The eye (above the plateau) at which the lip just hides T: the sight line over the lip, D back, meets
+	# the ground g_t below the plateau's top k_t beyond it when e = D x (top - g_t) / k_t.
+	var thr := D * (top - g_t) / k_t
+	var far := P + dir * (D + 120.0)         # low ground well beyond the dead ground, 120 m past the lip
+	var dist_t := P.distance_to(T)
+	var dist_far := P.distance_to(far)
+	print("[fog_downed] plateau edge at %s: level %d (%.0f m), lip %.1f m ahead; T %.0f m past it (ground %.0f m); the lip hides T below an eye of %.1f m above the plateau" % [P, lvl, top, D, k_t, g_t, thr])
+	var v := _los_vision()
+	var base := v.sight_radius_m(u)
+	var steps: Array = [
+		[400.0, true], [200.0, true], [top + 100.0, true], [top + 2.0 * thr, true], [top + 0.5 * thr, false], [top + 0.2 * thr, false],
+	]
+	var radius_hid := 0
+	var far_seen := 0
+	var checked := 0
+	# Frozen where the edge is, as if it had gone down in an earlier turn: the sampler puts it at its x, y and fall height.
+	u.x = P.x
+	u.y = P.y
+	u.down_at = NAN
+	u.history = []
+	for st: Array in steps:
+		var h_abs: float = st[0]
+		var want_t: bool = st[1]
+		u.fall_height_m = h_abs
+		for t: float in [-1.0, 0.5]:
+			v.update_from_world(w, t, "history")
+			var c := _circle(v, "bomber")
+			var tag := "height %.1f m (%.1f m over the plateau), t = %s" % [h_abs, h_abs - top, t]
+			if not check(not c.is_empty() and c.has("shed"), "%s: a circle with a shed" % tag):
+				continue
+			near(c.eye_agl, h_abs - top, 1e-6, "%s: the eye is its current height" % tag)
+			near(c.r, _expect(base, h_abs), 1e-6, "%s: the radius is the falling rule's" % tag)
+			check(c.r >= dist_t, "%s: the radius (%.1f m) still covers the ground behind the lip (%.1f m away), so the lip, not the radius, decides" % [tag, c.r, dist_t])
+			eq(v.is_visible(T), want_t, "%s: the ground %.0f m past the lip is %s" % [tag, k_t, "visible" if want_t else "hidden"])
+			eq(v.engine().ground_visible_from(P, c.eye_agl, T), want_t, "%s: the viewshed engine, one exact ray, agrees" % tag)
+			# The radius rule on top: the far ground is seen only inside the radius, though the line is clear.
+			var los_far: bool = v.engine().ground_visible_from(P, c.eye_agl, far)
+			eq(v.is_visible(far), los_far and c.r >= dist_far, "%s: the far ground (%.0f m) is in sight exactly when the line is clear AND it is inside the radius (%.1f m)" % [tag, dist_far, c.r])
+			if los_far and c.r < dist_far:
+				radius_hid += 1
+			if los_far and c.r >= dist_far:
+				far_seen += 1
+			checked += 1
+	check(checked == 2 * steps.size(), "every step was checked (%d)" % checked)
+	check(radius_hid >= 2 and far_seen >= 2, "far ground was seen while the radius reached it (%d) and hidden by the radius alone while the line was clear (%d)" % [far_seen, radius_hid])
+	_sections.append("los_hill")
