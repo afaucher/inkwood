@@ -1237,6 +1237,25 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'For the strike board - B3 · Shock ring, pale-lipped crater'. The board's recommendation had been B1 (Track X2)."
+    },
+    {
+      "id": "sight-follows-pilot",
+      "date": "2026-10-10",
+      "area": "Fog, Sight",
+      "question": "What does a downed plane see?",
+      "board": "none (playtest, said in chat; tmp/fog_downed/sheet.png)",
+      "options": [],
+      "chosen": "sight follows the pilot: an exploded plane stops revealing; a disabled, falling plane keeps a reduced sight that shrinks as it comes down (the information you can gather going down is limited), then nothing after the crash; with line of sight on, hills occlude a falling plane's view as it drops. Later: bailing out when disabled, the sight following the pilot, not the plane (not built)",
+      "parameters": {
+        "rule": "scripts/sim/sight_rules.gd, data/sim/sight.json (values proposed)",
+        "bail_out": "wanted later, not designed"
+      },
+      "applied_to": [
+        "scripts/sim/sight_rules.gd, scripts/render/fog_vision.gd, scripts/sim/ai_sense.gd (9abee92)",
+        "line-of-sight occlusion while falling: being tested"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Sorry, I was mixing two things. I meant if the plane drops such that the hills occlude the view you should see that happen (when LOS is enabled). However I think your version is actually more relevant. Basically going down the information you can gather is limited. Eventually I want to be able to bail when disabled and it would follow the pilot not the plane.'"
     }
   ]
 }
