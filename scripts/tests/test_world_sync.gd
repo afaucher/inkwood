@@ -194,7 +194,12 @@ func _run() -> bool:
 	await _wait(func() -> bool: return host.world.is_ready(ann.player()), "Ann's Ready on the host")
 	eq(host.world.phase, World.PHASE_PLANNING, "6. the host waits: it is not ready itself")
 	eq(host.resolved.size(), 0, "6. two Readys of three: no resolve")
+	# The host edits and readies in the same frame (the edit is still queued when Ready comes):
+	# the edit came first, so the Ready stands (a bug once withdrew it re-entrantly and stalled
+	# the turn while the clients were told the host was ready).
+	host.world.plan_step(HEAVY, 0, {"to": Vector2(3000.0, 3000.0)})
 	host.world.commit(host.player())
+	check(host.world.is_ready(host.player()) or host.resolved.size() == 1, "6. the host's Ready survives sending its own edit made just before it")
 	await _wait(func() -> bool: return host.resolved.size() == 1 and ann.resolved.size() == 1 and bob.resolved.size() == 1, "the turn resolved on all three")
 	await _wait(func() -> bool: return _alike(), "all three Worlds alike after the resolve")
 	eq(_alike_why(), "", "6. every World holds identical unit states and histories after the resolve")

@@ -218,6 +218,9 @@ func _process(_delta: float) -> void:
 
 # Send what the local player did since the last flush, in the order it happened.
 # Plans are read NOW (a drag that changed a unit's plan ten times is one message).
+# True while flush() runs for a Ready: the edits it sends were made before that Ready.
+var _flushing_for_ready: bool = false
+
 func flush() -> void:
 	if _outbox.is_empty():
 		return
@@ -230,8 +233,10 @@ func _send_local_plan(unit_id: String) -> void:
 	if world == null or not world.units.has(unit_id) or world.phase != World.PHASE_PLANNING:
 		return
 	if is_host():
-		# The host's own edit: it takes the host player's Ready back, and goes to everyone.
-		_unready(local_player())
+		# The host's own edit: it takes the host player's Ready back (unless it is being sent as
+		# part of that Ready: the edit came first), and goes to everyone.
+		if not _flushing_for_ready:
+			_unready(local_player())
 		_broadcast_plan(unit_id, HOST_ID, 0)
 		return
 	var seq: int = int(_plan_sent.get(unit_id, 0)) + 1
@@ -261,15 +266,22 @@ func _on_ready_changed(player: String, is_ready: bool) -> void:
 	# under _applying and announced by the code that applied them.
 	if not _live() or world.phase != World.PHASE_PLANNING:
 		return
-	# An edit made before this Ready reaches the host (and so everyone) before it.
+	# An edit made before this Ready reaches the host (and so everyone) before it. It was made
+	# BEFORE the Ready, so sending it must not take this Ready back: on the host that withdraw
+	# re-entered this handler, and the outer call then broadcast a stale "ready" while the host
+	# itself was not ready, stalling the turn (found by Track A, 2026-10-10). Send what the World
+	# holds after the flush, never the argument.
+	_flushing_for_ready = true
 	flush()
+	_flushing_for_ready = false
+	var now_ready := world.is_ready(player)
 	if is_host():
-		_broadcast_ready(world.turn, player, is_ready, HOST_ID, 0)
+		_broadcast_ready(world.turn, player, now_ready, HOST_ID, 0)
 		_maybe_resolve.call_deferred()
 	elif player == local_player():
 		_ready_sent += 1
-		_note("req_ready", HOST_ID, "", {"ready": is_ready})
-		rpc_req_ready.rpc_id(HOST_ID, world.turn, is_ready, _ready_sent)
+		_note("req_ready", HOST_ID, "", {"ready": now_ready})
+		rpc_req_ready.rpc_id(HOST_ID, world.turn, now_ready, _ready_sent)
 
 func _on_phase_changed(phase: String) -> void:
 	if phase != World.PHASE_PLANNING or world == null:
