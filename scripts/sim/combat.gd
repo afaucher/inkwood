@@ -29,8 +29,11 @@ extends RefCounted
 #     r = sqrt((across / half_across)^2 + (height / half_height)^2)
 #
 # r is 0 at the centre and 1 at the rim; the target is in the arc when r <= 1.
-# It is IN THE CONE when it is also within the weapon's range of the hardpoint
-# (the slant distance, so a target 600 m up is 600 m away). Azimuth and
+# It is IN THE CONE when it is also within the weapon's REACH of the hardpoint
+# (the slant distance, so a target 600 m up is 600 m away): its effective range
+# stretched by range_overshoot while the "range" factor is on (a gun fires
+# slightly over its effective range, Alex), else the effective range alone, a
+# hard edge. Azimuth and
 # elevation (a turret's traverse and elevation) rather than the true angle from
 # the axis because that is how a cone of +-110 degrees across and 35 +- 35 in
 # height reads, and for the narrow cones the two are the same.
@@ -42,15 +45,21 @@ extends RefCounted
 # pitch is 0 and the cones are level.
 #
 # ODDS = base_hit_chance x the product of the NAMED FACTORS data/sim/combat.json
-# lists (odds_factors), clamped to 0..1. Only "centre" exists:
+# lists (odds_factors), clamped to 0..1. Two exist:
 #     centre(r) = 1 - (1 - rim_odds_factor) x r^falloff_exponent
 # 1 at the centre, rim_odds_factor at the rim. Fixed guns are PEAKED (rim factor
 # well under 1), flexible guns and turrets FLAT (rim factor 1: a gunner aims
-# within the arc). Adding a factor (range, crossing speed, target size, ...)
-# means adding its name to FACTOR_NAMES and a branch in factor_value(), then
-# its name to the data; the geometry dictionary it reads (`geo`) already has
-# distance, r, across and height, and gains whatever the new factor needs.
-# NONE of those is built.
+# within the arc).
+#     range(d) = 1 for d <= effective_range_m, else 1 - s^2 (3 - 2 s) with
+#                s = (d - effective_range_m) / (effective_range_m x range_overshoot)
+# a smoothstep: 1 inside the effective range, falling smoothly (no kink at the
+# range) to 0 at effective_range_m x (1 + range_overshoot), where range_overshoot
+# is data/sim/combat.json's, passed in `params` (CombatRules.factor_params()).
+# Alex 2026-10-09: "slightly over effective range" a gun still fires.
+# Adding a factor (crossing speed, target size, ...) means adding its name to
+# FACTOR_NAMES and a branch in factor_value(), then its name to the data; the
+# geometry dictionary it reads (`geo`) has distance, r, across, height and the
+# `params`, and gains whatever the new factor needs. NONE of those is built.
 #
 # THE ROLLS (combat_resolver.gd): the turn is cut into ticks (tick_seconds); at
 # each tick every unit that is up is sampled at the tick's END time t on the
@@ -143,7 +152,7 @@ const MASK32 := 0xFFFFFFFF
 
 # The odds factors the code knows. data/sim/combat.json names the ones in use;
 # a name not listed here is a data error.
-const FACTOR_NAMES: Array[String] = ["centre"]
+const FACTOR_NAMES: Array[String] = ["centre", "range"]
 
 # --- Geometry ----------------------------------------------------------------
 
@@ -194,18 +203,21 @@ static func distance_sq(p: Dictionary, target: Dictionary) -> float:
 
 # The cone test of a target {x, y, height_m} from a pose, against a weapon.
 # `factors`: the named odds factors to apply (CombatRules.odds_factors).
-# Returns {in_cone, in_arc, in_range (bool), r (1 or less is inside the arc;
+# `params`: the numbers the factors read besides the weapon (CombatRules.factor_params(): range_overshoot); a missing
+# range_overshoot is 0, a hard edge at the effective range.
+# Returns {in_cone, in_arc, in_range (within the reach, see reach()), r (1 or less is inside the arc;
 # INF when the target is at the hardpoint), distance (slant metres), across,
 # height (signed offsets from the cone's centre, radians; NAN at the
 # hardpoint), odds (0 outside the cone), factors ({name: value}, empty outside
 # the cone)}.
-static func evaluate_pose(p: Dictionary, weapon: CombatWeapon, target: Dictionary, factors: Array) -> Dictionary:
+static func evaluate_pose(p: Dictionary, weapon: CombatWeapon, target: Dictionary, factors: Array, params: Dictionary = {}) -> Dictionary:
 	var dx := float(target["x"]) - float(p["x"])
 	var dy := float(target["y"]) - float(p["y"])
 	var dz := float(target["height_m"]) - float(p["z"])
 	var dist := sqrt(dx * dx + dy * dy + dz * dz)
+	var reach_m := reach(weapon, factors, params)
 	var out := {
-		"in_cone": false, "in_arc": false, "in_range": dist <= weapon.range_m,
+		"in_cone": false, "in_arc": false, "in_range": dist <= reach_m,
 		"r": INF, "distance": dist, "across": NAN, "height": NAN,
 		"odds": 0.0, "factors": {},
 	}
@@ -226,9 +238,9 @@ static func evaluate_pose(p: Dictionary, weapon: CombatWeapon, target: Dictionar
 	out["height"] = height
 	out["r"] = r
 	out["in_arc"] = r <= 1.0
-	out["in_cone"] = r <= 1.0 and dist <= weapon.range_m
+	out["in_cone"] = r <= 1.0 and dist <= reach_m
 	if out["in_cone"]:
-		var geo := {"r": r, "distance": dist, "across": across, "height": height}
+		var geo := {"r": r, "distance": dist, "across": across, "height": height, "params": params}
 		var odds := weapon.base_hit_chance
 		var used := {}
 		for name: Variant in factors:
@@ -241,24 +253,47 @@ static func evaluate_pose(p: Dictionary, weapon: CombatWeapon, target: Dictionar
 
 # pose() then evaluate_pose(), for one hardpoint of a weapon (by index).
 # `shooter` {x, y, heading, height_m, pitch?}; `target` {x, y, height_m}.
-static func evaluate(shooter: Dictionary, weapon: CombatWeapon, hardpoint_index: int, target: Dictionary, factors: Array = ["centre"]) -> Dictionary:
-	return evaluate_pose(pose(shooter, weapon.hardpoints[hardpoint_index]), weapon, target, factors)
+static func evaluate(shooter: Dictionary, weapon: CombatWeapon, hardpoint_index: int, target: Dictionary, factors: Array = ["centre"], params: Dictionary = {}) -> Dictionary:
+	return evaluate_pose(pose(shooter, weapon.hardpoints[hardpoint_index]), weapon, target, factors, params)
 
 # --- Odds --------------------------------------------------------------------
 
 # One named factor's multiplier for a target in the cone; `geo` is
-# {r, distance, across, height}. An unknown name is a data error caught at load
+# {r, distance, across, height, params}. An unknown name is a data error caught at load
 # (CombatRules); here it is 1.0 so a stray name cannot silently zero the odds.
 static func factor_value(name: String, weapon: CombatWeapon, geo: Dictionary) -> float:
 	match name:
 		"centre":
 			return centre_factor(weapon, float(geo["r"]))
+		"range":
+			return range_factor(weapon, float(geo["distance"]), float((geo["params"] as Dictionary).get("range_overshoot", 0.0)))
 	return 1.0
 
 # 1 at the cone's centre, weapon.rim_odds_factor at its rim, along r^exponent.
 static func centre_factor(weapon: CombatWeapon, r: float) -> float:
 	var rr := clampf(r, 0.0, 1.0)
 	return 1.0 - (1.0 - weapon.rim_odds_factor) * pow(rr, weapon.falloff_exponent)
+
+# 1 inside the effective range; past it a smoothstep down to 0 at effective range x
+# (1 + overshoot): 1 - s^2 (3 - 2 s), s the fraction of the way through the fringe.
+# With no overshoot the edge is hard (0 just past the range).
+static func range_factor(weapon: CombatWeapon, distance: float, overshoot: float) -> float:
+	var eff := weapon.effective_range_m
+	if distance <= eff:
+		return 1.0
+	var fringe := eff * overshoot
+	if fringe <= 0.0:
+		return 0.0
+	var s := clampf((distance - eff) / fringe, 0.0, 1.0)
+	return 1.0 - s * s * (3.0 - 2.0 * s)
+
+# The farthest slant distance at which a weapon rolls at all: its effective range
+# stretched by the overshoot when the "range" factor is applied, else the
+# effective range alone.
+static func reach(weapon: CombatWeapon, factors: Array, params: Dictionary) -> float:
+	if factors.has("range"):
+		return weapon.max_range_m(float(params.get("range_overshoot", 0.0)))
+	return weapon.effective_range_m
 
 # --- Rolls -------------------------------------------------------------------
 

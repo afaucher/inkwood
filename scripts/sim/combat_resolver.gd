@@ -45,6 +45,7 @@ var _fates: Dictionary = {}
 var _events: Array = []
 var _turn: int = 0
 var _seed: int = 0
+var _params: Dictionary = {}    # CombatRules.factor_params()
 
 func _init(combat_rules: CombatRules) -> void:
 	rules = combat_rules
@@ -60,6 +61,7 @@ func run(units: Dictionary, histories: Dictionary, turn: int, rng_seed: int, tur
 	_events = []
 	_turn = turn
 	_seed = rng_seed
+	_params = rules.factor_params()
 	for i in _ids.size():
 		var id: String = _ids[i]
 		var u: Unit = units[id]
@@ -97,7 +99,8 @@ func run(units: Dictionary, histories: Dictionary, turn: int, rng_seed: int, tur
 func _fire_hardpoint(active: Array[String], states: Dictionary, sid: String, w_i: int, weapon: CombatWeapon, h_i: int, n_rolls: int, tick: int, t: float) -> void:
 	var shooter: Unit = _units[sid]
 	var p := Combat.pose(states[sid], weapon.hardpoints[h_i])
-	var range_sq := weapon.range_m * weapon.range_m
+	var reach_m := Combat.reach(weapon, rules.odds_factors, _params)
+	var range_sq := reach_m * reach_m
 	var best_id := ""
 	var best: Dictionary = {}
 	for tid: String in active:
@@ -107,7 +110,7 @@ func _fire_hardpoint(active: Array[String], states: Dictionary, sid: String, w_i
 		var ts: Dictionary = states[tid]
 		if Combat.distance_sq(p, ts) > range_sq:
 			continue
-		var g := Combat.evaluate_pose(p, weapon, ts, rules.odds_factors)
+		var g := Combat.evaluate_pose(p, weapon, ts, rules.odds_factors, _params)
 		if not g["in_cone"]:
 			continue
 		# The target rule "best_odds" (the only one): the best odds, then the

@@ -26,8 +26,13 @@ extends SceneTree
 #   first        ... of which it went down first
 #
 # Variants: with the bomber's guns on (the real exchange) and off (how long the
-# fighter needs when nobody shoots back). Gaps: 150 m (close), 300 m (inside
-# both ranges), 420 m (outside the tail turret's reach, inside the wing guns').
+# fighter needs when nobody shoots back). Gaps (centre to centre; the tail turret
+# sits 10.5 m behind the bomber's centre): 150 m (close), 300 m (inside both
+# effective ranges), 420 m (just over the tail turret's 400 m effective range: it
+# still fires, at 96 percent of its odds), 470 m (inside the tail turret's 480 m
+# reach at about a third of its odds, over the wing guns' 450 m effective range),
+# 500 m (past the tail turret's reach; the wing guns, effective 450 m, reach 540 m
+# and fire at about 40 percent of their odds). Range overshoot 0.2 (data/sim/combat.json).
 
 const World = preload("res://scripts/sim/world.gd")
 
@@ -40,7 +45,7 @@ func _initialize() -> void:
 	print("")
 	print("%-14s %5s %-10s | %-9s %-12s %-14s | %-13s %-8s" % ["fighter", "gap m", "bomber", "kill", "turns (mean)", "turns (median)", "fighter lost", "f.down"])
 	for ftype: String in ["light_fighter", "heavy_fighter"]:
-		for gap: float in [150.0, 300.0, 420.0]:
+		for gap: float in [150.0, 300.0, 420.0, 470.0, 500.0]:
 			for fire_back: bool in [false, true]:
 				_row(ftype, gap, fire_back)
 	print("")
@@ -49,7 +54,7 @@ func _initialize() -> void:
 	for t: String in ["light_fighter", "heavy_fighter", "bomber"]:
 		for wp in w.unit_def(t).weapons:
 			var per_turn: float = float(wp.hardpoints.size()) * wp.rolls_per_second * w.rules.turn_seconds * wp.base_hit_chance * float(wp.damage_pips)
-			print("  %-14s %-14s %d hardpoint(s) x %s rolls/s x %.2f odds x %d pip(s) = %.2f pips a turn (range %s m)" % [t, wp.id, wp.hardpoints.size(), str(wp.rolls_per_second), wp.base_hit_chance, wp.damage_pips, per_turn, str(wp.range_m)])
+			print("  %-14s %-14s %d hardpoint(s) x %s rolls/s x %.2f odds x %d pip(s) = %.2f pips a turn (effective range %s m, reach %s m)" % [t, wp.id, wp.hardpoints.size(), str(wp.rolls_per_second), wp.base_hit_chance, wp.damage_pips, per_turn, str(wp.effective_range_m), str(wp.max_range_m(w.combat.range_overshoot))])
 	quit()
 
 func _row(ftype: String, gap: float, fire_back: bool) -> void:

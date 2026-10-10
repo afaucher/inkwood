@@ -34,7 +34,7 @@ func setup(_main) -> void:
 	for f: String in ["id", "name", "domain", "size_m", "actions_per_turn", "health", "sight_range_m", "drawing", "envelope", "weapons"]:
 		check(fields.has(f), "schema lists '%s'" % f)
 	var weapon_fields: Dictionary = (fields.get("weapons", {}) as Dictionary).get("item_fields", {})
-	for f: String in ["id", "name", "kind", "hardpoints", "mount_deg", "half_across_deg", "elevation_deg", "half_height_deg", "range_m", "base_hit_chance", "rim_odds_factor", "falloff_exponent", "damage_pips", "rolls_per_second"]:
+	for f: String in ["id", "name", "kind", "hardpoints", "mount_deg", "half_across_deg", "elevation_deg", "half_height_deg", "effective_range_m", "base_hit_chance", "rim_odds_factor", "falloff_exponent", "damage_pips", "rolls_per_second"]:
 		check(weapon_fields.has(f), "schema lists weapons[].%s" % f)
 	var env_fields: Dictionary = (fields.get("envelope", {}) as Dictionary).get("fields", {})
 	for f: String in ["speed_min_mps", "speed_max_mps", "accel_mps2", "decel_mps2", "turn_rate_curve_dps", "turn_bleed_mps2", "climb_speed_cost_mps", "dive_speed_gain_mps", "altitude_bands", "reverse_from_stop"]:
@@ -82,8 +82,8 @@ func setup(_main) -> void:
 		["a curve whose speeds do not increase", "strictly increase"],
 		["a domain outside the roster's", "'domain' = 'space'"],
 		["zero steps per turn", "'actions_per_turn' = 0 is below 1"],
-		["a weapon missing a field", "missing field 'weapons[0].range_m'"],
-		["a weapon number with no provenance", "'weapons[0].range_m' says neither where it came from"],
+		["a weapon missing a field", "missing field 'weapons[0].effective_range_m'"],
+		["a weapon number with no provenance", "'weapons[0].effective_range_m' says neither where it came from"],
 		["a misspelt weapon key", "unknown field 'weapons[0].rnage_m'"],
 		["a weapon kind outside the three", "'weapons[0].kind' = 'cannon' is not one of"],
 		["a weapon with no hardpoints", "'weapons[0].hardpoints' must be a non-empty list"],
@@ -170,9 +170,9 @@ func _break(d: Dictionary, what: String) -> void:
 		"zero steps per turn":
 			d["actions_per_turn"] = {"value": 0, "_proposed": true, "_reason": "x"}
 		"a weapon missing a field":
-			(d["weapons"][0] as Dictionary).erase("range_m")
+			(d["weapons"][0] as Dictionary).erase("effective_range_m")
 		"a weapon number with no provenance":
-			d["weapons"][0]["range_m"] = {"value": 450}
+			d["weapons"][0]["effective_range_m"] = {"value": 450}
 		"a misspelt weapon key":
 			d["weapons"][0]["rnage_m"] = {"value": 1, "_proposed": true, "_reason": "typo"}
 		"a weapon kind outside the three":
@@ -205,13 +205,13 @@ func _check_weapons(def: UnitDef) -> void:
 		ids.append(w.id)
 		check(CombatWeapon.KINDS.has(w.kind), "%s.%s: kind '%s' is one of the three" % [def.id, w.id, w.kind])
 		check(w.hardpoints.size() >= 1, "%s.%s: at least one hardpoint" % [def.id, w.id])
-		check(w.half_across > 0.0 and w.half_height > 0.0 and w.range_m > 0.0 and w.damage_pips >= 1 and w.rolls_per_second > 0.0, "%s.%s: a real cone, range, damage and roll rate" % [def.id, w.id])
+		check(w.half_across > 0.0 and w.half_height > 0.0 and w.effective_range_m > 0.0 and w.damage_pips >= 1 and w.rolls_per_second > 0.0, "%s.%s: a real cone, range, damage and roll rate" % [def.id, w.id])
 		near(w.mount, deg_to_rad(w.mount_deg), 1e-12, "%s.%s: angles are radians at runtime" % [def.id, w.id])
 		check(w.base_hit_chance > 0.0 and w.base_hit_chance <= 1.0 and w.rim_odds_factor >= 0.0 and w.rim_odds_factor <= 1.0, "%s.%s: odds are probabilities" % [def.id, w.id])
 		var back := CombatWeapon.new(w.values())
-		check(back.range_m == w.range_m and back.hardpoints == w.hardpoints and back.mount == w.mount, "%s.%s: values() rebuilds the same weapon" % [def.id, w.id])
+		check(back.effective_range_m == w.effective_range_m and back.range_m == w.range_m and back.hardpoints == w.hardpoints and back.mount == w.mount, "%s.%s: values() rebuilds the same weapon" % [def.id, w.id])
 	check(def.domain != "air" or def.weapons.size() >= 1, "%s: an air unit has a weapon" % def.id)
-	print("    weapons: %s" % ", ".join(def.weapons.map(func(w: CombatWeapon) -> String: return "%s (%d hardpoint%s, %s, %s m)" % [w.id, w.hardpoints.size(), "" if w.hardpoints.size() == 1 else "s", w.kind, w.range_m])))
+	print("    weapons: %s" % ", ".join(def.weapons.map(func(w: CombatWeapon) -> String: return "%s (%d hardpoint%s, %s, %s m)" % [w.id, w.hardpoints.size(), "" if w.hardpoints.size() == 1 else "s", w.kind, w.effective_range_m])))
 	# The lead's proposal (variants/engagement-cones/weapons_proposed.json), 2026-10-09.
 	match def.id:
 		"light_fighter":
@@ -222,9 +222,9 @@ func _check_weapons(def: UnitDef) -> void:
 		"heavy_fighter":
 			eq(ids, ["nose_cannon", "rear_gunner"] as Array[String], "heavy fighter: nose cannon and rear gunner")
 			eq(def.weapons[0].damage_pips, 2, "the cannon does 2 pips")
-			eq(def.weapons[0].range_m, 600.0, "...at 600 m")
+			eq(def.weapons[0].effective_range_m, 600.0, "...at 600 m")
 			eq(def.weapons[1].mount_deg, 180.0, "the rear gunner points rearward")
 		"bomber":
 			eq(ids, ["nose_gun", "dorsal_turret", "tail_turret"] as Array[String], "bomber: nose gun, dorsal turret, tail turret")
-			eq(def.weapons[2].range_m, 400.0, "the tail turret reaches 400 m")
+			eq(def.weapons[2].effective_range_m, 400.0, "the tail turret's effective range is 400 m")
 			eq(def.weapons[1].elevation_deg, 35.0, "the dorsal turret's cone is centred 35 deg up")

@@ -30,7 +30,11 @@ var mount_deg: float = 0.0           # cone centre relative to the nose: 0 forwa
 var half_across_deg: float = 1.0     # half the cone's width, in azimuth
 var elevation_deg: float = 0.0       # cone centre above level
 var half_height_deg: float = 1.0     # half the cone's height, in elevation
-var range_m: float = 0.0
+var effective_range_m: float = 0.0   # inside it the range factor is 1; slightly over it a gun still fires, at falling odds
+# The same number under its old name (the enemy AI and the interface read it).
+var range_m: float:
+	get:
+		return effective_range_m
 var base_hit_chance: float = 0.0     # odds per roll at the cone's centre, before any other factor
 var rim_odds_factor: float = 1.0     # the centre factor at the cone's rim: 1 = flat, less = peaked
 var falloff_exponent: float = 1.0    # shape of the fall from centre to rim
@@ -58,7 +62,7 @@ func _init(v: Dictionary = {}) -> void:
 	half_across_deg = float(v.get("half_across_deg", half_across_deg))
 	elevation_deg = float(v.get("elevation_deg", elevation_deg))
 	half_height_deg = float(v.get("half_height_deg", half_height_deg))
-	range_m = float(v.get("range_m", range_m))
+	effective_range_m = float(v.get("effective_range_m", v.get("range_m", effective_range_m)))
 	base_hit_chance = float(v.get("base_hit_chance", base_hit_chance))
 	rim_odds_factor = float(v.get("rim_odds_factor", rim_odds_factor))
 	falloff_exponent = float(v.get("falloff_exponent", falloff_exponent))
@@ -77,7 +81,12 @@ func values() -> Dictionary:
 		"hardpoints": hardpoints.duplicate(),
 		"mount_deg": mount_deg, "half_across_deg": half_across_deg,
 		"elevation_deg": elevation_deg, "half_height_deg": half_height_deg,
-		"range_m": range_m, "base_hit_chance": base_hit_chance,
+		"effective_range_m": effective_range_m, "base_hit_chance": base_hit_chance,
 		"rim_odds_factor": rim_odds_factor, "falloff_exponent": falloff_exponent,
 		"damage_pips": damage_pips, "rolls_per_second": rolls_per_second,
 	}
+
+# The farthest slant distance at which this weapon still rolls: its effective
+# range stretched by `overshoot` (data/sim/combat.json range_overshoot).
+func max_range_m(overshoot: float) -> float:
+	return effective_range_m * (1.0 + maxf(overshoot, 0.0))

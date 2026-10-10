@@ -11,9 +11,14 @@
     "_reason": "a default so a weapon with several enemies in its cone still rolls at one of them: the one with the best odds (ties: nearer, then the unit added first). NOT target priority, which Alex will design; when he does, this record names the new rule"
   },
   "odds_factors": {
-    "value": ["centre"],
+    "value": ["centre", "range"],
     "_proposed": true,
-    "_reason": "the named factors that multiply a weapon's base_hit_chance. Only 'centre' (better odds nearer the cone's centre, per weapon falloff) is decided (Alex 2026-10-09). Range, crossing speed, damage and others come later by adding a name here and a function in combat.gd; none is built"
+    "_reason": "the named factors that multiply a weapon's base_hit_chance, in this order. 'centre' (better odds nearer the cone's centre, per weapon falloff) and 'range' (1 inside the effective range, falling smoothly to 0 slightly over it) are Alex's (2026-10-09). Crossing speed, damage and others come later by adding a name here and a function in combat.gd; none is built"
+  },
+  "range_overshoot": {
+    "value": 0.2,
+    "_proposed": true,
+    "_reason": "Alex 2026-10-09: a gun fires 'slightly over effective range'. Past a weapon's effective_range_m the 'range' factor falls along a smoothstep (flat at the effective range, flat again at the end) to 0 at effective range x (1 + this). 0.2 is a fifth: 400 m becomes 480, 450 becomes 540, 600 becomes 720 -- far enough that a stand-off just outside the range still gets shot at (a fighter 420 m behind the bomber is 409.5 m from its tail turret, inside the fringe at about 96 percent of full odds) and short enough that 'slightly' stays true; the range 0.15 to 0.25 would all do. One number for every weapon; per weapon later if a gun needs its own"
   },
   "max_pitch_deg": {
     "value": 35,

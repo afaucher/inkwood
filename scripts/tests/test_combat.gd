@@ -27,6 +27,9 @@ const CombatRules = preload("res://scripts/sim/combat_rules.gd")
 const CombatResolver = preload("res://scripts/sim/combat_resolver.gd")
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 
+# The shipped rules (data/sim/combat.json): the odds factors and the range overshoot.
+var _cr: CombatRules = CombatRules.new()
+
 # A level shooter turned a little, so the rotation is exercised.
 const SHOOTER := {"x": 3000.0, "y": 2500.0, "heading": 0.7, "height_m": 400.0}
 
@@ -38,9 +41,11 @@ func setup(_main) -> void:
 	_rules()
 	_geometry(w)
 	_odds(w)
+	_range(w)
 	_seeds()
 	_determinism()
 	_chase()
+	_standoff()
 	_down_mid_turn()
 	_cross_band()
 	_round_trip()
@@ -120,17 +125,25 @@ func _eval(shooter: Dictionary, weapon: CombatWeapon, hp: int, across_deg: float
 func _rules() -> void:
 	var r := CombatRules.new()
 	check(r.ok(), "data/sim/combat.json loads: %s" % str(r.errors))
-	eq(r.odds_factors, ["centre"] as Array[String], "the only decided odds factor is the cone's centre")
+	eq(r.odds_factors, ["centre", "range"] as Array[String], "the decided odds factors: the cone's centre and the range")
+	check(r.range_overshoot > 0.0 and r.range_overshoot < 1.0, "a gun fires slightly over its effective range (overshoot %s)" % str(r.range_overshoot))
+	eq(r.factor_params(), {"range_overshoot": r.range_overshoot}, "the factor params carry the overshoot")
 	check(r.tick_seconds > 0.0 and r.tick_seconds <= 1.0, "the tick is a fraction of a step")
 	check(r.max_pitch > 0.0, "the climb tilt is on (max_pitch_deg > 0)")
 	var d: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CombatRules.PATH))
 	var bad: Dictionary = d.duplicate(true)
-	bad["odds_factors"] = {"value": ["range"], "_proposed": true, "_reason": "x"}
+	bad["odds_factors"] = {"value": ["crossing_speed"], "_proposed": true, "_reason": "x"}
 	var rb := CombatRules.new(bad, true)
-	check(not rb.ok() and "; ".join(rb.errors).contains("range"), "a factor the code does not know is a data error: %s" % str(rb.errors))
+	check(not rb.ok() and "; ".join(rb.errors).contains("crossing_speed"), "a factor the code does not know is a data error: %s" % str(rb.errors))
 	bad = d.duplicate(true)
 	bad["tick_seconds"] = 0.25
 	check(not CombatRules.new(bad, true).ok(), "a bare number instead of a value record is rejected")
+	bad = d.duplicate(true)
+	bad["range_overshoot"] = {"value": -0.1, "_proposed": true, "_reason": "x"}
+	check(not CombatRules.new(bad, true).ok(), "a negative overshoot is rejected")
+	bad = d.duplicate(true)
+	bad.erase("range_overshoot")
+	check(not CombatRules.new(bad, true).ok(), "a missing overshoot is rejected, not defaulted")
 	bad = d.duplicate(true)
 	bad.erase("explode_chance")
 	check(not CombatRules.new(bad, true).ok(), "a missing field is rejected, not defaulted")
@@ -191,9 +204,11 @@ func _geometry(w: World) -> void:
 	var ahead_t := {"x": float(ahead_p["x"]) + 300.0 * float(ahead_p["fx"]), "y": float(ahead_p["y"]) + 300.0 * float(ahead_p["fy"]), "height_m": 400.0 + 0.5}
 	check(not bool(Combat.evaluate_pose(ahead_p, tail, ahead_t, ["centre"])["in_cone"]), "the tail turret does not cover the front")
 	# Range: the tail turret reaches 400 m and not 450.
-	check(bool(_eval(SHOOTER, tail, 0, 0.0, 0.0, 399.0)["in_cone"]), "the tail turret reaches 399 m")
-	check(not bool(_eval(SHOOTER, tail, 0, 0.0, 0.0, 401.0)["in_cone"]), "the tail turret does not reach 401 m")
-	check(not bool(_eval(SHOOTER, tail, 0, 0.0, 0.0, 450.0)["in_cone"]), "the tail turret does not reach 450 m")
+	# Range with only the centre factor named: the effective range is a hard edge. (With the
+	# range factor on, a gun fires slightly over it: _range() and _standoff().)
+	check(bool(_eval(SHOOTER, tail, 0, 0.0, 0.0, 399.0)["in_cone"]), "without the range factor the tail turret reaches 399 m")
+	check(not bool(_eval(SHOOTER, tail, 0, 0.0, 0.0, 401.0)["in_cone"]), "...and not 401 m: a hard edge")
+	check(not bool(_eval(SHOOTER, tail, 0, 0.0, 0.0, 450.0)["in_cone"]), "...and not 450 m")
 	check(wing.range_m == 450.0, "the wing guns reach 450 m (the proposal)")
 	check(bool(_eval(SHOOTER, wing, 0, 0.0, 0.0, 449.0)["in_cone"]), "the wing guns reach 449 m")
 	# The proposal sheet's third picture: a fighter 430 m behind a bomber is in its
@@ -201,7 +216,7 @@ func _geometry(w: World) -> void:
 	var bomber_state := {"x": 3000.0, "y": 2500.0, "heading": 0.0, "height_m": 400.0}
 	var fighter_state := {"x": 2570.0, "y": 2500.0, "heading": 0.0, "height_m": 400.0}
 	var bomber_sees := Combat.evaluate(bomber_state, tail, 0, fighter_state)
-	check(not bool(bomber_sees["in_cone"]) and bool(bomber_sees["in_arc"]), "430 m behind: the tail turret has it in its arc but out of range")
+	check(not bool(bomber_sees["in_cone"]) and bool(bomber_sees["in_arc"]), "430 m behind, range factor off: the tail turret has it in its arc but out of range")
 	check(bool(Combat.evaluate(fighter_state, wing, 0, bomber_state)["in_cone"]), "430 m behind: the wing guns reach the bomber")
 	# The dorsal turret: +-110 across, centre 35 up with +-35: wide and high, not level.
 	check(bool(_eval(SHOOTER, dorsal, 0, 100.0, 0.0, 300.0)["in_cone"]), "the dorsal turret covers 100 deg either side of the tail")
@@ -533,7 +548,7 @@ func _cross_band() -> void:
 		var bs := w.sample("bomber", t)
 		var shooter := {"x": fs["x"], "y": fs["y"], "heading": fs["heading"], "height_m": fs["height_m"], "pitch": deg_to_rad(-35.0) if t <= 1.0 + 1e-9 else 0.0}
 		for h in 2:
-			if bool(Combat.evaluate(shooter, wing, h, bs)["in_cone"]):
+			if bool(Combat.evaluate(shooter, wing, h, bs, _cr.odds_factors, _cr.factor_params())["in_cone"]):
 				(expect[h] as Array).append(t)
 	var got: Dictionary = {0: [], 1: []}
 	for ev: Dictionary in _of_type(res["events"], "fire"):
@@ -590,3 +605,106 @@ func _down_seed() -> int:
 			return s
 	fail("no seed downs B in the head-on: the model has stopped hitting")
 	return 1
+
+# --- the range factor ----------------------------------------------------------------
+
+# Alex 2026-10-09: effective range, and "slightly over" it a gun still fires: the
+# factor is 1 inside, falls smoothly past it, is 0 at effective x (1 + overshoot).
+func _range(w: World) -> void:
+	var tail: CombatWeapon = null
+	var cannon: CombatWeapon = w.unit_def("heavy_fighter").weapons[0]
+	for wp: CombatWeapon in w.unit_def("bomber").weapons:
+		if wp.id == "tail_turret":
+			tail = wp
+	var os := _cr.range_overshoot
+	var eff := tail.effective_range_m
+	var end := eff * (1.0 + os)
+	near(tail.max_range_m(os), end, 1e-9, "max_range_m is the effective range x (1 + overshoot): %.0f m" % end)
+	eq(tail.range_m, tail.effective_range_m, "range_m is the effective range under its old name")
+	# The curve.
+	for d: float in [0.0, 100.0, 399.9, 400.0]:
+		eq(Combat.range_factor(tail, d, os), 1.0, "the range factor is exactly 1 inside the effective range (%.1f m)" % d)
+	var last := 1.0
+	var strictly := true
+	for i in range(1, int(end - eff)):
+		var f := Combat.range_factor(tail, eff + float(i), os)
+		strictly = strictly and f < last
+		check(f >= 0.0 and f <= 1.0, "the factor stays in 0..1 (%.0f m: %s)" % [eff + float(i), str(f)])
+		last = f
+	check(strictly, "past the effective range the factor falls at every metre")
+	eq(Combat.range_factor(tail, end, os), 0.0, "0 at the end of the fringe (%.0f m)" % end)
+	eq(Combat.range_factor(tail, end + 1.0, os), 0.0, "0 past it")
+	near(Combat.range_factor(tail, eff + 0.5 * (end - eff), os), 0.5, 1e-12, "half way through the fringe the factor is half (a smoothstep)")
+	check(Combat.range_factor(tail, eff + 1.0, os) > 0.999, "no kink at the effective range: 1 m over is still nearly 1")
+	check(Combat.range_factor(tail, end - 1.0, os) < 0.001, "...and no cliff at the end: 1 m short of the end is nearly 0")
+	eq(Combat.range_factor(tail, eff + 0.001, 0.0), 0.0, "with no overshoot the edge is hard")
+	# Through the model with the shipped rules: the tail turret (400 m, hardpoint 10.5 m behind the centre).
+	var fl: Array = _cr.odds_factors
+	var pr: Dictionary = _cr.factor_params()
+	var inside := _eval_full(tail, 399.0)
+	check(bool(inside["in_cone"]) and float(inside["factors"]["range"]) == 1.0, "399 m: in the cone, range factor 1")
+	near(float(inside["odds"]), tail.base_hit_chance, 1e-12, "...and the odds are the base chance (flat centre, range 1)")
+	var over := _eval_full(tail, 420.0)
+	check(bool(over["in_cone"]) and bool(over["in_range"]), "420 m: still in range, slightly over the effective range")
+	near(float(over["factors"]["range"]), Combat.range_factor(tail, 420.0, os), 1e-12, "...the range factor is the curve's")
+	near(float(over["odds"]), tail.base_hit_chance * float(over["factors"]["centre"]) * float(over["factors"]["range"]), 1e-12, "...odds = base x centre x range")
+	check(float(over["odds"]) < tail.base_hit_chance and float(over["odds"]) > 0.0, "...fewer than the base odds, not zero (%.4f)" % float(over["odds"]))
+	var odds_450 := float(_eval_full(tail, 450.0)["odds"])
+	check(odds_450 > 0.0 and odds_450 < float(over["odds"]), "450 m: the old out-of-range case now fires at falling odds (%.4f < %.4f)" % [odds_450, float(over["odds"])])
+	var at_end := _eval_full(tail, end)
+	check(bool(at_end["in_cone"]) and float(at_end["odds"]) == 0.0, "%.0f m, the end of the fringe: odds 0" % end)
+	var past := _eval_full(tail, end + 1.0)
+	check(not bool(past["in_cone"]) and bool(past["in_arc"]) and not bool(past["in_range"]) and float(past["odds"]) == 0.0, "%.0f m: out of reach altogether" % (end + 1.0))
+	# The odds product with both factors: the cannon, off its centre and over its range.
+	var p := Combat.pose(SHOOTER, cannon.hardpoints[0])
+	var t := _target_from(p, cannon, 3.5, 0.0, 650.0)
+	var g := Combat.evaluate_pose(p, cannon, t, fl, pr)
+	check(bool(g["in_cone"]), "the cannon reaches 650 m (effective 600)")
+	near(float(g["odds"]), cannon.base_hit_chance * Combat.centre_factor(cannon, 0.5) * Combat.range_factor(cannon, 650.0, os), 1e-9, "odds = base x centre(0.5) x range(650 m)")
+	# Range off in the data: the effective range is the edge again.
+	var off := Combat.evaluate_pose(Combat.pose(SHOOTER, tail.hardpoints[0]), tail, _target_from(Combat.pose(SHOOTER, tail.hardpoints[0]), tail, 0.0, 0.0, 401.0), ["centre"], pr)
+	check(not bool(off["in_cone"]), "with the range factor left out of the data, 401 m is out of range")
+
+func _eval_full(weapon: CombatWeapon, dist: float) -> Dictionary:
+	var p := Combat.pose(SHOOTER, weapon.hardpoints[0])
+	return Combat.evaluate_pose(p, weapon, _target_from(p, weapon, 0.0, 0.0, dist), _cr.odds_factors, _cr.factor_params())
+
+# --- standing off behind a bomber -----------------------------------------------------
+
+# The stand-off that used to win every time (a light fighter just outside the tail
+# turret's 400 m) now gets shot at, at falling odds; far enough back, nobody can.
+# The fighter is `gap` m behind the bomber's centre: the tail turret's hardpoint is
+# 10.5 m behind the centre, the wing guns' 0.3 m behind the fighter's.
+func _standoff() -> void:
+	var os := _cr.range_overshoot
+	var w0 := World.new()
+	var tail: CombatWeapon = w0.unit_def("bomber").weapons[2]
+	var wing: CombatWeapon = w0.unit_def("light_fighter").weapons[0]
+	for gap: float in [420.0, 470.0, 500.0, 560.0]:
+		var bomber_rolls := 0
+		var fighter_rolls := 0
+		var b_odds := 0.0
+		var f_odds := 0.0
+		for s in range(1, 6):
+			var w := _chase_world(s, gap, false)
+			w.units["bomber"].health = 1000
+			w.units["fighter"].health = 1000
+			for ev: Dictionary in _of_type(_turn(w)["events"], "fire"):
+				if ev["unit"] == "bomber":
+					bomber_rolls += 1
+					b_odds = float(ev["odds"])
+				else:
+					fighter_rolls += 1
+					f_odds = float(ev["odds"])
+		var tail_d := gap - 10.5
+		var wing_d := gap + 0.3
+		if tail_d <= tail.max_range_m(os):
+			check(bomber_rolls == 5 * 10, "gap %d m: the tail turret (%.1f m from its hardpoint, effective 400, reach %.0f) still rolls (%d rolls)" % [int(gap), tail_d, tail.max_range_m(os), bomber_rolls])
+			near(b_odds, tail.base_hit_chance * Combat.range_factor(tail, tail_d, os), 1e-6, "gap %d m: ...at the range factor's odds (%.4f)" % [int(gap), b_odds])
+		else:
+			eq(bomber_rolls, 0, "gap %d m: %.1f m is past the tail turret's reach (%.0f m): it cannot roll" % [int(gap), tail_d, tail.max_range_m(os)])
+		if wing_d <= wing.max_range_m(os):
+			check(fighter_rolls == 5 * 20, "gap %d m: the wing guns (%.1f m, effective 450, reach %.0f) roll (%d rolls)" % [int(gap), wing_d, wing.max_range_m(os), fighter_rolls])
+			check(f_odds <= wing.base_hit_chance * Combat.range_factor(wing, wing_d, os) + 1e-9 and f_odds > 0.0, "gap %d m: ...at odds %.4f, within the base %.2f" % [int(gap), f_odds, wing.base_hit_chance])
+		else:
+			eq(fighter_rolls, 0, "gap %d m: past the wing guns' reach (%.0f m): nobody rolls" % [int(gap), wing.max_range_m(os)])
