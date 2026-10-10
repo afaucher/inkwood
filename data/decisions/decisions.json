@@ -295,6 +295,144 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Do the proposal'. The altitude cue now reads the same at every map scale."
+    },
+    {
+      "id": "weapon-cones",
+      "date": "2026-10-09",
+      "area": "Combat, Units",
+      "question": "What decides what a unit's guns can hit?",
+      "board": "none (questions in chat, 2026-10-09)",
+      "options": [
+        "one forward cone per plane type, plus fire at will / hold fire (proposed)",
+        "target priority and range limits"
+      ],
+      "chosen": "a cone per weapon",
+      "parameters": {
+        "rule": "every weapon has its own cone; a bomber's tail turret and its front guns are different weapons with different cones",
+        "target_priority": "wanted eventually; not designed or built yet"
+      },
+      "applied_to": [
+        "nothing yet: the first-fight pass builds it (proposed plan in the design doc)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Let's do a cone per weapon. There's a huge difference between a turret on the back of a bomber and the front guns.' Idea Alex is still thinking through, NOT to design or build yet: a special used on an area pre-aims it, so an enemy revealed there by the fog may be hit with higher accuracy."
+    },
+    {
+      "id": "hit-odds",
+      "date": "2026-10-09",
+      "area": "Combat",
+      "question": "How does a weapon's fire resolve into hits?",
+      "board": "none (questions in chat, 2026-10-09)",
+      "options": [
+        "no dice: damage builds inside the cone, falling off with range (proposed)",
+        "a random roll per burst from a shared seed"
+      ],
+      "chosen": "random-ish, from a number of factors to be modelled over time",
+      "parameters": {
+        "first_factor": "machine guns: better odds the closer the target is to the centre of the cone"
+      },
+      "applied_to": [
+        "nothing yet: the first-fight pass builds it (proposed plan in the design doc)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'It should be randomish with a bunch of factors we will want to model later.'"
+    },
+    {
+      "id": "altitude-fire",
+      "date": "2026-10-09",
+      "area": "Combat, Height",
+      "question": "Can guns fire between altitude bands?",
+      "board": "none (questions in chat, 2026-10-09)",
+      "options": [
+        "same band, or one band away with a penalty (proposed)",
+        "same band only"
+      ],
+      "chosen": "the same cone behaviour in height",
+      "parameters": {
+        "rule": "a weapon's cone has a vertical extent too; a target above or below is in reach when it is inside the cone, with odds by the same rule as across"
+      },
+      "applied_to": [
+        "nothing yet: the first-fight pass builds it (proposed plan in the design doc)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Same cone behavior.'"
+    },
+    {
+      "id": "mountainous-islands",
+      "date": "2026-10-09",
+      "area": "Terrain, Height",
+      "question": "Hills cannot hide a plane (ground tops out at 24 m, the low air band is 120 m). Make the ground taller?",
+      "board": "none (questions in chat, 2026-10-09)",
+      "options": [
+        "taller high ground so a low plane can drop behind a ridge (proposed)",
+        "keep the ground low; hiding is for ground units"
+      ],
+      "chosen": "taller ground: mountainous islands, for tactical options",
+      "parameters": {},
+      "applied_to": [
+        "nothing yet: how mountains read in ink, their heights and passability go to a board first (proposed)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'I definitely think we will want some taller ground. Like I said, we should be mountainous islands to give some tactical options.'"
+    },
+    {
+      "id": "turn-preview",
+      "date": "2026-10-09",
+      "area": "Turn actions, Fog of war",
+      "question": "What does the turn preview assume about enemies?",
+      "board": "none (questions in chat, 2026-10-09)",
+      "options": [
+        "enemies fly the dumb plan",
+        "the player picks an enemy plan to simulate, the dumb plan by default"
+      ],
+      "chosen": "open",
+      "parameters": {
+        "fixed": "there will be a preview function; it must not reveal the enemies' real plans"
+      },
+      "applied_to": [],
+      "status": "open: Alex's design point, not decided",
+      "notes": "Alex: 'This is actually an open design point. We almost certainly want to give the player a preview function, but we don't want them to know the plans of the enemies.'"
+    },
+    {
+      "id": "coop-plan-editing",
+      "date": "2026-10-09",
+      "area": "Co-op and turns",
+      "question": "How do players edit plans together?",
+      "board": "none (questions in chat, 2026-10-09)",
+      "options": [
+        "live drafts in each player's colour, with who is editing a unit shown (proposed)",
+        "last edit wins"
+      ],
+      "chosen": "last edit wins, with a full preview",
+      "parameters": {
+        "rule": "any player can edit any unit; the last edit stands",
+        "visibility": "every player sees every unit's plan live, and which units have plans and which do not"
+      },
+      "applied_to": [
+        "nothing yet: the first-fight pass builds it (proposed plan in the design doc)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Last edit wins with full preview so you can see what has plans and what doesn't.'"
+    },
+    {
+      "id": "turn-authority",
+      "date": "2026-10-09",
+      "area": "Co-op and turns, Networking",
+      "question": "Who resolves a turn in a networked game?",
+      "board": "none (questions in chat, 2026-10-09)",
+      "options": [
+        "the host resolves and sends the result (proposed)",
+        "every peer resolves from the shared plans (lockstep)"
+      ],
+      "chosen": "the host",
+      "parameters": {
+        "rule": "the host plays out the turn and sends every player the result; peers play back what the host sends"
+      },
+      "applied_to": [
+        "nothing yet: the first-fight pass builds it (proposed plan in the design doc)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Host'."
     }
   ]
 }
