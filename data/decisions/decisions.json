@@ -816,6 +816,26 @@
       ],
       "status": "new round (Alex)",
       "notes": "Alex: 'Contour rings for smoke is the current leader but it looks too much like trees.'"
+    },
+    {
+      "id": "relative-velocity-odds",
+      "date": "2026-10-10",
+      "area": "Combat",
+      "question": "Should relative velocity affect hit odds?",
+      "board": "none (said in chat)",
+      "options": [
+        "no",
+        "yes"
+      ],
+      "chosen": "yes: relative velocity has an accuracy impact",
+      "parameters": {
+        "proposed_design": "a third odds factor: the line of sight's crossing rate costs the most, closing speed less or nothing; fixed guns hurt more than flexible guns and turrets, whose gunners track (per-weapon tracking values in data)"
+      },
+      "applied_to": [
+        "Track C, in progress"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Relative velocity should also have an accuracy impact.' The second factor Alex has named after the cone's centre (hit-odds) and range (effective-range)."
     }
   ]
 }
