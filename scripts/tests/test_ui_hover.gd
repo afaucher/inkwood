@@ -91,6 +91,8 @@ func _check_data(st: UiStyle) -> void:
 		check(shapes.has(st.text("planner.hover.cursor." + k)), "cursor.%s names a known shape (%s)" % [k, st.text("planner.hover.cursor." + k)])
 	var mode := st.text("planner.hover.mode")
 	check(not mode.is_empty(), "a hover mode is set")
+	# Alex 2026-10-10 (decision node-hover): A, grow and fill.
+	eq(mode, "grow", "the data holds Alex's choice: grow and fill")
 	for fx: String in mode.split("+", false):
 		check(MotionPlanner.HOVER_EFFECTS.has(fx), "hover effect '%s' is one the planner draws" % fx)
 	check(st.has_role("hover_ink") and st.has_role("hover_paper"), "the hover's roles exist")

@@ -112,6 +112,6 @@
   "recommendation_proposed": "E, ring + label (planner.hover.mode in data is set to it, PROPOSED, so the build gives feedback before Alex picks): the ring IS the grab zone (the pick radius), so 'close enough' is literally visible; it closes in as the pointer approaches, so the approach is shown and not only the arrival; the lit lettering names the step and the speed it ends at. A (grow) is the quietest alternative but shows no zone; C's halo does least over the cone wash and the grove; D's line is too short to see in range, the pick radius being 16 px.",
   "pick_radius_proposal": "planner.handle_px 12 -> 16 PROPOSED: 24 px is the least a mouse target needs and is small for a trackpad or a finger; with the nearest handle winning, a larger radius no longer costs a crowded neighbour its handle; the ring now shows the radius; 16 px still clears the next step's fan at the start zoom (its near edge is 31 px from the last handle at minimum speed). Revert by setting 12.",
   "sheet": "board.png (rows A-E: zoom 1 and zoom 0.35 by far | approaching | in range | dragging; a palette strip below)",
-  "chosen": null,
-  "chosen_by": null
+  "chosen": "A, grow and fill",
+  "chosen_by": "Alex, 2026-10-10"
 }

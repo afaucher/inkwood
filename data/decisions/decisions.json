@@ -769,6 +769,29 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'D · One ribbon between the wingtips'. Still proposed and open: own planes only, a one-turn window, whether the whole-flight line stops at the last turn's start, the trail's overlap with the cone wash behind a selected plane, a trail for a falling plane."
+    },
+    {
+      "id": "node-hover",
+      "date": "2026-10-10",
+      "area": "UI, Planner",
+      "question": "How does a path node show that the pointer is close enough to grab it?",
+      "board": "variants/node-hover/",
+      "options": [
+        "A grow and fill",
+        "B closing ring",
+        "C paper halo and lit label",
+        "D magnet line",
+        "E closing ring and lit label"
+      ],
+      "chosen": "A, grow and fill",
+      "parameters": {
+        "planner.hover.mode": "grow"
+      },
+      "applied_to": [
+        "data/ui/ui.json#planner.hover.mode"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'A · Grow and fill'. Still proposed: the pick radius 16 px (was 12), the cursor changes, the place mark, nearest handle wins."
     }
   ]
 }
