@@ -24,6 +24,17 @@ extends "res://scripts/test_support/test_case.gd"
 #   TOPO     the level of detail for a zoom is never magnified past 1 /
 #            lod_ratio; a chunk records (GDScript timing printed); the sheet
 #            gets lighter level by level.
+#   RECORDING the paint calls a topographic chunk records ARE its look: the worker-thread twin
+#            (FogTopo.make_canvas_threaded, on its own Terrain) records the very same calls as the
+#            main thread, run on real worker tasks side by side, and both the same as the code before
+#            the recording left the main thread (hashes of the recorded calls from the committed
+#            fog_topo.gd; the pixels are hashed windowed: scripts/render/map_look_hash.gd).
+#   BAKING   a FogLayer with auto_bake on runs its pipeline up to the engine's drawing (worker
+#            recording, submission): never more than topo.max_inflight bakes at once nor more than
+#            one recording, none left after shutdown(); wanted_chunks() puts the view's chunks
+#            before the ring and nearer before farther; rect_under_fog() is true only where no
+#            vision circle reaches. (Headless counts no drawn frame, so the asynchronous read-back
+#            and the textures are checked windowed: scripts/render/map_look_hash.gd.)
 #   SIGHT    with line of sight on (test_viewshed owns the rule itself) the
 #            layer draws a unit's viewshed as a shape: one shape per unit, its
 #            texture and eye handed to the shape shader, the mask pixel -> metres
@@ -68,6 +79,7 @@ func setup(_main) -> void:
 	_edge()
 	_mask()
 	_topo()
+	_recording()
 	_layer_setup()   # finishes in _physics_process, after the camera has drawn
 
 # --- data ---------------------------------------------------------------------------
@@ -297,6 +309,53 @@ func _topo() -> void:
 		print("[fog] topo chunk %s lod %d (%d px): recorded in %.1f ms, %d paint calls" % [c, lod, g.size.x, ms, g.op_count()])
 		g.discard()
 
+# --- the recording is the look ----------------------------------------------------------------------
+
+# SHA-256 (first 16 hex) of the paint calls recorded on a chunk canvas, computed from the committed
+# fog_topo.gd (scripts/render/map_look_hash.gd mode=ops), per px_per_m: "cx,cy,lod" -> hash. A px_per_m without an entry
+# here is compared main thread against worker only (and says so).
+const OPS_HASHES := {
+	"2": {"10,9,0": "f18597be69bad8b9", "10,9,1": "cb0a68fd620120ec", "10,9,2": "98e4aeec4f6b25ca",
+		"0,0,0": "063675a85f374641", "19,19,1": "227883bab3ab942c"},
+}
+
+static func _ops_sig(g: InkCanvas) -> String:
+	g._flush_batch()
+	var ctx := HashingContext.new()
+	ctx.start(HashingContext.HASH_SHA256)
+	ctx.update(var_to_bytes(g._ops))
+	return ctx.finish().hex_encode().substr(0, 16)
+
+func _recording() -> void:
+	var topo := FogTopo.new(_terrain)
+	topo.prepare_threaded()
+	check(topo.has_twin(), "RECORDING: prepare_threaded() builds the private twin")
+	var want: Dictionary = OPS_HASHES.get(str(roundi(_terrain.px_per_m)), {})
+	if want.is_empty():
+		print("[fog] RECORDING: no committed hashes for px_per_m %s: main thread vs worker only" % _terrain.px_per_m)
+	var keys: Array = want.keys() if not want.is_empty() else ["10,9,0", "10,9,1", "0,0,0"]
+	var boxes: Array = []
+	var tasks: Array = []
+	var mains: Array = []
+	for key: String in keys:
+		var p := key.split(",")
+		var c := Vector2i(int(p[0]), int(p[1]))
+		var s: float = topo.lods[int(p[2])]
+		var main_sig := _ops_sig(topo.make_canvas(c, s))
+		mains.append(main_sig)
+		if want.has(key):
+			eq(main_sig, want[key], "RECORDING chunk %s: the paint calls are the committed code's" % key)
+		# every chunk at once on worker tasks: they take turns on the twin
+		var box := [null]
+		boxes.append(box)
+		tasks.append(WorkerThreadPool.add_task(func() -> void: box[0] = topo.make_canvas_threaded(c, s)))
+	for i in tasks.size():
+		WorkerThreadPool.wait_for_task_completion(tasks[i])
+		check(boxes[i][0] is InkCanvas, "RECORDING chunk %s: the worker returned a canvas" % keys[i])
+		if boxes[i][0] is InkCanvas:
+			eq(_ops_sig(boxes[i][0]), mains[i], "RECORDING chunk %s: recorded on a worker thread, the same paint calls as on the main thread" % keys[i])
+			check((boxes[i][0] as InkCanvas).op_count() > 0, "RECORDING chunk %s records paint calls" % keys[i])
+
 func _terrain_paper() -> Color:
 	return FogStyle.base("paper", FogTopo.new(_terrain).P)
 
@@ -359,7 +418,85 @@ func _physics_process(_delta: float) -> void:
 		_sight_check()
 	elif _frames == 14:
 		_sight_off_check()
-		finish()
+		_bake_start()
+	elif _frames > 14:
+		_bake_poll()
+
+# --- the bake pipeline --------------------------------------------------------------------------------
+
+var _bake_frame0 := 0
+var _max_inflight_seen := 0
+var _max_recording_seen := 0
+var _rendered := {}
+
+func _bake_start() -> void:
+	_cam.set_view(Vector2(2600.0, 2500.0) * _terrain.px_per_m, 0.9)
+	_layer.vision.set_circles([{"id": "a", "x": 2600.0, "y": 2500.0, "r": 120.0}])
+	_layer.bakes_per_frame = 2
+	check(_layer.worker_recording, "BAKING: fog.json has the recording on a worker thread")
+	check(_layer.max_inflight >= 1 and _layer.main_budget_ms > 0.0, "BAKING: the pipeline's limits are data")
+	# rect_under_fog: no circle within reach -> hidden; on the circle -> not
+	var ppm := _terrain.px_per_m
+	var far := Rect2(Vector2(2600.0 + 2000.0, 2500.0) * ppm, Vector2(100.0, 100.0))
+	var on := Rect2(Vector2(2600.0 - 10.0, 2500.0 - 10.0) * ppm, Vector2(20.0, 20.0) * ppm)
+	check(_layer.rect_under_fog(far), "BAKING: a rectangle far from every vision circle is under the fog")
+	check(not _layer.rect_under_fog(on), "BAKING: one on a vision circle is not")
+	_layer.overview_override = 1.0
+	_layer._overview = _layer.overview_amount()   # (the layer refreshes it every frame)
+	check(not _layer.rect_under_fog(far), "BAKING: in the overview the topographic layer is everywhere, so nothing counts as hidden")
+	_layer.overview_override = -1.0
+	_layer._overview = _layer.overview_amount()
+	# wanted_chunks: the view's own before the ring, nearer before farther
+	var view := _layer.view_rect_px()
+	var lod := _layer.topo.lod_for_zoom(_layer._zoom)
+	var want := _layer.wanted_chunks(view, lod)
+	check(want.size() > 4, "BAKING: the view wants a few chunks (%d)" % want.size())
+	var centre := view.get_center()
+	var seen_ring := false
+	var last_d := -1.0
+	var order_ok := true
+	for c in want:
+		var r := _layer.topo.chunk_rect_px(c)
+		var in_view := view.intersects(r)
+		var d := r.get_center().distance_to(centre)
+		if in_view and seen_ring:
+			order_ok = false   # a view chunk after a ring chunk
+		if not in_view and not seen_ring:
+			seen_ring = true
+			last_d = -1.0
+		if d < last_d - 1e-6:
+			order_ok = false   # farther before nearer inside a group
+		last_d = d
+	check(order_ok, "BAKING: wanted chunks run view first, ring after, nearest the centre first within each")
+	check(seen_ring, "BAKING: the ring round the view is wanted too")
+	_bake_frame0 = _frames
+	_layer.auto_bake = true
+
+# Headless draws nothing and never counts a drawn frame, so a bake runs as far as "render" (recorded
+# on a worker, submitted, waiting for the engine to draw it) and no further; the asynchronous read-back
+# and the textures are checked windowed (scripts/render/map_look_hash.gd: every chunk of three views
+# through the pipeline hashes the same as FogTopo.bake_chunk's).
+func _bake_poll() -> void:
+	var rec := 0
+	for job: Dictionary in _layer._jobs:
+		if job.state == "recording":
+			rec += 1
+		if job.state == "render" or job.state == "arriving":
+			_rendered[job.key] = true
+	_max_inflight_seen = maxi(_max_inflight_seen, _layer.bakes_in_flight())
+	_max_recording_seen = maxi(_max_recording_seen, rec)
+	if _rendered.size() < _layer.max_inflight and _frames - _bake_frame0 < 900:
+		return
+	_layer.auto_bake = false
+	check(_rendered.size() >= _layer.max_inflight, "BAKING: bakes were recorded on workers and submitted (%d reached the render state in %d frames)" % [_rendered.size(), _frames - _bake_frame0])
+	check(_max_inflight_seen >= 1 and _max_inflight_seen <= _layer.max_inflight, "BAKING: never more than topo.max_inflight (%d) bakes at once (saw %d)" % [_layer.max_inflight, _max_inflight_seen])
+	check(_max_recording_seen <= 1, "BAKING: never more than one chunk recording at a time (saw %d)" % _max_recording_seen)
+	check(float(_layer.stats.record_ms_max) > 0.0, "BAKING: the recording was timed")
+	print("[fog] bake pipeline: %d submitted, at most %d in flight, record %.1f ms (max %.1f) on a worker, main %.2f ms in all, worst frame %.2f ms" % [
+		_rendered.size(), _max_inflight_seen, _layer.stats.record_ms, _layer.stats.record_ms_max, _layer.stats.main_ms, _layer.stats.main_ms_max_frame])
+	_layer.shutdown()
+	eq(_layer.bakes_in_flight(), 0, "BAKING: shutdown() leaves no bake in flight (the worker tasks are waited for)")
+	finish()
 
 # --- line of sight in the layer -------------------------------------------------------------------
 

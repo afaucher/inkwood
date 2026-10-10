@@ -46,8 +46,18 @@ extends Node2D
 #
 # BAKING: chunk_baker.gd, a few steps a frame within map_view.bake_budget_ms
 # of main-thread time (recording runs on worker threads, read-backs are
-# asynchronous), visible chunks first, then a ring of prefetch_chunks, and
-# terrain generated one more ring ahead; up to max_cached_chunks kept, the
+# asynchronous), in this ORDER (map-performance track, 2026-10-10, all proposed
+# data under map_view): the chunks the player can see first, nearest the centre
+# first; then the view's chunks wholly under the fog's opaque topographic layer
+# (hidden_test: set it to FogLayer.rect_under_fog); then a ring of
+# prefetch_chunks round the view, leaning along the camera's recent motion
+# (further ahead, nothing behind: prefetch_ahead_extra_chunks,
+# prefetch_behind_chunks, motion_px_s), and the terrain one ring further. Each group is
+# only REQUESTED once the one before it is baked (ring_after_view), so a ring job
+# never takes a job slot, worker threads or the budget from a chunk the player
+# waits for; the baker itself steps jobs and sprite pages nearest first.
+# bake_boost raises the budget to bake_budget_loading_ms (a loading card is up).
+# Up to max_cached_chunks kept, the
 # furthest dropped first -- the cap HOLDS (fix pass, 2026-10-09): a chunk is
 # asked for only if it fits under it, and the keep ring (keep_chunks) is only
 # what is left over, not a reason to go past it. The one exception is the view
@@ -108,6 +118,18 @@ var camera_controlled := false
 var follow_speed := 6.0      # 1/s: how fast the camera eases to its target
 
 var chunk_px := 1024
+# (rect_px: Rect2) -> bool: is this map-px rectangle wholly under the fog's opaque
+# topographic layer (FogLayer.rect_under_fog)? Chunks that are hidden bake after the
+# visible ones. Unset: nothing is hidden.
+var hidden_test: Callable = Callable()
+# The sandbox sets this while its loading card is up: the baker then spends
+# map_view.bake_budget_loading_ms of main-thread time a frame instead of
+# bake_budget_ms (nobody is playing, so a long frame costs nothing).
+var bake_boost := false
+# The camera's recent motion, map px / s (track_motion): the prefetch ring leans
+# along it.
+var motion_px_s := Vector2.ZERO
+var _motion: Array = []       # [[seconds, view centre]]
 var _chunks: Dictionary = {}  # Vector2i -> Sprite2D
 var _target: Variant = null   # Vector2 (map px) to ease to, or null
 var _dragging := false
@@ -341,8 +363,10 @@ func _process(delta: float) -> void:
 		var z := camera.zoom.x
 		camera.position = (camera.position * z).round() / z
 	if bake_enabled:
+		track_motion()
 		_schedule()
-		for r: Dictionary in baker.step(int(float(cfg.get("bake_budget_ms", 6.0)) * 1000.0)):
+		var budget_ms := float(cfg.get("bake_budget_loading_ms", 6.0)) if bake_boost else float(cfg.get("bake_budget_ms", 6.0))
+		for r: Dictionary in baker.step(int(budget_ms * 1000.0)):
 			_show(r.c, r.texture)
 
 func _pan_input(delta: float) -> void:
@@ -389,8 +413,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		_target = null
 		camera.position -= (event as InputEventMouseMotion).relative / camera.zoom.x
 
-# Requests every chunk the view needs, nearest first, and drops queued ones it
-# no longer needs.
+# Requests the chunks the view needs and cancels queued ones it no longer
+# does. THE ORDER (map_view.priority_offsets, proposed): the view's own chunks
+# first, nearest the centre first; then the view's chunks wholly under the
+# fog's opaque topographic layer (hidden_test: nobody sees them until a unit's
+# sight reaches them); then the ring of prefetch chunks round the view, biased
+# along the camera's recent motion. With map_view.ring_after_view each later
+# group is only REQUESTED once every chunk of the earlier ones is baked: a
+# ring job started while a view chunk is missing took a job slot, worker
+# threads and the main thread's budget from the chunk the player is waiting
+# for (and the ring's terrain generation waits too).
 func _schedule() -> void:
 	var view := view_rect()
 	var pre := int(cfg.get("prefetch_chunks", 1))
@@ -400,16 +432,49 @@ func _schedule() -> void:
 	var m0 := Vector2i(floori(mr.position.x / chunk_px), floori(mr.position.y / chunk_px))
 	var m1 := Vector2i(ceili(mr.end.x / chunk_px) - 1, ceili(mr.end.y / chunk_px) - 1)
 	var centre := view.get_center() / float(chunk_px)
-	var wanted: Dictionary = {}
+	var dir := motion_dir()
+	var ahead := int(cfg.get("prefetch_ahead_extra_chunks", 0))
+	var behind := int(cfg.get("prefetch_behind_chunks", pre))
+	var bias := float(cfg.get("prefetch_bias", 0.0))
+	var offs: Dictionary = cfg.get("priority_offsets", {})
+	var off_fogged_view := float(offs.get("fogged_view", 50.0))
+	var off_ring := float(offs.get("ring", 100.0))
+	var off_fogged_ring := float(offs.get("fogged_ring", 50.0))
+	var reach := pre + (ahead if dir != Vector2.ZERO else 0)
+	var wanted: Dictionary = {}   # Vector2i -> priority: the view and its ring (what the cache holds)
+	var tier: Dictionary = {}     # Vector2i -> 0 view, 1 view under the fog, 2 ring
 	var in_view := 0
-	for cy in range(maxi(c0.y - pre, m0.y), mini(c1.y + pre, m1.y) + 1):
-		for cx in range(maxi(c0.x - pre, m0.x), mini(c1.x + pre, m1.x) + 1):
+	var missing := [0, 0, 0]
+	for cy in range(maxi(c0.y - reach, m0.y), mini(c1.y + reach, m1.y) + 1):
+		for cx in range(maxi(c0.x - reach, m0.x), mini(c1.x + reach, m1.x) + 1):
 			var c := Vector2i(cx, cy)
 			var visible := cx >= c0.x and cx <= c1.x and cy >= c0.y and cy <= c1.y
-			var d := (Vector2(cx, cy) + Vector2(0.5, 0.5)).distance_to(centre)
-			wanted[c] = d + (0.0 if visible else 100.0)
+			var to := (Vector2(cx, cy) + Vector2(0.5, 0.5)) - centre
+			var d := to.length()
+			var hidden: bool = hidden_test.is_valid() and bool(hidden_test.call(Rect2(Vector2(c * chunk_px), Vector2(chunk_px, chunk_px))))
+			var t := 0
+			var prio := d
 			if visible:
 				in_view += 1
+				if hidden:
+					t = 1
+					prio = off_fogged_view + d
+			else:
+				# the ring: pre chunks round the view, more ahead of the camera's motion
+				# and fewer behind it; a chunk is in only if both of its axes are
+				var dx := maxi(c0.x - cx, cx - c1.x)
+				var dy := maxi(c0.y - cy, cy - c1.y)
+				if (dx > 0 and dx > _ring_depth(1 if cx > c1.x else -1, dir.x, pre, ahead, behind)) \
+						or (dy > 0 and dy > _ring_depth(1 if cy > c1.y else -1, dir.y, pre, ahead, behind)):
+					continue
+				t = 2
+				prio = off_ring + d + (off_fogged_ring if hidden else 0.0)
+				if dir != Vector2.ZERO and d > 0.0:
+					prio -= bias * dir.dot(to / d)
+			wanted[c] = prio
+			tier[c] = t
+			if not _chunks.has(c):
+				missing[t] += 1
 	# The cache cap holds (see the header): ask for no more chunks than fit under
 	# it, nearest first (the view's own always come first: their priority is
 	# below the prefetch ring's), or the ones baked would be dropped and baked
@@ -420,19 +485,58 @@ func _schedule() -> void:
 		nearest.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return wanted[a] < wanted[b])
 		for i in range(cap, nearest.size()):
 			wanted.erase(nearest[i])
+	var gate := bool(cfg.get("ring_after_view", false))
+	var open := [true, not gate or missing[0] == 0, not gate or (missing[0] == 0 and missing[1] == 0)]
+	var requested: Dictionary = {}
 	for c: Vector2i in wanted:
-		if not _chunks.has(c):
-			baker.request(c, wanted[c])
-	# Content for one ring further out is generated ahead (idle generator lane).
-	for cy in range(maxi(c0.y - pre - 1, m0.y), mini(c1.y + pre + 1, m1.y) + 1):
-		for cx in range(maxi(c0.x - pre - 1, m0.x), mini(c1.x + pre + 1, m1.x) + 1):
-			var c := Vector2i(cx, cy)
-			if not _chunks.has(c):
-				baker.warm(c, (Vector2(cx, cy) + Vector2(0.5, 0.5)).distance_to(centre))
-	for c: Vector2i in baker._queue.keys():
-		if not wanted.has(c):
+		if not _chunks.has(c) and open[tier[c]]:
+			baker.request(c, wanted[c], true)
+			requested[c] = true
+	# Content for one ring further out is generated ahead (idle generator lane),
+	# once the view is baked.
+	baker.warm_paused = not open[2]
+	if open[2]:
+		for cy in range(maxi(c0.y - reach - 1, m0.y), mini(c1.y + reach + 1, m1.y) + 1):
+			for cx in range(maxi(c0.x - reach - 1, m0.x), mini(c1.x + reach + 1, m1.x) + 1):
+				var c := Vector2i(cx, cy)
+				if not _chunks.has(c):
+					baker.warm(c, (Vector2(cx, cy) + Vector2(0.5, 0.5)).distance_to(centre))
+	for c: Vector2i in baker.queued():
+		if not requested.has(c):
 			baker.cancel(c)
 	_evict(view, wanted, cap)
+
+# Chunks the prefetch ring reaches beyond the view's edge on one side (side +1:
+# past the far edge, -1: past the near one) given the camera's motion along
+# that axis: `pre`, plus `ahead` more in the direction it moves, `behind` on the
+# side it left.
+static func _ring_depth(side: int, motion: float, pre: int, ahead: int, behind: int) -> int:
+	if absf(motion) < 0.3:
+		return pre
+	return pre + ahead if motion * float(side) > 0.0 else behind
+
+# --- the camera's recent motion ----------------------------------------------------------
+
+# Called every frame by _process: the view centre over the last
+# prefetch_motion_window_s seconds gives a velocity (map px / s). `now_s` and
+# `at` (a view centre, map px) are for tests.
+func track_motion(now_s: float = -1.0, at: Variant = null) -> void:
+	var now := Time.get_ticks_msec() / 1000.0 if now_s < 0.0 else now_s
+	var here: Vector2 = view_rect().get_center() if at == null else at
+	_motion.append([now, here])
+	var window := float(cfg.get("prefetch_motion_window_s", 1.5))
+	while _motion.size() > 2 and now - float(_motion[0][0]) > window:
+		_motion.pop_front()
+	var dt := now - float(_motion[0][0])
+	motion_px_s = (here - (_motion[0][1] as Vector2)) / dt if dt > 0.05 else Vector2.ZERO
+
+# The unit direction the camera has been moving in, or ZERO when it is
+# (nearly) still: slower than prefetch_motion_min_chunks_per_s.
+func motion_dir() -> Vector2:
+	var min_px := float(cfg.get("prefetch_motion_min_chunks_per_s", 0.15)) * float(chunk_px)
+	if motion_px_s.length() < min_px or min_px <= 0.0:
+		return Vector2.ZERO
+	return motion_px_s.normalized()
 
 func _show(c: Vector2i, tex: Texture2D) -> void:
 	if tex == null:
@@ -484,8 +588,10 @@ func chunk_count() -> int:
 func has_chunk(c: Vector2i) -> bool:
 	return _chunks.has(c)
 
-# Chunks of the map the current view touches that are not baked yet.
-func missing_in_view() -> int:
+# Chunks of the map the current view touches that are not baked yet. With
+# `ignore_hidden`, not those wholly under the fog's opaque layer (hidden_test):
+# nobody sees them yet, so a loading card need not wait for them.
+func missing_in_view(ignore_hidden: bool = false) -> int:
 	var view := view_rect()
 	var mr := map_rect()
 	var r := view.intersection(mr)
@@ -494,8 +600,11 @@ func missing_in_view() -> int:
 	var n := 0
 	for cy in range(floori(r.position.y / chunk_px), floori((r.end.y - 0.001) / chunk_px) + 1):
 		for cx in range(floori(r.position.x / chunk_px), floori((r.end.x - 0.001) / chunk_px) + 1):
-			if not _chunks.has(Vector2i(cx, cy)):
-				n += 1
+			if _chunks.has(Vector2i(cx, cy)):
+				continue
+			if ignore_hidden and hidden_test.is_valid() and bool(hidden_test.call(Rect2(Vector2(cx * chunk_px, cy * chunk_px), Vector2(chunk_px, chunk_px)))):
+				continue
+			n += 1
 	return n
 
 func pending() -> int:

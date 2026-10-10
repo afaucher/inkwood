@@ -7,6 +7,7 @@ extends RefCounted
 #
 #   var baker := ChunkBaker.new(provider, P, cfg)    # cfg: the map_view section of render_defaults.json
 #   baker.request(Vector2i(cx, cy), priority)        # lower priority value = sooner
+#   baker.request(c, priority, true)                  # ... and REPLACES a standing one (also a running job's)
 #   baker.cancel(c)                                   # drops a request that has not started
 #   var done: Array = baker.step(budget_usec)         # call every frame; returns finished chunks
 #       # -> [{c: Vector2i, texture: ImageTexture (mipmapped), ms: total, ...}]
@@ -34,6 +35,15 @@ extends RefCounted
 # built-in stage "sprites" waits until every object in
 # job.data.sprite_objects has a sprite and gives each its `sprite` (a
 # Texture2D) and `half`, as the prototype's castShadows and drawSprites expect.
+#
+# NEAREST FIRST (map-performance track, 2026-10-10). step() orders jobs AND
+# sprite pages in one list by the priority MapView gave the chunk (a page has
+# its requester's, pulled forward when a nearer chunk needs one of its sprites)
+# and steps them in that order: the nearest chunk gets the main-thread budget,
+# the worker slots and the terrain lane first. Sprite pages submitted to the
+# GPU per frame are capped (map_view.sprite_pages_per_frame). MapView only
+# requests the prefetch ring once the view is baked, and warm_paused holds the
+# ring's terrain generation back too.
 #
 # WHAT MAKES IT FAST ENOUGH (measured 2026-10-09; the report has the table):
 # recording on at most max_worker_tasks threads (GDScript slows down past ~8),
@@ -72,6 +82,12 @@ var sprite_batch: int      # sprites recorded per worker task (map_view.sprite_b
 var max_jobs: int
 var max_workers: int        # worker tasks in flight at once (map_view.max_worker_tasks)
 var sprite_cache_max: int
+# Sprite pages that may be submitted to the GPU in one frame (map_view.sprite_pages_per_frame;
+# 0: no cap). A page submitted in pieces still lands on the GPU a few sprites at a time, but
+# several pages submitting together pile their sprites into the same frames.
+var pages_per_frame := 0
+# MapView holds the prefetch ring's terrain generation back while a view chunk is missing.
+var warm_paused := false
 var pool_enabled := false
 var pool_variants := 16
 var pool_bucket_px := 0.5
@@ -81,7 +97,9 @@ var _stages: Array = []
 var _queue: Dictionary = {}       # Vector2i -> priority (not started)
 var _jobs: Array = []             # started jobs
 var _sprites: Dictionary = {}     # key -> [AtlasTexture or Texture2D, half, last_used]
-var _pending: Dictionary = {}     # key -> true (on a page being built)
+var _pending: Dictionary = {}     # key -> the page being built for it (true until the page exists)
+var _pages_touched: Dictionary = {}  # page id -> true: pages that submitted this frame (the cap)
+var _page_ids := 0
 var _pages: Array = []            # pages being recorded / rendered
 var _use_clock := 0
 var _busy := 0                    # worker tasks launched and not yet collected
@@ -103,20 +121,27 @@ var _slice_usec := 3000
 func _init(p: RefCounted, params: RenderParams, cfg: Dictionary) -> void:
 	provider = p
 	P = params
+	apply_config(cfg)
+	provider.prepare()
+	InkCanvas.configure_pen_from(P)
+	_stages = provider.stages()
+	reset_stats()
+
+# (Re)reads the baker's tunables from the map_view section of the data (flattened,
+# MapView.load_config); tools and probes change a value in the dictionary and call
+# this again.
+func apply_config(cfg: Dictionary) -> void:
 	chunk_px = int(cfg.get("chunk_px", 1024))
 	sprite_batch = int(cfg.get("sprite_batch", 24))
 	max_jobs = int(cfg.get("max_jobs", 3))
 	max_workers = int(cfg.get("max_worker_tasks", 8))
 	collect_delay = int(cfg.get("collect_delay_frames", 0))
 	sprite_cache_max = int(cfg.get("sprite_cache_max", 12000))
+	pages_per_frame = int(cfg.get("sprite_pages_per_frame", 0))
 	var pool: Dictionary = cfg.get("tree_pool", {})
 	pool_enabled = bool(pool.get("enabled", false))
 	pool_variants = int(pool.get("variants", 16))
 	pool_bucket_px = float(pool.get("bucket_px", 0.5))
-	provider.prepare()
-	InkCanvas.configure_pen_from(P)
-	_stages = provider.stages()
-	reset_stats()
 
 func reset_stats() -> void:
 	stats = {"chunks": 0, "chunk_ms_total": 0.0, "chunk_ms_max": 0.0, "sprites_built": 0, "pages": 0,
@@ -124,11 +149,23 @@ func reset_stats() -> void:
 
 # --- requests -----------------------------------------------------------------------
 
-func request(c: Vector2i, priority: float = 0.0) -> void:
+func request(c: Vector2i, priority: float = 0.0, replace: bool = false) -> void:
 	for j: Dictionary in _jobs:
 		if j.c == c:
-			return  # being baked
-	_queue[c] = minf(priority, float(_queue.get(c, priority)))
+			if replace:
+				j.prio = priority   # being baked: it moves up or down the order with the camera
+			return
+	_queue[c] = priority if replace else minf(priority, float(_queue.get(c, priority)))
+
+# The priority a queued or running request for c has now (INF when none).
+func priority_of(c: Vector2i) -> float:
+	for j: Dictionary in _jobs:
+		if j.c == c:
+			return float(j.prio)
+	return float(_queue.get(c, INF))
+
+func queued() -> Array:
+	return _queue.keys()
 
 func cancel(c: Vector2i) -> void:
 	_queue.erase(c)
@@ -179,19 +216,38 @@ func step(budget_usec: int) -> Array:
 	_slice_usec = maxi(1000, budget_usec / 2)
 	var done: Array = []
 	_lane_wanted.clear()
+	_pages_touched.clear()
 	_start_jobs()
-	_step_pages(t0, budget_usec)
-	_note_action("pages", t0)
-	for j: Dictionary in _jobs.duplicate():
+	# STRICT NEAREST FIRST. Jobs and sprite pages are ONE list ordered by the
+	# priority the requester gave the chunk (a page has its requester's, lowered
+	# when a nearer chunk needs one of its sprites), so the nearest chunk gets
+	# the main thread's budget, the worker slots and the terrain lane first and
+	# the others what it leaves. (Before, every page went first in the order it was
+	# queued and then the jobs in start order: eight chunks advanced together and
+	# landed together, the near ones last as often as first.) Among equals a
+	# chunk's pages go before its own stages.
+	var actors: Array = []   # [priority, 0 job | 1 page, object]
+	for j: Dictionary in _jobs:
+		actors.append([float(j.prio), 0, j])
+	for pg: Dictionary in _pages:
+		actors.append([float(pg.prio), 1, pg])
+	actors.sort_custom(func(a: Array, b: Array) -> bool:
+		return a[0] < b[0] or (a[0] == b[0] and a[1] > b[1]))
+	for a: Array in actors:
 		if Time.get_ticks_usec() - t0 > budget_usec and _acted:
 			break
 		var ta := Time.get_ticks_usec()
+		if a[1] == 1:
+			_step_page(a[2], ta)
+			continue
+		var j: Dictionary = a[2]
 		var label := "%s:%s" % [j.state, (_stages[j.stage] as Dictionary).get("name", "sprites")]
 		var r: Variant = _step_job(j)
 		_note_action(label, ta)
 		if r != null:
 			done.append(r)
 			_jobs.erase(j)
+	_evict_sprites()
 	_step_warm()  # after the jobs: a bake waiting for the lane goes first
 	var spent := (Time.get_ticks_usec() - t0) / 1000.0
 	stats.main_ms += spent
@@ -207,11 +263,12 @@ func _start_jobs() -> void:
 		for k: Vector2i in _queue:
 			if _queue[k] < _queue[best]:
 				best = k
+		var prio: float = _queue[best]
 		_queue.erase(best)
 		var origin := Vector2(best * chunk_px)
 		var job := {"c": best, "rect": Rect2(origin, Vector2(chunk_px, chunk_px)),
 			"view": Transform2D.IDENTITY.translated(-origin), "size": Vector2i(chunk_px, chunk_px),
-			"stage": 0, "state": "ready", "data": {}, "bg": {}, "t0": Time.get_ticks_usec()}
+			"stage": 0, "state": "ready", "data": {}, "bg": {}, "t0": Time.get_ticks_usec(), "prio": prio}
 		_jobs.append(job)
 
 # A parallel task gives its worker slot back as soon as it is done (its
@@ -244,7 +301,7 @@ func _step_job(j: Dictionary) -> Variant:
 			var st: Dictionary = _stages[j.stage]
 			if st.get("builtin", "") == "sprites":
 				_acted = true
-				j.sprite_keys = _request_sprites(j.data.get("sprite_objects", []))
+				j.sprite_keys = _request_sprites(j.data.get("sprite_objects", []), float(j.prio))
 				j.state = "sprites"
 				return _step_job(j)
 			if st.get("join", false):
@@ -422,8 +479,8 @@ func _step_warm() -> void:
 			return
 		_collected(_warm_task, lane)
 		_warm_task = -1
-	if _warm.is_empty() or _lane_wanted.has(lane) or not _queue.is_empty():
-		return  # bakes first: a job is waiting for the lane, or chunks wait to start
+	if _warm.is_empty() or _lane_wanted.has(lane) or not _queue.is_empty() or warm_paused:
+		return  # bakes first: a job is waiting for the lane, or chunks wait to start (or MapView says wait)
 	var best: Vector2i = _warm.keys()[0]
 	for k: Vector2i in _warm:
 		if _warm[k] < _warm[best]:
@@ -505,8 +562,10 @@ func _pool_tree(o: Dictionary) -> Dictionary:
 	t.seed = 0x5EED0000 + b * 977 + v
 	return t
 
-# Keys for `objs`, and pages started for any not cached or on the way.
-func _request_sprites(objs: Array) -> Array:
+# Keys for `objs`, and pages started for any not cached or on the way. `prio` is
+# the requesting chunk's priority: its new pages take it, and a page already on
+# the way for a FARTHER chunk is pulled forward when this chunk needs a sprite on it.
+func _request_sprites(objs: Array, prio: float = 0.0) -> Array:
 	_use_clock += 1
 	var keys: Array = []
 	var build: Array = []   # [key, object copy]
@@ -518,8 +577,12 @@ func _request_sprites(objs: Array) -> Array:
 		elif not _pending.has(k):
 			_pending[k] = true
 			build.append([k, _pool_tree(o) if (pool_enabled and o.kind == "tree") else o.duplicate()])
+		else:
+			var pg: Variant = _pending[k]
+			if pg is Dictionary and float((pg as Dictionary).prio) > prio:
+				(pg as Dictionary).prio = prio
 	if not build.is_empty():
-		_start_pages(build)
+		_start_pages(build, prio)
 	return keys
 
 # One canvas per sprite, sized to the sprite, recorded in batches of
@@ -528,7 +591,7 @@ func _request_sprites(objs: Array) -> Array:
 # WHOLE render target, so 60 trees on a 2048 px supersampled page cost ~70x
 # what they cost on their own ~240 px targets (measured 2026-10-09: pages
 # made 100-200 ms GPU hitches while panning).
-func _start_pages(build: Array) -> void:
+func _start_pages(build: Array, prio: float = 0.0) -> void:
 	var batch: Array = []
 	for e: Array in build:
 		var o: Dictionary = e[1]
@@ -544,14 +607,17 @@ func _start_pages(build: Array) -> void:
 			size = Vector2i(ceili(o.bw), ceili(o.bh))
 		batch.append([e[0], o, half, InkCanvas.new(size)])
 		if batch.size() >= sprite_batch:
-			_start_page(batch)
+			_start_page(batch, prio)
 			batch = []
 	if not batch.is_empty():
-		_start_page(batch)
+		_start_page(batch, prio)
 
-func _start_page(entries: Array) -> void:
+func _start_page(entries: Array, prio: float = 0.0) -> void:
 	var box := [0.0]   # record ms, written by the worker only
-	var page := {"entries": entries, "state": "queued", "box": box}
+	_page_ids += 1
+	var page := {"entries": entries, "state": "queued", "box": box, "prio": prio, "id": _page_ids}
+	for e: Array in entries:
+		_pending[e[0]] = page
 	var Pp := P
 	page.fn = (func() -> void:
 		var tw := Time.get_ticks_usec()
@@ -575,63 +641,85 @@ func _start_page(entries: Array) -> void:
 	stats.pages += 1
 	stats.sprites_built += entries.size()
 
-func _step_pages(t0: int, budget_usec: int) -> void:
-	for pg: Dictionary in _pages.duplicate():
-		if Time.get_ticks_usec() - t0 > budget_usec and _acted:
+# One sprite page's next step (step() calls it in priority order). The cap
+# (pages_per_frame) holds a page back from SUBMITTING when that many other
+# pages already submitted this frame, so their sprites do not all land in
+# the same frames' GPU work.
+func _step_page(pg: Dictionary, ta: int) -> void:
+	if pg.state == "queued":
+		var task := _launch(pg.fn)
+		if task >= 0:
+			pg.task = task
+			pg.erase("fn")
+			pg.state = "recording"
+	elif pg.state == "recording":
+		if not WorkerThreadPool.is_task_completed(pg.task):
 			return
-		if pg.state == "queued":
-			var task := _launch(pg.fn)
-			if task >= 0:
-				pg.task = task
-				pg.erase("fn")
-				pg.state = "recording"
-		elif pg.state == "recording":
-			if not WorkerThreadPool.is_task_completed(pg.task):
-				continue
-			_collected(pg.task)
-			pg.erase("task")
-			stats.page_record_ms += float(pg.box[0])
-			for e: Array in pg.entries:
-				(e[3] as InkCanvas).begin_submit()
-			pg.sub_i = 0
-			pg.state = "submitting"
-			_acted = true
-		elif pg.state == "submitting":
-			var ts := Time.get_ticks_usec()
-			var entries: Array = pg.entries
-			while pg.sub_i < entries.size():
-				if not (entries[pg.sub_i][3] as InkCanvas).submit_some(_slice_usec):
-					break
-				pg.sub_i += 1
-				if Time.get_ticks_usec() - ts > _slice_usec:
-					break
-			_note_action("page_submit", ts)
-			_add_stage_ms("page_submit", (Time.get_ticks_usec() - ts) / 1000.0)
-			_acted = true
-			if pg.sub_i >= entries.size():
-				pg.frame = Engine.get_frames_drawn()
-				pg.state = "render"
-		elif pg.state == "render" and Engine.get_frames_drawn() > pg.frame + collect_delay:
-			var got: Array = []
-			got.resize(pg.entries.size())
-			for i in pg.entries.size():
-				(pg.entries[i][3] as InkCanvas).collect_async(func(img: Image) -> void: got[i] = img)
-			pg.got = got
-			pg.state = "arriving"
-			_acted = true
-		elif pg.state == "arriving":
-			if (pg.got as Array).has(null):
-				continue
-			var tc := Time.get_ticks_usec()
-			for i in pg.entries.size():
-				var e: Array = pg.entries[i]
-				_sprites[e[0]] = [ImageTexture.create_from_image(pg.got[i]), e[2], _use_clock]
-				_pending.erase(e[0])
-			_note_action("page_collect", tc)
-			_add_stage_ms("page_collect", (Time.get_ticks_usec() - tc) / 1000.0)
-			_pages.erase(pg)
-			_acted = true
-	_evict_sprites()
+		_collected(pg.task)   # the worker slot goes back at once, whatever the cap says
+		pg.erase("task")
+		stats.page_record_ms += float(pg.box[0])
+		pg.state = "recorded"
+		_step_page(pg, ta)
+		return
+	elif pg.state == "recorded":
+		if not _page_may_submit(pg):
+			return
+		for e: Array in pg.entries:
+			(e[3] as InkCanvas).begin_submit()
+		pg.sub_i = 0
+		pg.state = "submitting"
+		_acted = true
+	elif pg.state == "submitting":
+		if not _page_may_submit(pg):
+			return
+		var ts := Time.get_ticks_usec()
+		var entries: Array = pg.entries
+		while pg.sub_i < entries.size():
+			if not (entries[pg.sub_i][3] as InkCanvas).submit_some(_slice_usec):
+				break
+			pg.sub_i += 1
+			if Time.get_ticks_usec() - ts > _slice_usec:
+				break
+		_note_action("page_submit", ts)
+		_add_stage_ms("page_submit", (Time.get_ticks_usec() - ts) / 1000.0)
+		_acted = true
+		if pg.sub_i >= entries.size():
+			pg.frame = Engine.get_frames_drawn()
+			pg.state = "render"
+	elif pg.state == "render" and Engine.get_frames_drawn() > pg.frame + collect_delay:
+		var got: Array = []
+		got.resize(pg.entries.size())
+		for i in pg.entries.size():
+			(pg.entries[i][3] as InkCanvas).collect_async(func(img: Image) -> void: got[i] = img)
+		pg.got = got
+		pg.state = "arriving"
+		_acted = true
+	elif pg.state == "arriving":
+		if (pg.got as Array).has(null):
+			return
+		var tc := Time.get_ticks_usec()
+		for i in pg.entries.size():
+			var e: Array = pg.entries[i]
+			_sprites[e[0]] = [ImageTexture.create_from_image(pg.got[i]), e[2], _use_clock]
+			_pending.erase(e[0])
+		_note_action("page_collect", tc)
+		_add_stage_ms("page_collect", (Time.get_ticks_usec() - tc) / 1000.0)
+		_pages.erase(pg)
+		_acted = true
+	_note_action("pages", ta)
+
+# The submission cap: a page already submitting this frame may go on; a new one
+# only while fewer than pages_per_frame have.
+func _page_may_submit(pg: Dictionary) -> bool:
+	var id: int = pg.id
+	if pages_per_frame <= 0 or _pages_touched.has(id):
+		_pages_touched[id] = true
+		return true
+	if _pages_touched.size() >= pages_per_frame:
+		stats.pages_held = int(stats.get("pages_held", 0)) + 1
+		return false
+	_pages_touched[id] = true
+	return true
 
 func _evict_sprites() -> void:
 	if _sprites.size() <= sprite_cache_max:

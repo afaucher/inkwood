@@ -47,13 +47,32 @@ extends Node2D
 #     vision, nothing inside, the edge treatment between (edge.mode "inked" or
 #     "soft"), the overview amount from the zoom. A chunk not baked yet draws
 #     as the plain map sheet; a chunk wholly inside vision is skipped.
-#   3 BAKE. Missing chunks are recorded (GDScript) and submitted to the GPU a
-#     few per frame (topo.bakes_per_frame) and collected after the frame draws
-#     (InkCanvas.submit / RenderingServer.frame_post_draw): no forced frames
-#     mid-game. Track V's baker can take this over: set auto_bake = false and
+#   3 BAKE. Missing chunks (nearest the view centre first, the view's own before
+#     the ring round it) are baked by a small pipeline that never waits for the GPU
+#     and, with topo.worker_recording, keeps the recording off the main thread:
+#       recording    GDScript, on a WORKER thread (FogTopo.make_canvas_threaded, one
+#                    chunk at a time on a private twin of the terrain); or on the
+#                    main thread when topo.worker_recording is false
+#       submitting   the recorded canvas into canvas items, a slice of
+#                    topo.main_budget_ms a frame (InkCanvas.begin_submit / submit_some)
+#       render       the engine draws it with the next frame
+#       arriving     the pixels read back ASYNCHRONOUSLY (InkCanvas.collect_async;
+#                    the old collect_image() was a synchronous read-back that waits
+#                    for every frame in flight - measured 2026-10-09 as most of
+#                    the choppy frames after a pan), then mipmaps and the texture
+#     at most topo.max_inflight bakes at once, topo.bakes_per_frame started a frame.
+#     The main thread's share of a chunk is the submission and the texture
+#     (stats.main_ms). shutdown() waits for the workers, and runs on leaving the
+#     tree: a quit with a worker task still running GDScript crashes the engine.
+#     Track V's baker can take the bakes over instead: set auto_bake = false and
 #     hand textures in with set_topo_chunk(c, lod, texture) from FogTopo's
 #     provider (record_chunk / bake_topo_chunk). prebake() bakes synchronously
 #     (loading, shots).
+#
+# HIDDEN CHUNKS: rect_under_fog(rect_px) says whether a map-px rectangle lies wholly
+# under the opaque topographic layer (no vision circle within the edge's reach of
+# it, and the overview off). MapView bakes such chunks after the visible ones
+# (map_view.hidden_test).
 
 const Terrain = preload("res://scripts/world/terrain.gd")
 const RenderParams = preload("res://scripts/world/render_params.gd")
@@ -86,7 +105,10 @@ var errors: Array = []
 var edge_mode: String
 var mask_scale: float
 var range_px: float
-var bakes_per_frame: int
+var bakes_per_frame: int        # bakes STARTED per frame
+var max_inflight: int           # bakes in the pipeline at once
+var worker_recording: bool      # record on a worker thread (else on the main thread)
+var main_budget_ms: float       # main-thread ms a frame the pipeline may spend (submission, textures)
 var cache_cap: int
 var overview_edge: bool
 var far_mode: String
@@ -96,9 +118,13 @@ var overview_override := -1.0   # >= 0 forces the overview amount (shots, tests)
 var auto_bake := true
 
 # Timings and counts for the report: mask_us (last mask update, CPU side),
-# draw_us (last _draw, CPU side), record_ms / bakes (chunk recording,
-# GDScript), draw_chunks (quads last frame).
-var stats := {"mask_us": 0, "draw_us": 0, "record_ms": 0.0, "bakes": 0, "draw_chunks": 0, "los_us": 0, "los_uploads": 0, "los_shapes": 0}
+# draw_us (last _draw, CPU side), record_ms / record_ms_max (chunk recording,
+# GDScript; on a worker unless topo.worker_recording is off), bakes (chunks
+# baked), finished (bakes that left the pipeline, with or without pixels), main_ms /
+# main_ms_max_frame (main-thread time of the bake pipeline: submission and
+# textures), draw_chunks (quads last frame).
+var stats := {"mask_us": 0, "draw_us": 0, "record_ms": 0.0, "record_ms_max": 0.0, "bakes": 0, "finished": 0, "main_ms": 0.0,
+	"main_ms_max_frame": 0.0, "draw_chunks": 0, "los_us": 0, "los_uploads": 0, "los_shapes": 0}
 
 var _mask_vp: SubViewport
 var _mask_rect: ColorRect
@@ -112,7 +138,7 @@ var _final_mat: ShaderMaterial
 var _los_items := {}                # circle id -> {rect, mat, tex, serial}
 var _mat: ShaderMaterial
 var _cache := {}                # Vector3i(cx, cy, lod) -> ImageTexture
-var _pending: Array = []        # [[key, InkCanvas]] submitted, collected after the frame
+var _jobs: Array = []           # bakes in flight (see _start_bake)
 var _xf := Transform2D.IDENTITY # local (map px) -> screen px, this frame
 var _zoom := 1.0
 var _overview := 0.0
@@ -130,6 +156,9 @@ func setup(t: Terrain, params: RenderParams = null, fog: CameraData = null, cam:
 	mask_scale = fog_data.num("mask.scale")
 	range_px = fog_data.num("mask.range_px")
 	bakes_per_frame = fog_data.integer("topo.bakes_per_frame")
+	max_inflight = fog_data.integer("topo.max_inflight")
+	worker_recording = fog_data.flag("topo.worker_recording")
+	main_budget_ms = fog_data.num("topo.main_budget_ms")
 	cache_cap = fog_data.integer("topo.cache_chunks")
 	overview_edge = fog_data.flag("overview.vision_edge")
 	far_mode = cam_data.text("far_zoom.mode")
@@ -171,14 +200,30 @@ func set_terrain(t: Terrain) -> void:
 	topo = FogTopo.new(t, fog_data, P)
 	errors.append_array(topo.errors)
 	_apply_style()
-	for item: Array in _pending:
-		(item[1] as InkCanvas).discard()
-	_pending.clear()
+	shutdown()   # bakes in flight are for the old layer
 	_cache.clear()
 	queue_redraw()
 
 func _ready() -> void:
 	process_priority = 100   # after the camera has moved this frame
+
+# Waits for the worker tasks and drops every bake in flight. A quit with a task
+# still running GDScript crashes the engine, so a quit must not skip this; it
+# also runs when the layer leaves the tree. A bake whose pixels are already on
+# their way keeps its canvas (the read-back frees it) and its result is dropped.
+func shutdown() -> void:
+	for job: Dictionary in _jobs:
+		if job.has("task"):
+			WorkerThreadPool.wait_for_task_completion(job.task)
+		if job.has("box"):
+			if job.box[0] is InkCanvas:
+				(job.box[0] as InkCanvas).discard()
+		elif job.has("canvas") and job.state != "arriving":
+			(job.canvas as InkCanvas).discard()
+	_jobs.clear()
+
+func _exit_tree() -> void:
+	shutdown()
 
 func ok() -> bool:
 	return errors.is_empty() and vision.ok() and topo.ok() and fog_data.ok() and cam_data.ok()
@@ -242,6 +287,7 @@ func _process(_delta: float) -> void:
 	_mat.set_shader_parameter("zoom", _zoom)
 	_mat.set_shader_parameter("overview", _overview)
 	_mat.set_shader_parameter("show_edge", 1.0 if overview_edge else 1.0 - _overview)
+	_pump()
 	if auto_bake:
 		_schedule()
 	queue_redraw()
@@ -434,6 +480,25 @@ func _inside_vision(c: Vector2i) -> bool:
 			return true
 	return false
 
+# Is a map-px rectangle wholly under the opaque topographic layer: the overview
+# is off and no vision circle comes within the edge effect's reach of it (the
+# mask's whole range, as _inside_vision keeps)? A circle with a viewshed counts
+# as its full circle (the shape lies inside it), so this is conservative: a
+# rectangle it calls hidden is hidden. MapView bakes such chunks last.
+func rect_under_fog(rect_px: Rect2) -> bool:
+	if topo == null or _overview > 0.0:
+		return false
+	var r := rect_px.grow(range_px / maxf(_zoom, 1e-6))
+	var ppm := terrain.px_per_m
+	for circ: Dictionary in vision.circles:
+		var cx: float = circ.x * ppm
+		var cy: float = circ.y * ppm
+		var rr: float = circ.r * ppm
+		var q := Vector2(clampf(cx, r.position.x, r.end.x), clampf(cy, r.position.y, r.end.y))
+		if (q.x - cx) * (q.x - cx) + (q.y - cy) * (q.y - cy) <= rr * rr:
+			return false
+	return true
+
 # The baked texture for c at `lod`, else the nearest other level that is baked.
 func _best(c: Vector2i, lod: int) -> Texture2D:
 	var hit: Variant = _cache.get(Vector3i(c.x, c.y, lod))
@@ -484,44 +549,130 @@ func prebake(rect_px: Rect2, lod: int, batch: int = 48) -> Dictionary:
 	queue_redraw()
 	return {"count": todo.size(), "record_ms": rec, "render_ms": ren}
 
-func _schedule() -> void:
-	if not _pending.is_empty() or bakes_per_frame <= 0:
-		return
-	var lod := topo.lod_for_zoom(_zoom)
-	var view := view_rect_px()
+# The chunks to bake at `lod`, nearest the view's centre first, the view's own
+# before the ring round it (a ring chunk a hair nearer the centre must not go
+# first): not cached, not in flight, and not wholly inside vision (the full
+# render shows there, unless the overview is on).
+func wanted_chunks(view: Rect2, lod: int) -> Array[Vector2i]:
 	var centre := view.get_center()
-	var want: Array[Vector2i] = []
+	var inflight := {}
+	for job: Dictionary in _jobs:
+		inflight[job.key] = true
+	var scored: Array = []   # [distance, chunk]
 	for c in terrain.chunks_in_rect_px(view.grow(topo.chunk_px)):
-		if _cache.has(Vector3i(c.x, c.y, lod)):
+		var key := Vector3i(c.x, c.y, lod)
+		if _cache.has(key) or inflight.has(key):
 			continue
 		if _overview <= 0.0 and _inside_vision(c):
 			continue
-		want.append(c)
+		var r := topo.chunk_rect_px(c)
+		scored.append([r.get_center().distance_squared_to(centre) + (0.0 if view.intersects(r) else 1.0e18), c])
+	scored.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	var out: Array[Vector2i] = []
+	for e: Array in scored:
+		out.append(e[1])
+	return out
+
+# Starts bakes for the chunks the view needs (see the header). Recording on a
+# worker is one chunk at a time (the twin's lock), so a second one would only
+# wait holding a thread: at most one bake is in its recording state.
+func _schedule() -> void:
+	if bakes_per_frame <= 0 or _jobs.size() >= max_inflight:
+		return
+	var lod := topo.lod_for_zoom(_zoom)
+	var want := wanted_chunks(view_rect_px(), lod)
 	if want.is_empty():
 		return
-	want.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		return topo.chunk_rect_px(a).get_center().distance_squared_to(centre) < topo.chunk_rect_px(b).get_center().distance_squared_to(centre))
-	var s: float = topo.lods[lod]
-	var canvases: Array = []
-	var t0 := Time.get_ticks_usec()
-	for i in mini(bakes_per_frame, want.size()):
-		var c: Vector2i = want[i]
-		var g := topo.make_canvas(c, s)
-		_pending.append([Vector3i(c.x, c.y, lod), g])
-		canvases.append(g)
-	stats.record_ms = (Time.get_ticks_usec() - t0) / 1000.0
-	InkCanvas.submit(canvases)
-	RenderingServer.frame_post_draw.connect(_collect, CONNECT_ONE_SHOT)
+	var recording := 0
+	for job: Dictionary in _jobs:
+		if job.state == "recording":
+			recording += 1
+	var started := 0
+	for c in want:
+		if started >= bakes_per_frame or _jobs.size() >= max_inflight:
+			break
+		if worker_recording and recording > 0:
+			break
+		_start_bake(c, lod)
+		started += 1
+		recording += 1
 
-func _collect() -> void:
-	for item: Array in _pending:
-		var img: Image = (item[1] as InkCanvas).collect_image()
-		if img != null and not img.is_empty():
-			_cache[item[0]] = FogTopo.texture_from(img)
-			stats.bakes += 1
-	_pending.clear()
-	_evict()
-	queue_redraw()
+func _start_bake(c: Vector2i, lod: int) -> void:
+	var s: float = topo.lods[lod]
+	var job := {"key": Vector3i(c.x, c.y, lod), "c": c, "s": s, "state": "recording"}
+	if worker_recording:
+		topo.prepare_threaded()   # main thread: the twin reads the shared CameraData
+		var tp := topo
+		var box := [null, 0.0]   # [canvas, ms]: written by the worker only
+		job["box"] = box
+		job["task"] = WorkerThreadPool.add_task(func() -> void:
+			var tw := Time.get_ticks_usec()
+			box[0] = tp.make_canvas_threaded(c, s)
+			box[1] = (Time.get_ticks_usec() - tw) / 1000.0, true)
+	else:
+		var tr := Time.get_ticks_usec()
+		var g := topo.make_canvas(c, s)
+		var ms := (Time.get_ticks_usec() - tr) / 1000.0
+		job["box"] = [g, ms]
+		stats.main_ms += ms
+		stats.main_ms_max_frame = maxf(stats.main_ms_max_frame, ms)
+	_jobs.append(job)
+
+func bakes_in_flight() -> int:
+	return _jobs.size()
+
+# Advances every bake in flight, at most main_budget_ms of main-thread time a
+# frame (and at least one action, so a bake always progresses).
+func _pump() -> void:
+	if _jobs.is_empty():
+		return
+	var t0 := Time.get_ticks_usec()
+	var budget := int(main_budget_ms * 1000.0)
+	var slice := maxi(500, budget / 2)
+	var acted := false
+	for job: Dictionary in _jobs.duplicate():
+		if acted and Time.get_ticks_usec() - t0 > budget:
+			break
+		match job.state:
+			"recording":
+				if job.has("task"):
+					if not WorkerThreadPool.is_task_completed(job.task):
+						continue
+					WorkerThreadPool.wait_for_task_completion(job.task)
+					job.erase("task")
+				var box: Array = job.box
+				job.erase("box")
+				job["canvas"] = box[0]
+				stats.record_ms = box[1]
+				stats.record_ms_max = maxf(stats.record_ms_max, box[1])
+				(job.canvas as InkCanvas).begin_submit()
+				job.state = "submitting"
+				acted = true
+			"submitting":
+				acted = true
+				if (job.canvas as InkCanvas).submit_some(slice):
+					job["frame"] = Engine.get_frames_drawn()
+					job.state = "render"
+			"render":
+				if Engine.get_frames_drawn() > job.frame:
+					(job.canvas as InkCanvas).collect_async(func(img: Image) -> void: job["img"] = img)
+					job.state = "arriving"
+					acted = true
+			"arriving":
+				if not job.has("img"):
+					continue
+				var img: Image = job.img
+				_jobs.erase(job)
+				stats.finished += 1
+				acted = true
+				if img != null and not img.is_empty():
+					_cache[job.key] = FogTopo.texture_from(img)
+					stats.bakes += 1
+					_evict()
+					queue_redraw()
+	var spent := (Time.get_ticks_usec() - t0) / 1000.0
+	stats.main_ms += spent
+	stats.main_ms_max_frame = maxf(stats.main_ms_max_frame, spent)
 
 # Over the cap: drop the chunks farthest from the view, finer levels first.
 func _evict() -> void:

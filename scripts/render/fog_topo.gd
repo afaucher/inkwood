@@ -34,8 +34,17 @@ extends RefCounted
 # THREADS: record_chunk calls only Terrain's chunk queries (chains_px,
 # polys_px, chunks_in_rect_px) and records an InkCanvas, as Track T's own
 # TerrainDraw.draw_linework does. Terrain caches chunk geometry in plain
-# Dictionaries with no lock, so a baker on worker threads warms the chunk
-# (and its 8 neighbours) on one thread first, or serialises Terrain calls.
+# Dictionaries with no lock, and the main thread queries the same Terrain
+# (the vision, the viewshed, the units' heights), so a worker must never
+# touch THAT one. make_canvas_threaded() is the worker entry point: it records
+# on a private TWIN of this layer built over its own Terrain (same seed, data
+# and scale, so the same geometry bit for bit), one chunk at a time under a
+# mutex (Terrain's caches are not thread-safe within the twin either).
+# prepare_threaded() builds the twin and MUST be called on the main thread
+# first (it reads the shared CameraData, which records what it hands out).
+# The cost is that the twin generates the terrain chunks it records a second
+# time (once per terrain chunk, on a worker); sharing one Terrain between the
+# map, the fog and the interface needs a thread-safe Terrain (proposed).
 #
 # Textures come back with mipmaps (the layer minifies a level up to 1/lod_ratio).
 
@@ -70,6 +79,9 @@ var grid_w: float                     # texels
 var lods := PackedFloat64Array()      # texels per world px, finest first
 var lod_ratio: float
 var noise_seed: int
+
+var _twin: RefCounted = null          # a FogTopo over a private Terrain, for worker threads
+var _twin_lock := Mutex.new()
 
 func _init(t: Terrain, fog_data: CameraData = null, params: RenderParams = null) -> void:
 	terrain = t
@@ -145,6 +157,26 @@ static func bake_topo_chunk(t: Terrain, chunk: Vector2i, view: Transform2D) -> I
 func make_canvas(c: Vector2i, texels_per_px: float) -> InkCanvas:
 	var g := InkCanvas.new(canvas_size(texels_per_px))
 	record_chunk(g, c, view_for(c, texels_per_px))
+	return g
+
+# MAIN THREAD, once: the private twin make_canvas_threaded() records on.
+func prepare_threaded() -> void:
+	if _twin != null:
+		return
+	var twin_terrain := Terrain.new(terrain.seed_value, terrain.data.source_path, terrain.P)
+	twin_terrain.px_per_m = terrain.px_per_m
+	_twin = load("res://scripts/render/fog_topo.gd").new(twin_terrain, data, P)
+
+func has_twin() -> bool:
+	return _twin != null
+
+# WORKER-THREAD SAFE make_canvas: the same canvas, recorded on the twin (the
+# same calls on the same geometry give the same paint calls: test_fog compares
+# them). Blocks while another thread records on the twin.
+func make_canvas_threaded(c: Vector2i, texels_per_px: float) -> InkCanvas:
+	_twin_lock.lock()
+	var g: InkCanvas = _twin.make_canvas(c, texels_per_px)
+	_twin_lock.unlock()
 	return g
 
 func bake_chunk(c: Vector2i, texels_per_px: float) -> ImageTexture:
