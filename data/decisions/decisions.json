@@ -559,6 +559,65 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: '1. Bomber can start high 2. Sounds good 3 fine for now' -- read as answers to Track E's three questions (the lead's reading)."
+    },
+    {
+      "id": "close-chase-feel",
+      "date": "2026-10-09",
+      "area": "Combat",
+      "question": "A lone light fighter on a bomber's tail is shot down first about 45% of the time. Intended?",
+      "board": "none (Track C's tuning table)",
+      "options": [
+        "yes, as tuned",
+        "make the turrets less accurate"
+      ],
+      "chosen": "yes: grouping is the better tactic when the target outmasses you",
+      "parameters": {
+        "turret_base_hit_chance": "0.08, unchanged"
+      },
+      "applied_to": [
+        "data/units/*.json (as built)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Yes, that means grouping is better tactic when target out masses you.'"
+    },
+    {
+      "id": "effective-range",
+      "date": "2026-10-09",
+      "area": "Combat",
+      "question": "Should hit odds depend on distance (a light fighter 420 m back outranges a 400 m tail turret every time)?",
+      "board": "none (Track C's tuning table)",
+      "options": [
+        "hard range cutoff (as built)",
+        "odds fall off with range now",
+        "wait"
+      ],
+      "chosen": "guns fire slightly over their effective range: full odds inside it, falling off just past it",
+      "parameters": {
+        "rule": "a second odds factor, range: 1 inside the effective range, falling smoothly to 0 over a short overshoot past it (proposed size in data/sim/combat.json)"
+      },
+      "applied_to": [
+        "Track C, in progress"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Slightly over effective range.' (The lead's reading: odds fall off past the effective range rather than a hard cutoff.)"
+    },
+    {
+      "id": "crash-on-ground",
+      "date": "2026-10-09",
+      "area": "Effects, Combat",
+      "question": "Should a crash do anything on the ground?",
+      "board": "variants/crash-explosion/ (Track X, in progress)",
+      "options": [
+        "nothing",
+        "an explosion, then a smoking wreck"
+      ],
+      "chosen": "an explosion, then smoking",
+      "parameters": {},
+      "applied_to": [
+        "Track X's crash board, in progress"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'A explosion then smoking - show me the panel.'"
     }
   ]
 }
