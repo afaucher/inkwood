@@ -84,6 +84,9 @@ func _result_and_snapshot() -> bool:
 	host_world.commit("peer_7")
 
 	# 4. The snapshot, mid-turn: encoded, decoded, applied to a fresh World.
+	# A bomb still falling from an earlier drop (the strike) must reach a joiner too.
+	host_world.bombs_in_flight = [{"id": 1, "unit": BOMBER, "drop_index": 0, "bomb": 0, "release_turn": host_world.turn, "release_t": 1.0,
+		"x0": 100.0, "y0": 100.0, "h0": 400.0, "x": 150.0, "y": 100.0, "fall_s": 9.0, "impact_turn": host_world.turn + 2, "impact_t": 10.0}]
 	var snap: Dictionary = hs.snapshot()
 	eq((snap["units"][BOMBER]["plan"] as Array).size(), 0, "4. the snapshot has no plan for the AI unit")
 	check((host_world.units[BOMBER].plan as Array).size() > 0, "4. though the AI has planned on the host")
@@ -96,6 +99,9 @@ func _result_and_snapshot() -> bool:
 	eq(_diff(host_world, joiner_world), "", "4. a joiner that applies the snapshot holds the host's game")
 	check(joiner_world.is_ready("peer_7") and joiner_world.is_ready(World.AI_PLAYER) and not joiner_world.is_ready("peer_1"), "4. with the same Ready flags")
 	eq((joiner_world.units[BOMBER].plan as Array).size(), 0, "4. its AI unit has no plan")
+	check(WorldSync.same(joiner_world.bombs_in_flight, host_world.bombs_in_flight) and joiner_world.bombs_in_flight.size() == 1, "4. a joiner receives the bombs still falling")
+	host_world.bombs_in_flight = []
+	joiner_world.bombs_in_flight = []
 
 	# 3. The result of a turn: everyone ready, resolve, encode, apply on the second World.
 	host_world.commit("peer_1")

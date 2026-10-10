@@ -537,6 +537,8 @@ func snapshot() -> Dictionary:
 		"proto": PROTOCOL, "scenario": scenario_id, "turn": world.turn, "seed": world.rng_seed,
 		"players": world.players.duplicate(), "names": names.duplicate(),
 		"ready": world.ready.duplicate(), "units": units,
+		# Bombs still falling from an earlier turn (the strike): a joiner must land them too.
+		"bombs": world.net_bombs(),
 	}
 
 # --- Client: messages from the host ----------------------------------------------------------------
@@ -677,6 +679,7 @@ func apply_snapshot(s: Dictionary) -> void:
 		u.plan.clear()
 		if u.controller == World.CONTROLLER_PLAYER:
 			_set_plan(id, us["plan"])
+	world.apply_net_bombs(s.get("bombs", []))
 	var flags: Dictionary = s["ready"]
 	for p: Variant in flags:
 		_apply_ready(str(p), bool(flags[p]))
