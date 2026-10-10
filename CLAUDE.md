@@ -69,12 +69,32 @@ over terrain and trees, a topographic layer outside sight, an inked edge)
 and `scripts/world/camera_controller.gd` (`test_fog`, `test_viewshed`,
 `test_camera`; looks: `fog_shot.gd`, `fog_los_shot.gd`).
 
-**The sandbox demo plays** (2026-10-09): Local starts it, `test_sandbox` drives
-12 turns through it, and `build.ps1` exports it. **It was the target.** Its exit criteria are Alex's (design doc:
-Execution plan > Sandbox demo exit criteria) and the track plan with folder
-ownership is `docs/proposals/demo-plan.md`. Work on a track stays inside the
-folders it owns and reads other tracks' data, not their code. The variant
-board tool and networking beyond the template are not part of the demo.
+**The sandbox demo plays** (2026-10-09): `test_sandbox` drives 12 turns through
+it (`INKWOOD_SCENARIO=sandbox`). Its exit criteria are Alex's (design doc:
+Execution plan > Sandbox demo exit criteria); the track plan with folder
+ownership was `docs/proposals/demo-plan.md`.
+
+**The first fight plays** (2026-10-10; design doc: Next pass: the first fight):
+Local, Host and Join start the Intercept scenario (`data/scenarios/intercept.json`):
+find the enemy bomber in the fog and shoot it down before it reaches the target.
+- Combat: `scripts/sim/combat*.gd`, weapons on hardpoints in `data/units/*.json`,
+  odds = base x centre x range x crossing_rate (`data/sim/combat.json`); a downed
+  plane explodes or falls out of control to a crash (`test_combat`,
+  `test_combat_fall`; tuning: `scripts/test_support/combat_tuning.gd`).
+- Enemy AI and missions: `scripts/sim/ai_pilot.gd` (strike, escort; it never
+  reads player plans) and `scripts/sim/mission.gd` (win/lose conditions as data);
+  `ai_dumb.gd` stays for the sandbox (`test_ai_states`, `test_mission`, `test_intercept`).
+- Networked co-op: `scripts/net/world_sync.gd` -- the host resolves, last edit
+  wins, AI plans never cross the wire; `World.apply_resolution` on clients
+  (`test_world_sync`, `test_net_join_ready`, `test_net_wire`; two windows:
+  `tmp/net/run_check.ps1`).
+- On screen: UnitUI mounts the cone wash, the ribbon trails, the effects layer
+  (`scripts/fx/`, smoke W1, no fire) and the result card itself
+  (`test_ui_combat`, `test_ui_result`, `test_ui_trails_combat`).
+- Every choice Alex made from a board is in `data/decisions/decisions.json`;
+  the boards are under `variants/` (their frames are regenerated, not committed).
+Work on a track stays inside the folders it owns and reads other tracks' data
+and public APIs, not their code.
 
 ## Running tests
 
@@ -188,6 +208,13 @@ Properties of Godot and PowerShell, not of that game. Entries marked
 - **Never delete a unit from `World.units` mid-game**: combat seeds every
   roll from the shooter's index in that Dictionary, so removing one reshuffles
   every later unit's dice. A destroyed unit stays, with `down` and `fate`.
+- **A script without `class_name` cannot name itself as a return type**, and
+  the parse error appears in the OTHER script that uses it ("Could not resolve
+  external class member"). Observed 2026-10-10 by the assembly track.
+- **A replaced node must leave the tree before its successor is added**, or the
+  successor is renamed (`Sandbox2`) and its RPC path changes (2026-10-10).
+- **A lambda that captured a node freed later logs "Lambda capture ... was
+  freed"**; compare instance ids instead (2026-10-10).
 - **`load()` on a script with a parse error returns a NON-null resource on 4.7**
   (observed 2026-10-09, proved with a deliberately broken test). A `== null`
   guard never fires; `main.gd` checks `can_instantiate()` as well.
@@ -355,7 +382,8 @@ is made in BOTH twins; `tar_pack.ps1` is the one Windows-only helper, because
   networking bug. Allocated: `test_enet_loopback` 28777,
   `test_network_session` 28778, `test_world_sync` 28779, `test_net_sandbox`
   28780; the manual two-window check (`tmp/net/run_check.ps1`, not in the
-  gate) uses 28790. Pick the next free one and add it here.
+  gate) uses 28790. `test_net_join_ready` 28781, `test_intercept` 28782. Pick
+  the next free one and add it here.
 - **Only `scripts/net/steam_manager.gd` calls `Steam.*`.** Everything else asks
   `NetworkManager`, because the gate may have no Steam client and anything that
   reaches past that boundary is untestable the moment it is written.
