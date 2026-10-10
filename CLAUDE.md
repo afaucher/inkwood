@@ -208,6 +208,11 @@ Properties of Godot and PowerShell, not of that game. Entries marked
 - **Never delete a unit from `World.units` mid-game**: combat seeds every
   roll from the shooter's index in that Dictionary, so removing one reshuffles
   every later unit's dice. A destroyed unit stays, with `down` and `fate`.
+- **A Packed array read out of a Dictionary is a COPY**: `(d["ids"] as
+  PackedInt32Array).append(i)` appends to the copy and the Dictionary keeps
+  the old array, silently (2026-10-10, hit by two tracks: an empty road index
+  let trees stand on the road while a test passed). Take it out, append, put
+  it back.
 - **A script without `class_name` cannot name itself as a return type**, and
   the parse error appears in the OTHER script that uses it ("Could not resolve
   external class member"). Observed 2026-10-10 by the assembly track.
