@@ -45,7 +45,7 @@ extends RefCounted
 # pitch is 0 and the cones are level.
 #
 # ODDS = base_hit_chance x the product of the NAMED FACTORS data/sim/combat.json
-# lists (odds_factors), clamped to 0..1. Two exist:
+# lists (odds_factors), clamped to 0..1. Three exist:
 #     centre(r) = 1 - (1 - rim_odds_factor) x r^falloff_exponent
 # 1 at the centre, rim_odds_factor at the rim. Fixed guns are PEAKED (rim factor
 # well under 1), flexible guns and turrets FLAT (rim factor 1: a gunner aims
@@ -56,10 +56,25 @@ extends RefCounted
 # range) to 0 at effective_range_m x (1 + range_overshoot), where range_overshoot
 # is data/sim/combat.json's, passed in `params` (CombatRules.factor_params()).
 # Alex 2026-10-09: "slightly over effective range" a gun still fires.
-# Adding a factor (crossing speed, target size, ...) means adding its name to
-# FACTOR_NAMES and a branch in factor_value(), then its name to the data; the
-# geometry dictionary it reads (`geo`) has distance, r, across, height and the
-# `params`, and gains whatever the new factor needs. NONE of those is built.
+#     crossing_rate(w) = 1 / (1 + (w / tracking_dps)^crossing_exponent)
+# Alex 2026-10-10: "relative velocity should also have an accuracy impact". w is the
+# turn rate of the line of sight from the shooter's hardpoint to the target, degrees/s:
+# the relative velocity (target minus shooter) perpendicular to the line of fire, over
+# the distance -- the deflection a gun must track, so the same crossing speed costs
+# less from farther away. 1 when nothing crosses (a matched-speed tail chase), exactly
+# 0.5 at the weapon's tracking_dps, smooth, never a cliff. tracking_dps is small for
+# a fixed gun (the pilot swings the whole plane) and larger for a flexible gun or a
+# turret (a gunner tracks); crossing_exponent is data/sim/combat.json's. The velocity
+# along the line of fire (closing or opening) costs nothing, by design: a fast pass is
+# brief, and the tick count already pays for that in fewer rolls; it is computed
+# (closing_mps) so a later factor can use it. Velocities come from the resolver: speed
+# along the nose, pitched by the same tilt as the cones (so a plane changing band
+# climbs or dives at its pitch, not at the 280 to 600 m a second the band heights
+# imply over a 1 to 1.7 s step, which would make any band change untouchable).
+# Adding a factor (target size, ...) means adding its name to FACTOR_NAMES and a branch
+# in factor_value(), then its name to the data; the geometry dictionary it reads (`geo`)
+# has distance, r, across, height, crossing_dps, closing_mps and the `params`, and gains
+# whatever the new factor needs. NONE of those is built.
 #
 # THE ROLLS (combat_resolver.gd): the turn is cut into ticks (tick_seconds); at
 # each tick every unit that is up is sampled at the tick's END time t on the
@@ -98,7 +113,7 @@ extends RefCounted
 #
 #   {"type": "fire", "turn", "tick" (1-based), "unit" (shooter id), "weapon"
 #    (weapon id), "hardpoint" (index), "target" (unit id), "t", "hit" (bool),
-#    "odds" (what the roll was against, 0..1), "r", "distance" (slant m),
+#    "odds" (what the roll was against, 0..1), "r", "distance" (slant m), "crossing_dps" (the line of sight's turn rate),
 #    "x", "y", "height_m" (the hardpoint, where the shot starts),
 #    "tx", "ty", "theight_m" (the target's centre)}      one per roll
 #   {"type": "hit", "turn", "unit" (the TARGET), "by" (shooter id), "weapon",
@@ -152,7 +167,7 @@ const MASK32 := 0xFFFFFFFF
 
 # The odds factors the code knows. data/sim/combat.json names the ones in use;
 # a name not listed here is a data error.
-const FACTOR_NAMES: Array[String] = ["centre", "range"]
+const FACTOR_NAMES: Array[String] = ["centre", "range", "crossing_rate"]
 
 # --- Geometry ----------------------------------------------------------------
 
@@ -163,6 +178,8 @@ const FACTOR_NAMES: Array[String] = ["centre", "range"]
 # Returns {x, y, z (world position; z is metres above sea level), and the
 # airframe's axes in the world: fx, fy, fz (forward), rx, ry (right; no z, the
 # wings are level), ux, uy, uz (up)}.
+# The shooter's velocity vx, vy, vz (m/s, world axes; optional, default 0) is carried
+# along as vx, vy, vz: the crossing_rate factor needs it.
 static func pose(shooter: Dictionary, hardpoint: Vector3) -> Dictionary:
 	var h := float(shooter["heading"])
 	var th := float(shooter.get("pitch", 0.0))
@@ -191,6 +208,7 @@ static func pose(shooter: Dictionary, hardpoint: Vector3) -> Dictionary:
 		"fx": fx, "fy": fy, "fz": fz,
 		"rx": rx, "ry": ry,
 		"ux": ux, "uy": uy, "uz": uz,
+		"vx": float(shooter.get("vx", 0.0)), "vy": float(shooter.get("vy", 0.0)), "vz": float(shooter.get("vz", 0.0)),
 	}
 
 # Squared slant distance from a pose to a target {x, y, height_m}: the cheap
@@ -203,13 +221,17 @@ static func distance_sq(p: Dictionary, target: Dictionary) -> float:
 
 # The cone test of a target {x, y, height_m} from a pose, against a weapon.
 # `factors`: the named odds factors to apply (CombatRules.odds_factors).
-# `params`: the numbers the factors read besides the weapon (CombatRules.factor_params(): range_overshoot); a missing
-# range_overshoot is 0, a hard edge at the effective range.
+# `params`: the numbers the factors read besides the weapon (CombatRules.factor_params():
+# range_overshoot, crossing_exponent); a missing range_overshoot is 0, a hard edge at the
+# effective range. The target may carry its velocity vx, vy, vz (m/s, world axes; default 0);
+# the pose carries the shooter's. Without either, there is no relative motion.
 # Returns {in_cone, in_arc, in_range (within the reach, see reach()), r (1 or less is inside the arc;
 # INF when the target is at the hardpoint), distance (slant metres), across,
 # height (signed offsets from the cone's centre, radians; NAN at the
-# hardpoint), odds (0 outside the cone), factors ({name: value}, empty outside
-# the cone)}.
+# hardpoint), crossing_dps (the line of sight's turn rate, degrees/s, from the relative
+# velocity; 0 outside the cone), closing_mps (the relative velocity along the line of fire,
+# negative closing; 0 outside the cone), odds (0 outside the cone), factors ({name: value},
+# empty outside the cone)}.
 static func evaluate_pose(p: Dictionary, weapon: CombatWeapon, target: Dictionary, factors: Array, params: Dictionary = {}) -> Dictionary:
 	var dx := float(target["x"]) - float(p["x"])
 	var dy := float(target["y"]) - float(p["y"])
@@ -219,7 +241,7 @@ static func evaluate_pose(p: Dictionary, weapon: CombatWeapon, target: Dictionar
 	var out := {
 		"in_cone": false, "in_arc": false, "in_range": dist <= reach_m,
 		"r": INF, "distance": dist, "across": NAN, "height": NAN,
-		"odds": 0.0, "factors": {},
+		"odds": 0.0, "factors": {}, "crossing_dps": 0.0, "closing_mps": 0.0,
 	}
 	if dist < 1e-9:
 		return out
@@ -240,7 +262,17 @@ static func evaluate_pose(p: Dictionary, weapon: CombatWeapon, target: Dictionar
 	out["in_arc"] = r <= 1.0
 	out["in_cone"] = r <= 1.0 and dist <= reach_m
 	if out["in_cone"]:
-		var geo := {"r": r, "distance": dist, "across": across, "height": height, "params": params}
+		# Relative motion: the target's velocity minus the shooter's, split along the line of
+		# fire (closing) and across it (the line of sight's turn rate, the deflection a gun must track).
+		var rvx := float(target.get("vx", 0.0)) - float(p["vx"])
+		var rvy := float(target.get("vy", 0.0)) - float(p["vy"])
+		var rvz := float(target.get("vz", 0.0)) - float(p["vz"])
+		var closing := (rvx * dx + rvy * dy + rvz * dz) / dist
+		var perp_sq := maxf(rvx * rvx + rvy * rvy + rvz * rvz - closing * closing, 0.0)
+		var crossing_dps := rad_to_deg(sqrt(perp_sq) / dist)
+		out["crossing_dps"] = crossing_dps
+		out["closing_mps"] = closing
+		var geo := {"r": r, "distance": dist, "across": across, "height": height, "crossing_dps": crossing_dps, "closing_mps": closing, "params": params}
 		var odds := weapon.base_hit_chance
 		var used := {}
 		for name: Variant in factors:
@@ -259,7 +291,7 @@ static func evaluate(shooter: Dictionary, weapon: CombatWeapon, hardpoint_index:
 # --- Odds --------------------------------------------------------------------
 
 # One named factor's multiplier for a target in the cone; `geo` is
-# {r, distance, across, height, params}. An unknown name is a data error caught at load
+# {r, distance, across, height, crossing_dps, closing_mps, params}. An unknown name is a data error caught at load
 # (CombatRules); here it is 1.0 so a stray name cannot silently zero the odds.
 static func factor_value(name: String, weapon: CombatWeapon, geo: Dictionary) -> float:
 	match name:
@@ -267,6 +299,8 @@ static func factor_value(name: String, weapon: CombatWeapon, geo: Dictionary) ->
 			return centre_factor(weapon, float(geo["r"]))
 		"range":
 			return range_factor(weapon, float(geo["distance"]), float((geo["params"] as Dictionary).get("range_overshoot", 0.0)))
+		"crossing_rate":
+			return crossing_factor(weapon, float(geo["crossing_dps"]), float((geo["params"] as Dictionary).get("crossing_exponent", 2.0)))
 	return 1.0
 
 # 1 at the cone's centre, weapon.rim_odds_factor at its rim, along r^exponent.
@@ -286,6 +320,13 @@ static func range_factor(weapon: CombatWeapon, distance: float, overshoot: float
 		return 0.0
 	var s := clampf((distance - eff) / fringe, 0.0, 1.0)
 	return 1.0 - s * s * (3.0 - 2.0 * s)
+
+# Accuracy against relative motion: 1 when the line of sight is not turning, falling
+# smoothly with its rate -- 1 / (1 + (rate / tracking_dps)^exponent), so exactly half at
+# the weapon's tracking_dps and never a cliff or an exact 0. A fixed gun has a small
+# tracking_dps (the pilot swings the whole plane), a gunner's a larger one.
+static func crossing_factor(weapon: CombatWeapon, crossing_dps: float, exponent: float) -> float:
+	return 1.0 / (1.0 + pow(maxf(crossing_dps, 0.0) / maxf(weapon.tracking_dps, 1e-6), exponent))
 
 # The farthest slant distance at which a weapon rolls at all: its effective range
 # stretched by the overshoot when the "range" factor is applied, else the

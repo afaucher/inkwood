@@ -18,6 +18,10 @@ const CombatWeapon = preload("res://scripts/sim/combat_weapon.gd")
 # these must.
 const REQUIRED := ["light_fighter", "heavy_fighter", "bomber"]
 
+# Tracking rates by mounting, across every unit file (the design: a fixed gun tolerates less crossing than a gunner).
+var _fixed_tracking: Array[float] = []
+var _gunner_tracking: Array[float] = []
+
 func setup(_main) -> void:
 	var rules := SimRules.new()
 	if not check(rules.ok(), "data/sim/turn.json and altitude.json load: %s" % str(rules.errors)):
@@ -34,7 +38,7 @@ func setup(_main) -> void:
 	for f: String in ["id", "name", "domain", "size_m", "actions_per_turn", "health", "sight_range_m", "drawing", "envelope", "weapons"]:
 		check(fields.has(f), "schema lists '%s'" % f)
 	var weapon_fields: Dictionary = (fields.get("weapons", {}) as Dictionary).get("item_fields", {})
-	for f: String in ["id", "name", "kind", "hardpoints", "mount_deg", "half_across_deg", "elevation_deg", "half_height_deg", "effective_range_m", "base_hit_chance", "rim_odds_factor", "falloff_exponent", "damage_pips", "rolls_per_second"]:
+	for f: String in ["id", "name", "kind", "hardpoints", "mount_deg", "half_across_deg", "elevation_deg", "half_height_deg", "effective_range_m", "base_hit_chance", "rim_odds_factor", "falloff_exponent", "tracking_dps", "damage_pips", "rolls_per_second"]:
 		check(weapon_fields.has(f), "schema lists weapons[].%s" % f)
 	var env_fields: Dictionary = (fields.get("envelope", {}) as Dictionary).get("fields", {})
 	for f: String in ["speed_min_mps", "speed_max_mps", "accel_mps2", "decel_mps2", "turn_rate_curve_dps", "turn_bleed_mps2", "climb_speed_cost_mps", "dive_speed_gain_mps", "altitude_bands", "reverse_from_stop"]:
@@ -66,6 +70,7 @@ func setup(_main) -> void:
 		_check_weapons(def)
 	for id: String in REQUIRED:
 		check(found.has(id), "data/units/%s.json exists" % id)
+	check(not _fixed_tracking.is_empty() and not _gunner_tracking.is_empty() and _fixed_tracking.max() < _gunner_tracking.min(), "every fixed gun tracks worse than every flexible gun and turret (fixed up to %s deg/s, gunners from %s)" % [str(_fixed_tracking.max()), str(_gunner_tracking.min())])
 
 	# --- Broken files are rejected, each for its own reason --------------------
 	var good: Dictionary = Records.new("lf").read_json(UnitDef.path_for("light_fighter"))
@@ -92,6 +97,7 @@ func setup(_main) -> void:
 		["a cone with no width", "'weapons[0].half_across_deg' = 0.0 is outside [0.1, 180.0]"],
 		["a zero damage", "'weapons[0].damage_pips' = 0 is below 1"],
 		["two weapons with one id", "weapons: id 'wing_guns' is used twice"],
+		["a tracking rate of nothing", "'weapons[0].tracking_dps' = 0.0 is outside"],
 		["no weapons list", "missing list 'weapons'"],
 		["a weapon that is not an object", "'weapons[0]' is not an object"],
 	]
@@ -189,6 +195,8 @@ func _break(d: Dictionary, what: String) -> void:
 			d["weapons"][0]["damage_pips"] = {"value": 0, "_proposed": true, "_reason": "x"}
 		"two weapons with one id":
 			(d["weapons"] as Array).append((d["weapons"][0] as Dictionary).duplicate(true))
+		"a tracking rate of nothing":
+			d["weapons"][0]["tracking_dps"] = {"value": 0, "_proposed": true, "_reason": "x"}
 		"no weapons list":
 			d.erase("weapons")
 		"a weapon that is not an object":
@@ -208,6 +216,10 @@ func _check_weapons(def: UnitDef) -> void:
 		check(w.half_across > 0.0 and w.half_height > 0.0 and w.effective_range_m > 0.0 and w.damage_pips >= 1 and w.rolls_per_second > 0.0, "%s.%s: a real cone, range, damage and roll rate" % [def.id, w.id])
 		near(w.mount, deg_to_rad(w.mount_deg), 1e-12, "%s.%s: angles are radians at runtime" % [def.id, w.id])
 		check(w.base_hit_chance > 0.0 and w.base_hit_chance <= 1.0 and w.rim_odds_factor >= 0.0 and w.rim_odds_factor <= 1.0, "%s.%s: odds are probabilities" % [def.id, w.id])
+		if w.kind == "fixed":
+			_fixed_tracking.append(w.tracking_dps)
+		else:
+			_gunner_tracking.append(w.tracking_dps)
 		var back := CombatWeapon.new(w.values())
 		check(back.effective_range_m == w.effective_range_m and back.range_m == w.range_m and back.hardpoints == w.hardpoints and back.mount == w.mount, "%s.%s: values() rebuilds the same weapon" % [def.id, w.id])
 	check(def.domain != "air" or def.weapons.size() >= 1, "%s: an air unit has a weapon" % def.id)

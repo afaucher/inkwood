@@ -38,6 +38,7 @@ var range_m: float:
 var base_hit_chance: float = 0.0     # odds per roll at the cone's centre, before any other factor
 var rim_odds_factor: float = 1.0     # the centre factor at the cone's rim: 1 = flat, less = peaked
 var falloff_exponent: float = 1.0    # shape of the fall from centre to rim
+var tracking_dps: float = 1000000.0   # the line-of-sight rate (deg/s) at which crossing halves the odds; small = a fixed gun, large = a gunner who tracks
 var damage_pips: int = 1
 var rolls_per_second: float = 1.0
 # Radians, derived from the degrees above.
@@ -66,6 +67,7 @@ func _init(v: Dictionary = {}) -> void:
 	base_hit_chance = float(v.get("base_hit_chance", base_hit_chance))
 	rim_odds_factor = float(v.get("rim_odds_factor", rim_odds_factor))
 	falloff_exponent = float(v.get("falloff_exponent", falloff_exponent))
+	tracking_dps = float(v.get("tracking_dps", tracking_dps))
 	damage_pips = int(v.get("damage_pips", damage_pips))
 	rolls_per_second = float(v.get("rolls_per_second", rolls_per_second))
 	mount = deg_to_rad(mount_deg)
@@ -82,7 +84,7 @@ func values() -> Dictionary:
 		"mount_deg": mount_deg, "half_across_deg": half_across_deg,
 		"elevation_deg": elevation_deg, "half_height_deg": half_height_deg,
 		"effective_range_m": effective_range_m, "base_hit_chance": base_hit_chance,
-		"rim_odds_factor": rim_odds_factor, "falloff_exponent": falloff_exponent,
+		"rim_odds_factor": rim_odds_factor, "falloff_exponent": falloff_exponent, "tracking_dps": tracking_dps,
 		"damage_pips": damage_pips, "rolls_per_second": rolls_per_second,
 	}
 

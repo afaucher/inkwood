@@ -11,9 +11,14 @@
     "_reason": "a default so a weapon with several enemies in its cone still rolls at one of them: the one with the best odds (ties: nearer, then the unit added first). NOT target priority, which Alex will design; when he does, this record names the new rule"
   },
   "odds_factors": {
-    "value": ["centre", "range"],
+    "value": ["centre", "range", "crossing_rate"],
     "_proposed": true,
-    "_reason": "the named factors that multiply a weapon's base_hit_chance, in this order. 'centre' (better odds nearer the cone's centre, per weapon falloff) and 'range' (1 inside the effective range, falling smoothly to 0 slightly over it) are Alex's (2026-10-09). Crossing speed, damage and others come later by adding a name here and a function in combat.gd; none is built"
+    "_reason": "the named factors that multiply a weapon's base_hit_chance, in this order. 'centre' (better odds nearer the cone's centre, per weapon falloff), 'range' (1 inside the effective range, falling smoothly to 0 slightly over it) and 'crossing_rate' (accuracy falls with the line of sight's turn rate, per weapon tracking_dps) are Alex's (2026-10-09 and 2026-10-10: relative velocity affects accuracy). Others come later by adding a name here and a function in combat.gd; none is built"
+  },
+  "crossing_exponent": {
+    "value": 2,
+    "_proposed": true,
+    "_reason": "Alex 2026-10-10: relative velocity affects accuracy. The crossing_rate factor is 1 / (1 + (rate / tracking_dps)^this), rate being the line of sight's turn rate in degrees a second: exactly 1 with no crossing, exactly 0.5 at the weapon's tracking_dps, smooth and never a cliff. 2 is flat near zero (a small drift costs almost nothing, so a tail chase with a gentle weave keeps its odds) and falls off as 1 over the rate squared far out (a fast crossing is nearly untouchable but never exactly 0). Only the SPEED across the line of fire counts; closing speed costs nothing (a fast pass is brief and the tick count already pays for that)"
   },
   "range_overshoot": {
     "value": 0.2,

@@ -129,7 +129,7 @@ func _fire_hardpoint(active: Array[String], states: Dictionary, sid: String, w_i
 		_events.append({
 			"type": "fire", "turn": _turn, "tick": tick, "unit": sid, "weapon": weapon.id,
 			"hardpoint": h_i, "target": best_id, "t": t, "hit": hit, "odds": odds,
-			"r": best["r"], "distance": best["distance"],
+			"r": best["r"], "distance": best["distance"], "crossing_dps": best["crossing_dps"],
 			"x": p["x"], "y": p["y"], "height_m": p["z"],
 			"tx": tstate["x"], "ty": tstate["y"], "theight_m": tstate["height_m"],
 		})
@@ -160,7 +160,7 @@ func _has_enemies(active: Array[String]) -> bool:
 			return true
 	return false
 
-# A unit's state for combat at t: {x, y, heading, height_m, pitch}. Position,
+# A unit's state for combat at t: {x, y, heading, height_m, pitch, vx, vy, vz}. Position,
 # heading and height are the World's sample; pitch is the airframe's tilt while
 # the unit changes band (combat.gd, THE TILT): the angle of the path in the
 # step that t falls in, from the heights of its two bands over its length, at
@@ -179,7 +179,16 @@ func _state_at(id: String, t: float, path: Array, sampler: Callable, band_height
 		var dt := float(b["t"]) - float(a["t"])
 		if dh != 0.0 and dt > 0.0:
 			pitch = clampf(atan2(dh / dt, maxf(float(s["speed"]), 1e-9)), -rules.max_pitch, rules.max_pitch)
-	return {"x": s["x"], "y": s["y"], "heading": s["heading"], "height_m": s["height_m"], "pitch": pitch}
+	# Velocity (for the crossing_rate factor): the sampled speed along the nose, pitched by the
+	# same tilt as the cones. The band heights imply a climb of 280 to 600 m a second over a
+	# step; the airframe's pitch is the plausible rate and agrees with the cones.
+	var speed := float(s["speed"])
+	var hdg := float(s["heading"])
+	var cp := cos(pitch)
+	return {
+		"x": s["x"], "y": s["y"], "heading": hdg, "height_m": s["height_m"], "pitch": pitch,
+		"vx": speed * cp * cos(hdg), "vy": speed * cp * sin(hdg), "vz": speed * sin(pitch),
+	}
 
 # Two time-ordered event lists as one: by "t" ascending, `first` before
 # `second` when they tie. (Array.sort_custom is not stable, so this merges.)

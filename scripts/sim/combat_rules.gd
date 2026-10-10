@@ -27,6 +27,7 @@ var odds_factors: Array[String] = []   # names from Combat.FACTOR_NAMES, applied
 var max_pitch_deg: float = NAN
 var max_pitch: float = NAN             # radians
 var range_overshoot: float = NAN       # the range factor reaches 0 at effective range x (1 + this); one for every weapon
+var crossing_exponent: float = NAN      # how fast the crossing_rate factor falls with the line-of-sight rate
 # What happens to a unit at 0 health (Alex 2026-10-09: it explodes mid air or
 # loses control and crashes eventually).
 var explode_chance: float = NAN        # chance a kill explodes the plane; otherwise it falls out of control
@@ -54,6 +55,7 @@ func _init(source: Variant = PATH, quiet: bool = false) -> void:
 		max_pitch_deg = r.number(d, "max_pitch_deg", "max_pitch_deg", 0.0, 89.0)
 		max_pitch = deg_to_rad(max_pitch_deg)
 		range_overshoot = r.number(d, "range_overshoot", "range_overshoot", 0.0, 2.0)
+		crossing_exponent = r.number(d, "crossing_exponent", "crossing_exponent", 0.5, 8.0)
 		explode_chance = r.number(d, "explode_chance", "explode_chance", 0.0, 1.0)
 		fall_turn_rate_dps = r.number(d, "fall_turn_rate_dps", "fall_turn_rate_dps", 0.0)
 		fall_turn_rate = deg_to_rad(fall_turn_rate_dps)
@@ -67,4 +69,4 @@ func ok() -> bool:
 # The numbers the odds factors read besides the weapon (Combat.evaluate_pose's
 # `params`): pass this whenever the factors in odds_factors are applied.
 func factor_params() -> Dictionary:
-	return {"range_overshoot": range_overshoot}
+	return {"range_overshoot": range_overshoot, "crossing_exponent": crossing_exponent}

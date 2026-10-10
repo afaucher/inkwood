@@ -42,10 +42,12 @@ func setup(_main) -> void:
 	_geometry(w)
 	_odds(w)
 	_range(w)
+	_crossing(w)
 	_seeds()
 	_determinism()
 	_chase()
 	_standoff()
+	_crossing_pass()
 	_down_mid_turn()
 	_cross_band()
 	_round_trip()
@@ -125,9 +127,10 @@ func _eval(shooter: Dictionary, weapon: CombatWeapon, hp: int, across_deg: float
 func _rules() -> void:
 	var r := CombatRules.new()
 	check(r.ok(), "data/sim/combat.json loads: %s" % str(r.errors))
-	eq(r.odds_factors, ["centre", "range"] as Array[String], "the decided odds factors: the cone's centre and the range")
+	eq(r.odds_factors, ["centre", "range", "crossing_rate"] as Array[String], "the decided odds factors: the cone's centre, the range and the crossing rate")
+	check(r.crossing_exponent >= 0.5 and r.crossing_exponent <= 8.0, "the crossing curve has a shape (exponent %s)" % str(r.crossing_exponent))
 	check(r.range_overshoot > 0.0 and r.range_overshoot < 1.0, "a gun fires slightly over its effective range (overshoot %s)" % str(r.range_overshoot))
-	eq(r.factor_params(), {"range_overshoot": r.range_overshoot}, "the factor params carry the overshoot")
+	eq(r.factor_params(), {"range_overshoot": r.range_overshoot, "crossing_exponent": r.crossing_exponent}, "the factor params carry the overshoot and the crossing exponent")
 	check(r.tick_seconds > 0.0 and r.tick_seconds <= 1.0, "the tick is a fraction of a step")
 	check(r.max_pitch > 0.0, "the climb tilt is on (max_pitch_deg > 0)")
 	var d: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CombatRules.PATH))
@@ -141,6 +144,9 @@ func _rules() -> void:
 	bad = d.duplicate(true)
 	bad["range_overshoot"] = {"value": -0.1, "_proposed": true, "_reason": "x"}
 	check(not CombatRules.new(bad, true).ok(), "a negative overshoot is rejected")
+	bad = d.duplicate(true)
+	bad["crossing_exponent"] = {"value": 0.0, "_proposed": true, "_reason": "x"}
+	check(not CombatRules.new(bad, true).ok(), "a crossing exponent of 0 (no curve) is rejected")
 	bad = d.duplicate(true)
 	bad.erase("range_overshoot")
 	check(not CombatRules.new(bad, true).ok(), "a missing overshoot is rejected, not defaulted")
@@ -569,6 +575,19 @@ func _cross_band() -> void:
 	check(all_after, "rolls on every tick from t = 1.25: level and dead ahead")
 	# The height the sampler reports for the dive: linear between the bands.
 	near(float(w.sample("fighter", 0.5)["height_m"]), 700.0, 1e-9, "half way down the dive step the fighter is half way between high and medium")
+	# The velocity the factor reads while the fighter dives is along its pitched nose (35 deg down),
+	# not the 600 m a second the band heights imply: the line of sight turns at about 10 deg/s at
+	# t = 0.75, and not at all once it is level behind the bomber again.
+	var dive_rate := -1.0
+	var level_rate := -1.0
+	for ev: Dictionary in _of_type(res["events"], "fire"):
+		if ev["unit"] == "fighter" and int(ev["hardpoint"]) == 0:
+			if absf(float(ev["t"]) - 0.75) < 1e-9:
+				dive_rate = float(ev["crossing_dps"])
+			if absf(float(ev["t"]) - 3.0) < 1e-9:
+				level_rate = float(ev["crossing_dps"])
+	check(dive_rate > 5.0 and dive_rate < 20.0, "in the dive the line of sight turns at a plausible rate (%.1f deg/s), not the hundred of a raw band change" % dive_rate)
+	check(level_rate >= 0.0 and level_rate < 0.5, "level and lined up behind the bomber it barely turns (%.3f deg/s)" % level_rate)
 
 # --- the host-to-client round trip with events --------------------------------------
 
@@ -708,3 +727,127 @@ func _standoff() -> void:
 			check(f_odds <= wing.base_hit_chance * Combat.range_factor(wing, wing_d, os) + 1e-9 and f_odds > 0.0, "gap %d m: ...at odds %.4f, within the base %.2f" % [int(gap), f_odds, wing.base_hit_chance])
 		else:
 			eq(fighter_rolls, 0, "gap %d m: past the wing guns' reach (%.0f m): nobody rolls" % [int(gap), wing.max_range_m(os)])
+
+# --- relative velocity: the crossing-rate factor -----------------------------------------
+
+# A shooter at SHOOTER's place flying `shooter_speed` along its heading, and a target `dist`
+# m dead ahead of weapon `weapon`'s first hardpoint (behind it, for a rearward weapon) with
+# a velocity of `target_along` m/s along the shooter's heading and `cross` m/s along its
+# right wing.
+func _pass(weapon: CombatWeapon, dist: float, shooter_speed: float, target_along: float, cross: float, factors: Array = []) -> Dictionary:
+	var fl: Array = factors if not factors.is_empty() else _cr.odds_factors
+	var sh := SHOOTER.duplicate()
+	var ch := cos(float(SHOOTER["heading"]))
+	var sn := sin(float(SHOOTER["heading"]))
+	sh["vx"] = shooter_speed * ch
+	sh["vy"] = shooter_speed * sn
+	var p := Combat.pose(sh, weapon.hardpoints[0])
+	var t := _target_from(p, weapon, 0.0, 0.0, dist)
+	t["vx"] = target_along * ch + cross * (-sn)
+	t["vy"] = target_along * sn + cross * ch
+	t["vz"] = 0.0
+	return Combat.evaluate_pose(p, weapon, t, fl, _cr.factor_params())
+
+func _crossing(w: World) -> void:
+	var cannon: CombatWeapon = w.unit_def("heavy_fighter").weapons[0]
+	var wing: CombatWeapon = w.unit_def("light_fighter").weapons[0]
+	var tail: CombatWeapon = w.unit_def("bomber").weapons[2]
+	var k := _cr.crossing_exponent
+	# The curve itself: 1 with nothing crossing, exactly half at the weapon's tracking rate,
+	# falling smoothly and never to a hard 0.
+	eq(Combat.crossing_factor(wing, 0.0, k), 1.0, "no crossing: the factor is exactly 1")
+	near(Combat.crossing_factor(wing, wing.tracking_dps, k), 0.5, 1e-12, "at the weapon's tracking rate the odds are halved")
+	var last := 1.0
+	var mono := true
+	for i in range(1, 200):
+		var f := Combat.crossing_factor(wing, float(i), k)
+		mono = mono and f < last and f > 0.0
+		last = f
+	check(mono, "the factor falls at every degree a second and never reaches 0 (%s at 199 deg/s)" % str(last))
+	check(Combat.crossing_factor(wing, 0.5, k) > 0.99, "a drift of half a degree a second costs next to nothing (flat near 0)")
+	# A matched-speed tail chase: nothing crosses, the factor is 1 and the odds are the plain ones.
+	var chase := _pass(cannon, 300.0, 85.0, 85.0, 0.0)
+	near(float(chase["crossing_dps"]), 0.0, 1e-9, "a matched-speed chase: the line of sight is not turning")
+	eq(float((chase["factors"] as Dictionary)["crossing_rate"]), 1.0, "...the crossing factor is exactly 1")
+	var plain := _pass(cannon, 300.0, 85.0, 85.0, 0.0, ["centre", "range"])
+	near(float(chase["odds"]), float(plain["odds"]), 1e-12, "...so the odds are what they were without the factor")
+	var wobble := _pass(wing, 300.0, 85.0, 85.0, 3.0)
+	check(float((wobble["factors"] as Dictionary)["crossing_rate"]) > 0.99, "a target drifting 3 m/s sideways at 300 m (0.6 deg/s) keeps nearly all its odds (%.4f)" % float((wobble["factors"] as Dictionary)["crossing_rate"]))
+	# Closing speed costs nothing: head-on, and a fast overtaking chase.
+	var head_on := _pass(cannon, 300.0, 100.0, -100.0, 0.0)
+	near(float(head_on["closing_mps"]), -200.0, 1e-6, "head-on: the closing speed is 200 m/s")
+	eq(float((head_on["factors"] as Dictionary)["crossing_rate"]), 1.0, "...and costs nothing by itself")
+	var overtake := _pass(cannon, 300.0, 160.0, 85.0, 0.0)
+	near(float(overtake["closing_mps"]), -75.0, 1e-6, "overtaking at 160 against 85: closing at 75 m/s")
+	eq(float((overtake["factors"] as Dictionary)["crossing_rate"]), 1.0, "...also free")
+	# A 90 degree crossing pass: the shooter at 100 m/s, the target 300 m ahead crossing at 100 m/s.
+	var cross := _pass(cannon, 300.0, 100.0, 0.0, 100.0)
+	near(float(cross["crossing_dps"]), rad_to_deg(100.0 / 300.0), 1e-6, "a 90 degree pass at 300 m turns the line of sight at 19.1 deg/s")
+	var f_cross := float((cross["factors"] as Dictionary)["crossing_rate"])
+	check(f_cross < 0.2, "...far lower than a chase: the cannon keeps %.3f of its odds" % f_cross)
+	check(float(cross["odds"]) < 0.2 * float(plain["odds"]), "...odds %.4f against %.4f in the chase" % [float(cross["odds"]), float(plain["odds"])])
+	# The same crossing speed from farther away costs less (it is an angular rate).
+	var prev := 0.0
+	var farther := true
+	for d: float in [150.0, 200.0, 300.0, 400.0, 500.0]:
+		var fr := float((_pass(cannon, d, 100.0, 0.0, 100.0)["factors"] as Dictionary)["crossing_rate"])
+		farther = farther and fr > prev
+		prev = fr
+	check(farther, "the same 100 m/s crossing costs less the farther away it is (150 m up to 500 m)")
+	near(float(_pass(cannon, 150.0, 100.0, 0.0, 100.0)["crossing_dps"]), 2.0 * float(cross["crossing_dps"]), 1e-6, "half the distance, twice the angular rate")
+	# A turret loses less than a fixed gun on the same crossing: the tail turret and the
+	# wing guns, both 300 m from a target crossing at 100 m/s.
+	var w_cross := float((_pass(wing, 300.0, 100.0, 0.0, 100.0)["factors"] as Dictionary)["crossing_rate"])
+	var t_cross := float((_pass(tail, 300.0, 100.0, 0.0, 100.0)["factors"] as Dictionary)["crossing_rate"])
+	check(t_cross > 3.0 * w_cross, "on the same crossing the tail turret keeps %.3f of its odds, the fixed wing guns %.3f" % [t_cross, w_cross])
+	# The factor product: all three factors below 1 at once (the cannon at 650 m, off centre, crossing).
+	var p := Combat.pose(SHOOTER, cannon.hardpoints[0])
+	var tg := _target_from(p, cannon, 3.5, 0.0, 650.0)
+	tg["vx"] = 40.0
+	tg["vy"] = -30.0
+	var g := Combat.evaluate_pose(p, cannon, tg, _cr.odds_factors, _cr.factor_params())
+	var fs: Dictionary = g["factors"]
+	check(float(fs["centre"]) < 1.0 and float(fs["range"]) < 1.0 and float(fs["crossing_rate"]) < 1.0, "all three factors bite (%s)" % str(fs))
+	near(float(g["odds"]), cannon.base_hit_chance * float(fs["centre"]) * float(fs["range"]) * float(fs["crossing_rate"]), 1e-12, "odds = base x centre x range x crossing_rate")
+	near(float(fs["crossing_rate"]), Combat.crossing_factor(cannon, float(g["crossing_dps"]), k), 1e-12, "...the crossing term is the curve at the evaluated line-of-sight rate")
+	# Data off: the factor not listed has no effect, even with violent relative motion.
+	var off := _pass(cannon, 300.0, 100.0, 0.0, 100.0, ["centre", "range"])
+	check(not (off["factors"] as Dictionary).has("crossing_rate"), "factor not listed: it is not applied")
+	near(float(off["odds"]), float(plain["odds"]), 1e-12, "...and the odds are those of the stand-still case")
+	# No velocities given: no relative motion, no effect.
+	var still := Combat.evaluate_pose(p, cannon, _target_from(p, cannon, 0.0, 0.0, 300.0), _cr.odds_factors, _cr.factor_params())
+	eq(float((still["factors"] as Dictionary)["crossing_rate"]), 1.0, "a pose and a target without velocities have no relative motion")
+	# Everything moving the same way is no relative motion at all.
+	var together := _pass(cannon, 300.0, 160.0, 160.0, 0.0)
+	eq(float((together["factors"] as Dictionary)["crossing_rate"]), 1.0, "two planes flying the same velocity: nothing crosses at any speed")
+
+# A crossing pass through the whole turn: a light fighter heading east at 100 m/s, a bomber
+# 400 m ahead and 127 m south flying north at 85 m/s, so it crosses the fighter's nose after
+# about 1.5 s. The wing guns roll on every tick for the test. Every roll in it carries the line
+# of sight's turn rate and its odds are exactly base x centre x range x crossing.
+func _crossing_pass() -> void:
+	var w := _new_world(5)
+	var wing: CombatWeapon = w.unit_def("light_fighter").weapons[0]
+	wing.rolls_per_second = 4.0
+	_add(w, "fighter", "light_fighter", "allies", 1000.0, 2500.0, 0.0, 100.0, "medium")
+	_add(w, "bomber", "bomber", "axis", 1400.0, 2627.0, -PI * 0.5, 85.0, "medium")
+	w.units["fighter"].health = 1000
+	w.units["bomber"].health = 1000
+	var fires: Array = []
+	for ev: Dictionary in _of_type(_turn(w)["events"], "fire"):
+		if ev["unit"] == "fighter":
+			fires.append(ev)
+	if not check(fires.size() >= 3, "the crossing bomber is in the fighter's cone for a few ticks (%d rolls)" % fires.size()):
+		return
+	var worst := 0.0
+	var all_cross := true
+	var lowest_ratio := 1.0
+	for ev: Dictionary in fires:
+		var want: float = wing.base_hit_chance * Combat.centre_factor(wing, float(ev["r"])) * Combat.range_factor(wing, float(ev["distance"]), _cr.range_overshoot) * Combat.crossing_factor(wing, float(ev["crossing_dps"]), _cr.crossing_exponent)
+		worst = maxf(worst, absf(want - float(ev["odds"])))
+		all_cross = all_cross and float(ev["crossing_dps"]) > 5.0
+		lowest_ratio = minf(lowest_ratio, float(ev["odds"]) / wing.base_hit_chance)
+	check(worst < 1e-9, "every roll's odds are base x centre x range x crossing from its own event fields (largest error %s)" % str(worst))
+	check(all_cross, "the line of sight turns faster than 5 deg/s on every roll of the pass (first %.1f deg/s)" % float(fires[0]["crossing_dps"]))
+	check(lowest_ratio < 0.3, "the pass costs the fixed guns most of their odds (as low as %.3f of the base)" % lowest_ratio)
+	print("  crossing pass: %d rolls, line of sight turning %.1f to %.1f deg/s, odds as low as %.3f of the base" % [fires.size(), float(fires[0]["crossing_dps"]), float(fires[fires.size() - 1]["crossing_dps"]), lowest_ratio])
