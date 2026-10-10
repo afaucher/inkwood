@@ -181,14 +181,31 @@ static func art_for(st: RefCounted, silhouette: String, accent: Color, ppm: floa
 	var hi: float = st.num("unit_art.max_bake_ppm")
 	var q := snappedf(clampf(ppm, lo, hi), 0.01)
 	var variant := _variant_of(st, silhouette)
-	var key := "%s|%d|%s|%.2f" % [silhouette, variant, accent.to_html(), q]
+	# The pen is part of the art (outlines go through InkCanvas's pen), so it is part of the key.
+	var key := "%s|%d|%s|%.2f|%s" % [silhouette, variant, accent.to_html(), q, InkCanvas.pen_key()]
 	if _art.has(key):
-		return _art[key]
+		var hit: Art = _art[key]
+		_art.erase(key)   # LRU: a hit moves to the back, the front is evicted first
+		_art[key] = hit
+		return hit
 	if not can_bake():
 		return null
 	var art := _bake(st, model_for(st, silhouette), accent, q)
 	_art[key] = art
+	_trim(int(st.num("unit_art.cache_max")))
 	return art
+
+# The cache is bounded (unit_art.cache_max, data): a zoom bakes a new scale now
+# and then, and a cache that never evicts grew by one entry per zoom step
+# (measured 2026-10-09: 128 bakes in 120 frames of planning-time zooming, when
+# the ghosts asked for their own art every frame). Evicts the least recently
+# used; an art a marker holds stays alive through that reference.
+static func _trim(limit: int) -> void:
+	while _art.size() > maxi(limit, 1):
+		_art.erase(_art.keys()[0])
+
+static func cache_size() -> int:
+	return _art.size()
 
 # The sheet's model for a silhouette and variant: parameters and geometry, metres.
 static func model_for(st: RefCounted, silhouette: String, variant: int = -1) -> Model:
@@ -212,6 +229,8 @@ static func model_for(st: RefCounted, silhouette: String, variant: int = -1) -> 
 	_models[key] = m
 	return m
 
+# Forgets every baked art (a pen change makes them stale; a sandbox that ends
+# leaves none behind). Markers keep the art they hold until they ask again.
 static func clear_cache() -> void:
 	_art.clear()
 

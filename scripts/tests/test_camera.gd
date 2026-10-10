@@ -192,6 +192,36 @@ func _pan() -> void:
 	_ctl.follow(func() -> Variant: return Vector2(100.0, 100.0))
 	_ctl.pan_screen(Vector2(5.0, 0.0))
 	check(not _ctl.is_following(), "a manual pan stops following")
+	# A drag in progress is followed and ended in _input (a card under the pointer
+	# stops motion and swallows the release in the GUI phase): the press begins it in
+	# _unhandled_input, the rest never gets there.
+	for button: int in [MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT]:
+		var b4 := _ctl.world_px_to_screen(w)
+		var down := InputEventMouseButton.new()
+		down.button_index = button
+		down.pressed = true
+		down.position = Vector2(400.0, 300.0)
+		_ctl._unhandled_input(down)
+		var mv := InputEventMouseMotion.new()
+		mv.position = Vector2(430.0, 325.0)
+		mv.relative = Vector2(30.0, 25.0)
+		_ctl._input(mv)
+		near((_ctl.world_px_to_screen(w) - b4).distance_to(Vector2(30.0, 25.0)), 0.0, 1e-3, "button %d: motion is followed in _input" % button)
+		var up := InputEventMouseButton.new()
+		up.button_index = button
+		up.pressed = false
+		up.position = mv.position
+		_ctl._input(up)
+		var after_up := _ctl.world_px_to_screen(w)
+		mv.relative = Vector2(50.0, 0.0)
+		_ctl._input(mv)
+		_ctl._unhandled_input(mv)
+		near(_ctl.world_px_to_screen(w).distance_to(after_up), 0.0, 1e-9, "button %d: the release in _input ended the drag (later motion does nothing)" % button)
+	var idle := InputEventMouseMotion.new()
+	idle.relative = Vector2(40.0, 40.0)
+	var before_idle := _ctl.world_px_to_screen(w)
+	_ctl._input(idle)
+	near(_ctl.world_px_to_screen(w).distance_to(before_idle), 0.0, 0.0, "_input does nothing when no drag is in progress")
 
 func _drag(button: int, by: Vector2) -> void:
 	var down := InputEventMouseButton.new()

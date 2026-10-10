@@ -15,7 +15,7 @@
     "drag_buttons": { "value": ["middle", "right"], "_proposed": true, "_reason": "buttons that drag the map; the left button is left to the planner and the roster (Track U)" },
     "keys": { "value": { "left": ["A", "Left"], "right": ["D", "Right"], "up": ["W", "Up"], "down": ["S", "Down"], "zoom_in": ["E", "Equal"], "zoom_out": ["Q", "Minus"] }, "_proposed": true, "_reason": "physical key names (OS.find_keycode_from_string); WASD and arrows pan, Q/E and -/= zoom about the view centre" },
     "trackpad_px_per_unit": { "value": 16, "_proposed": true, "_reason": "screen px a trackpad two-finger pan moves per unit of its gesture delta" },
-    "map_margin_m": { "value": 300, "_proposed": true, "_reason": "how far past the map edge the view centre may go: enough to look at a plane that has just left the map (Track S: leaving is an event, not an error)" }
+    "map_margin_m": { "value": 1000, "_proposed": true, "_reason": "how far past the map edge the view centre may go: enough to look at a plane that has left the map (Track S: leaving is an event, not an error). Was 300; raised to 1000 in the 2026-10-09 fix pass (the lead's review): a fast plane covers 500 m in a turn, so 300 m could leave one already outside, and out of the camera's reach. The planner now also refuses Ready for a turn that would leave the map, carry-on steps included, so this is the margin for a plane that starts outside or leaves some other way" }
   },
 
   "follow": {

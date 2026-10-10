@@ -10,13 +10,14 @@
 
   "unit_art": {
     "_proposed": true,
-    "_reason": "The unit sheet's plane generators (reference/mockups/unit_sheet.html genPlane/buildPlane/drawPlane), ported to scripts/ui/unit_marker_art.gd. variant is the sheet's variant letter as an index (0 = a, the sheet's default view of each type); stipple is the sheet's stipple knob at its default. bake_margin_px holds the wobble and line width inside the texture. A marker is baked once per type, side and scale and re-baked only when the host's scale drifts past rebake_ratio either way (a zoom), never per frame; min/max_bake_ppm bound the bake.",
+    "_reason": "The unit sheet's plane generators (reference/mockups/unit_sheet.html genPlane/buildPlane/drawPlane), ported to scripts/ui/unit_marker_art.gd. variant is the sheet's variant letter as an index (0 = a, the sheet's default view of each type); stipple is the sheet's stipple knob at its default. bake_margin_px holds the wobble and line width inside the texture. A marker is baked once per type, side and scale and re-baked only when the host's scale drifts past rebake_ratio either way (a zoom), never per frame; min/max_bake_ppm bound the bake. cache_max (proposed 2026-10-09, fix pass) bounds the cache of baked arts, least recently used out first: three silhouettes x two sides at a few scales each is a dozen entries, so 48 is room to spare and a zoom can no longer grow it without limit.",
     "variant": { "light_fighter": 0, "heavy_fighter": 0, "bomber": 0 },
     "stipple": 1,
     "bake_margin_px": 4,
     "rebake_ratio": 1.15,
     "min_bake_ppm": 1.0,
-    "max_bake_ppm": 30.0
+    "max_bake_ppm": 30.0,
+    "cache_max": 48
   },
 
   "fonts": {

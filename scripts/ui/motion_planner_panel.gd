@@ -39,6 +39,7 @@ func setup(w: World, motion_planner: MotionPlanner, sel: RefCounted, player: Str
 	size = custom_minimum_size
 	if not world.plan_changed.is_connected(_redraw):
 		world.plan_changed.connect(_redraw)
+		planner.ready_refused.connect(_redraw)
 		world.phase_changed.connect(_redraw)
 		world.ready_changed.connect(func(_p: String, _r: bool) -> void: queue_redraw())
 		selection.changed.connect(_redraw)
@@ -186,7 +187,11 @@ func _draw() -> void:
 			line2 = "click or drag inside the fan" if placed == 0 else "%d planned; the rest carry on" % placed
 	UiInk.ink_line(self, PackedVector2Array([Vector2(pad, 34.0), Vector2(size.x - pad, 34.0)]), false, faint, 0.8, 5, 0.4)
 	UiInk.text(self, serif, Vector2(pad, 56.0), line1, st.num("fonts.name_px"), ink)
-	UiInk.text(self, italic, Vector2(pad, 74.0), line2, detail, soft)
+	if planner != null and planner.ready_notice != "" and world.phase == World.PHASE_PLANNING:
+		# Ready was refused (a turn that would leave the map): said in full ink, in place of the hint.
+		UiInk.text(self, italic, Vector2(pad, 74.0), planner.ready_notice, detail, ink, HORIZONTAL_ALIGNMENT_LEFT, size.x - 2.0 * pad)
+	else:
+		UiInk.text(self, italic, Vector2(pad, 74.0), line2, detail, soft)
 	UiInk.text(self, italic, Vector2(pad, 97.0), _altitude_caption(), detail, soft)
 	var b := buttons()
 	for name: String in b:

@@ -81,6 +81,7 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	map_parent.add_child(marker_layer)
 	marker_layer.setup(world, host_mapping, selection, style)
 	marker_layer.leader_target = _leader_target
+	planner.marker_layer = marker_layer   # the ghosts borrow the selected marker's art
 	marker_layer.playback_finished.connect(_on_playback_finished)
 
 	hud = Control.new()
@@ -131,6 +132,8 @@ func press_ready() -> void:
 		ready_pressed.emit(false)
 		return
 	var all := planner.ready_up()
+	if not world.is_ready(local_player):
+		return   # refused: the planner says why on the orders card (a turn that would leave the map)
 	ready_pressed.emit(all)
 	if all and auto_resolve:
 		world.resolve()   # turn_resolved -> the marker layer plays it
@@ -162,6 +165,22 @@ func map_release(p: Vector2) -> bool:
 
 func _to_map(viewport_pt: Vector2) -> Vector2:
 	return marker_layer.get_global_transform_with_canvas().affine_inverse() * viewport_pt
+
+# A step being dragged follows the pointer and ends on release WHEREVER the
+# pointer is, so those two events are taken here, before the GUI: a card (the
+# roster, the orders card) under the pointer stops mouse motion, which stalled
+# the drag, and swallowed the release, which left the step under the card. The
+# press that starts a drag stays in _unhandled_input: a card on top is clicked,
+# not planned through.
+func _input(event: InputEvent) -> void:
+	if world == null or planner == null or not planner.is_dragging():
+		return
+	if event is InputEventMouseMotion:
+		map_drag(_to_map((event as InputEventMouseMotion).position))
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT and not (event as InputEventMouseButton).pressed:
+		map_release(_to_map((event as InputEventMouseButton).position))
+		get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if world == null:

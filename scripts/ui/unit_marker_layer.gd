@@ -105,6 +105,12 @@ func sync_units() -> void:
 func marker(id: String) -> UnitMarker:
 	return markers.get(id)
 
+# Every marker bakes its art again (after UnitMarkerArt.clear_cache(): the pen
+# changed, say).
+func refresh_art() -> void:
+	for id: String in markers:
+		(markers[id] as UnitMarker).refresh_art()
+
 # The pose a unit is drawn at now: {x, y, heading, speed, altitude_band, height_m}.
 # During playback, where the last resolve had it at playback_t; otherwise where it is.
 func pose_of(id: String) -> Dictionary:

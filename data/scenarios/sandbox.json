@@ -41,6 +41,7 @@
     "start_pad_m": { "value": 110, "_proposed": true, "_reason": "A margin round every plane and its carry-on end in the opening view, so no plane sits on the edge of the free area" },
     "start_look_ahead_turns": { "value": 1, "_proposed": true, "_reason": "The opening view frames this many turns of carry-on flight beyond each plane, so the first screen shows where the planes are going" },
     "track_sample_s": { "value": 0.25, "_proposed": true, "_reason": "Tracks (the flown path of each plane, drawn for the whole game) are sampled from each turn's history this often" },
-    "track_line_px": { "value": 1.6, "_proposed": true, "_reason": "Track line width on screen; ink in the unit's side colour" }
+    "track_line_px": { "value": 1.6, "_proposed": true, "_reason": "Track line width on screen; ink in the unit's side colour" },
+    "bake_pause_overview": { "value": 0.5, "_proposed": true, "_reason": "The map view stops drawing new chunks once the topographic overview covers this much of the full render (data/view/camera.json far_zoom; the controller's overview_amount, 0 to 1). It was 0.999, which let the cache grow towards the whole map while the fade passed (about 530 MB: below zoom 0.2 at 1280 x 720, or at the start zoom in a 2560 x 1440 window); at 0.5 half the full render is already under the overview, and what is baked is kept. Added in the 2026-10-09 fix pass" }
   }
 }

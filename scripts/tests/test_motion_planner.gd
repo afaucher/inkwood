@@ -19,6 +19,13 @@ extends "res://scripts/test_support/test_case.gd"
 #      (Alex 2026-10-09); pressed again, Ready withdraws
 #   8. the turn plays: with the AI in, Ready resolves; the markers animate
 #      along the histories (World.sample) and the next turn begins
+#   9. THE MAP RULE FOR THE WHOLE TURN (fix pass 2026-10-09): Ready is refused
+#      while any step of a player unit's turn -- carry-on steps included --
+#      would end outside the map; the refusal names the plane, marks the first
+#      such step, selects the plane, and planning a turn lifts it; a plane that
+#      already starts outside is exempt
+#  10. a drag in progress follows the pointer and ends on release in _input,
+#      past a card that would stop the motion in the GUI phase
 
 const World = preload("res://scripts/sim/world.gd")
 const AiDumb = preload("res://scripts/sim/ai_dumb.gd")
@@ -166,6 +173,18 @@ func setup(_main) -> void:
 	key_ev.pressed = true
 	ui._unhandled_input(key_ev)
 	eq(pl.planned_count(), 0, "the undo key drops it")
+	# 10. A drag in progress is taken in _input (before the GUI: a card under the
+	# pointer would stop the motion and swallow the release). The press stays in
+	# _unhandled_input.
+	ui._unhandled_input(press_ev)
+	check(pl.is_dragging(), "10. the press starts a drag")
+	ui._input(move_ev)
+	ui._input(release_ev)
+	check(not pl.is_dragging(), "10. its release, taken in _input, ends it")
+	eq(pl.planned_count(), 1, "10. one step from a press, a drag in _input and a release in _input")
+	ui._input(move_ev)
+	eq(pl.planned_count(), 1, "10. _input does nothing when no drag is in progress")
+	pl.clear()
 	pl.place_point(a)
 
 	# 7. Ready.
@@ -213,7 +232,60 @@ func setup(_main) -> void:
 	var u1 = w.units["p1"]
 	check(ui.marker_layer.marker("p1").position.distance_to(xf * Vector2(float(u1.x), float(u1.y))) < 1e-3, "after playback the marker is where the unit is")
 	eq(pl.next_step_index(), 0, "a fresh plan for turn 2")
+	_check_ready_refusal()
 	finish()
+
+# 9. A plane 350 m from the east edge, heading east at 100 m/s: nothing planned,
+# its carry-on flight leaves the map at step 4.
+func _check_ready_refusal() -> void:
+	var w := World.new()
+	w.add_player("local")
+	w.add_unit({"id": "edge", "type": "light_fighter", "side": "allies", "controller": "player", "callsign": "Wizard",
+		"x": w.bounds.end.x - 350.0, "y": 2500.0, "heading": 0.0})
+	w.add_unit({"id": "safe", "type": "light_fighter", "side": "allies", "controller": "player",
+		"x": 2500.0, "y": 2500.0, "heading": 0.0})
+	var xf := Transform2D(0.0, Vector2(PPM, PPM), 0.0, -Vector2(4000.0, 2200.0) * PPM)
+	var ui := UnitUI.new()
+	add_child(ui)
+	ui.setup(w, xf, "local")
+	var pl := ui.planner
+	ui.select("safe")
+	var blocked := pl.ready_blocker()
+	check(not blocked.is_empty(), "9. a turn whose carry-on flight leaves the map has a blocker")
+	eq(blocked.get("unit"), "edge", "9. the blocker is the plane that leaves")
+	check(int(blocked.get("step", -1)) >= 1, "9. at a later step (%s)" % str(blocked.get("step")))
+	check(not bool(w.planned_states("edge")[0]["planned"]), "9. with nothing planned at all: the steps are all carry-on")
+	check(not w.in_bounds((blocked["at"] as Vector2).x, (blocked["at"] as Vector2).y), "9. and the point it names is off the map")
+	check(not pl.ready_up(), "9. Ready is refused")
+	check(not w.is_ready("local"), "9. and nobody is readied")
+	check(pl.ready_notice.contains("Wizard") and pl.ready_notice.contains("leave the map"), "9. the notice names the plane: '%s'" % pl.ready_notice)
+	check(pl.refused_world.is_finite() and pl.refused_world.distance_to(blocked["at"]) < 1e-6, "9. the 'off the map' cross is at the first such step")
+	print("[test] Ready refused at step %d, %.0f m past the edge: '%s'" % [int(blocked["step"]) + 1, (blocked["at"] as Vector2).x - w.bounds.end.x, pl.ready_notice])
+	eq(ui.selection.unit_id, "edge", "9. the plane is selected")
+	var presses: Array[bool] = []
+	ui.ready_pressed.connect(func(all: bool) -> void: presses.append(all))
+	ui.press_ready()
+	check(presses.is_empty() and not w.is_ready("local"), "9. the Ready key/button refuses too, and ready_pressed does not fire")
+	check(ui.orders.press_button("ready"), "9. the orders card's Ready is a button that can be pressed")
+	check(not w.is_ready("local"), "9. and it refuses")
+	# Planning a turn lifts it: every step steers for the middle of the map.
+	for k in w.steps_per_turn("edge"):
+		pl.place_point(Vector2(2500.0, 2500.0))
+	eq(pl.ready_notice, "", "9. planning the plane cleared the notice")
+	check(pl.ready_blocker().is_empty(), "9. and the plane's turn now stays on the map (%s)" % str(pl.ready_blocker()))
+	check(pl.ready_up(), "9. Ready now goes through (the only participant)")
+	check(w.is_ready("local"), "9. and the player is ready")
+	# A plane that already starts outside the map is exempt (it may not get back in within a turn).
+	var w2 := World.new()
+	w2.add_player("local")
+	w2.add_unit({"id": "stray", "type": "light_fighter", "side": "allies", "controller": "player",
+		"x": w2.bounds.end.x + 200.0, "y": 2500.0, "heading": 0.0})
+	var ui2 := UnitUI.new()
+	add_child(ui2)
+	ui2.setup(w2, xf, "local")
+	check(w2.units["stray"].out_of_bounds, "9. the stray plane starts outside the map")
+	check(ui2.planner.ready_blocker().is_empty(), "9. a plane that starts outside is exempt from the Ready rule")
+	check(ui2.planner.ready_up(), "9. and its player can ready")
 
 func _fan_middle(o: PackedVector2Array) -> Vector2:
 	var half := o.size() / 2

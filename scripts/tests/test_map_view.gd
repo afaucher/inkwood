@@ -16,6 +16,12 @@ extends "res://scripts/test_support/test_case.gd"
 #      the camera looks at is the viewport centre; and after a change of
 #      scale (set_px_per_m, the demo knob) the camera still looks at the same
 #      metres.
+#   3. THE CACHE CAP HOLDS (fix pass 2026-10-09): after a schedule pass the
+#      view keeps at most max(max_cached_chunks, the chunks in view) chunks,
+#      the view's own all among them, the furthest dropped first -- the keep
+#      ring used to stop eviction altogether, so the cache grew with the map.
+#   4. A CONTROLLED CAMERA IS LEFT ALONE: once use_camera() has handed the
+#      camera over, look_at_m, set_zoom, follow and the easing do nothing.
 
 const RenderParams = preload("res://scripts/world/render_params.gd")
 const MapView = preload("res://scripts/render/map_view.gd")
@@ -65,6 +71,7 @@ func _physics_process(_delta: float) -> void:
 			_frames = 0
 		2:
 			_check_round_trip("zoom 0.3")
+			_view.get_window().size = Vector2i(1280, 720)   # (a headless window is tiny; the cache check wants a real view)
 			_view.set_px_per_m(4.0)
 			_phase = 3
 			_frames = 0
@@ -72,9 +79,71 @@ func _physics_process(_delta: float) -> void:
 			eq(_view.px_per_m, 4.0, "set_px_per_m changes the scale")
 			_check_round_trip("zoom 0.3 at 4 px/m")
 			_check_centre(Vector2(4000.0, 900.0), "the camera stays on the same metres across a scale change")
+			_check_cache_cap()
+			_check_controlled_camera()
 			_view.queue_free()
 			_view = null
 			finish()
+
+# 3. A full cache (every chunk of the 20 x 20 map, as sprites) and a view of a
+# few chunks: one schedule pass (which requests, cancels and evicts) leaves the cap.
+func _check_cache_cap() -> void:
+	_view.look_at_m(Vector2(2500.0, 2500.0))
+	_view.set_zoom(0.3)
+	var cp: int = _view.chunk_px
+	var n := int(ceil(_view.map_rect().size.x / float(cp)))
+	var view: Rect2 = _view.view_rect()
+	var c0 := Vector2i(floori(view.position.x / cp), floori(view.position.y / cp))
+	var c1 := Vector2i(floori(view.end.x / cp), floori(view.end.y / cp))
+	var in_view := (c1.x - c0.x + 1) * (c1.y - c0.y + 1)
+	check(in_view >= 6 and in_view < 40, "3. the test view shows a few chunks (%d)" % in_view)
+	for cap: int in [in_view + 6, 4]:
+		_view.cfg["max_cached_chunks"] = cap
+		for c in _view._chunks.keys():
+			(_view._chunks[c] as Node).free()
+		_view._chunks.clear()
+		for cy in n:
+			for cx in n:
+				var s := Sprite2D.new()
+				_view.map_layer.add_child(s)
+				_view._chunks[Vector2i(cx, cy)] = s
+		_view._schedule()
+		var want := maxi(cap, in_view)
+		eq(_view.chunk_count(), want, "3. cap %d, %d chunks in view: %d chunks kept after a schedule pass (of %d)" % [cap, in_view, want, n * n])
+		eq(_view.missing_in_view(), 0, "3. and every chunk the view shows is among them")
+		if cap > in_view:
+			# The furthest went first: what stays is the view and the nearest ring round it.
+			var far := 0
+			for c: Vector2i in _view._chunks:
+				if c.x < c0.x - 3 or c.x > c1.x + 3 or c.y < c0.y - 3 or c.y > c1.y + 3:
+					far += 1
+			eq(far, 0, "3. nothing far from the view was kept while nearer chunks went")
+	for c in _view._chunks.keys():
+		(_view._chunks[c] as Node).free()
+	_view._chunks.clear()
+	_view._schedule()
+	check(_view.baker.pending() > 0, "3. with the cache empty, the schedule asks for chunks again")
+
+# 4.
+func _check_controlled_camera() -> void:
+	_view.input_enabled = false
+	_view.look_at_m(Vector2(2500.0, 2500.0))
+	_view.set_zoom(0.5)
+	var pos: Vector2 = _view.camera.position
+	var zoom: float = _view.camera.zoom.x
+	check(not _view.camera_controlled, "4. a view that only has its input off is still MapView's to move (tools and tests drive it)")
+	_view.use_camera(_view.camera)
+	check(_view.camera_controlled and not _view.input_enabled, "4. use_camera() hands the camera over")
+	_view.look_at_m(Vector2(100.0, 100.0))
+	_view.set_zoom(1.7)
+	_view.follow(Vector2(4000.0, 4000.0))
+	_view._target = Vector2(0.0, 0.0)   # a stale easing target must not move it either
+	_view._process(0.5)
+	near(_view.camera.position.distance_to(pos), 0.0, 0.0, "4. look_at_m, follow and the easing leave the controller's camera where it was")
+	near(_view.camera.zoom.x, zoom, 0.0, "4. and set_zoom leaves its zoom")
+	_view.camera.position = Vector2(-900.0, -900.0)   # the controller's pan margin reaches past the map
+	_view._process(0.5)
+	near(_view.camera.position.distance_to(Vector2(-900.0, -900.0)), 0.0, 0.0, "4. nothing clamps it back to the map")
 
 func _check_round_trip(label: String) -> void:
 	var worst := 0.0

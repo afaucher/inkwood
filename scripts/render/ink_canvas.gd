@@ -465,8 +465,9 @@ func stroke() -> void:
 	var alpha := stroke_color.a * global_alpha
 	if alpha <= 0.0:
 		return
-	if not _path_odd and _pen_applies(stroke_color):
-		_stroke_pen(alpha)
+	var pen := pen_config()   # once per stroke: one snapshot for the decision and the ribbon
+	if not _path_odd and _pen_applies(pen, stroke_color):
+		_stroke_pen(pen, alpha)
 		return
 	var w := line_width * _scale()
 	if w <= 1.0:
@@ -585,26 +586,43 @@ func draw_image_region_with_material(texture: Texture2D, src: Rect2, dest: Rect2
 
 # The pen as configured: mode, lit, shadow, open, taper_px, taper_frac, floor,
 # ink (Color), shadow_dir (Vector2, unit, world/device space). Read from data
-# on first use; thread-safe to read once loaded.
+# on first use. THREAD-SAFE: the bake workers read it while the main thread may
+# switch it (the sandbox's pen knob), so the shared Dictionary is only touched
+# under _pen_mutex. The returned Dictionary is a SNAPSHOT: configure_pen()
+# never edits one in place, it publishes a new one, so a caller that holds
+# this one (a stroke, a ribbon) sees a single consistent pen throughout. Read
+# it ONCE per stroke, not per use.
 static func pen_config() -> Dictionary:
+	_pen_mutex.lock()
 	if _pen.is_empty():
-		_pen_mutex.lock()
-		if _pen.is_empty():
-			_pen = _load_pen()
-		_pen_mutex.unlock()
-	return _pen
+		_pen = _load_pen()
+	var cfg := _pen
+	_pen_mutex.unlock()
+	return cfg
 
 # Overrides any of pen_config()'s keys for every canvas recorded afterwards.
+# Call it only when no bake is recording (the map view's baker.clear() waits for
+# its workers first -- Sandbox rebakes BEFORE it switches the pen); a stroke
+# already under way keeps the snapshot it took.
 static func configure_pen(overrides: Dictionary) -> void:
-	var cfg := pen_config().duplicate()
+	_pen_mutex.lock()
+	if _pen.is_empty():
+		_pen = _load_pen()
+	var cfg := _pen.duplicate()
 	cfg.merge(overrides, true)
 	_pen = cfg
+	_pen_mutex.unlock()
 
 static func set_pen_mode(mode: String) -> void:
 	configure_pen({"mode": mode})
 
 static func pen_mode() -> String:
 	return str(pen_config().get("mode", "even"))
+
+# The pen mode the DATA names (render_defaults.json linework.pen.mode), whatever
+# the live pen has been switched to since: what a "data" knob choice means.
+static func data_pen_mode() -> String:
+	return str(_load_pen().get("mode", "even"))
 
 # What a cached sprite drawn with the pen depends on: "" for the even pen, else
 # the mode and the shadow direction. Sprite caches add it to their keys.
@@ -678,16 +696,15 @@ static func _smooth(t: float) -> float:
 		return 1.0
 	return t * t * (3.0 - 2.0 * t)
 
-func _pen_applies(c: Color) -> bool:
-	var cfg := pen_config()
+func _pen_applies(cfg: Dictionary, c: Color) -> bool:
 	if str(cfg.get("mode", "even")) == "even":
 		return false
 	var ink: Color = cfg.get("ink", Color(0, 0, 0, 0))
 	return c.r8 == ink.r8 and c.g8 == ink.g8 and c.b8 == ink.b8
 
-# Ribbons for every subpath of the current path, painted as one call.
-func _stroke_pen(alpha: float) -> void:
-	var cfg := pen_config()
+# Ribbons for every subpath of the current path, painted as one call, with the
+# pen snapshot `cfg` stroke() took.
+func _stroke_pen(cfg: Dictionary, alpha: float) -> void:
 	var sc := _scale()
 	var base := line_width * sc
 	var tris := PackedVector2Array()
@@ -1127,7 +1144,14 @@ func _collect() -> Image:
 	_free()
 	return img
 
+# IDEMPOTENT: a canvas can be freed from two places -- the baker's _discard_job
+# (a bake cleared mid-flight: a scale, pen or pool knob, Esc, a closing window)
+# and the async read-back callback that still holds the canvas (collect_async's
+# `me`) -- and the second free must not free_rid what the first freed (each
+# produced an engine error per RID).
 func _free() -> void:
+	if _done:
+		return
 	_done = true
 	for i in range(_items.size() - 1, -1, -1):
 		RenderingServer.free_rid(_items[i])
@@ -1135,6 +1159,10 @@ func _free() -> void:
 	for rid in [_canvas_hi, _canvas_lo, _vp_hi, _vp_lo]:
 		if rid.is_valid():
 			RenderingServer.free_rid(rid)
+	_canvas_hi = RID()
+	_canvas_lo = RID()
+	_vp_hi = RID()
+	_vp_lo = RID()
 	_keep.clear()
 	_ops.clear()
 	_batch_tris = PackedVector2Array()

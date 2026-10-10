@@ -40,20 +40,39 @@ extends Node2D
 #     way back.
 #   * Editing a plan after Ready TAKES THE READY BACK (the player is un-readied
 #     and the edit is made), so the last Ready always plays the turn.
+#
+# THE MAP RULE APPLIES TO THE WHOLE TURN (fix pass, 2026-10-09): carry-on steps
+# are steps too, so Ready itself refuses while any step of any player unit's
+# turn -- planned or carry-on, World.planned_states -- would end outside the map
+# (ready_blocker / ready_up). The refusal marks the first such step with the same
+# "off the map" cross, selects the plane and puts "<name> would leave the map:
+# plan a turn" on the orders card (ready_notice) until a plan changes. A unit
+# that starts the turn already outside is exempt (PROPOSED): it may not be able
+# to get back in within one turn, and the rule would then lock Ready for good.
 
 signal plan_edited(unit_id: String)
+signal ready_refused(unit_id: String)   # Ready was refused for this unit (or "": the notice was cleared)
 
 const World = preload("res://scripts/sim/world.gd")
 const UiMapping = preload("res://scripts/ui/ui_mapping.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
+const Roster = preload("res://scripts/ui/roster.gd")
 
 var world: World = null
 var mapping: UiMapping = null
 var selection: RefCounted = null
 var style: UiStyle = null
 var local_player: String = "local"
+# The unit marker layer, when the planner sits beside one (UnitUI sets it): the
+# ghosts use the art the selected unit's own marker already holds, so a zoom
+# never makes the planner bake art of its own.
+var marker_layer: Object = null
+
+# Why Ready was refused (see the header), "" when it was not: the orders card
+# shows it. Cleared when a plan changes or the phase does.
+var ready_notice: String = ""
 
 # The last refused point (metres) and when (msec ticks): drawn for a moment.
 var refused_world := Vector2.INF
@@ -62,6 +81,7 @@ const REFUSED_SHOW_MS := 1600
 
 var _drag_index: int = -1
 var _paths: Dictionary = {}         # unit id -> Array of [PackedVector2Array world pts, planned: bool]
+var _own_art: Dictionary = {}       # unit id -> Art: only used when there is no marker layer to borrow from
 
 func setup(w: World, host_mapping: Variant, sel: RefCounted, player: String = "local", st: RefCounted = null) -> void:
 	style = (st if st != null else UiStyle.shared()) as UiStyle
@@ -288,10 +308,45 @@ func clear() -> void:
 
 # The Ready button: commit for the local player. True when everyone is ready
 # (the World does not resolve by itself; the owner -- UnitUI -- decides when).
+# False, and nobody readied, when a player unit's turn would leave the map (see
+# the header): ready_notice says which plane.
 func ready_up() -> bool:
 	if world == null or world.phase != World.PHASE_PLANNING:
 		return false
+	var blocked := ready_blocker()
+	if not blocked.is_empty():
+		_refuse_ready(blocked)
+		return false
+	ready_notice = ""
 	return world.commit(local_player)
+
+# The first step, of any player-controlled unit, that would end outside the map:
+# {unit, step, at (metres)} or {} when every step of every turn stays on it.
+# Planned and carry-on steps alike (World.planned_states); a unit that already
+# starts the turn outside the map is exempt (see the header).
+func ready_blocker() -> Dictionary:
+	if world == null:
+		return {}
+	for id: String in world.units:
+		var u = world.units[id]
+		if u.controller != World.CONTROLLER_PLAYER or bool(u.out_of_bounds):
+			continue
+		var st := world.planned_states(id)
+		for k in st.size():
+			var s: Dictionary = st[k]
+			if bool(s["out_of_bounds"]):
+				return {"unit": id, "step": k, "at": Vector2(float(s["x"]), float(s["y"]))}
+	return {}
+
+func _refuse_ready(blocked: Dictionary) -> void:
+	var id: String = blocked["unit"]
+	refused_world = blocked["at"]
+	refused_ms = Time.get_ticks_msec()
+	ready_notice = "%s would leave the map: plan a turn" % Roster.unit_name(world.units[id])
+	if selection != null and selection.unit_id != id:
+		selection.select(id)   # the plane that needs the plan, with its fan up
+	ready_refused.emit(id)
+	queue_redraw()
 
 # --- Pointer (screen points in this node's space) ------------------------------------
 
@@ -350,11 +405,15 @@ func release(screen_pt: Vector2) -> bool:
 
 func _on_plan_changed(id: String) -> void:
 	_paths.erase(id)
+	if ready_notice != "" and world.units.has(id) and world.units[id].controller == World.CONTROLLER_PLAYER:
+		ready_notice = ""
+		ready_refused.emit("")   # (the card redraws)
 	queue_redraw()
 
 func _on_phase_changed(_phase: String) -> void:
 	_paths.clear()
 	_drag_index = -1
+	ready_notice = ""
 	queue_redraw()
 
 func _on_selection(_id: String) -> void:
@@ -403,6 +462,7 @@ func _draw() -> void:
 		if id != sel and world.units[id].controller == World.CONTROLLER_PLAYER:
 			_draw_curve(id, style.num("planner.others_alpha"))
 	if sel == "" or not world.units.has(sel) or world.units[sel].controller != World.CONTROLLER_PLAYER:
+		_draw_refused()
 		return
 	_draw_ghosts(sel)
 	if can_plan(sel):
@@ -473,11 +533,11 @@ func _draw_ghosts(id: String) -> void:
 		var sp: Vector2 = mapping.world_to_screen(wp)
 		var ppm: float = mapping.px_per_m(wp)
 		var planned := bool(s["planned"])
-		var art: UnitMarkerArt.Art = UnitMarkerArt.art_for(style, u.def.silhouette, style.side_color(u.side),
-			ppm * style.num("marker.true_scale"))
+		var scale_k: float = style.num("marker.true_scale")
+		var art: UnitMarkerArt.Art = _ghost_art(id, u, ppm * scale_k)
 		if art != null and art.texture != null:
 			var a: float = style.num("planner.ghost_alpha") if planned else style.num("planner.carry_ghost_alpha")
-			var sc := ppm * style.num("marker.true_scale") / art.ppm
+			var sc := ppm * scale_k / art.ppm
 			draw_set_transform(sp, mapping.screen_angle(wp, float(s["heading"])) + PI / 2.0, Vector2(sc, sc))
 			draw_texture(art.texture, -art.origin, Color(1.0, 1.0, 1.0, a))
 			draw_set_transform_matrix(Transform2D.IDENTITY)
@@ -490,9 +550,33 @@ func _draw_ghosts(id: String) -> void:
 			label += ("  climb to " if up else "  dive to ") + band
 		if label != "":
 			# Lettering on the sun side of the ghost, clear of the curve's own shadow side.
-			var off: Vector2 = -style.shadow_dir() * (art.extent_m * ppm + 6.0 if art != null else 14.0)
+			var off: Vector2 = -style.shadow_dir() * (art.extent_m * ppm * scale_k + 6.0 if art != null else 14.0)
 			UiInk.text(self, font, sp + off + Vector2(-4.0, 0.0), label.strip_edges(), small, ink)
 		prev_band = band
+
+# The art a ghost of unit `id` is drawn with, scaled by the caller to the ghost's
+# own screen scale. It is the art the unit's MARKER holds (no bake at all, and
+# the marker already re-bakes only when the scale drifts past unit_art.rebake_ratio);
+# with no marker layer (the planner alone) it keeps one art of its own and
+# re-bakes it past the same ratio. Asking UnitMarkerArt.art_for every frame, as
+# this once did, baked a new art on almost every zoom step: art_for caches by the
+# scale rounded to 0.01 and each miss is a forced engine frame (measured
+# 2026-10-09: 128 bakes in 120 frames, 9.7 ms mean and 32 ms worst per frame).
+func _ghost_art(id: String, u: Object, want_ppm: float) -> UnitMarkerArt.Art:
+	if marker_layer != null:
+		var m: Object = marker_layer.marker(id)
+		if m != null and m.art != null:
+			return m.art
+	var held: UnitMarkerArt.Art = _own_art.get(id)
+	if held != null:
+		var ratio := want_ppm / held.ppm
+		var limit: float = style.num("unit_art.rebake_ratio")
+		if ratio <= limit and ratio >= 1.0 / limit:
+			return held
+	var art: UnitMarkerArt.Art = UnitMarkerArt.art_for(style, u.def.silhouette, style.side_color(u.side), want_ppm)
+	if art != null:
+		_own_art[id] = art
+	return art
 
 # The mark for a step refused for leaving the map: a cross where it was asked
 # for, with a short caption, for REFUSED_SHOW_MS.

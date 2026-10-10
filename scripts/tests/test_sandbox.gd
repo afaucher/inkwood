@@ -31,6 +31,10 @@ extends "res://scripts/test_support/test_case.gd"
 #      map view agree afterwards and the camera is still over the same metres.
 #   7. ESC: back to the menu, the UI style's two borrowed numbers restored; Local
 #      again builds a fresh sandbox.
+#   8. NO GLOBAL STATE LEAKS between sessions (fix pass 2026-10-09): the pen the
+#      "data" knob choice means is the DATA's, not the live global's; Esc puts the
+#      pen back as found; the loading card also locks the keys (Track U's and the
+#      camera's) until the first view is baked.
 
 const World = preload("res://scripts/sim/world.gd")
 const SandboxScenario = preload("res://scripts/app/sandbox_scenario.gd")
@@ -79,6 +83,11 @@ func setup(main) -> void:
 	if _sb == null:
 		finish()
 		return
+	# 8. The loading card blocks the mouse; the sandbox blocks the keys under it.
+	check(not _sb.is_playable, "8. the first view is not baked yet")
+	check(not _sb.ctl.input_enabled, "8. while the card is up the camera takes no input (WASD, Q/E, wheel, drag)")
+	check(not _sb.ui.is_processing_unhandled_input(), "8. and Track U takes none (Enter would ready and play turn 1 under the card)")
+	check(_sb.map_view.camera_controlled, "8. MapView's camera is the controller's: use_camera() was called")
 	check(not main.menu.visible, "and hides the menu")
 	check(main.start_sandbox(), "Local again is a no-op that still reports a sandbox")
 
@@ -115,7 +124,7 @@ func _check_scenario() -> void:
 	var bad := SandboxScenario.new("no_such_scenario", true)
 	check(not bad.ok(), "a scenario that is not there is an error, not a default")
 	# The view values the sandbox reads are all present.
-	for k: String in ["fog", "plane_px", "plane_min_px", "start_zoom_max", "start_pad_m", "start_look_ahead_turns", "track_sample_s", "track_line_px"]:
+	for k: String in ["fog", "plane_px", "plane_min_px", "start_zoom_max", "start_pad_m", "start_look_ahead_turns", "track_sample_s", "track_line_px", "bake_pause_overview"]:
 		check(sc.view.has(k), "view.%s is in the scenario" % k)
 
 # --- The frame loop --------------------------------------------------------------------------
@@ -153,6 +162,7 @@ func _go(next: String) -> void:
 func _inspect() -> void:
 	var w: World = _sb.world
 	eq(w.units.size(), 3, "the world has three units")
+	check(_sb.ctl.input_enabled and _sb.ui.is_processing_unhandled_input(), "8. once the first view is baked the keys are back (camera and Track U)")
 	var players: Array[String] = []
 	for id: String in w.units:
 		var u = w.units[id]
@@ -493,11 +503,16 @@ func _scale() -> void:
 # --- 7. Esc ----------------------------------------------------------------------------------------------
 
 func _esc() -> void:
+	# 8. The pen is global: switched by the knob, Esc must put it back.
+	DebugSettings.set_choice("pen", 1)
+	eq(InkCanvas.pen_mode(), "even", "8. the pen knob is on 'even' when Esc is pressed")
 	var ev := InputEventKey.new()
 	ev.keycode = KEY_ESCAPE
 	ev.physical_keycode = KEY_ESCAPE
 	ev.pressed = true
 	_main._unhandled_input(ev)
+	eq(InkCanvas.pen_mode(), "shadow_side", "8. Esc puts the pen back as it found it")
+	DebugSettings.set_choice("pen", 0)
 	eq(_main.sandbox, null, "Esc stops the sandbox")
 	check(_main.menu.visible, "and brings the menu back")
 	check(_sb.is_queued_for_deletion(), "the sandbox is freed")
@@ -509,7 +524,12 @@ func _esc() -> void:
 func _again() -> void:
 	if _phase_frames < 3:
 		return
+	# 8. A pen left switched by someone else is not what "data" means: the next
+	# session reads the data's pen, and puts back the one it found.
+	InkCanvas.set_pen_mode("even")
 	check(_main.start_sandbox(), "Local after Esc builds a fresh sandbox")
+	eq(InkCanvas.pen_mode(), "shadow_side", "8. the pen knob on 'data' means the data's pen, not the live one")
+	eq(str(_main.sandbox._data["pen"]), "shadow_side", "8. the sandbox's 'data' pen is read from render_defaults.json")
 	check(_main.sandbox != _sb, "a new one, not the freed one")
 	check(not _main.menu.visible, "and hides the menu again")
 	var w: World = _main.sandbox.world
@@ -517,4 +537,6 @@ func _again() -> void:
 	eq(w.units.size(), 3, "with its three units")
 	_main.stop_sandbox()
 	check(_main.menu.visible, "Esc once more: the menu")
+	eq(InkCanvas.pen_mode(), "even", "8. the pen is back as that session found it")
+	InkCanvas.set_pen_mode("shadow_side")
 	finish()

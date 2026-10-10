@@ -11,20 +11,30 @@ extends Node2D
 # THE API OTHER TRACKS USE (names fixed; Track U and F bind to them):
 #   world_to_screen(p_m: Vector2) -> Vector2   metres -> VIEWPORT pixels, camera included
 #   screen_to_world(p: Vector2) -> Vector2     viewport pixels -> metres
-#   look_at_m(p_m: Vector2)                    centre the view on a point (metres): A wires
-#                                              Track U's unit_focus_requested to it
+#   look_at_m(p_m: Vector2)                    centre the view on a point (metres) -- for a
+#                                              MapView that drives its OWN camera (tools,
+#                                              tests). With a camera controller (the sandbox)
+#                                              it does nothing: the controller's follow() /
+#                                              set_view() / frame_points() are the way, and a
+#                                              roster click (Track U's unit_focus_requested)
+#                                              goes to its follow, as sandbox.gd does
 #   camera: Camera2D                           the view's camera, a child, in MAP px. Track
 #                                              F's camera_controller.gd drives it (or another,
 #                                              via use_camera(cam)); MapView reads its bake
 #                                              window from whichever camera is current
-#   input_enabled: bool                        MapView's own fallback input; F sets false
+#   use_camera(cam)                            hand the camera to a controller: MapView's
+#                                              input is off and look_at_m, follow, set_zoom
+#                                              and the _process easing do nothing from then on
+#                                              (camera_controlled), so they cannot fight it
+#   input_enabled: bool                        MapView's own fallback input (WASD, drag, wheel)
 #   live_layer: Node2D                         above the map, in MAP px (zooms with it): for
 #                                              Track F's fog if it suits; U draws in screen
 #                                              space on its own CanvasLayers instead
 #   px_per_m, set_px_per_m(v)                  the scale; a live knob (1..4 tried): regenerate,
 #                                              rebake, camera kept on the same metres
 #   m_to_map(p_m) / map_to_m(p_px)             metres <-> map px
-#   follow(p_m or null), set_zoom(z), get_zoom(), view_rect(), missing_in_view(), rebake()
+#   follow(p_m or null), set_zoom(z)           the own-camera helpers (no-ops once controlled)
+#   get_zoom(), view_rect(), missing_in_view(), rebake()
 #   signal chunk_baked(c: Vector2i)
 #
 # COORDINATES: WORLD = metres (Track S's units: bounds, unit positions).
@@ -38,7 +48,13 @@ extends Node2D
 # of main-thread time (recording runs on worker threads, read-backs are
 # asynchronous), visible chunks first, then a ring of prefetch_chunks, and
 # terrain generated one more ring ahead; up to max_cached_chunks kept, the
-# furthest dropped first. A chunk not baked yet shows plain paper. Content
+# furthest dropped first -- the cap HOLDS (fix pass, 2026-10-09): a chunk is
+# asked for only if it fits under it, and the keep ring (keep_chunks) is only
+# what is left over, not a reason to go past it. The one exception is the view
+# itself: the chunks the view shows are never dropped for the cap (a window
+# that shows more than max_cached_chunks, 1080p near the far zoom, would else
+# show holes and never finish loading), so the cap is max(max_cached_chunks,
+# the chunks in view). A chunk not baked yet shows plain paper. Content
 # from chunk_terrain_provider.gd (Track T's terrain, the default) or
 # chunk_scene_provider.gd (the prototype stand-in): map_view.provider in data.
 # Chunk borders do not show: every object that reaches a chunk is drawn by it,
@@ -86,6 +102,9 @@ var edge_px := 10.0
 var edge_pan := true
 var input_enabled := true
 var bake_enabled := true
+# A camera controller has the camera (use_camera): the own-camera helpers below
+# stand down.
+var camera_controlled := false
 var follow_speed := 6.0      # 1/s: how fast the camera eases to its target
 
 var chunk_px := 1024
@@ -215,6 +234,7 @@ func view_rect() -> Rect2:
 # whatever camera is current. `cam`, if given, is made current.
 func use_camera(cam: Camera2D) -> void:
 	input_enabled = false
+	camera_controlled = true
 	_target = null
 	if cam != null and cam != camera:
 		external_camera = cam
@@ -225,6 +245,9 @@ var external_camera: Camera2D = null
 # --- camera ------------------------------------------------------------------------------
 
 func set_zoom(z: float) -> void:
+	if camera_controlled:
+		_controlled("set_zoom")
+		return
 	z = clampf(z, zoom_min, zoom_max)
 	camera.zoom = Vector2(z, z)
 
@@ -235,20 +258,32 @@ func get_zoom() -> float:
 		return get_global_transform_with_canvas().get_scale().x
 	return camera.zoom.x
 
-# Jumps the camera to a point (metres) -- this view's own camera, or the one
-# handed over with use_camera().
+# Jumps the camera to a point (metres) -- this view's own camera. Does nothing
+# once a controller has the camera (use_camera): its set_view() is the way.
 func look_at_m(p_m: Vector2) -> void:
-	_target = null
-	if external_camera != null:
-		external_camera.global_position = to_global(m_to_map(p_m))
+	if camera_controlled:
+		_controlled("look_at_m")
 		return
+	_target = null
 	var z := camera.zoom.x
 	camera.position = (_clamp_to_map(m_to_map(p_m)) * z).round() / z  # whole screen pixels (see _process)
 
 # Eases the camera to a point (metres) over the next frames: the way to
-# follow a unit through its turn animation. null stops following.
+# follow a unit through its turn animation. null stops following. Does nothing
+# once a controller has the camera (use_camera): its follow() is the way.
 func follow(p_m: Variant) -> void:
+	if camera_controlled:
+		_controlled("follow")
+		return
 	_target = null if p_m == null else _clamp_to_map(m_to_map(p_m))
+
+var _warned_controlled: Dictionary = {}
+
+# A helper was called that would move a camera a controller owns: say so once.
+func _controlled(helper: String) -> void:
+	if not _warned_controlled.has(helper):
+		_warned_controlled[helper] = true
+		push_warning("MapView.%s ignored: a camera controller owns the camera (use its set_view / follow)" % helper)
 
 func _clamp_to_map(p: Vector2) -> Vector2:
 	var r := map_rect()
@@ -287,9 +322,12 @@ func _update_background() -> void:
 
 func _process(delta: float) -> void:
 	# The camera is MapView's to move only while its own fallback controller
-	# is on (input_enabled) or it is following; otherwise whoever drives it
-	# (Track F's camera_controller.gd) owns position, limits and smoothing.
-	if input_enabled or _target != null:
+	# is on (input_enabled) or it is following, and no controller has been handed
+	# the camera (camera_controlled); otherwise whoever drives it (Track F's
+	# camera_controller.gd) owns position, limits and smoothing -- the easing and
+	# the clamp to the map below would fight it (its pan margin reaches past the
+	# map's edge).
+	if not camera_controlled and (input_enabled or _target != null):
 		if input_enabled:
 			_pan_input(delta)
 		if _target != null:
@@ -363,12 +401,25 @@ func _schedule() -> void:
 	var m1 := Vector2i(ceili(mr.end.x / chunk_px) - 1, ceili(mr.end.y / chunk_px) - 1)
 	var centre := view.get_center() / float(chunk_px)
 	var wanted: Dictionary = {}
+	var in_view := 0
 	for cy in range(maxi(c0.y - pre, m0.y), mini(c1.y + pre, m1.y) + 1):
 		for cx in range(maxi(c0.x - pre, m0.x), mini(c1.x + pre, m1.x) + 1):
 			var c := Vector2i(cx, cy)
 			var visible := cx >= c0.x and cx <= c1.x and cy >= c0.y and cy <= c1.y
 			var d := (Vector2(cx, cy) + Vector2(0.5, 0.5)).distance_to(centre)
 			wanted[c] = d + (0.0 if visible else 100.0)
+			if visible:
+				in_view += 1
+	# The cache cap holds (see the header): ask for no more chunks than fit under
+	# it, nearest first (the view's own always come first: their priority is
+	# below the prefetch ring's), or the ones baked would be dropped and baked
+	# again for ever.
+	var cap := maxi(int(cfg.get("max_cached_chunks", 64)), in_view)
+	if wanted.size() > cap:
+		var nearest := wanted.keys()
+		nearest.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return wanted[a] < wanted[b])
+		for i in range(cap, nearest.size()):
+			wanted.erase(nearest[i])
 	for c: Vector2i in wanted:
 		if not _chunks.has(c):
 			baker.request(c, wanted[c])
@@ -381,7 +432,7 @@ func _schedule() -> void:
 	for c: Vector2i in baker._queue.keys():
 		if not wanted.has(c):
 			baker.cancel(c)
-	_evict(view)
+	_evict(view, wanted, cap)
 
 func _show(c: Vector2i, tex: Texture2D) -> void:
 	if tex == null:
@@ -398,21 +449,30 @@ func _show(c: Vector2i, tex: Texture2D) -> void:
 	_chunks[c] = s
 	chunk_baked.emit(c)
 
-func _evict(view: Rect2) -> void:
-	var cap := int(cfg.get("max_cached_chunks", 64))
+# Drops chunks until at most `cap` are kept. Order of going: those outside the
+# keep ring (view grown by keep_chunks), furthest first; then those inside it that
+# nothing wants any more, furthest first; the ones `wanted` (the view and what the
+# cap leaves for prefetch) last, the least wanted first -- and since wanted holds
+# no more than `cap` chunks, those never have to go. (This used to stop at the
+# first chunk inside the keep ring, so the cache could grow without limit.)
+func _evict(view: Rect2, wanted: Dictionary, cap: int) -> void:
 	if _chunks.size() <= cap:
 		return
 	var keep := int(cfg.get("keep_chunks", 3))
 	var centre := view.get_center() / float(chunk_px)
-	var order := _chunks.keys()
-	order.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		return (Vector2(a) + Vector2(0.5, 0.5)).distance_to(centre) > (Vector2(b) + Vector2(0.5, 0.5)).distance_to(centre))
 	var reach := view.grow(keep * chunk_px)
-	for c: Vector2i in order:
-		if _chunks.size() <= cap:
-			break
-		if reach.intersects(Rect2(Vector2(c * chunk_px), Vector2(chunk_px, chunk_px))):
-			break
+	var scored: Array = []   # [keep value, chunk]: the lowest goes first
+	for c: Vector2i in _chunks:
+		var v: float
+		if wanted.has(c):
+			v = 2.0e6 - float(wanted[c])
+		else:
+			var inside := reach.intersects(Rect2(Vector2(c * chunk_px), Vector2(chunk_px, chunk_px)))
+			v = (1.0e6 if inside else 0.0) - (Vector2(c) + Vector2(0.5, 0.5)).distance_to(centre)
+		scored.append([v, c])
+	scored.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	for i in _chunks.size() - cap:
+		var c: Vector2i = scored[i][1]
 		(_chunks[c] as Node).queue_free()
 		_chunks.erase(c)
 

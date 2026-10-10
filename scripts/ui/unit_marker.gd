@@ -29,6 +29,7 @@ var shadow: Sprite2D           # lives in the layer's shadow group, not under th
 
 var screen_ppm: float = 1.0    # the host's px per metre where the unit is
 var screen_heading: float = 0.0
+var _checked_k: float = -1.0   # the marker.true_scale the art was last checked against
 var _style: UiStyle
 var _fallback_ink := Color.BLACK
 
@@ -61,13 +62,17 @@ func _exit_tree() -> void:
 func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_offset_px: Vector2) -> void:
 	position = screen_pos
 	screen_heading = heading_screen
-	if absf(ppm - screen_ppm) > 1e-6:
+	var k: float = _style.num("marker.true_scale")
+	# The art is baked for ppm x true_scale, so a change of EITHER re-checks it
+	# (the plane-size knob changes only true_scale: the art stayed blurry, or
+	# coarse, until the next zoom).
+	if absf(ppm - screen_ppm) > 1e-6 or k != _checked_k:
 		screen_ppm = ppm
+		_checked_k = k
 		_ensure_art()
 	elif art == null:
 		_ensure_art()
 	var rot := heading_screen + PI / 2.0  # the art's nose points to -y
-	var k: float = _style.num("marker.true_scale")
 	if art != null and art.texture != null:
 		var sc := Vector2.ONE * (screen_ppm * k / art.ppm)
 		plane.texture = art.texture
@@ -95,6 +100,12 @@ func _ensure_art() -> void:
 	var a: UnitMarkerArt.Art = UnitMarkerArt.art_for(_style, silhouette, accent, want)
 	if a != null:
 		art = a
+
+# Drops the art held and bakes it again at the current scale (the art cache was
+# cleared because the pen changed, or the scale rule did).
+func refresh_art() -> void:
+	art = null
+	_ensure_art()
 
 # Screen radius of the plane itself (for hits and the ring).
 func radius_px() -> float:

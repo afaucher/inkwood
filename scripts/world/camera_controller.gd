@@ -35,7 +35,10 @@ extends Node
 # metres the same-looking view covers. Limits in metres (pan.map_margin_m) and
 # the fit_map zoom-out limit follow; zoom.max and far_zoom stay in map px.
 #
-# INPUT (_unhandled_input, so the roster and the planner see events first).
+# INPUT (_unhandled_input, so the roster and the planner see events first). A
+# drag IN PROGRESS is followed and ended in _input instead (fix pass,
+# 2026-10-09): a card under the pointer stops mouse motion and swallows the
+# release, which stalled the drag and left it stuck on.
 # THE LEFT BUTTON IS TRACK U'S (click and drag inside a plane's fan plans its
 # motion): the controller never pans on it. Wheel and trackpad magnify zoom
 # about the cursor; the drag buttons (data: middle, right) and a trackpad pan
@@ -382,6 +385,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		_handled()
 	elif event is InputEventPanGesture:
 		pan_screen(-(event as InputEventPanGesture).delta * trackpad_px)
+		_handled()
+
+# The drag in progress: motion pans, the release of its button ends it, wherever
+# the pointer is (the press that began it went through _unhandled_input).
+func _input(event: InputEvent) -> void:
+	if not input_enabled or data == null or camera == null or _drag_button == -1:
+		return
+	if event is InputEventMouseMotion:
+		pan_screen((event as InputEventMouseMotion).relative)
+		_handled()
+	elif event is InputEventMouseButton and not (event as InputEventMouseButton).pressed \
+			and (event as InputEventMouseButton).button_index == _drag_button:
+		_drag_button = -1
 		_handled()
 
 func _handled() -> void:

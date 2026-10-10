@@ -39,6 +39,11 @@ extends "res://scripts/test_support/test_case.gd"
 #   7. FAST NOISE: scripts/render/fast_noise.gd gives exactly core/noise.gd's
 #      values (the drawing layer uses it for speed; the RNG draw counts above
 #      depend on it being exact).
+#   8. THE PEN IS THREAD-SAFE (fix pass 2026-10-09): pen_config() is a snapshot
+#      that a later switch does not edit; worker threads stroking while the main
+#      thread switches the mode never see a torn config or crash; data_pen_mode()
+#      is the data's, whatever the live pen is; freeing a canvas twice is
+#      harmless.
 
 const RenderParams = preload("res://scripts/world/render_params.gd")
 const SceneGen = preload("res://scripts/world/scene_gen.gd")
@@ -80,6 +85,7 @@ func setup(_main) -> void:
 	_check_parity_switch()
 	_check_pen()
 	_check_fast_noise()
+	_check_pen_threads()
 	print("test_render_layer: checks ran in %.0f ms" % ((Time.get_ticks_usec() - t0) / 1000.0))
 	finish()
 
@@ -338,6 +344,68 @@ static func _last_ribbon(c: InkCanvas) -> bool:
 	c._flush_batch()
 	var op: Array = c._ops[c._ops.size() - 1]
 	return op[0] == InkCanvas._OP_TRIS and bool(op[4])
+
+# --- 8. the pen across threads, and freeing a canvas twice ----------------------------------------
+
+var _pen_bad := 0
+
+func _stroke_loop(n: int) -> void:
+	var c := InkCanvas.new(Vector2i(32, 32), 1)
+	for i in n:
+		var cfg: Dictionary = InkCanvas.pen_config()
+		var mode := str(cfg.get("mode", ""))
+		if mode != "even" and mode != "shadow_side":
+			_pen_bad += 1
+		c.stroke_color = cfg.get("ink", Color.BLACK)
+		c.begin_path()
+		c.move_to(2.0, 2.0)
+		c.line_to(20.0, 6.0 + float(i % 7))
+		c.line_to(8.0, 24.0)
+		c.stroke()
+	c.discard()
+
+func _check_pen_threads() -> void:
+	var was := InkCanvas.pen_mode()
+	var snap: Dictionary = InkCanvas.pen_config()
+	var snap_mode := str(snap["mode"])
+	InkCanvas.set_pen_mode("even" if snap_mode != "even" else "shadow_side")
+	eq(str(snap["mode"]), snap_mode, "pen: a snapshot taken before a switch is not edited by it")
+	InkCanvas.set_pen_mode(was)
+	var data_mode := str(((JSON.parse_string(FileAccess.get_file_as_string(InkCanvas.PARAMS_PATH)) as Dictionary)["linework"]["pen"] as Dictionary)["mode"])
+	InkCanvas.set_pen_mode("even" if data_mode != "even" else "shadow_side")
+	eq(InkCanvas.data_pen_mode(), data_mode, "pen: data_pen_mode() is render_defaults.json's, whatever the live pen is")
+	InkCanvas.set_pen_mode(was)
+	# Four workers stroke while the main thread flips the mode.
+	_pen_bad = 0
+	var t0 := Time.get_ticks_msec()
+	var tasks: Array[int] = []
+	for i in 4:
+		tasks.append(WorkerThreadPool.add_task(_stroke_loop.bind(1500), true))
+	var flips := 0
+	for i in 3000:
+		InkCanvas.set_pen_mode("even" if i % 2 == 0 else "shadow_side")
+		flips += 1
+	for t in tasks:
+		WorkerThreadPool.wait_for_task_completion(t)
+	InkCanvas.set_pen_mode(was)
+	eq(_pen_bad, 0, "pen: 4 workers x 1500 strokes against %d mode switches (%d ms) never saw a torn config" % [flips, Time.get_ticks_msec() - t0])
+	# The cost of reading it, once per stroke: a lock and an unlock.
+	var t1 := Time.get_ticks_usec()
+	for i in 20000:
+		InkCanvas.pen_config()
+	var per_call_us := float(Time.get_ticks_usec() - t1) / 20000.0
+	print("[test] pen_config() under its lock: %.3f us per call" % per_call_us)
+	check(per_call_us < 20.0, "pen: reading the config under its lock is cheap (%.3f us)" % per_call_us)
+	# A canvas freed twice: the baker discards it, then its read-back callback frees it again.
+	var c := InkCanvas.new(Vector2i(16, 16), 1)
+	c.begin_path()
+	c.move_to(1.0, 1.0)
+	c.line_to(10.0, 10.0)
+	c.stroke()
+	c.discard()
+	c.discard()
+	c._free()
+	check(c._done, "canvas: discard() twice and _free() after it are harmless")
 
 # --- 7. fast noise --------------------------------------------------------------------------
 

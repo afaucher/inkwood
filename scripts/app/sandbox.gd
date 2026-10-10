@@ -39,6 +39,12 @@ extends Node2D
 # pan; Q/E (and -/=) zoom (Track F, data/view/camera.json); F2 the knobs; Esc
 # the menu (scripts/app/main.gd). Track U's keys: Enter, Backspace, Delete,
 # PageUp/PageDown, Tab -- no clash.
+#
+# WHILE "Drawing the map..." IS UP the card blocks the mouse and _lock_input()
+# blocks the rest: Track U's keys (Enter would have readied and played turn 1
+# under the card) and the camera's (WASD, Q/E, wheel, drag). The camera is the
+# controller's from the start: MapView.use_camera() stands MapView's own camera
+# helpers down, so they cannot fight it.
 
 signal playable
 signal failed(message: String)
@@ -56,6 +62,7 @@ const CameraController = preload("res://scripts/world/camera_controller.gd")
 const FogLayer = preload("res://scripts/render/fog_layer.gd")
 const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
 const UnitUI = preload("res://scripts/ui/unit_ui.gd")
+const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 
 const SCENARIO_ID := "sandbox"
@@ -106,6 +113,8 @@ var _load_t0 := 0
 var _rebaking := false
 var _rebake_t0 := 0
 var _saved_style: Dictionary = {}
+var _saved_pen := ""                  # the pen mode before this sandbox: put back at shutdown
+var _bake_pause_overview := 0.5       # view.bake_pause_overview: the overview amount that pauses baking
 var _data_ppm := 2.0
 var _data := {}                       # knob key -> what "data" means (text)
 var _window: Array[float] = []        # the last frame times, for frame_line()
@@ -149,11 +158,14 @@ func _build() -> void:
 	ai.attach()
 
 	# The knobs that must be set before anything bakes: scale, pen, tree pool.
-	_data["pen"] = InkCanvas.pen_mode()
+	# "data" for the pen is what the DATA says (render_defaults.json linework.pen.mode),
+	# not whatever the live global pen happens to be: a pen left switched by an earlier
+	# session must not become this one's "data". The pen it finds is put back at shutdown.
+	_saved_pen = InkCanvas.pen_mode()
+	_data["pen"] = InkCanvas.data_pen_mode()
 	var ppm := _effective_ppm()
 	var pen := _choice("pen")
-	if pen != "data":
-		InkCanvas.set_pen_mode(pen)
+	InkCanvas.set_pen_mode(str(_data["pen"]) if pen == "data" else pen)
 
 	terrain = Terrain.new(scenario.seed_value)
 	terrain.px_per_m = ppm
@@ -178,7 +190,7 @@ func _build() -> void:
 		return
 	ctl.bind(map_view.camera)
 	map_view.add_child(ctl)
-	map_view.input_enabled = false
+	map_view.use_camera(map_view.camera)   # the controller's from here: MapView's own helpers stand down
 	var inset: float = _style.num("roster.width_px") + 2.0 * _style.num("card.margin_px")
 	if get_viewport().get_visible_rect().size.x < inset * 2.5:
 		inset = 0.0   # a window too narrow to keep a free area beside the sidebar (a headless test's)
@@ -258,6 +270,8 @@ func _build() -> void:
 	_load_t0 = Time.get_ticks_msec()
 	_load_total = _view_chunk_total()
 	_update_plane_scale()
+	_bake_pause_overview = scenario.view_num("bake_pause_overview")
+	_lock_input(true)   # until the first view is baked (_finish_loading)
 
 func _fail(message: String) -> void:
 	errors.append(message)
@@ -283,15 +297,20 @@ func _process(delta: float) -> void:
 		_check_rebake()
 	_record_frame(delta)
 
-# Fully zoomed out the topographic overview covers the baked map entirely
-# (Track F), so the full render of the whole map -- 100 chunks of 4 MB -- is not
-# worth baking: MapView only bakes while any of the full render shows through.
+# Zoomed out, the topographic overview covers the baked map (Track F), so the
+# full render of the whole map -- 100 chunks of 4 MB -- is not worth baking:
+# MapView only bakes while at least half of the full render shows through
+# (view.bake_pause_overview, data). It paused at 0.999 once, and the cache grew
+# towards the whole map, about 530 MB, while the fade passed (below zoom 0.2 at
+# 1280 x 720, or at the start zoom in a 2560 x 1440 window).
 func _pause_baking_at_overview() -> void:
 	if headless:
 		return
-	var want: bool = ctl.overview_amount() < 0.999
+	var want: bool = ctl.overview_amount() < _bake_pause_overview
 	if map_view.bake_enabled != want:
 		map_view.bake_enabled = want
+		if want and (_rebaking or not is_playable):
+			_load_total = _view_chunk_total()   # baking resumes: the card counts this view's chunks
 
 # Controls mounted straight in a CanvasLayer (Track U's HUD, the loading card)
 # take their size from the viewport through anchors, and in the real window
@@ -331,8 +350,21 @@ func _update_fog() -> void:
 
 # --- Loading -----------------------------------------------------------------------------
 
+# Chunks of the view still to bake -- none while baking is paused (zoomed out
+# under the overview): waiting for chunks that are not being drawn left
+# "Redrawing the map..." up for ever.
+func _missing() -> int:
+	return map_view.missing_in_view() if map_view.bake_enabled else 0
+
+# Locks (or unlocks) the keys the loading card cannot catch: Track U's and the camera's.
+func _lock_input(locked: bool) -> void:
+	if ui != null:
+		ui.set_process_unhandled_input(not locked)
+	if ctl != null:
+		ctl.input_enabled = not locked
+
 func _check_loading() -> void:
-	var missing: int = map_view.missing_in_view()
+	var missing: int = _missing()
 	var secs := (Time.get_ticks_msec() - _load_t0) / 1000.0
 	loading.set_progress(maxi(_load_total - missing, 0), _load_total, secs)
 	if headless or (missing == 0 and _frames > 3):
@@ -340,6 +372,7 @@ func _check_loading() -> void:
 
 func _finish_loading() -> void:
 	is_playable = true
+	_lock_input(false)
 	loading.visible = false
 	hint.start()
 	load_ms = float(Time.get_ticks_msec() - created_ms)
@@ -348,7 +381,7 @@ func _finish_loading() -> void:
 	playable.emit()
 
 func _check_rebake() -> void:
-	var missing: int = map_view.missing_in_view()
+	var missing: int = _missing()
 	var secs := (Time.get_ticks_msec() - _rebake_t0) / 1000.0
 	note.set_progress(maxi(_load_total - missing, 0), _load_total, secs)
 	if headless or (missing == 0 and _frames > 3):
@@ -529,8 +562,14 @@ func _apply_knob(key: String, startup: bool) -> void:
 				fog.vision.set_line_of_sight(str(_data["line_of_sight"]) if c == "data" else c)
 		"pen":
 			if not startup:
-				InkCanvas.set_pen_mode(str(_data["pen"]) if c == "data" else c)
+				# REBAKE FIRST: map_view.rebake() -> baker.clear() waits for the worker
+				# threads, which read the pen on every stroke; switching it while they
+				# run was a race. Then the pen, then everything that was inked with the
+				# old one: the unit art (cleared, markers re-bake) and the fog's layer.
 				_begin_rebake()
+				InkCanvas.set_pen_mode(str(_data["pen"]) if c == "data" else c)
+				UnitMarkerArt.clear_cache()
+				ui.marker_layer.refresh_art()
 				fog.set_terrain(terrain)   # its topographic layer is inked with the same pen
 		"far_zoom":
 			var mode := str(_data["far_zoom"]) if c == "data" else c
@@ -584,7 +623,7 @@ func _category() -> String:
 		return "rebaking"
 	var what := "playing" if (ui != null and ui.marker_layer.is_playing()) else "planning"
 	# Chunks still being baked for the view the camera has moved to cost frames of their own.
-	return what + "+baking" if map_view.missing_in_view() > 0 else what
+	return what + "+baking" if _missing() > 0 else what
 
 func _record_frame(delta: float) -> void:
 	var ms := delta * 1000.0
@@ -620,7 +659,9 @@ func frame_line() -> String:
 # --- Teardown ----------------------------------------------------------------------------------------
 
 # Everything a run changed outside its own nodes put back: the UI style's two
-# numbers, the knob signal; the map view's bake jobs dropped.
+# numbers, the knob signal; the map view's bake jobs dropped (which waits for
+# the workers, so the pen can be put back safely after); the global pen; the
+# unit-art cache, whose entries were baked with it.
 func shutdown() -> void:
 	if DebugSettings.changed.is_connected(_on_knob_changed):
 		DebugSettings.changed.disconnect(_on_knob_changed)
@@ -629,6 +670,9 @@ func shutdown() -> void:
 			_style.set_num(k, float(_saved_style[k]))
 	if is_instance_valid(map_view) and map_view.baker != null:
 		map_view.baker.clear()
+	if _saved_pen != "":
+		InkCanvas.set_pen_mode(_saved_pen)
+	UnitMarkerArt.clear_cache()
 	if is_instance_valid(ctl):
 		ctl.stop_follow()
 
