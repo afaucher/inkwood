@@ -458,6 +458,64 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Dead planes should either explode mid air or lose control by players and crash eventually.'"
+    },
+    {
+      "id": "remote-edits-keep-ready",
+      "date": "2026-10-09",
+      "area": "Co-op and turns",
+      "question": "If another player edits a plan after I am Ready, is my Ready withdrawn?",
+      "board": "none (question from Track U2's report)",
+      "options": [
+        "withdraw everyone's Ready",
+        "only the editor's own Ready is withdrawn"
+      ],
+      "chosen": "other players' edits do not unready you",
+      "parameters": {
+        "rule": "an edit withdraws only the editing player's Ready"
+      },
+      "applied_to": [
+        "scripts/net/world_sync.gd (Track N)",
+        "scripts/ui (Track U2), in progress"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Other player edits should not unready you.'"
+    },
+    {
+      "id": "roster-group-needs-orders",
+      "date": "2026-10-09",
+      "area": "UI, Roster",
+      "question": "Does the roster get a filter or grouping for units that need orders?",
+      "board": "none (question from Track U2's report)",
+      "options": [
+        "a header count only",
+        "a filter",
+        "a group-by"
+      ],
+      "chosen": "a group-by for needs orders",
+      "parameters": {},
+      "applied_to": [
+        "scripts/ui/roster.gd (Track U2), in progress"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'We want a group by for needs orders.'"
+    },
+    {
+      "id": "health-ring-own-planes",
+      "date": "2026-10-09",
+      "area": "UI, Health",
+      "question": "Is the health arc on the selection ring drawn for enemy planes too?",
+      "board": "none (question from Track U2's report)",
+      "options": [
+        "own planes only",
+        "own and enemy planes"
+      ],
+      "chosen": "own planes only, for now",
+      "parameters": {},
+      "applied_to": [
+        "scripts/ui/health_arc.gd (Track U2)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'The health ring can stay on our planes for now.'"
     }
   ]
 }
