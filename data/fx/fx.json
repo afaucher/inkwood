@@ -619,9 +619,9 @@
       "_reason": "the lead's working default until Alex chooses from variants/flak/ (PROPOSED by Track X2: the recommendation recorded in that board)"
     },
     "bomb": {
-      "value": "B1",
-      "_proposed": true,
-      "_reason": "the working default until Alex chooses from variants/bomb-impact/ (PROPOSED by Track X2)"
+      "value": "B3",
+      "decision": "bomb-impact",
+      "_reason": "Alex 2026-10-10 on variants/bomb-impact/: 'B3 · Shock ring, pale-lipped crater'"
     },
     "ruin": {
       "value": "R1",

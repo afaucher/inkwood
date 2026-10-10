@@ -832,7 +832,9 @@ func _check_strike(data: FxData, st: FxStyle) -> void:
 	check(missing.is_empty(), "every colour role a strike option names exists: %s" % str(missing.slice(0, 4)))
 	for k: String in ["flak", "bomb", "ruin"]:
 		var wd: Dictionary = (data.raw.get("working_default") as Dictionary).get(k)
-		check(wd.get("_proposed") == true, "the working default %s is a proposed record, not a decision" % k)
+		# Either still a proposed working default, or Alex's choice naming its decision (bomb: B3, decision bomb-impact).
+		check(wd.get("_proposed") == true or str(wd.get("decision", "")) != "", "the working default %s is a proposed record or names Alex's decision" % k)
+	eq(str(((data.raw.get("working_default") as Dictionary).get("bomb") as Dictionary).get("value")), "B3", "the bomb impact is Alex's B3 (decision bomb-impact)")
 	for rname: String in data.role_names():
 		if rname.begins_with("flak.") or rname.begins_with("bomb.") or rname.begins_with("ruin."):
 			var c: Color = st.color(rname)
@@ -1277,7 +1279,9 @@ func _check_strike_boards() -> void:
 		var d: Dictionary = j
 		eq(d.get("id"), id, "%s: its id" % id)
 		eq(int(d.get("seed", 0)), 20261009, "%s: seed 20261009" % id)
-		check(d.has("chosen") and d["chosen"] == null, "%s: nothing is chosen" % id)
+		# Alex chose B3 on the bomb-impact board (decision bomb-impact); the other two are still open.
+		var want: Variant = "B3" if id == "bomb-impact" else null
+		check(d.has("chosen") and d["chosen"] == want, "%s: chosen is %s" % [id, str(want)])
 		var rec: Variant = d.get("recommendation")
 		check(rec is Dictionary and (rec as Dictionary).get("_proposed") == true and str((rec as Dictionary).get("option", "")) != "", "%s: the recommendation is labelled proposed" % id)
 		eq((d.get("options", []) as Array).size(), 4, "%s: four options" % id)
