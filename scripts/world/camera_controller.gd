@@ -212,26 +212,52 @@ func center() -> Vector2:
 
 # The hard zoom-out limit: the whole map in the view ("fit_map"), a number, or
 # in "full_render" far mode far_zoom.full_render_min_zoom. Never above zoom_max.
+# "fit_map" fits the map into the FREE part of the view, the view less the HUD insets
+# (the roster sidebar): v = view_size - (left + right, top + bottom), so at full
+# zoom-out the sidebar does not cover the map (first fight, rough edge; Track U2's spec).
 func zoom_limit_min() -> float:
 	var z: float
 	if far_mode == FAR_FULL:
 		z = full_render_min
 	elif zoom_min_spec is String:
-		var v := view_size()
+		var v := free_size()
 		z = minf(v.x / maxf(map_rect_px.size.x, 1.0), v.y / maxf(map_rect_px.size.y, 1.0)) / fit_margin
 	else:
 		z = float(zoom_min_spec)
 	return minf(z, zoom_max)
 
+# The view less the HUD insets: the screen area the map may use (at least 1 px each way).
+func free_size() -> Vector2:
+	var v := view_size()
+	return Vector2(maxf(v.x - float(insets.left) - float(insets.right), 1.0), maxf(v.y - float(insets.top) - float(insets.bottom), 1.0))
+
+# How far the centre of the free area is from the centre of the view, in screen px:
+# (left - right, top - bottom) / 2. The map's centre appears there at the zoom-out limit.
+func inset_offset() -> Vector2:
+	return Vector2(float(insets.left) - float(insets.right), float(insets.top) - float(insets.bottom)) * 0.5
+
+# Is `z` the "fit_map" zoom-out limit: the whole map on show, so the view is centred on it?
+func is_fit_zoom(z: float) -> bool:
+	return far_mode != FAR_FULL and zoom_min_spec is String and z <= zoom_limit_min() * (1.0 + 1e-9)
+
 func clamp_zoom(z: float) -> float:
 	return clampf(z, zoom_limit_min(), zoom_max)
 
-# Sets centre (map px) and zoom, clamped: zoom to the range, the centre to the
-# map grown by pan.map_margin_m.
+# Sets centre (map px) and zoom, clamped: zoom to the range, and the centre of the FREE
+# area (the view less the HUD insets) to the map grown by pan.map_margin_m. At the
+# "fit_map" zoom-out limit the free area is centred on the map: pos = map centre -
+# (left - right, top - bottom) / (2 zoom), so the sidebar does not cover it. With no
+# insets this is the plain clamp of the camera's centre.
 func set_view(c: Vector2, z: float) -> void:
 	var zz := clamp_zoom(z)
 	var lim := map_rect_px.grow(map_margin_px)
-	var cc := Vector2(clampf(c.x, lim.position.x, lim.end.x), clampf(c.y, lim.position.y, lim.end.y))
+	var shift := inset_offset() / zz     # the camera centre sits this far from the free area's centre
+	var free_c := c + shift
+	var cc: Vector2
+	if is_fit_zoom(zz):
+		cc = map_rect_px.get_center() - shift
+	else:
+		cc = Vector2(clampf(free_c.x, lim.position.x, lim.end.x), clampf(free_c.y, lim.position.y, lim.end.y)) - shift
 	if cc == camera.position and zz == camera.zoom.x:
 		return
 	camera.position = cc
@@ -297,8 +323,13 @@ func is_following() -> bool:
 
 # --- framing -------------------------------------------------------------------------------
 
+# The screen space the HUD covers (UnitUI.hud_insets()): framing leaves it out, the
+# zoom-out limit fits the map into what is left, and the zoom-out view is centred on it
+# (zoom_limit_min, set_view). The view is clamped again at once, as the limit moves.
 func set_insets(left: float, top: float, right: float, bottom: float) -> void:
 	insets = {"left": left, "top": top, "right": right, "bottom": bottom}
+	if camera != null and data != null:
+		set_view(camera.position, camera.zoom.x)
 
 # The screen rectangle framing fits into: the view minus the HUD insets and the margin.
 func frame_rect() -> Rect2:

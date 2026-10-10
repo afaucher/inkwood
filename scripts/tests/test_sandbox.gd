@@ -1,6 +1,8 @@
 extends "res://scripts/test_support/test_case.gd"
 
-# THE SANDBOX DEMO, ASSEMBLED (Track A): the menu's Local button starts it, the
+# THE SANDBOX DEMO, ASSEMBLED (Track A): (the OLD flight-toy scenario, data/scenarios/
+# sandbox.json -- the 'scenario' knob is set to it here; Local starts the first fight's
+# Intercept by default, which scripts/tests/test_intercept.gd covers) the menu's Local button starts it, the
 # parts are wired, a minute of flight runs, Esc comes back. Headless, so no
 # pixels (scripts/app/demo_shot.gd is the windowed proof); what is checked is
 # every join the parts were never tested across:
@@ -62,10 +64,13 @@ var _p1 := ""
 var _p2 := ""
 var _ai := ""
 var _looped_back := false
+var _saved_scenario := 0
 
 func setup(main) -> void:
 	timeout_seconds = 240.0
 	_main = main
+	_saved_scenario = DebugSettings.get_choice("scenario")
+	DebugSettings.set_choice("scenario", 1)   # "sandbox": the flight toy, not the first fight
 	_check_scenario()
 	var st: UiStyle = UiStyle.shared() as UiStyle
 	_style_true_scale = st.num("marker.true_scale")
@@ -98,6 +103,8 @@ func _check_scenario() -> void:
 	if not check(sc.ok(), "the sandbox scenario reads cleanly: %s" % str(sc.errors)):
 		return
 	eq(sc.seed_value, 20261009, "the scenario's seed is the prototype's fixed seed")
+	eq(sc.ai_kind, "dumb", "the old sandbox keeps AiDumb")
+	check(sc.mission_spec.is_empty(), "and has no mission (it never ends)")
 	eq(sc.units.size(), 3, "three units")
 	var players := 0
 	var ais := 0
@@ -124,7 +131,7 @@ func _check_scenario() -> void:
 	var bad := SandboxScenario.new("no_such_scenario", true)
 	check(not bad.ok(), "a scenario that is not there is an error, not a default")
 	# The view values the sandbox reads are all present.
-	for k: String in ["fog", "plane_px", "plane_min_px", "start_zoom_max", "start_pad_m", "start_look_ahead_turns", "track_sample_s", "track_line_px", "bake_pause_overview"]:
+	for k: String in ["fog", "plane_px", "plane_min_px", "start_zoom_max", "start_pad_m", "start_look_ahead_turns", "start_frame_objective", "track_sample_s", "track_line_px", "bake_pause_overview", "result_card_delay_s"]:
 		check(sc.view.has(k), "view.%s is in the scenario" % k)
 
 # --- The frame loop --------------------------------------------------------------------------
@@ -539,4 +546,5 @@ func _again() -> void:
 	check(_main.menu.visible, "Esc once more: the menu")
 	eq(InkCanvas.pen_mode(), "even", "8. the pen is back as that session found it")
 	InkCanvas.set_pen_mode("shadow_side")
+	DebugSettings.set_choice("scenario", _saved_scenario)
 	finish()

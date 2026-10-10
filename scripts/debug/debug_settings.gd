@@ -45,9 +45,9 @@ const OPTIONS := {
 	"autostart": {
 		"section": "Diagnostics",
 		"label": "Autostart",
-		"choices": ["off", "local", "local_shot", "host", "join", "host_shot", "join_shot"],
+		"choices": ["off", "local", "local_shot", "host", "join", "host_shot", "join_shot", "host_game", "join_game"],
 		"default": 0,
-		"help": "'local' presses the menu's Local button at launch; 'local_shot' also saves one frame of the running sandbox (INKWOOD_SHOT_OUT, else user://autostart.png) once it is playable, and quits. For checking an exported build without a tool that drives the window. 'host' / 'join' press Host / Join the same way (the transport is the 'net' knob); 'host_shot' / 'join_shot' also run the two-window check (proposed, Track N): wait for the other window, plan one plane each, wait until each window shows the other's plan, save a frame to INKWOOD_SHOT_OUT and quit.",
+		"help": "'local' presses the menu's Local button at launch; 'local_shot' also saves one frame of the running sandbox (INKWOOD_SHOT_OUT, else user://autostart.png) once it is playable, and quits. For checking an exported build without a tool that drives the window. 'host' / 'join' press Host / Join the same way (the transport is the 'net' knob); 'host_shot' / 'join_shot' also run the two-window check (proposed, Track N): wait for the other window, plan one plane each, wait until each window shows the other's plan, save a frame to INKWOOD_SHOT_OUT and quit. 'host_game' / 'join_game' (Track A, proposed) play the first fight to its END in the two windows (a frame of the result card in each), then Play again from the joiner, and a frame of the new game.",
 	},
 	# --- Network (Track N, proposed) -----------------------------------------------
 	"net": {
@@ -65,6 +65,14 @@ const OPTIONS := {
 		"min": 1024,
 		"max": 65535,
 		"help": "The UDP port Host binds and Join connects to when the transport is 'enet' (NetworkManager.DEFAULT_PORT). INKWOOD_NET_PORT=28790.",
+	},
+	# --- Scenario (Track A, first fight, proposed) -------------------------------------
+	"scenario": {
+		"section": "Sandbox",
+		"label": "Scenario",
+		"choices": ["intercept", "sandbox"],
+		"default": 0,
+		"help": "Which data/scenarios/<id>.json Local, Host and Join start. 'intercept' is the first fight (an AI bomber and its escort, a mission, a result card); 'sandbox' is the old flight toy (AiDumb, no mission). Read when a game is built, so set it before pressing Local: INKWOOD_SCENARIO=sandbox. Not a live knob (it is not on the F2 panel).",
 	},
 	# --- Sandbox knobs (Track A; the F2 panel shows them) ---------------------------
 	# Index 0 is always "data": whatever the data files say (data/scenarios/

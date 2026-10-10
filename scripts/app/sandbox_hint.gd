@@ -2,8 +2,10 @@ extends Control
 
 # A line of small ink lettering at the bottom left for the first seconds of the
 # sandbox -- the keys the demo answers to (Track A, proposed) -- then it fades.
-# Never takes a click.
+# Never takes a click. With a `headline` (a scenario's briefing) the card has a second,
+# larger line above the keys: what the game is about.
 #
+#   hint.headline = "INTERCEPT - ..."  # optional
 #   hint.setup(style, "F2 knobs   Esc menu ...", 14.0)
 #   hint.start()                      # when the map is playable
 
@@ -14,6 +16,7 @@ const FADE_S := 3.0
 
 var style: UiStyle = null
 var text := ""
+var headline := ""
 var show_s := 14.0
 var _t := -1.0
 
@@ -44,8 +47,17 @@ func _draw() -> void:
 	var px: float = style.num("fonts.detail_px")
 	var w := UiInk.text_width(font, text, px)
 	var m: float = style.num("card.margin_px")
-	var r := Rect2(Vector2(m, size.y - m - px - 12.0), Vector2(w + 20.0, px + 14.0))
+	var head_px: float = px + 2.0
+	var head_w := UiInk.text_width(style.font(false), headline, head_px) if headline != "" else 0.0
+	var h := px + 14.0 + (head_px + 8.0 if headline != "" else 0.0)
+	var r := Rect2(Vector2(m, size.y - m - h), Vector2(maxf(w, head_w) + 20.0, h))
 	var fill: Color = style.color("card_fill")
 	fill.a *= a * 0.9
 	draw_rect(r, fill, true)
-	UiInk.text(self, font, Vector2(r.position.x + 10.0, r.position.y + px + 3.0), text, px, ink)
+	var y := r.position.y
+	if headline != "":
+		var head_ink: Color = style.color("ink")
+		head_ink.a *= a
+		UiInk.text(self, style.font(false), Vector2(r.position.x + 10.0, y + head_px + 4.0), headline, head_px, head_ink)
+		y += head_px + 8.0
+	UiInk.text(self, font, Vector2(r.position.x + 10.0, y + px + 3.0), text, px, ink)

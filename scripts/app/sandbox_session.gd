@@ -85,6 +85,46 @@ func on_playable() -> void:
 func shutdown() -> void:
 	_down = true
 
+# --- Play again, for everyone (Track A, proposed) ----------------------------------------------------
+#
+# The simplest correct way to restart a networked game: a restart is a NEW sandbox on every
+# machine (the map is rebuilt, which is the 10-15 s the first view takes), joined the way a
+# game is joined the first time -- so it needs no new rule in WorldSync. Whoever presses Play
+# again on the result card asks the host (a client by rpc_request_restart; the host just does
+# it); the host rebuilds its sandbox and, once the new one exists, tells every client
+# (rpc_restart), each of which rebuilds its own and says hello to the new host World when its
+# first view is baked. Both RPCs are on THIS node, so the new sandbox's Session (the same path
+# on every machine) receives them. The sandbox emits restart_requested; whoever owns the
+# sandboxes (scripts/app/main.gd) replaces them.
+
+# A player pressed Play again on the result card.
+func request_restart() -> void:
+	if role == "client":
+		if multiplayer.multiplayer_peer != null and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+			rpc_request_restart.rpc_id(WorldSync.HOST_ID)
+	else:
+		sandbox.call("ask_restart")
+
+# The host, from the sandbox that REPLACED the finished one: every client rebuilds too.
+func announce_restart() -> void:
+	if role == "host" and multiplayer.multiplayer_peer != null:
+		rpc_restart.rpc()
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_restart() -> void:
+	if role != "host" or _down:
+		return
+	# Only a finished game is restarted on a request: a second player's press arriving after the host
+	# already restarted (the new game is "playing") is a stale one.
+	if bool(sandbox.call("result_decided")):
+		sandbox.call("ask_restart")
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_restart() -> void:
+	if role != "client" or _down or multiplayer.get_remote_sender_id() != WorldSync.HOST_ID:
+		return
+	sandbox.call("ask_restart")
+
 func _process(_delta: float) -> void:
 	if not _down:
 		_refresh()
@@ -161,12 +201,69 @@ func run_check(out: String, timeout_s: float = 90.0) -> String:
 		await get_tree().process_frame
 	return _save(out.get_basename() + "_turn2." + out.get_extension())
 
+# THE TWO-WINDOW GAME (INKWOOD_AUTOSTART=host_game / join_game, Track A, proposed): the first fight
+# played to its END across two windows. Each turn the HOST plans both fighters to circle in place (any
+# player edits any plan: the plans go to the client over the wire), and once this window shows those
+# plans both windows ready; nobody fights, so the bomber reaches the target (a loss) in about twelve turns.
+# Then it waits for this window's result card and saves a frame of it to `out`. Returns "" on success.
+func run_game(out: String, timeout_s: float = 900.0) -> String:
+	var t0 := Time.get_ticks_msec()
+	var w: World = sync.world
+	if not await _until(func() -> bool: return sync.is_joined() and w.players.size() >= 2, t0, timeout_s):
+		return "the other window never joined (players: %s, joined: %s)" % [str(w.players), str(sync.is_joined())]
+	for i in 40:
+		await get_tree().process_frame
+	var last := 0
+	while not bool(sandbox.call("result_decided")):
+		var came: bool = await _until(func() -> bool: return bool(sandbox.call("result_decided")) \
+			or (w.phase == World.PHASE_PLANNING and not bool(ui.call("is_playing")) and w.turn > last), t0, timeout_s)
+		if not came:
+			return "the turn after %d never came (phase %s, ready: %s)" % [last, w.phase, str(w.ready)]
+		if bool(sandbox.call("result_decided")):
+			break
+		last = w.turn
+		print("[Session] %s: planning turn %d" % [role, last])
+		if role == "host":
+			for id: String in w.units:
+				if w.units[id].controller == World.CONTROLLER_PLAYER and not w.units[id].down:
+					for i in w.steps_per_turn(id):
+						w.plan_step(id, i, {"turn": 1.5})
+		# Two frames for the edits to go out BEFORE the Ready: WorldSync takes the host player's Ready back when the
+		# flush of an edit made in the same frame runs inside the Ready (a human cannot do both in one frame).
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var planned: bool = await _until(func() -> bool:
+			for id: String in w.units:
+				if w.units[id].controller == World.CONTROLLER_PLAYER and not w.units[id].down and (w.units[id].plan as Array).is_empty():
+					return false
+			return true, t0, timeout_s)
+		if not planned:
+			return "never saw the host's plans for turn %d" % last
+		ui.call("press_ready")
+	var card: bool = await _until(func() -> bool: return bool(sandbox.call("result_card_shown")), t0, timeout_s)
+	if not card:
+		return "the result card never came up (result: %s)" % str(sandbox.get("result"))
+	for i in 40:
+		await get_tree().process_frame
+	print("[Session] %s: the game ended on turn %d: %s" % [role, int(sandbox.get("result")["turn"]), str(sandbox.get("result")["reason"])])
+	return _save(out)
+
 func _until(cond: Callable, t0: int, timeout_s: float) -> bool:
+	var last_say := Time.get_ticks_msec()
 	while not cond.call():
 		if float(Time.get_ticks_msec() - t0) / 1000.0 > timeout_s:
 			return false
+		# A wait that lasts is said aloud every ten seconds, so a stalled two-window run says where.
+		if Time.get_ticks_msec() - last_say > 10000:
+			last_say = Time.get_ticks_msec()
+			var w: World = sync.world
+			print("[Session] %s still waiting: turn %d, %s, ready %s, playing %s" % [role, w.turn, w.phase, str(w.ready), str(ui != null and bool(ui.call("is_playing")))])
 		await get_tree().process_frame
 	return true
+
+# A frame of this window to `path` ("" on success, else why not).
+func save_frame(path: String) -> String:
+	return _save(path)
 
 func _save(path: String) -> String:
 	var img := get_viewport().get_texture().get_image()

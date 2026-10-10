@@ -23,6 +23,11 @@ extends "res://scripts/test_support/test_case.gd"
 #   FOLLOW   following eases toward the unit and snaps with smoothing 0.
 #   FAR      overview_amount is 1 below topo_below_zoom, 0 above
 #            full_above_zoom, 0 always in "full_render" mode.
+#   INSETS   (first fight, rough edge "the roster clear of the map at full zoom-out")
+#            the HUD insets: "fit_map" fits the map into the free area (the view less
+#            the insets), the zoom-out view is centred on it -- pos = map centre -
+#            (left - right, top - bottom) / (2 zoom) -- so the sidebar does not cover
+#            the map; the pan clamp is on the free area's centre; no insets, no change.
 
 const Terrain = preload("res://scripts/world/terrain.gd")
 const World = preload("res://scripts/sim/world.gd")
@@ -59,6 +64,7 @@ func setup(_main) -> void:
 	_follow()
 	_far()
 	_scale_knob()
+	_insets()
 	# The last check needs a drawn frame: the engine's canvas transform.
 	_ctl.set_view(_at(0.45, 0.55), 0.4)
 	_ctl.zoom_at(0.9, _anchor)
@@ -313,6 +319,67 @@ func _scale_knob() -> void:
 		near(_ctl.zoom_limit_min(), lo0 * ppm0 / ppm, 1e-9, "px_per_m %s: fit_map's zoom-out limit follows the map's size in px" % ppm)
 		near(_ctl.map_margin_px, _ctl.data.num("pan.map_margin_m") * ppm, 1e-9, "px_per_m %s: the pan margin is metres x px_per_m" % ppm)
 	near(_ctl.world_to_screen(centre_m).distance_to(_ctl.view_size() * 0.5), 0.0, 0.01, "metres map to the same screen point after the round trip")
+
+# --- the HUD insets: the roster must not cover the map at full zoom-out ---------------------------------
+
+func _insets() -> void:
+	var map := _ctl.map_rect_px
+	var cases: Array = [
+		# [left, top, right, bottom, why]
+		[0.0, 0.0, 700.0, 0.0, "a sidebar at the right wide enough for the width to bind"],
+		[0.0, 0.0, 354.0, 0.0, "the sidebar as the sandbox sets it (roster 300 + margins), height binds"],
+		[120.0, 60.0, 400.0, 90.0, "insets on every side"],
+	]
+	for c: Array in cases:
+		var L: float = c[0]
+		var T: float = c[1]
+		var R: float = c[2]
+		var B: float = c[3]
+		_ctl.set_insets(L, T, R, B)
+		var v := Vector2(SIZE)
+		var free := v - Vector2(L + R, T + B)
+		# 1. The limit fits the map into the free area (spec: z = min(v.x / map.x, v.y / map.y) / fit_margin).
+		var want := minf(free.x / map.size.x, free.y / map.size.y) / _ctl.fit_margin
+		near(_ctl.zoom_limit_min(), want, 1e-9, "insets %s: 'fit_map' fits the map into the free area (%s)" % [str([L, T, R, B]), c[4]])
+		# 2. Zoomed out as far as it goes, the view is centred on the free area: pos = map centre - (L - R, T - B) / (2 zoom).
+		_ctl.set_view(map.get_center() + Vector2(900.0, -700.0), 1e-6)
+		var z := _ctl.zoom_level()
+		near(z, want, 1e-6 * want, "insets %s: zoomed right out the zoom is the limit" % str([L, T, R, B]))
+		var expect := map.get_center() - Vector2(L - R, T - B) / (2.0 * z)
+		near(_ctl.center().distance_to(expect), 0.0, 1e-3, "insets %s: the view is centred so that the map's centre is the free area's centre" % str([L, T, R, B]))
+		# 3. And the whole map lies inside the free area (the sidebar covers none of it).
+		var tl := _ctl.world_px_to_screen(map.position)
+		var br := _ctl.world_px_to_screen(map.end)
+		var free_rect := Rect2(L, T, free.x, free.y)
+		check(free_rect.grow(0.5).has_point(tl) and free_rect.grow(0.5).has_point(br), "insets %s: the map (%s to %s) is inside the free area %s, clear of the HUD" % [str([L, T, R, B]), tl.round(), br.round(), free_rect])
+		# 4. The wheel, zooming out about a corner cursor, ends at the same view.
+		_ctl.set_view(_at(0.8, 0.2), 0.2)
+		for i in 60:
+			_ctl.zoom_by(1.0 / _ctl.wheel_step, Vector2(30.0, 30.0))
+		near(_ctl.center().distance_to(expect), 0.0, 1e-3, "insets %s: zooming out with the wheel (about a corner) ends on the same centred view" % str([L, T, R, B]))
+		# 5. In between, the clamp is on the free area's centre: pushed far, it stops at the map's edge plus the margin.
+		_ctl.set_view(map.get_center(), 0.5)
+		_ctl.set_view(Vector2(1e7, -1e7), 0.5)
+		var free_c := _ctl.center() + _ctl.inset_offset() / 0.5
+		var lim := map.grow(_ctl.map_margin_px)
+		near(free_c.x, lim.end.x, 1e-3, "insets %s: the free area's centre stops at the map's east edge plus the margin" % str([L, T, R, B]))
+		near(free_c.y, lim.position.y, 1e-3, "insets %s: and at the north edge plus the margin" % str([L, T, R, B]))
+	# Framing is unchanged by this and still leaves the insets out.
+	_ctl.set_insets(0.0, 0.0, 354.0, 0.0)
+	check(_ctl.frame_rect().end.x <= SIZE.x - 354.0 + 1e-9, "frame_rect still leaves the insets out")
+	# No insets: the limit and the clamp are exactly what they were.
+	_ctl.set_insets(0.0, 0.0, 0.0, 0.0)
+	var plain := minf(SIZE.x / map.size.x, SIZE.y / map.size.y) / _ctl.fit_margin
+	near(_ctl.zoom_limit_min(), plain, 1e-12, "no insets: the plain fit_map limit")
+	_ctl.set_view(map.get_center() + Vector2(500.0, 500.0), 1e-6)
+	near(_ctl.center().distance_to(map.get_center()), 0.0, 1e-9, "no insets: right out, the view is centred on the map")
+	# 'full_render' far mode keeps its number as the limit, insets or not, and only the clamp follows them.
+	var d := CameraData.new(CameraData.CAMERA_PATH)
+	d.root["far_zoom"]["mode"]["value"] = "full_render"
+	_ctl = _make(d)
+	_ctl.set_insets(0.0, 0.0, 354.0, 0.0)
+	near(_ctl.zoom_limit_min(), d.num("far_zoom.full_render_min_zoom"), 1e-12, "'full_render' with insets: the limit is still full_render_min_zoom")
+	_ctl = _make()
 
 # --- far zoom ---------------------------------------------------------------------------------------
 

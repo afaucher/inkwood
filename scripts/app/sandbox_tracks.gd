@@ -16,11 +16,21 @@ extends Node2D
 # of a side with a player-controlled unit is always drawn; any other unit's
 # track only where `point_visible` says that ground is in sight right now.
 #
+# THE WINGTIP TRAIL TAKES THE LAST TURN (decision wingtip-trails, Alex 2026-10-10: "yes, the
+# trail is to the current position"; trails on every moving unit): a unit with a wingtip
+# trail (scripts/ui/wingtip_trails.gd, drawn by UnitUI) has this whole-flight line stop where
+# the trail BEGINS, `trail_start` (UnitUI.trail_start_t: game seconds, NAN when the unit has no
+# trail) -- the start of the last resolved turn while planning, a rolling window behind the
+# marker while a turn plays back -- so the last turn is drawn once, by the trail, which runs up
+# to the plane. The dot where a turn ended is drawn only while it lies on this line. A unit with
+# no trail (the mode is none, or it does not apply) keeps its line to the plane.
+#
 #   var tracks := SandboxTracks.new()
 #   mount.add_child(tracks)                     # below Track U's markers
 #   tracks.setup(world, map_view, marker_layer, style, 0.25, 1.6)
 #   tracks.reveals = func(id): ...              # optional: whose tracks are always drawn
 #   tracks.point_visible = func(p_m): ...       # optional: the fog's plain query
+#   tracks.trail_start = ui.trail_start_t       # optional: where each unit's wingtip trail begins
 
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 
@@ -32,6 +42,7 @@ var sample_s := 0.25
 var line_px := 1.6
 var reveals: Callable = Callable()
 var point_visible: Callable = Callable()
+var trail_start: Callable = Callable()      # unit id -> game seconds its wingtip trail begins at (NAN: none)
 
 # unit id -> {pts: PackedVector2Array (metres), t: PackedFloat64Array (game seconds),
 #             marks: PackedInt32Array (index of the point that ends each turn), color: Color}
@@ -95,15 +106,43 @@ func _on_turn_resolved(turn_no: int, _histories: Dictionary, _events: Array) -> 
 func _process(_delta: float) -> void:
 	queue_redraw()   # the camera moves; the drawing is a few hundred points
 
+# How far the playback of the last resolved turn has got, in game seconds: INF when none is playing
+# (every recorded point may be drawn). The turn being played is the one resolved last: its game time
+# starts at _last_turn_end - turn_seconds.
+func playback_limit() -> float:
+	if playback != null and bool(playback.is_playing()):
+		return _last_turn_end - float(world.rules.turn_seconds) + float(playback.playback_t)
+	return INF
+
+# The game time the flight line of `unit_id` is drawn up to: the playback's reach (`playback_limit`),
+# and never past where the unit's wingtip trail begins (`trail_start`; NAN: it has none).
+func line_limit(unit_id: String, playback_reach: float = INF) -> float:
+	var lim := playback_reach
+	if trail_start.is_valid():
+		var from_trail := float(trail_start.call(unit_id))
+		if not is_nan(from_trail):
+			lim = minf(lim, from_trail)
+	return lim
+
+# How many recorded points of the unit's line are drawn right now (fog aside): those up to line_limit.
+func drawn_points(unit_id: String) -> int:
+	if not tracks.has(unit_id):
+		return 0
+	var ts: PackedFloat64Array = tracks[unit_id].t
+	var lim := line_limit(unit_id, playback_limit())
+	var n := 0
+	for t: float in ts:
+		if t > lim:
+			break
+		n += 1
+	return n
+
 func _draw() -> void:
 	if world == null or host == null or tracks.is_empty():
 		return
 	var xf: Transform2D = host.get_global_transform_with_canvas()
 	var ppm: float = host.px_per_m
-	var limit := INF
-	if playback != null and bool(playback.is_playing()):
-		# The turn being played is the one resolved last: its game time starts at _last_turn_end - turn_seconds.
-		limit = _last_turn_end - float(world.rules.turn_seconds) + float(playback.playback_t)
+	var limit := playback_limit()
 	var ink: Color = style.color("ink")
 	for id: String in tracks:
 		var tr: Dictionary = tracks[id]
@@ -114,8 +153,9 @@ func _draw() -> void:
 		var ts: PackedFloat64Array = tr.t
 		var run := PackedVector2Array()
 		var drawn_to := -1
+		var id_limit := line_limit(id, limit)
 		for i in pts.size():
-			if ts[i] > limit:
+			if ts[i] > id_limit:
 				break
 			drawn_to = i
 			var visible := always or not point_visible.is_valid() or bool(point_visible.call(pts[i]))

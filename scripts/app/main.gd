@@ -7,7 +7,14 @@ extends Node2D
 # own: the menu's Local button starts the SANDBOX (scripts/app/sandbox.gd, the
 # sandbox demo assembled -- LOADED here, not preloaded, so a parse error in any
 # part fails Local and the sandbox's own test, never every test through this
-# file), and Esc goes back to the menu.
+# file), and Esc goes back to the menu. WHICH scenario it plays is the 'scenario'
+# knob (INKWOOD_SCENARIO): the first fight's Intercept by default, "sandbox" for
+# the old flight toy. Local, Host and Join all start it.
+#
+# THE RESULT CARD's two buttons come back here: Play again (the sandbox's
+# restart_requested) replaces the sandbox with a fresh one of the same scenario and role
+# -- on a host the new sandbox tells every client to do the same
+# (scripts/app/sandbox_session.gd) -- and Menu (menu_requested) is Esc.
 
 const BuildVersion = preload("res://scripts/ui/build_version.gd")
 
@@ -139,7 +146,9 @@ func _net_port() -> int:
 #
 # `role` (Track N, proposed): "" is Local; "host" or "client" starts the same
 # sandbox in the session NetworkManager just opened (_on_session_started).
-func start_sandbox(role: String = "") -> bool:
+# `replacing` (Track A, proposed): this sandbox takes the place of a finished one in the
+# same session (Play again), so a host tells its clients to do the same.
+func start_sandbox(role: String = "", replacing: bool = false) -> bool:
 	if sandbox != null:
 		return true
 	_local_pressed_ms = Time.get_ticks_msec()
@@ -149,6 +158,7 @@ func start_sandbox(role: String = "") -> bool:
 		return false
 	var sb: Node = script.new()
 	sb.set("net_role", role)
+	sb.set("announce_restart", replacing and role == "host")
 	add_child(sb)
 	if not bool(sb.call("ok")):
 		_set_status("The sandbox did not start: %s" % str(sb.get("errors")))
@@ -156,6 +166,9 @@ func start_sandbox(role: String = "") -> bool:
 		return false
 	sandbox = sb
 	sb.connect("playable", _on_sandbox_playable)
+	# Deferred: both come from a button of the sandbox's own interface, which the answer frees.
+	sb.connect("restart_requested", restart_sandbox, CONNECT_DEFERRED)
+	sb.connect("menu_requested", stop_sandbox, CONNECT_DEFERRED)
 	menu.hide()
 	_set_status("Local sandbox." if role == "" else "%s sandbox." % role.capitalize())
 	return true
@@ -172,6 +185,22 @@ func stop_sandbox() -> void:
 	# Out of the game is out of the session (NetworkManager.leave() ends it for the others too).
 	if networked and NetworkManager.active:
 		NetworkManager.leave()
+
+# Play again: a fresh sandbox of the same scenario and role in the place of this one. The old
+# one leaves the tree FIRST, so the new one is named "Sandbox" again -- the node path is the
+# address of its RPCs, the same on every machine (scripts/app/sandbox_session.gd). The session,
+# if any, stays: only the game is replaced.
+func restart_sandbox() -> bool:
+	if sandbox == null:
+		return false
+	var role := str(sandbox.get("net_role"))
+	var old := sandbox
+	sandbox = null
+	old.call("shutdown")
+	remove_child(old)
+	old.queue_free()
+	_set_status("Restarting the scenario...")
+	return start_sandbox(role, true)
 
 func _on_sandbox_playable() -> void:
 	print("[Main] Local pressed -> first playable frame in %d ms" % (Time.get_ticks_msec() - _local_pressed_ms))
@@ -227,7 +256,7 @@ func _autostart_net(mode: String) -> void:
 		printerr("[Main] autostart %s: no session after 30 s (%s)" % [mode, status_label.text if status_label != null else ""])
 		get_tree().quit(1)
 		return
-	if not mode.ends_with("_shot"):
+	if not mode.ends_with("_shot") and not mode.ends_with("_game"):
 		return
 	if not bool(sandbox.get("is_playable")):
 		await sandbox.playable
@@ -236,11 +265,54 @@ func _autostart_net(mode: String) -> void:
 		out = "tmp/net/%s.png" % ("host" if mode.begins_with("host") else "join")
 	if out.is_relative_path():
 		out = ProjectSettings.globalize_path("res://").path_join(out)
+	if mode.ends_with("_game"):
+		await _autostart_game(mode, out)
+		return
 	var problem: String = await sandbox.get("session").call("run_check", out)
 	if problem != "":
 		printerr("[Main] two-window check FAILED: ", problem)
 	else:
 		print("[Main] two-window check passed (%s)" % mode)
+	stop_sandbox()
+	await get_tree().process_frame
+	get_tree().quit(0 if problem == "" else 1)
+
+# INKWOOD_AUTOSTART=host_game / join_game (Track A, proposed): the TWO-WINDOW GAME. The first fight
+# played to its end in two windows (scripts/app/sandbox_session.gd run_game): a frame of the result
+# card in each (`out`), then PLAY AGAIN from the joining window -- the host replaces its sandbox, the
+# joiner is told to replace its own, and both end up in a new game that the joiner has rejoined -- and
+# a frame of that (`out` with "_again" before the extension). Quits 0, or 1 with the reason.
+func _autostart_game(mode: String, out: String) -> void:
+	var session: Node = sandbox.get("session")
+	var problem: String = await session.call("run_game", out)
+	if problem == "":
+		var old_id := sandbox.get_instance_id()
+		var is_host := mode.begins_with("host")
+		if not is_host:
+			# The joiner presses Play again on its card: it asks the host, which replaces its sandbox and tells it to replace its own.
+			sandbox.get("ui").get("result_card").play_again.emit()
+		var t0 := Time.get_ticks_msec()
+		while (sandbox == null or sandbox.get_instance_id() == old_id) and Time.get_ticks_msec() - t0 < 120000:
+			await get_tree().process_frame
+		if sandbox == null or sandbox.get_instance_id() == old_id:
+			problem = "Play again never replaced this window's sandbox"
+		else:
+			if not bool(sandbox.get("is_playable")):
+				await sandbox.playable
+			var again: Node = sandbox.get("session")
+			var sync: Node = again.get("sync")
+			while Time.get_ticks_msec() - t0 < 180000 and not (bool(sync.call("is_joined")) and sync.get("world").players.size() >= 2):
+				await get_tree().process_frame
+			if not (bool(sync.call("is_joined")) and sync.get("world").players.size() >= 2):
+				problem = "the new game never had both players in it"
+			else:
+				for i in 60:
+					await get_tree().process_frame
+				problem = str(again.call("save_frame", out.get_basename() + "_again." + out.get_extension()))
+	if problem != "":
+		printerr("[Main] two-window game FAILED: ", problem)
+	else:
+		print("[Main] two-window game passed (%s)" % mode)
 	stop_sandbox()
 	await get_tree().process_frame
 	get_tree().quit(0 if problem == "" else 1)

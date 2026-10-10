@@ -4,7 +4,9 @@ extends Node2D
 # assembled behind the menu's Local button. One node that builds, from
 # data/scenarios/sandbox.json:
 #
-#   World + AiDumb          Track S: the units, the turn loop, the AI that flies on its own
+#   World + the AI + Mission  Track S / E: the units, the turn loop, the AI the SCENARIO asks for
+#                           (AiDumb for the old sandbox, AiPilot for the first fight's Intercept) and
+#                           the mission that judges the game (scripts/sim/mission.gd), if it has one
 #   Terrain                 Track T, for the main thread: heights under the shadows, the fog's
 #                           topographic layer (MapView has its own, on its worker threads)
 #   MapView                 Track V: the static map baked in chunks under a camera
@@ -12,6 +14,7 @@ extends Node2D
 #   FogLayer                Track F: first in MapView's live layer, over the baked map
 #   UnitUI                  Track U: markers, roster, fan, orders; mapped through MapView
 #   SandboxTracks           the flown paths (this folder, proposed)
+#   SandboxObjective        the mission's target ring on the map (this folder, proposed)
 #   SandboxKnobs (F2)       the live knobs (this folder, proposed)
 #   SandboxLoading          "Drawing the map..." until the first view has baked
 #
@@ -19,6 +22,19 @@ extends Node2D
 #   main.add_child(sb)            # builds everything in _ready
 #   sb.playable                   # signal: the first view is baked, the card is gone
 #   sb.shutdown(); sb.queue_free()   # back to the menu
+#
+# WHICH SCENARIO. data/scenarios/<id>.json, id from the 'scenario' knob (INKWOOD_SCENARIO):
+# "intercept", the first fight, by default (proposed); "sandbox", the flight toy. The scenario
+# says which AI and which mission to attach. The AI plans on the HOST or locally only, never on a
+# client (a client's World would plan and ready up the enemy itself); the Mission is attached
+# everywhere, because it only reads units and histories a client already has: it evaluates after
+# every resolve, applied or its own, and reaches the host's verdict.
+#
+# THE END OF A MISSION. When the Mission leaves 'playing' the sandbox waits for the deciding
+# turn's playback to end, then view.result_card_delay_s, then calls ui.show_result(result) (Track
+# U2b's card). Its Play again restarts the scenario: signal restart_requested (Local: this machine;
+# a host: for everyone, a client's press asks the host: scripts/app/sandbox_session.gd); its Menu is
+# signal menu_requested. scripts/app/main.gd answers both.
 #
 # SPACES. World = metres (Track S). MapView draws in MAP px = metres x px_per_m
 # (a live knob, 1-4, starting at 2) under a Camera2D that the CameraController
@@ -48,15 +64,23 @@ extends Node2D
 
 signal playable
 signal failed(message: String)
+# The mission left 'playing' (at the resolve, before its playback): {state, reason, turn, t, scenario}.
+signal mission_ended(result: Dictionary)
+# The result card was put up (after the playback and the delay).
+signal result_shown(result: Dictionary)
+# The player asked for the scenario again / for the menu on the result card (main.gd answers both).
+signal restart_requested
+signal menu_requested
 
 const SandboxScenario = preload("res://scripts/app/sandbox_scenario.gd")
+const SandboxObjective = preload("res://scripts/app/sandbox_objective.gd")
 const SandboxTracks = preload("res://scripts/app/sandbox_tracks.gd")
 const SandboxKnobs = preload("res://scripts/app/sandbox_knobs.gd")
 const SandboxLoading = preload("res://scripts/app/sandbox_loading.gd")
 const SandboxHint = preload("res://scripts/app/sandbox_hint.gd")
 const SandboxSession = preload("res://scripts/app/sandbox_session.gd")
 const World = preload("res://scripts/sim/world.gd")
-const AiDumb = preload("res://scripts/sim/ai_dumb.gd")
+const Mission = preload("res://scripts/sim/mission.gd")
 const Terrain = preload("res://scripts/world/terrain.gd")
 const MapView = preload("res://scripts/render/map_view.gd")
 const CameraController = preload("res://scripts/world/camera_controller.gd")
@@ -66,14 +90,18 @@ const UnitUI = preload("res://scripts/ui/unit_ui.gd")
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 
-const SCENARIO_ID := "sandbox"
+# The 'scenario' knob's first choice (data/scenarios/<id>.json); DebugSettings.get_choice_name("scenario") is the live one.
+const DEFAULT_SCENARIO := "intercept"
 # The knobs the F2 panel lists, in order (each is registered in DebugSettings,
 # section "Sandbox"). line_of_sight is added when the fog layer has it.
 const KNOB_KEYS: Array[String] = ["map_scale", "plane_size", "fog", "fog_edge", "line_of_sight", "pen", "far_zoom", "tree_pool", "playback_speed"]
 
 var scenario: SandboxScenario = null
 var world: World = null
-var ai: AiDumb = null
+var ai: RefCounted = null             # the scenario's AI (AiDumb or AiPilot); null on a client
+var mission: Mission = null           # the scenario's mission, or null (the old sandbox has none)
+var result: Dictionary = {}           # the mission's verdict once it has one: {state, reason, turn, t, scenario}
+var objective: SandboxObjective = null
 var terrain: Terrain = null
 var map_view: MapView = null
 var ctl: CameraController = null
@@ -90,6 +118,9 @@ var hint: SandboxHint = null          # the keys, for the first seconds
 # on the host only: scripts/app/sandbox_session.gd.
 var net_role := ""
 var session: SandboxSession = null
+# True when this sandbox REPLACES a finished one in a live session (main.gd sets it before add_child):
+# a host then tells the clients to rebuild theirs too, once this one exists.
+var announce_restart := false
 
 var ids: Array[String] = []
 var headless := false
@@ -106,6 +137,10 @@ var errors: Array[String] = []
 # view are still being drawn. {n, sum_ms, max_ms, over33, over100}
 var stats: Dictionary = {}
 
+var _restart_asked := false
+var _result_shown := false
+var _result_idle_frames := 0
+var _result_wait_s := 0.0
 var _style: UiStyle = null
 var _mount: CanvasLayer = null
 var _hud: CanvasLayer = null
@@ -126,9 +161,13 @@ var _data_ppm := 2.0
 var _data := {}                       # knob key -> what "data" means (text)
 var _window: Array[float] = []        # the last frame times, for frame_line()
 
-func _init(scenario_id: String = SCENARIO_ID) -> void:
+func _init(scenario_id: String = "") -> void:
 	name = "Sandbox"
 	created_ms = Time.get_ticks_msec()
+	if scenario_id == "":
+		scenario_id = DebugSettings.get_choice_name("scenario")
+	if scenario_id == "":
+		scenario_id = DEFAULT_SCENARIO
 	scenario = SandboxScenario.new(scenario_id)
 
 func _ready() -> void:
@@ -167,9 +206,20 @@ func _build() -> void:
 		add_child(session)
 		session.begin(self, net_role)
 		local_player = session.player
-	ai = AiDumb.new(world)
+	# The enemy's plans exist on the host (or Local) only; a client's World never plans them.
 	if net_role != "client":
-		ai.attach()   # the enemy's plans exist on the host only
+		ai = scenario.make_ai(world)
+		if not scenario.ai_attach(ai, world):
+			_fail("the scenario's AI did not attach: %s" % [ai.get("errors")])
+			return
+	# The mission is evaluated everywhere, from the World's units and histories alone.
+	mission = scenario.make_mission(world)
+	if mission != null:
+		if not mission.ok():
+			_fail("the scenario's mission is not valid: %s" % [mission.errors])
+			return
+		mission.state_changed.connect(_on_mission_state)
+		mission.attach()
 
 	# The knobs that must be set before anything bakes: scale, pen, tree pool.
 	# "data" for the pen is what the DATA says (render_defaults.json linework.pen.mode),
@@ -205,10 +255,6 @@ func _build() -> void:
 	ctl.bind(map_view.camera)
 	map_view.add_child(ctl)
 	map_view.use_camera(map_view.camera)   # the controller's from here: MapView's own helpers stand down
-	var inset: float = _style.num("roster.width_px") + 2.0 * _style.num("card.margin_px")
-	if get_viewport().get_visible_rect().size.x < inset * 2.5:
-		inset = 0.0   # a window too narrow to keep a free area beside the sidebar (a headless test's)
-	ctl.set_insets(0.0, 0.0, inset, 0.0)   # the roster and orders column is on the RIGHT
 	_data["far_zoom"] = ctl.far_mode
 
 	# The fog: the first child of the live layer, over the baked map.
@@ -221,6 +267,7 @@ func _build() -> void:
 	fog.auto_bake = not headless
 	fog.controller = ctl
 	map_view.live_layer.add_child(fog)
+	map_view.hidden_test = fog.rect_under_fog   # chunks wholly under the fog's opaque layer bake last
 	_data["fog_edge"] = fog.edge_mode
 	_data["line_of_sight"] = fog.vision.line_of_sight
 
@@ -230,6 +277,11 @@ func _build() -> void:
 	_mount.name = "MapLayer"
 	_mount.layer = 1
 	add_child(_mount)
+	var target := scenario.objective()
+	if not target.is_empty():
+		objective = SandboxObjective.new()
+		_mount.add_child(objective)
+		objective.setup(map_view, _style, target["point"], float(target["radius_m"]))
 	tracks = SandboxTracks.new()
 	tracks.name = "Tracks"
 	_mount.add_child(tracks)
@@ -239,9 +291,20 @@ func _build() -> void:
 	ui.setup(world, map_view, local_player, _mount, null)
 	if session != null:
 		session.attach_ui(ui)
+		if "player_name" in ui:
+			ui.set("player_name", session.sync.name_of)   # the cards say "Hal", not "peer_1"
+		if mission != null:
+			session.sync.joined.connect(_on_joined)
+	_set_hud_insets()
+	if ui.has_signal("result_play_again"):
+		ui.connect("result_play_again", _on_result_play_again)
+	if ui.has_signal("result_menu"):
+		ui.connect("result_menu", _on_result_menu)
 	ui.marker_layer.ground_height = func(x: float, y: float) -> float: return terrain.height_at(x, y)
 	ui.unit_focus_requested.connect(_on_focus_requested)
 	tracks.setup(world, map_view, ui.marker_layer, _style, scenario.view_num("track_sample_s"), scenario.view_num("track_line_px"))
+	if ui.has_method("trail_start_t"):
+		tracks.trail_start = ui.trail_start_t   # the whole-flight line gives way to the wingtip trail (decision wingtip-trails)
 	_saved_style = {"marker.true_scale": _style.num("marker.true_scale"), "marker.playback_speed": _style.num("marker.playback_speed")}
 	_data["playback_speed"] = String.num(_style.num("marker.playback_speed"), 2)
 
@@ -257,6 +320,7 @@ func _build() -> void:
 	hint = SandboxHint.new()
 	hint.name = "Hint"
 	_hud.add_child(hint)
+	hint.headline = scenario.briefing
 	hint.setup(_style, "F2 knobs   ·   Esc menu   ·   right-drag or WASD pans   ·   wheel or Q E zooms   ·   %s readies" % _style.text("keys.ready"), 16.0)
 	_top = CanvasLayer.new()
 	_top.name = "LoadingLayer"
@@ -288,6 +352,9 @@ func _build() -> void:
 	_update_plane_scale()
 	_bake_pause_overview = scenario.view_num("bake_pause_overview")
 	_lock_input(true)   # until the first view is baked (_finish_loading)
+	map_view.bake_boost = not headless   # the loading card is up: nobody is playing, so bake in big slices
+	if announce_restart and session != null:
+		session.announce_restart()
 
 func _fail(message: String) -> void:
 	errors.append(message)
@@ -311,6 +378,7 @@ func _process(delta: float) -> void:
 		_check_loading()
 	elif _rebaking:
 		_check_rebake()
+	_poll_result(delta)
 	_record_frame(delta)
 
 # Zoomed out, the topographic overview covers the baked map (Track F), so the
@@ -369,8 +437,9 @@ func _update_fog() -> void:
 # Chunks of the view still to bake -- none while baking is paused (zoomed out
 # under the overview): waiting for chunks that are not being drawn left
 # "Redrawing the map..." up for ever.
+# Chunks wholly under the fog's opaque layer do not count: nobody sees them yet (map_view.hidden_test).
 func _missing() -> int:
-	return map_view.missing_in_view() if map_view.bake_enabled else 0
+	return map_view.missing_in_view(true) if map_view.bake_enabled else 0
 
 # Locks (or unlocks) the keys the loading card cannot catch: Track U's and the camera's.
 func _lock_input(locked: bool) -> void:
@@ -390,6 +459,7 @@ func _finish_loading() -> void:
 	is_playable = true
 	_lock_input(false)
 	loading.visible = false
+	map_view.bake_boost = _rebaking and not headless   # the loading card is gone (a redraw note may be up)
 	hint.start()
 	load_ms = float(Time.get_ticks_msec() - created_ms)
 	print("[Sandbox] first playable frame %.0f ms after the sandbox was created (building the parts %.0f ms; first view of %d chunks, %s)" % [
@@ -404,6 +474,7 @@ func _check_rebake() -> void:
 	note.set_progress(maxi(_load_total - missing, 0), _load_total, secs)
 	if headless or (missing == 0 and _frames > 3):
 		_rebaking = false
+		map_view.bake_boost = false   # the redraw note is gone
 		note.visible = false
 		last_rebake_s = secs
 		print("[Sandbox] map redrawn in %.1f s" % secs)
@@ -414,6 +485,7 @@ func _begin_rebake(clear_chunks: bool = true) -> void:
 	if headless:
 		return
 	_rebaking = true
+	map_view.bake_boost = true   # the redraw note is up: spend the loading budget until it goes
 	_rebake_t0 = Time.get_ticks_msec()
 	_load_total = _view_chunk_total()
 	note.set_progress(0, _load_total, 0.0)
@@ -431,14 +503,18 @@ func _view_chunk_total() -> int:
 
 # --- Camera ---------------------------------------------------------------------------------
 
-# Frame every plane in sight and the end of its carry-on flight this turn (and
-# the next ones, view.start_look_ahead_turns): the first screen shows the action.
+# Frame the PLAYERS' planes and the end of their carry-on flight this turn (and the next
+# ones, view.start_look_ahead_turns), and the mission's target ring when the scenario asks
+# (view.start_frame_objective): the first screen shows the action and what is defended. Only
+# the players' own planes: the enemy's plan is never read for the camera (it framed the AI's
+# planned path once, which gave it away).
 func _frame_start_view() -> void:
 	var pts: Array = []
+	var pad := scenario.view_num("start_pad_m")
 	for id: String in ids:
-		if not _in_sight(id):
-			continue
 		var u = world.units[id]
+		if u.controller != World.CONTROLLER_PLAYER or not _in_sight(id):
+			continue
 		var at: Array = [Vector2(float(u.x), float(u.y))]
 		var st: Array = world.planned_states(id)
 		if not st.is_empty():
@@ -447,10 +523,15 @@ func _frame_start_view() -> void:
 			var b := Vector2(float(last["x"]), float(last["y"]))
 			at.append(a + (b - a) * maxf(scenario.view_num("start_look_ahead_turns"), 0.0))
 		# A margin round every plane and its carry-on end, so none sits on the screen's edge.
-		var pad := scenario.view_num("start_pad_m")
 		for p: Vector2 in at:
 			for corner: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
 				pts.append(p + corner * pad)
+	if scenario.view_flag("start_frame_objective") and objective != null:
+		var reach := objective.radius_m + pad * 0.5
+		for corner: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+			pts.append(objective.point_m + corner * reach)
+	if pts.is_empty():
+		return
 	var old_max := ctl.frame_max_zoom
 	ctl.frame_max_zoom = minf(old_max, scenario.view_num("start_zoom_max"))
 	ctl.frame_points(pts)
@@ -585,6 +666,7 @@ func _apply_knob(key: String, startup: bool) -> void:
 				# run was a race. Then the pen, then everything that was inked with the
 				# old one: the unit art (cleared, markers re-bake) and the fog's layer.
 				_begin_rebake()
+				fog.shutdown()   # its contour bakes in flight read the pen too: wait for them first
 				InkCanvas.set_pen_mode(str(_data["pen"]) if c == "data" else c)
 				UnitMarkerArt.clear_cache()
 				ui.marker_layer.refresh_art()
@@ -631,6 +713,90 @@ func set_map_scale(v: float) -> void:
 	ctl.set_scale(terrain.map_rect_px(), v)
 	_begin_rebake(false)   # MapView.set_px_per_m already dropped every chunk
 	_update_plane_scale()
+
+# --- The mission and its result card -------------------------------------------------------------
+
+# The camera leaves what the HUD covers out of its zoom-out limit and its centring (the roster
+# sidebar, from UnitUI.hud_insets()). A window too narrow to keep a free area beside the sidebar
+# (a headless test's) gets none.
+func _set_hud_insets() -> void:
+	var ins: Dictionary = ui.hud_insets()
+	var l := float(ins["left"])
+	var t := float(ins["top"])
+	var r := float(ins["right"])
+	var b := float(ins["bottom"])
+	var vs := get_viewport().get_visible_rect().size
+	if vs.x < (l + r) * 2.5 or vs.y < (t + b) * 2.5:
+		l = 0.0
+		t = 0.0
+		r = 0.0
+		b = 0.0
+	ctl.set_insets(l, t, r, b)
+
+# A player who joins a game that is already over never saw the deciding turn resolve, so the mission has
+# nothing to evaluate: look at what the host's snapshot carries (every unit's state and its LAST turn's
+# history) -- a bomber that is down, the fighters down, or the bomber at the target in that last turn are
+# decided at once, and the card comes up (a decided game is over whoever walks in).
+func _on_joined() -> void:
+	if mission != null and mission.state == Mission.PLAYING and world.turn > 1:
+		mission.evaluate({"turn": world.turn - 1})
+
+# Has the mission been decided (won or lost)? The host asks this of a stale Play again.
+func result_decided() -> bool:
+	return not result.is_empty()
+
+# The Mission left 'playing' (inside World.turn_resolved, so BEFORE the turn's playback has started).
+func _on_mission_state(state: String, reason: String, turn_no: int) -> void:
+	result = {"state": state, "reason": reason, "turn": turn_no, "t": mission.time, "scenario": scenario.id}
+	_result_shown = false
+	_result_idle_frames = 0
+	_result_wait_s = 0.0
+	print("[Sandbox] mission %s on turn %d: %s" % [state, turn_no, reason])
+	mission_ended.emit(result)
+
+# Put the result card up once the deciding turn has played back and the delay has passed.
+func _poll_result(delta: float) -> void:
+	if result.is_empty() or _result_shown or ui == null:
+		return
+	if ui.is_playing():
+		_result_idle_frames = 0
+		_result_wait_s = 0.0
+		return
+	# (Two idle frames first: the playback starts on the very resolve that decided the game.)
+	_result_idle_frames += 1
+	if _result_idle_frames < 3:
+		return
+	_result_wait_s += delta
+	if _result_wait_s >= scenario.view_num("result_card_delay_s"):
+		_show_result()
+
+func _show_result() -> void:
+	_result_shown = true
+	if ui.has_method("show_result"):
+		ui.call("show_result", result)
+	else:
+		push_warning("Sandbox: the unit interface has no show_result() yet (Track U2b); the mission ended: %s" % [result])
+	result_shown.emit(result)
+
+func result_card_shown() -> bool:
+	return _result_shown
+
+func _on_result_play_again() -> void:
+	if session != null:
+		session.request_restart()   # a client asks the host; the host restarts at once
+	else:
+		ask_restart()
+
+# Ask whoever owns this sandbox to replace it with a fresh one -- once: a second ask (the host's
+# own press and a client's arriving together) is the same restart.
+func ask_restart() -> void:
+	if _restart_asked:
+		return
+	_restart_asked = true
+	restart_requested.emit()
+
+func _on_result_menu() -> void:
+	menu_requested.emit()
 
 # --- Frame times ----------------------------------------------------------------------------------
 
@@ -683,11 +849,17 @@ func frame_line() -> String:
 func shutdown() -> void:
 	if session != null:
 		session.shutdown()
+	if mission != null:
+		mission.detach()
+	if ai != null and ai.has_method("detach"):
+		ai.call("detach")
 	if DebugSettings.changed.is_connected(_on_knob_changed):
 		DebugSettings.changed.disconnect(_on_knob_changed)
 	if _style != null:
 		for k: String in _saved_style:
 			_style.set_num(k, float(_saved_style[k]))
+	if is_instance_valid(fog):
+		fog.shutdown()   # its contour bakes in flight read the pen: wait for them before it is put back (and before a quit)
 	if is_instance_valid(map_view) and map_view.baker != null:
 		map_view.baker.clear()
 	if _saved_pen != "":

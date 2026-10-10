@@ -7,8 +7,9 @@ extends SceneTree
 #   build\deps\godot\4.7-stable\Godot_v4.7-stable_win64_console.exe --path . `
 #       --script res://scripts/app/demo_shot.gd -- [what=main|knobs|all] [out=tmp/demo]
 #
-# Starts the sandbox exactly as the menu's Local button does (scripts/app/sandbox.gd,
-# in a 1280x720 window), plays SCRIPTED turns through the real turn flow, and saves
+# Starts the sandbox (the old "sandbox" scenario: the 'scenario' knob is set to it here, because
+# Local now starts the first fight's Intercept: scripts/app/intercept_shot.gd) exactly as the menu's Local
+# button does (scripts/app/sandbox.gd, in a 1280x720 window), plays SCRIPTED turns through the real turn flow, and saves
 # one PNG per exit criterion (docs/proposals/demo-plan.md) into tmp/demo/:
 #
 #   criterion_2_planes_roster.png     two player planes and one AI plane on screen, the roster
@@ -104,6 +105,7 @@ func _run() -> void:
 	_say("window %s, viewport %s" % [str(DisplayServer.window_get_size()), str(root.get_viewport().get_visible_rect().size)])
 	_t0 = Time.get_ticks_msec()
 	dbg = root.get_node("DebugSettings")
+	dbg.set_choice("scenario", 1)   # the OLD flight-toy scenario ("sandbox"): the sandbox demo's proof; Local now starts Intercept
 	var script: Script = load("res://scripts/app/sandbox.gd")
 	if script == null or not script.can_instantiate():
 		printerr("[demo-shot] scripts/app/sandbox.gd did not compile -- see the Parse Error above")

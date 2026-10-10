@@ -1,0 +1,94 @@
+{
+  "_about": "The first fight: INTERCEPT (Track A, 2026-10-10). Two player fighters, a light and a heavy, must find an enemy bomber that flies with one escort fighter and shoot it down before it reaches a target on the map. Won: the bomber is down. Lost: the bomber comes within the capture radius of the target, or both player fighters are down (design doc, Next pass: the first fight; the exit criteria and the scenario are PROPOSED there). EVERYTHING HERE IS PROPOSED except what a record cites as Alex's: the map seed (the prototype's), the two sides' colours and callsign pools (Alex 2026-10-09), the map scale and planes-at-their-own-scale rule (decision demo-baseline), and the decisions behind the AI (the bomber can start HIGH so the players must climb; it evades by weaving and a one-band change; an escort that broke off for health does not re-engage). Read by scripts/app/sandbox.gd through scripts/app/sandbox_scenario.gd. Units are in metres on the 5,000 m map (data/sim/turn.json); heading 0 points along +x (east), positive is clockwise on screen. The bomber's route and the escort's station are Track E's proposal (data/sim/ai.json, scripts/sim/ai_pilot.gd).",
+
+  "id": "intercept",
+  "seed": 20261009,
+  "rng_seed": 7,
+  "_rng_seed_note": "The World's combat seed (hit rolls; only the host's World rolls). PROPOSED, and nothing depends on it: the tests search for a seed at run time, because combat's odds are still being tuned.",
+  "local_player": "local",
+  "briefing": "INTERCEPT  -  find the bomber and shoot it down before it reaches the target ring.",
+
+  "sides": {
+    "_about": "Scenario side -> the World's side name (the interface's accent table in data/ui/ui.json knows allies and axis) and the callsign pool (data/names/callsigns.json). side_a is brick red, side_b slate blue (Alex).",
+    "side_a": { "world_side": "allies", "callsign_pool": "side_a" },
+    "side_b": { "world_side": "axis", "callsign_pool": "side_b" }
+  },
+
+  "units": [
+    {
+      "id": "light_fighter_1",
+      "type": "light_fighter", "side": "side_a", "controller": "player", "callsign": "pool",
+      "x": 2600.0, "y": 3000.0, "heading": -0.9, "altitude_band": "medium",
+      "_proposed": true,
+      "_reason": "Player plane 1. The players DEFEND the target: they start south-west of it, about 1,350 m from the target point and 950 m from the nearest point of the bomber's route, heading north-east, outside the 800 m sight of any point of the route, so the fog has to be searched before the bomber is found. Chosen from scripts/test_support/intercept_tuning.gd: of five starts tried, this one gave the scripted omniscient chase the best odds (55 percent of 40 seeds) while an idle game is still lost at turn 12."
+    },
+    {
+      "id": "heavy_fighter_1",
+      "type": "heavy_fighter", "side": "side_a", "controller": "player", "callsign": "pool",
+      "x": 2800.0, "y": 3200.0, "heading": -0.9, "altitude_band": "medium",
+      "_proposed": true,
+      "_reason": "Player plane 2: the heavier type, 280 m from plane 1 to the south-east, on the same heading, so two silhouettes start side by side and between them they cover more ground."
+    },
+    {
+      "id": "bomber_1",
+      "type": "bomber", "side": "side_b", "controller": "ai", "callsign": "pool",
+      "x": 800.0, "y": 900.0, "heading": 0.0666, "altitude_band": "high", "speed": 85.0,
+      "_proposed": true,
+      "_reason": "The enemy bomber on Track E's route (data/sim/ai.json notes): it starts at (800, 900) heading at the first waypoint, in the HIGH band, so the players must climb to reach it (Alex: the bomber can start high). Cruise speed 85 m/s."
+    },
+    {
+      "id": "escort_1",
+      "type": "light_fighter", "side": "side_b", "controller": "ai", "callsign": "pool",
+      "x": 634.0, "y": 1139.0, "heading": 0.0666, "altitude_band": "high", "speed": 85.0,
+      "_proposed": true,
+      "_reason": "The escort on station: 150 m behind and 250 m to the right of the bomber (data/sim/ai.json escort.station_forward_m, station_right_m), same heading, speed and band, so it starts in formation and the first thing it does is fly the bomber's plan beside it."
+    }
+  ],
+
+  "ai": {
+    "kind": "pilot",
+    "_proposed": true,
+    "_reason": "The first fight's enemy (scripts/sim/ai_pilot.gd): states from data, planned through the World's public API, so it can do nothing a player could not. The old sandbox keeps AiDumb.",
+    "assignments": {
+      "bomber_1": {
+        "role": "strike",
+        "route": [[2300.0, 1000.0], [3500.0, 1900.0]],
+        "target": [3600.0, 3900.0],
+        "band": "high",
+        "_reason": "Track E's proposed route: two waypoints, then the target; about 4,700 m to the capture ring, about 12 turns at cruise. It holds the high band and weaves and changes one band when it is threatened or hit (Alex)."
+      },
+      "escort_1": {
+        "role": "escort",
+        "protect": "bomber_1",
+        "_reason": "Holds its station beside the bomber, engages an enemy that comes close, breaks off by health (and does not re-engage, Alex), by leash or by a run of turns without a firing chance."
+      }
+    }
+  },
+
+  "mission": {
+    "id": "intercept",
+    "_proposed": true,
+    "_reason": "Intercept as data (scripts/sim/mission.gd): the bomber down is a win; the bomber within the capture radius of the target, or both player fighters down, is a loss. The radius is data/sim/ai.json's mission default, stated here so the map can draw the ring.",
+    "target": [3600.0, 3900.0],
+    "win": [ { "type": "unit_down", "unit": "bomber_1" } ],
+    "lose": [
+      { "type": "unit_within", "unit": "bomber_1", "of": "target", "radius_m": 300.0 },
+      { "type": "all_down", "controller": "player" }
+    ]
+  },
+
+  "view": {
+    "_about": "How the sandbox shows this scenario. Each can be flipped at run time from the knob panel (F2) or INKWOOD_<KEY> (scripts/debug/debug_settings.gd); these are the values the knobs call \"data\".",
+    "fog": { "value": true, "_proposed": true, "_reason": "Fog of war is how the bomber has to be FOUND (the scenario tests sight range and altitude); on by default" },
+    "plane_px": { "value": 36, "_proposed": true, "_reason": "Planes are drawn at their own scale, a light fighter about 36 px across at zoom 1 whatever the map scale (decision demo-baseline: planes_drawn_at_own_scale)" },
+    "plane_min_px": { "value": 14, "_proposed": true, "_reason": "A light fighter never draws smaller than this on screen, so the planes stay findable when the view is zoomed out" },
+    "start_zoom_max": { "value": 0.9, "_proposed": true, "_reason": "The opening view frames the players' planes, the first turn's carry-on flight and the target ring; it does not zoom in past this" },
+    "start_pad_m": { "value": 110, "_proposed": true, "_reason": "A margin round every plane and its carry-on end in the opening view, so none sits on the edge of the free area" },
+    "start_look_ahead_turns": { "value": 1, "_proposed": true, "_reason": "The opening view frames this many turns of carry-on flight beyond each PLAYER plane (the enemy's plan is never framed: it would leak it)" },
+    "start_frame_objective": { "value": true, "_proposed": true, "_reason": "The opening view also frames the mission's target ring, so the first screen shows what is being defended" },
+    "track_sample_s": { "value": 0.25, "_proposed": true, "_reason": "Tracks (the flown path of each plane, drawn for the whole game) are sampled from each turn's history this often" },
+    "track_line_px": { "value": 1.6, "_proposed": true, "_reason": "Track line width on screen; ink in the unit's side colour" },
+    "bake_pause_overview": { "value": 0.5, "_proposed": true, "_reason": "The map view stops drawing new chunks once the topographic overview covers this much of the full render (see sandbox.json)" },
+    "result_card_delay_s": { "value": 1.5, "_proposed": true, "_reason": "The result card appears this long after the playback of the deciding turn ends, so the last hit or the last of the smoke is seen before the card covers it" }
+  }
+}

@@ -3,6 +3,8 @@
 
   "id": "sandbox",
   "seed": 20261009,
+  "rng_seed": 0,
+  "_rng_seed_note": "The World's combat seed. 0 is what the sandbox has always run with (World.rng_seed's default); PROPOSED.",
   "local_player": "local",
 
   "sides": {
@@ -32,6 +34,12 @@
     }
   ],
 
+  "ai": {
+    "kind": "dumb",
+    "_proposed": true,
+    "_reason": "The old sandbox keeps its dumb AI (scripts/sim/ai_dumb.gd): it flies on its own and turns from the map edge. The first fight's scenario, intercept.json, asks for AiPilot and a Mission instead. This scenario has no mission: it never ends."
+  },
+
   "view": {
     "_about": "How the sandbox shows this scenario. Each can be flipped at run time from the knob panel (F2) or INKWOOD_<KEY> (scripts/debug/debug_settings.gd); these are the values the knobs call \"data\".",
     "fog": { "value": true, "_proposed": true, "_reason": "Fog of war is exit criterion 7; on by default so the demo shows it, switchable to compare" },
@@ -39,9 +47,11 @@
     "plane_min_px": { "value": 14, "_proposed": true, "_reason": "A light fighter never draws smaller than this on screen, so the planes stay findable when the view is zoomed out to follow a minute of flight; the other types scale with it" },
     "start_zoom_max": { "value": 0.9, "_proposed": true, "_reason": "The opening view frames the players' planes and the first turn's carry-on flight; it does not zoom in past this, so the whole first turn is on screen" },
     "start_pad_m": { "value": 110, "_proposed": true, "_reason": "A margin round every plane and its carry-on end in the opening view, so no plane sits on the edge of the free area" },
-    "start_look_ahead_turns": { "value": 1, "_proposed": true, "_reason": "The opening view frames this many turns of carry-on flight beyond each plane, so the first screen shows where the planes are going" },
+    "start_look_ahead_turns": { "value": 1, "_proposed": true, "_reason": "The opening view frames this many turns of carry-on flight beyond each PLAYER plane (the enemy's plan is never framed: it would leak it; first fight, 2026-10-10), so the first screen shows where the planes are going" },
+    "start_frame_objective": { "value": false, "_proposed": true, "_reason": "The opening view also frames the mission's target ring when this is true; the sandbox has no mission (first fight, 2026-10-10)" },
     "track_sample_s": { "value": 0.25, "_proposed": true, "_reason": "Tracks (the flown path of each plane, drawn for the whole game) are sampled from each turn's history this often" },
     "track_line_px": { "value": 1.6, "_proposed": true, "_reason": "Track line width on screen; ink in the unit's side colour" },
-    "bake_pause_overview": { "value": 0.5, "_proposed": true, "_reason": "The map view stops drawing new chunks once the topographic overview covers this much of the full render (data/view/camera.json far_zoom; the controller's overview_amount, 0 to 1). It was 0.999, which let the cache grow towards the whole map while the fade passed (about 530 MB: below zoom 0.2 at 1280 x 720, or at the start zoom in a 2560 x 1440 window); at 0.5 half the full render is already under the overview, and what is baked is kept. Added in the 2026-10-09 fix pass" }
+    "bake_pause_overview": { "value": 0.5, "_proposed": true, "_reason": "The map view stops drawing new chunks once the topographic overview covers this much of the full render (data/view/camera.json far_zoom; the controller's overview_amount, 0 to 1). It was 0.999, which let the cache grow towards the whole map while the fade passed (about 530 MB: below zoom 0.2 at 1280 x 720, or at the start zoom in a 2560 x 1440 window); at 0.5 half the full render is already under the overview, and what is baked is kept. Added in the 2026-10-09 fix pass" },
+    "result_card_delay_s": { "value": 1.5, "_proposed": true, "_reason": "Unused here (the sandbox has no mission, so no result card); see intercept.json" }
   }
 }

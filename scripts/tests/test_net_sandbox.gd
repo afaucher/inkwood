@@ -30,6 +30,7 @@ const BOMBER := "bomber_1"
 var rig: NetRig = null
 var main_node: Node = null
 var _saved_speed := 0
+var _saved_scenario := 0
 var _saved_net := 0
 var _saved_port := 0
 var _saved_log := 0
@@ -37,6 +38,10 @@ var _saved_log := 0
 func setup(main) -> void:
 	timeout_seconds = 120.0
 	main_node = main
+	# The OLD flight-toy scenario (Local, Host and Join start the first fight's Intercept by default;
+	# scripts/tests/test_intercept.gd covers that one over the net).
+	_saved_scenario = DebugSettings.get_choice("scenario")
+	DebugSettings.set_choice("scenario", 1)
 	# Turns play back quickly (x8): the knob only changes how fast the markers animate.
 	_saved_speed = DebugSettings.get_choice("playback_speed")
 	DebugSettings.set_choice("playback_speed", 4)
@@ -51,6 +56,7 @@ func setup(main) -> void:
 	var completed: Variant = await _run()
 	check(completed == true, "the test ran to its last line (a runtime error would have ended it silently)")
 	DebugSettings.set_choice("playback_speed", _saved_speed)
+	DebugSettings.set_choice("scenario", _saved_scenario)
 	finish()
 
 func _run() -> bool:
