@@ -34,6 +34,7 @@ const FxData = preload("res://scripts/fx/fx_data.gd")
 const FxStyle = preload("res://scripts/fx/fx_style.gd")
 const FxBake = preload("res://scripts/fx/fx_bake.gd")
 const FxPuff = preload("res://scripts/fx/fx_puff.gd")
+const FxFlash = preload("res://scripts/fx/fx_flash.gd")
 
 class BurstSet:
 	var frames: Array = []        # [{t: float, tex: Texture2D}] in time order
@@ -200,7 +201,10 @@ static func draw_burst(g: InkCanvas, st: FxStyle, b: Dictionary, u: float, seed_
 		"ring":
 			_ring_burst(g, st, b, u, rng, R, at, ground)
 		_:
-			push_error("FxBurst: unknown form '%s'" % FxData.s(b, "form"))
+			if FxFlash.handles(FxData.s(b, "form")):
+				FxFlash.draw(g, st, b, u, seed_v, R, at, ground)   # the strike's flashes (fire-free)
+			else:
+				push_error("FxBurst: unknown form '%s'" % FxData.s(b, "form"))
 
 static func _blob(st: FxStyle, rng: Mulberry32, cx: float, cy: float, r: float, n: int) -> PackedVector2Array:
 	var amps := PackedFloat64Array()

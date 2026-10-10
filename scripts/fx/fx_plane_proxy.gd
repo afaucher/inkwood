@@ -80,17 +80,19 @@ func draw_pass(item: CanvasItem, kind: String) -> void:
 	for p in planes:
 		var wp: Vector2 = p["pos"]
 		var ppm := mapping.px_per_m(wp) * true_scale
-		var art: UnitMarkerArt.Art = UnitMarkerArt.art_for(ui_style, str(p["type"]), fx_style.palette[str(p["side"])], snappedf(ppm, 0.01))
+		var rot := mapping.screen_angle(wp, float(p["heading"])) + PI / 2.0
+		var art: UnitMarkerArt.Art = UnitMarkerArt.art_for(ui_style, str(p["type"]), fx_style.palette[str(p["side"])], snappedf(ppm, 0.01), rot)
 		if art == null or art.texture == null:
 			continue
 		var sp := mapping.world_to_screen(wp)
-		var rot := mapping.screen_angle(wp, float(p["heading"])) + PI / 2.0
 		var sc := ppm / art.ppm
+		# a static unit's art (the battery) is baked already turned, its mask its cast shadow: not rotated here
+		var turn := 0.0 if ("screen_aligned" in art and art.screen_aligned) else rot
 		if kind == "shadows":
 			var off := mapping.screen_delta(wp, fx_style.plane_shadow_offset_m(float(p["h"])) * true_scale)
-			item.draw_set_transform(sp + off, rot, Vector2(sc, sc))
+			item.draw_set_transform(sp + off, turn, Vector2(sc, sc))
 			item.draw_texture(art.mask, -art.origin, _tint)
 		else:
-			item.draw_set_transform(sp, rot, Vector2(sc, sc))
+			item.draw_set_transform(sp, turn, Vector2(sc, sc))
 			item.draw_texture(art.texture, -art.origin, Color.WHITE)
 	item.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

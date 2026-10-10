@@ -17,6 +17,38 @@ extends Node2D
 #   fx.add_scar(unit_id, ground_pos, t, size_m)                      # restore one: a game in progress
 #   fx.clear()                                                       # the game ends
 #
+# THE STRIKE (Track X2, 2026-10-10: flak, bombs, the radio tower; every look is a PROPOSED option in fx.json
+# flak / bomb / ruin, chosen from variants/flak, variants/bomb-impact, variants/tower-ruin; fx.select_strike()):
+#
+#   fx.flak_burst(target_pos, height_m, t, hit, shot_id = "", size_m = 0.0)
+#       A flak shell bursts near its target. Feed it from a "fire" event whose shooter is a ground unit and whose target is
+#       in the air: target_pos = Vector2(ev.tx, ev.ty), height_m = the target's height ABOVE THE GROUND (the marker layer's
+#       height_above_ground of the target's pose; the event's theight_m is above the sim's 0), t = the game time, hit = ev.hit.
+#       A hit bursts on the target, a miss beside it (where is the effects' call). shot_id: any string that tells two shots
+#       at one moment apart (ev.unit + "/" + str(ev.tick) is plenty). A dark ragged puff and a fast flash at the burst's
+#       height, its shadow by the altitude rule; the puff hangs for a few turns.
+#   fx.bomb_drop(unit_id, bomb_id, from_pos, height_m, t_release, to_pos, t_impact)
+#       A bomb in the air, from the sim's bomb record (x0, y0, h0 above the ground, x, y; the game times of its release and
+#       impact): drawn flying from release to impact with its shadow closing on it. OPTIONAL, and nearly invisible: the sim's
+#       bombs keep the bomber's speed (no drag), so a stick falls in a column under the bomber and its icon hides them
+#       (they are drawn over it, small); call it once per bomb when the release is seen (the record is in the bomb_release
+#       event's turn, World.bombs_in_flight) only if the interface wants the dark specks.
+#   fx.bomb_impact(ground_pos, t, blast_m = 45.0, unit_id = "", bomb_id = 0)
+#       A bomb lands (the "bomb_impact" event: x, y, blast_m, t, bomb): a fast flash, a thick shadowed smoke burst, clods,
+#       a billow, and the crater that stays for the rest of the game. The sizes follow blast_m (fractions of it, in data).
+#   fx.ruin(unit_id, world_pos, t, kind = "radio_tower", size_m = 12.0, heading = 0.0)
+#       The radio tower is destroyed (a "down" event, fate "destroyed", for the tower): the flash, the smoke, the mast falling
+#       (or flung apart, by option), a column of smoke that thins over turns, and the ruin (crater, scorch, broken base, the
+#       mast lying) that stays for the rest of the game. heading = the unit's heading (the marker's convention).
+#       Any other kind (kind = "anti_aircraft_battery" for a destroyed battery, proposed) gets the flash, the smoke, the column
+#       and a scorch, a pit and scraps that stay: no mast, footings or hut.
+#   fx.add_crater(unit_id, ground_pos, t, blast_m, seed_v)           # restore a crater alone (a late joiner)
+#   fx.add_ruin(unit_id, world_pos, t, kind, size_m, heading, seed_v) # restore a ruin alone; returns nothing (see field.add_ruin)
+#       RESTORING A LATE JOINER: the strike is deterministic from (world seed, the call's arguments), so replaying
+#       bomb_impact() and ruin() with their TRUE game times draws exactly what the other players saw, including the smoke
+#       column of a ruin that is turns old (and the craters, which stay). The add_* calls put the bare mark down when the
+#       time is not known.
+#
 # FROM THE SIM'S EVENTS (scripts/sim/combat.gd; game time t = (turn - 1) x turn_seconds + the event's t):
 #   hit   -> the unit's health fraction (health / its def's health) for emit_damage_smoke, each frame
 #            of the playback while 0 < health < full (a full-health plane makes no smoke)
@@ -65,6 +97,8 @@ const FxBurst = preload("res://scripts/fx/fx_burst.gd")
 const FxBake = preload("res://scripts/fx/fx_bake.gd")
 const FxPass = preload("res://scripts/fx/fx_pass.gd")
 const FxShadowPass = preload("res://scripts/fx/fx_shadow_pass.gd")
+const FxBomb = preload("res://scripts/fx/fx_bomb.gd")
+const FxRuin = preload("res://scripts/fx/fx_ruin.gd")
 
 var style: FxStyle = null
 var data: FxData = null
@@ -83,6 +117,9 @@ var top_node: Node2D = null
 var _puff_sets: Dictionary = {}
 var _burst_sets: Dictionary = {}
 var _parts_sets: Dictionary = {}
+var _bomb_sets: Dictionary = {}
+var _drop_sets: Dictionary = {}
+var _ruin_sets: Dictionary = {}
 var _bakes: int = 0
 var _bake_ms: float = 0.0
 var _ratio: float = 1.15
@@ -147,6 +184,12 @@ func select(smoke: String, crash: String, crash_smoke: String = "") -> void:
 	field.select(smoke, crash, crash_smoke)
 	release_art()
 
+# Chooses the strike's options (flak, bombs, the tower's ruin; "" keeps the current one); drops the baked art.
+func select_strike(flak: String = "", bomb: String = "", ruin_option: String = "") -> void:
+	_build()
+	field.select_strike(flak, bomb, ruin_option)
+	release_art()
+
 # The fire machinery's switch (data: fx.json fire_switch.enabled, off since Alex's "no fire for now").
 # Turning it on makes flames, embers, the flash and the fireball come back; it drops the baked art.
 func set_fire(on: bool) -> void:
@@ -194,7 +237,8 @@ func _process(_delta: float) -> void:
 		queue_redraws()
 
 func _anything() -> bool:
-	return not (field.puffs.is_empty() and field.bursts.is_empty() and field.scars.is_empty() and field.debris.is_empty() and field.riders.is_empty())
+	return not (field.puffs.is_empty() and field.bursts.is_empty() and field.scars.is_empty() and field.debris.is_empty() and field.riders.is_empty() \
+		and field.craters.is_empty() and field.ruins.is_empty() and field.drops.is_empty())
 
 # --- The calls the interface makes -----------------------------------------------------------------------------------
 
@@ -222,6 +266,32 @@ func add_scar(unit_id: String, ground_pos: Vector2, t: float, size_m: float = 9.
 	_build()
 	field.add_scar(unit_id, ground_pos, t, size_m, rot, seed_v)
 
+# --- The strike's calls (documented in the header) ---------------------------------------------------------------------------
+
+func flak_burst(target_pos: Vector2, height_m: float, t: float, hit: bool, shot_id: String = "", size_m: float = 0.0) -> void:
+	_build()
+	field.flak_burst(target_pos, height_m, t, hit, shot_id, size_m)
+
+func bomb_drop(unit_id: String, bomb_id: int, from_pos: Vector2, height_m: float, t_release: float, to_pos: Vector2, t_impact: float) -> void:
+	_build()
+	field.bomb_drop(unit_id, bomb_id, from_pos, height_m, t_release, to_pos, t_impact)
+
+func bomb_impact(ground_pos: Vector2, t: float, blast_m: float = 45.0, unit_id: String = "", bomb_id: int = 0) -> void:
+	_build()
+	field.bomb_impact(ground_pos, t, blast_m, unit_id, bomb_id)
+
+func add_crater(unit_id: String, ground_pos: Vector2, t: float, blast_m: float = 45.0, seed_v: int = 0) -> void:
+	_build()
+	field.add_crater(unit_id, ground_pos, t, blast_m, seed_v)
+
+func ruin(unit_id: String, world_pos: Vector2, t: float, kind: String = "radio_tower", size_m: float = 12.0, heading: float = 0.0) -> void:
+	_build()
+	field.ruin(unit_id, world_pos, t, kind, size_m, heading)
+
+func add_ruin(unit_id: String, world_pos: Vector2, t: float, kind: String = "radio_tower", size_m: float = 12.0, heading: float = 0.0, seed_v: int = 0) -> void:
+	_build()
+	field.add_ruin(unit_id, world_pos, t, kind, size_m, heading, seed_v)
+
 # The game ends or restarts: every puff, burst, piece and scar goes. The baked art stays
 # (it is the same art next game); release_art() drops it too.
 func clear() -> void:
@@ -234,10 +304,13 @@ func release_art() -> void:
 	_puff_sets.clear()
 	_burst_sets.clear()
 	_parts_sets.clear()
+	_bomb_sets.clear()
+	_drop_sets.clear()
+	_ruin_sets.clear()
 
 func stats() -> Dictionary:
 	var c := field.counts()
-	c["baked_sets"] = _puff_sets.size() + _burst_sets.size() + _parts_sets.size()
+	c["baked_sets"] = _puff_sets.size() + _burst_sets.size() + _parts_sets.size() + _bomb_sets.size() + _drop_sets.size() + _ruin_sets.size()
 	c["bakes"] = _bakes
 	c["bake_ms"] = _bake_ms
 	c["draws"] = _draws
@@ -272,16 +345,91 @@ func _puffs_for(set_id: String, ppm_q: float, size_m: float) -> FxPuff.PuffSet:
 		_trim(_puff_sets)
 	return _puff_sets[key]
 
-func _burst_for(phase: String, ppm_q: float, size_m: float, radius_m: float) -> FxBurst.BurstSet:
-	var key := "%s|%.3f|%d|%.2f|f%d" % [phase, ppm_q, _size_class(size_m), radius_m, int(style.fire_on)]
+# The flipbook of a burst record (a crash's, or the strike's flash), at one scale. The strike's flashes are drawn on the
+# ground for a bomb or the tower and in the air for flak; a hit's is a different drawing from a miss's.
+func _burst_for(b: Dictionary, ppm_q: float) -> FxBurst.BurstSet:
+	var phase := str(b["phase"])
+	var grp := str(b.get("grp", "crash"))
+	var hit := bool(b.get("hit", false))
+	var radius_m := float(b["radius_m"])
+	var size_m := float(b["size_m"])
+	var opt := field.crash_name
+	match grp:
+		"flak":
+			opt = field.flak_name
+		"bomb":
+			opt = field.bomb_name
+		"ruin":
+			opt = field.ruin_name
+	var key := "%s|%s|%s|%.3f|%d|%.2f|h%d|f%d" % [grp, opt, phase, ppm_q, _size_class(size_m), radius_m, int(hit), int(style.fire_on)]
 	if not _burst_sets.has(key):
 		var t0 := Time.get_ticks_usec()
-		var b := FxData.grp(field.crash_o, "burst")
-		_burst_sets[key] = FxBurst.bake_burst(style, b, radius_m, ppm_q, phase == "impact", FxBake.seed_of(field.crash_name, phase, _size_class(size_m)))
+		var def := field.burst_def(b)
+		if grp != "crash":
+			def = def.duplicate()
+			def["hit"] = hit
+		_burst_sets[key] = FxBurst.bake_burst(style, def, radius_m, ppm_q, phase == "impact" or phase == "bomb" or phase == "tower", FxBake.seed_of(opt, phase + str(int(hit)), _size_class(size_m)))
 		_bakes += 1
 		_bake_ms += (Time.get_ticks_usec() - t0) / 1000.0
 		_trim(_burst_sets)
 	return _burst_sets[key]
+
+# The crater, clod and bomb sprites of the bomb option at one scale, for blasts of one size class.
+func _bomb_set_for(ppm_q: float, blast_m: float) -> FxBomb.BombSet:
+	var key := "%s|%.3f|%d" % [field.bomb_name, ppm_q, _size_class(blast_m)]
+	if not _bomb_sets.has(key):
+		var t0 := Time.get_ticks_usec()
+		var o := field.bomb_o
+		_bomb_sets[key] = FxBomb.bake_set(style, FxData.grp(o, "crater"), FxData.grp(o, "debris"), FxData.grp(o, "fall"), float(_size_class(blast_m)), ppm_q, FxBake.seed_of(field.bomb_name, "bomb", _size_class(blast_m)))
+		_bakes += 1
+		_bake_ms += (Time.get_ticks_usec() - t0) / 1000.0
+		_trim(_bomb_sets)
+	return _bomb_sets[key]
+
+# A falling bomb's sprite at one scale.
+func _drop_set_for(ppm_q: float) -> FxBomb.BombSet:
+	var key := "%s|%.3f" % [field.bomb_name, ppm_q]
+	if not _drop_sets.has(key):
+		var t0 := Time.get_ticks_usec()
+		_drop_sets[key] = FxBomb.bake_drop(style, FxData.grp(field.bomb_o, "fall"), ppm_q)
+		_bakes += 1
+		_bake_ms += (Time.get_ticks_usec() - t0) / 1000.0
+		_trim(_drop_sets)
+	return _drop_sets[key]
+
+# The tower's ruin sprites at one scale: what stays at the foot, the mast lying, the mast falling, a loose bar.
+func _ruin_set_for(ppm_q: float, rot: float = 0.0) -> FxRuin.RuinSet:
+	var rq := snappedf(rot, deg_to_rad(1.0))
+	var key := "%s|%.3f|%.3f" % [field.ruin_name, ppm_q, rq]
+	if not _ruin_sets.has(key):
+		var t0 := Time.get_ticks_usec()
+		_ruin_sets[key] = FxRuin.bake_set(style, field.ruin_o, field.tower_model(), ppm_q, FxBake.seed_of(field.ruin_name, "ruin", 0), rq)
+		_bakes += 1
+		_bake_ms += (Time.get_ticks_usec() - t0) / 1000.0
+		_trim(_ruin_sets)
+	return _ruin_sets[key]
+
+# The sprite, its shadow mask and its origin for a piece of debris, by what it is: earth, a bar of lattice, or a piece of a plane.
+func _debris_art(d: Dictionary, q: float) -> Dictionary:
+	var kind := str(d.get("kind", "shard"))
+	var v := int(d["variant"])
+	if kind == "clod":
+		var bs := _bomb_set_for(q, float(d["size_m"]))
+		if bs == null or bs.clods.is_empty():
+			return {}
+		v = v % bs.clods.size()
+		return {"tex": bs.clods[v], "mask": bs.clod_masks[v], "origin": bs.clod_origin[v]}
+	if kind == "bar":
+		var rs := _ruin_set_for(q)
+		if rs == null or rs.bars.is_empty():
+			return {}
+		v = v % rs.bars.size()
+		return {"tex": rs.bars[v], "mask": rs.bar_masks[v], "origin": rs.bar_origin[v]}
+	var ps := _parts_for(q, float(d["size_m"]))
+	if ps == null or ps.shards.is_empty():
+		return {}
+	v = v % ps.shards.size()
+	return {"tex": ps.shards[v], "mask": ps.shard_masks[v], "origin": ps.shard_origin[v]}
 
 func _parts_for(ppm_q: float, size_m: float) -> FxBurst.PartsSet:
 	var key := "%.3f|%d|f%d" % [ppm_q, _size_class(size_m), int(style.fire_on)]
@@ -354,12 +502,12 @@ func _draw_ground(item: CanvasItem, view: Rect2) -> void:
 			continue
 		var ppm := drawn_ppm(wp)
 		var q := quantize(ppm)
-		var ps := _parts_for(q, float(d["size_m"]))
-		if ps == null or ps.shards.is_empty():
+		var art := _debris_art(d, q)
+		if art.is_empty():
 			continue
-		var v := int(d["variant"]) % ps.shards.size()
-		_blit(item, ps.shards[v], ps.shard_origin[v], sp, float(st["rot"]), ppm / q, Color(1.0, 1.0, 1.0, float(st["alpha"])))
+		_blit(item, art["tex"], art["origin"], sp, float(st["rot"]), ppm / q, Color(1.0, 1.0, 1.0, float(st["alpha"])))
 	_draw_scar_embers(item, view)
+	_draw_strike_ground(item, view)
 
 # The embers glowing on a scar are puffs of kind scar_ember; they sit on the ground.
 func _draw_scar_embers(item: CanvasItem, view: Rect2) -> void:
@@ -418,11 +566,11 @@ func _draw_shadows(item: CanvasItem, view: Rect2) -> void:
 			continue
 		var ppm := drawn_ppm(wp)
 		var q := quantize(ppm)
-		var ps := _parts_for(q, float(d["size_m"]))
-		if ps == null or ps.shard_masks.is_empty():
+		var art := _debris_art(d, q)
+		if art.is_empty():
 			continue
-		var v := int(d["variant"]) % ps.shard_masks.size()
-		_blit(item, ps.shard_masks[v], ps.shard_origin[v], sp, float(st["rot"]), ppm / q, _tint)
+		_blit(item, art["mask"], art["origin"], sp, float(st["rot"]), ppm / q, _tint)
+	_draw_strike_shadows(item, view)
 
 # A stretched puff is drawn along the way it was flying (its `dir`, a world heading); a round one is not turned.
 func _puff_rot(o: Dictionary, p: Dictionary, wp: Vector2) -> float:
@@ -467,11 +615,10 @@ func _draw_air(item: CanvasItem, view: Rect2) -> void:
 			continue
 		var ppm := drawn_ppm(wp)
 		var q := quantize(ppm)
-		var ps := _parts_for(q, float(d["size_m"]))
-		if ps == null or ps.shards.is_empty():
+		var art := _debris_art(d, q)
+		if art.is_empty():
 			continue
-		var v := int(d["variant"]) % ps.shards.size()
-		_blit(item, ps.shards[v], ps.shard_origin[v], sp, float(st["rot"]), ppm / q, Color.WHITE)
+		_blit(item, art["tex"], art["origin"], sp, float(st["rot"]), ppm / q, Color.WHITE)
 
 func _draw_top(item: CanvasItem, view: Rect2) -> void:
 	# the flames on planes the sim is flying out of control
@@ -510,7 +657,88 @@ func _draw_top(item: CanvasItem, view: Rect2) -> void:
 			continue
 		var ppm := drawn_ppm(wp)
 		var q := quantize(ppm)
-		var bs := _burst_for(str(b["phase"]), q, float(b["size_m"]), float(b["radius_m"]))
+		var bs := _burst_for(b, q)
 		if bs == null or k >= bs.frames.size():
 			continue
 		_blit(item, bs.frames[k]["tex"], bs.origin, sp, 0.0, ppm / q, Color.WHITE)
+	_draw_strike_air(item, view)   # the bombs falling: over the bomber they were dropped from (they are under it in the air)
+
+# --- The strike's drawing (Track X2) -----------------------------------------------------------------------------------------------
+
+# On the ground: the craters, then each ruin (what stays at the foot, the mast falling or lying).
+func _draw_strike_ground(item: CanvasItem, view: Rect2) -> void:
+	for c in field.craters:
+		var a := field.crater_alpha(c, now)
+		if a <= 0.0:
+			continue
+		var wp: Vector2 = c["pos"]
+		var sp := mapping.world_to_screen(wp)
+		if not view.has_point(sp):
+			continue
+		var ppm := drawn_ppm(wp)
+		var q := quantize(ppm)
+		var bs := _bomb_set_for(q, float(c["size_m"]))
+		if bs == null or bs.craters.is_empty():
+			continue
+		var tex: Texture2D = bs.craters[int(c["variant"]) % bs.craters.size()]
+		_blit(item, tex, bs.crater_origin, sp, mapping.screen_angle(wp, float(c["rot"])), ppm / q, Color(1.0, 1.0, 1.0, a))
+	for r in field.ruins:
+		var a := field.ruin_alpha(r, now)
+		if a <= 0.0:
+			continue
+		var wp: Vector2 = r["pos"]
+		var sp := mapping.world_to_screen(wp)
+		if not view.grow(160.0).has_point(sp):
+			continue
+		var ppm := drawn_ppm(wp)
+		var q := quantize(ppm)
+		# the foot is baked ALREADY TURNED by the unit's heading (as the static markers are: the light is the map's at any heading)
+		var rs := _ruin_set_for(q, mapping.screen_angle(wp, float(r["heading"])) + PI / 2.0)
+		if rs == null or rs.remains.is_empty():
+			continue
+		var v := int(r["variant"]) % rs.remains.size()
+		var tower := str(r.get("kind", "radio_tower")) == "radio_tower"
+		_blit(item, rs.remains[v] if tower else rs.remains_other[v], rs.remains_origin, sp, 0.0, ppm / q, Color(1.0, 1.0, 1.0, a))
+		if not tower:
+			continue   # a destroyed battery: scorch, crater and scraps; no mast
+		# the mast: falling (a flipbook of its angles), then lying; both in the frame of its fall
+		var rot := mapping.screen_angle(wp, float(r["fall_rad"]))
+		var fk := field.ruin_collapse_frame(r, now)
+		var frames: Array = rs.collapse[v]
+		if fk >= 0 and fk < frames.size():
+			_blit(item, (frames[fk] as Dictionary)["tex"], rs.lying_origin, sp, rot, ppm / q, Color.WHITE)
+		elif field.ruin_lying(r, now) and rs.lying[v] != null:
+			_blit(item, rs.lying[v], rs.lying_origin, sp, rot, ppm / q, Color.WHITE)
+
+# Bombs in the air cast their shadow by the altitude rule, the gap closing as they fall.
+func _draw_strike_shadows(item: CanvasItem, view: Rect2) -> void:
+	for d in field.drops:
+		var s := field.drop_state(d, now)
+		if not bool(s["alive"]):
+			continue
+		var wp: Vector2 = s["pos"]
+		var sp := mapping.world_to_screen(wp) + _shadow_px(wp, float(s["h"]))
+		if not view.has_point(sp):
+			continue
+		var ppm := drawn_ppm(wp)
+		var q := quantize(ppm)
+		var bs := _drop_set_for(q)
+		if bs == null or bs.bomb_mask == null:
+			continue
+		_blit(item, bs.bomb_mask, bs.bomb_origin, sp, mapping.screen_angle(wp, float(s["heading"])), ppm / q, _tint)
+
+func _draw_strike_air(item: CanvasItem, view: Rect2) -> void:
+	for d in field.drops:
+		var s := field.drop_state(d, now)
+		if not bool(s["alive"]):
+			continue
+		var wp: Vector2 = s["pos"]
+		var sp := mapping.world_to_screen(wp)
+		if not view.has_point(sp):
+			continue
+		var ppm := drawn_ppm(wp)
+		var q := quantize(ppm)
+		var bs := _drop_set_for(q)
+		if bs == null or bs.bomb == null:
+			continue
+		_blit(item, bs.bomb, bs.bomb_origin, sp, mapping.screen_angle(wp, float(s["heading"])), ppm / q, Color.WHITE)

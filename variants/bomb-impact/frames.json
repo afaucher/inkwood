@@ -1,0 +1,609 @@
+{
+  "id": "bomb-impact",
+  "options": [
+    {
+      "option": "B1",
+      "label": "B1 · Flash, thick smoke, ringed pit",
+      "note": "PROPOSED. A fast knock-out flash (a ragged paper-light disc, ink hatch rays, flung dots, a ring of dust on the ground), a thick burst of the damage smoke thrown outward then hanging, casting its shadow, a billow that thins over turns, clods of earth thrown up and falling, and a crater that stays: an ink-wash pit with dirt stipple, short hatch on the wall toward the light and a broken ink ring on the lip.",
+      "rows": [
+        {
+          "title": "a. ONE BOMB (blast radius 45 m): a fast flash, a thick shadowed burst of smoke, clods of earth thrown up and falling, a billow, then the crater",
+          "key": "single",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/B1_single_0.png",
+              "caption": "0 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_single_1.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_single_2.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_single_3.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_single_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_single_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_single_6.png",
+              "caption": "two turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_single_7.png",
+              "caption": "four turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_single_8.png",
+              "caption": "twelve turns later: what stays  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. A STICK OF SIX walks across the ground, 0.12 s apart, 10 m apart, scattered: six flashes, six crater marks, one pall of smoke",
+          "key": "stick",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/B1_stick_0.png",
+              "caption": "0.1 s: the first bombs  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_stick_1.png",
+              "caption": "0.4 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_stick_2.png",
+              "caption": "0.8 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_stick_3.png",
+              "caption": "1.5 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_stick_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_stick_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_stick_6.png",
+              "caption": "three turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_stick_7.png",
+              "caption": "eight turns later  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. WHAT STAYS: the craters after the smoke has gone, close and at the planning view",
+          "key": "stays",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/B1_stays_0.png",
+              "caption": "eighteen turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_stays_1.png",
+              "caption": "sixty turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B1_stays_2.png",
+              "caption": "eighteen turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B1_stays_3.png",
+              "caption": "sixty turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "d. TWO PASSES, ten seconds apart, at the planning view",
+          "key": "passes",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/B1_passes_0.png",
+              "caption": "3 s: the first pass  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B1_passes_1.png",
+              "caption": "10.5 s: the second pass lands  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B1_passes_2.png",
+              "caption": "14 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B1_passes_3.png",
+              "caption": "six turns on  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B1_passes_4.png",
+              "caption": "twenty turns on  (zoom 0.35)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "B2",
+      "label": "B2 · Ink burst, dust, blot",
+      "note": "PROPOSED. No white at all: the blast is ink, as the crash board's stipple burst was with the fire off: flung dots and hatch rays, a ring of dust on the ground, then a grey burst of smoke (the plain translucent grey, W2, rather than white) and clods. What stays is a blot: dirt stipple and hatch, no ring, no pit wash (the burnt-ground look of terrain.burnt).",
+      "rows": [
+        {
+          "title": "a. ONE BOMB (blast radius 45 m): a fast flash, a thick shadowed burst of smoke, clods of earth thrown up and falling, a billow, then the crater",
+          "key": "single",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/B2_single_0.png",
+              "caption": "0 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_single_1.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_single_2.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_single_3.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_single_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_single_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_single_6.png",
+              "caption": "two turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_single_7.png",
+              "caption": "four turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_single_8.png",
+              "caption": "twelve turns later: what stays  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. A STICK OF SIX walks across the ground, 0.12 s apart, 10 m apart, scattered: six flashes, six crater marks, one pall of smoke",
+          "key": "stick",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/B2_stick_0.png",
+              "caption": "0.1 s: the first bombs  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_stick_1.png",
+              "caption": "0.4 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_stick_2.png",
+              "caption": "0.8 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_stick_3.png",
+              "caption": "1.5 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_stick_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_stick_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_stick_6.png",
+              "caption": "three turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_stick_7.png",
+              "caption": "eight turns later  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. WHAT STAYS: the craters after the smoke has gone, close and at the planning view",
+          "key": "stays",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/B2_stays_0.png",
+              "caption": "eighteen turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_stays_1.png",
+              "caption": "sixty turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B2_stays_2.png",
+              "caption": "eighteen turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B2_stays_3.png",
+              "caption": "sixty turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "d. TWO PASSES, ten seconds apart, at the planning view",
+          "key": "passes",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/B2_passes_0.png",
+              "caption": "3 s: the first pass  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B2_passes_1.png",
+              "caption": "10.5 s: the second pass lands  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B2_passes_2.png",
+              "caption": "14 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B2_passes_3.png",
+              "caption": "six turns on  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B2_passes_4.png",
+              "caption": "twenty turns on  (zoom 0.35)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "B3",
+      "label": "B3 · Shock ring, pale-lipped crater",
+      "note": "PROPOSED. The restrained one: a small knock-out core and one expanding broken ring (the shock), a smaller smoke burst, fewer clods. What stays is a crater with a pale lip of thrown earth (the lightest of the fills) round a dark pit: it reads as a hole at any distance, because it is a light ring round a dark centre.",
+      "rows": [
+        {
+          "title": "a. ONE BOMB (blast radius 45 m): a fast flash, a thick shadowed burst of smoke, clods of earth thrown up and falling, a billow, then the crater",
+          "key": "single",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/B3_single_0.png",
+              "caption": "0 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_single_1.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_single_2.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_single_3.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_single_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_single_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_single_6.png",
+              "caption": "two turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_single_7.png",
+              "caption": "four turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_single_8.png",
+              "caption": "twelve turns later: what stays  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. A STICK OF SIX walks across the ground, 0.12 s apart, 10 m apart, scattered: six flashes, six crater marks, one pall of smoke",
+          "key": "stick",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/B3_stick_0.png",
+              "caption": "0.1 s: the first bombs  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_stick_1.png",
+              "caption": "0.4 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_stick_2.png",
+              "caption": "0.8 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_stick_3.png",
+              "caption": "1.5 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_stick_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_stick_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_stick_6.png",
+              "caption": "three turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_stick_7.png",
+              "caption": "eight turns later  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. WHAT STAYS: the craters after the smoke has gone, close and at the planning view",
+          "key": "stays",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/B3_stays_0.png",
+              "caption": "eighteen turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_stays_1.png",
+              "caption": "sixty turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B3_stays_2.png",
+              "caption": "eighteen turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B3_stays_3.png",
+              "caption": "sixty turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "d. TWO PASSES, ten seconds apart, at the planning view",
+          "key": "passes",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/B3_passes_0.png",
+              "caption": "3 s: the first pass  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B3_passes_1.png",
+              "caption": "10.5 s: the second pass lands  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B3_passes_2.png",
+              "caption": "14 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B3_passes_3.png",
+              "caption": "six turns on  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B3_passes_4.png",
+              "caption": "twenty turns on  (zoom 0.35)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "B4",
+      "label": "B4 · Star burst, hatched crater",
+      "note": "PROPOSED. A ruled star: a jagged blast filled knock-out for its first frames, then a hollow inked star, with long rays (the woodcut blast of the crash board, with no fire). The smoke burst is thicker and taller-lived. What stays is a deeply hatched crater: dense hatch on the inner wall, a heavier pit wash, a broken ring.",
+      "rows": [
+        {
+          "title": "a. ONE BOMB (blast radius 45 m): a fast flash, a thick shadowed burst of smoke, clods of earth thrown up and falling, a billow, then the crater",
+          "key": "single",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/B4_single_0.png",
+              "caption": "0 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_single_1.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_single_2.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_single_3.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_single_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_single_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_single_6.png",
+              "caption": "two turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_single_7.png",
+              "caption": "four turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_single_8.png",
+              "caption": "twelve turns later: what stays  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. A STICK OF SIX walks across the ground, 0.12 s apart, 10 m apart, scattered: six flashes, six crater marks, one pall of smoke",
+          "key": "stick",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/B4_stick_0.png",
+              "caption": "0.1 s: the first bombs  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_stick_1.png",
+              "caption": "0.4 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_stick_2.png",
+              "caption": "0.8 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_stick_3.png",
+              "caption": "1.5 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_stick_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_stick_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_stick_6.png",
+              "caption": "three turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_stick_7.png",
+              "caption": "eight turns later  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. WHAT STAYS: the craters after the smoke has gone, close and at the planning view",
+          "key": "stays",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/B4_stays_0.png",
+              "caption": "eighteen turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_stays_1.png",
+              "caption": "sixty turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/B4_stays_2.png",
+              "caption": "eighteen turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B4_stays_3.png",
+              "caption": "sixty turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "d. TWO PASSES, ten seconds apart, at the planning view",
+          "key": "passes",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/B4_passes_0.png",
+              "caption": "3 s: the first pass  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B4_passes_1.png",
+              "caption": "10.5 s: the second pass lands  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B4_passes_2.png",
+              "caption": "14 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B4_passes_3.png",
+              "caption": "six turns on  (zoom 0.35)"
+            },
+            {
+              "file": "frames/B4_passes_4.png",
+              "caption": "twenty turns on  (zoom 0.35)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

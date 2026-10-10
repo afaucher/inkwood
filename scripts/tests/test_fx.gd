@@ -23,6 +23,9 @@ extends "res://scripts/test_support/test_case.gd"
 #   8. round 2 of the damage smoke: C0 is round 1's C; the levers (no scallops, open arcs, streaming, cool
 #      wash, dashed and ageing rings) and the plain white / grey smoke are in the data; thick smoke casts a
 #      shadow; every option draws in every tone and stage; every frame of the board exists at native size
+#   9. THE STRIKE (Track X2): flak bursts (a fast flash, a puff that hangs for turns, hits and misses), bomb impacts (flash, thick
+#      shadowed smoke, clods, a crater that stays, a stick of six, a falling bomb that follows the sim), the radio tower's ruin
+#      (the sheet's model, the fall, the column that thins, the ruin that stays and is restored); the boards' records
 
 const FxData = preload("res://scripts/fx/fx_data.gd")
 const FxStyle = preload("res://scripts/fx/fx_style.gd")
@@ -48,9 +51,12 @@ func setup(_main) -> void:
 	_check_crash(data)
 	_check_draw_crash(data, st)
 	_check_shadow(st)
-	_check_layer(data)
+	await _check_layer(data)
 	_check_r2(data, st)
+	_check_strike(data, st)
+	await _check_strike_layer(data)
 	_check_boards()
+	_check_strike_boards()
 	check(FxData.shared().ok(), "no data error was raised by any of the above: %s" % str(FxData.shared().errors))
 	finish()
 
@@ -787,6 +793,533 @@ func _check_r2(data: FxData, st: FxStyle) -> void:
 					eq([im.get_width(), im.get_height()], [int(size_a[0]), int(size_a[1])], "and it is the native size listed")
 			else:
 				print("test_fx: the round-2 frames are not on disk (regenerate with fx_board.gd what=smoke2); skipping the frame files")
+
+# --- 9. The strike (Track X2, 2026-10-10): flak, bombs, the radio tower -------------------------------------------------------------
+#
+#   flak: data holds four proposed options with palette roles only; a burst is a FAST flash (frames inside half a second) and a
+#   puff that hangs for turns (very slow decay), at the target's height, its shadow by the altitude rule; a hit bursts on the
+#   target, a miss beside it, a hit is bigger; the same call draws the same burst, two shots at one moment differ
+#   bombs: a bomb's flash, its thick shadowed smoke burst thrown out and then hanging, its clods thrown up and landing by the data's
+#   gravity, the crater that stays; a stick makes one of each in the sim's order; a falling bomb follows the sim's own arithmetic
+#   the tower: the sheet's model (the same parts as the unit marker's), the flash, the mast's fall by the data's frames, the column
+#   of smoke that thins over turns, the ruin that stays (and is restored the same, and for a late joiner)
+#   the boards' records exist (frames only when present)
+
+const FxRuin = preload("res://scripts/fx/fx_ruin.gd")
+const FxBomb = preload("res://scripts/fx/fx_bomb.gd")
+const FxFlash = preload("res://scripts/fx/fx_flash.gd")
+
+func _strike_digest(f: FxField) -> int:
+	return hash(var_to_str([f.puffs, f.bursts, f.debris, f.scars, f.craters, f.ruins, f.drops]))
+
+func _check_strike(data: FxData, st: FxStyle) -> void:
+	eq(data.flak_option_names(), ["F1", "F2", "F3", "F4"], "four proposed flak options")
+	eq(data.bomb_option_names(), ["B1", "B2", "B3", "B4"], "four proposed bomb options")
+	eq(data.ruin_option_names(), ["R1", "R2", "R3", "R4"], "four proposed ruin options")
+	# every value is a proposed record, every role exists and is hue-free paper-and-ink
+	var bad: Array[String] = []
+	var missing: Array[String] = []
+	for kind: String in ["flak", "bomb", "ruin"]:
+		var opts: Dictionary = (data.raw.get(kind) as Dictionary).get("options")
+		for name: String in opts:
+			if name.begins_with("_"):
+				continue
+			_walk_records(opts[name], "%s.%s" % [kind, name], bad)
+			var o: Dictionary = data.flak_option(name) if kind == "flak" else (data.bomb_option(name) if kind == "bomb" else data.ruin_option(name))
+			_roles_in(o, "%s.%s" % [kind, name], st, missing)
+			check(str(opts[name].get("_note", "")).begins_with("PROPOSED"), "%s %s is labelled proposed" % [kind, name])
+	check(bad.is_empty(), "every strike value is a proposed value record: %s" % str(bad.slice(0, 4)))
+	check(missing.is_empty(), "every colour role a strike option names exists: %s" % str(missing.slice(0, 4)))
+	for k: String in ["flak", "bomb", "ruin"]:
+		var wd: Dictionary = (data.raw.get("working_default") as Dictionary).get(k)
+		check(wd.get("_proposed") == true, "the working default %s is a proposed record, not a decision" % k)
+	for rname: String in data.role_names():
+		if rname.begins_with("flak.") or rname.begins_with("bomb.") or rname.begins_with("ruin."):
+			var c: Color = st.color(rname)
+			var l := FxStyle.to_oklch(c)
+			check(float(l[1]) < 0.055, "role %s has paper-and-ink chroma at most (%.3f): no new hue" % [rname, float(l[1])])
+	# the flak washes lighten with age and are darker than the damage smoke's whites at every age
+	for tone in 3:
+		var l0: float = FxStyle.to_oklch(st.color("flak.wash.0.%d" % tone))[0]
+		var l1: float = FxStyle.to_oklch(st.color("flak.wash.1.%d" % tone))[0]
+		var l2: float = FxStyle.to_oklch(st.color("flak.wash.2.%d" % tone))[0]
+		check(l0 < l1 and l1 < l2, "flak tone %d lightens as the puff ages (L %.2f, %.2f, %.2f)" % [tone, l0, l1, l2])
+	# --- flak: timing, size, place
+	for name: String in data.flak_option_names():
+		var f := FxField.new(data)
+		f.world_seed = 20261009
+		f.select_strike(name)
+		var o := f.flak_o
+		var fl := FxData.grp(o, "flash")
+		var bg := FxData.grp(o, "burst")
+		var frames := FxData.arr(fl, "frames_s")
+		var early := 0
+		for t in frames:
+			if float(t) <= 0.5:
+				early += 1
+		check(early >= 4, "%s: the flash is drawn in %d frames within half a second (fast)" % [name, early])
+		check(FxData.f(bg, "life_s") >= 10.0, "%s: a burst hangs %.0f s, two turns or more (very slow decay)" % [name, FxData.f(bg, "life_s")])
+		var target := Vector2(2000.0, 1500.0)
+		f.flak_burst(target, 400.0, 10.0, true, "aa/1")
+		f.flak_burst(target, 400.0, 10.0, false, "aa/2")
+		eq(f.bursts.size(), 2, "%s: a burst each" % name)
+		var hb: Dictionary = f.bursts[0]
+		var mb: Dictionary = f.bursts[1]
+		eq(f.burst_frame(hb, 9.99), -1, "%s: nothing before the flash" % name)
+		eq(f.burst_frame(hb, 10.0), 0, "%s: the first frame at the burst" % name)
+		check(f.burst_frame(hb, 10.2) >= 2, "%s: by 0.2 s the flipbook is well on" % name)
+		eq(f.burst_frame(hb, 10.0 + FxData.f(fl, "end_s") + 0.01), -1, "%s: and over after its end" % name)
+		check(float(hb["radius_m"]) > float(mb["radius_m"]), "%s: a hit's flash is bigger than a miss's" % name)
+		var ho := FxData.arr(bg, "hit_offset_m")
+		var mo := FxData.arr(bg, "miss_offset_m")
+		var dh := FxData.arr(bg, "miss_dh_m")
+		check((hb["pos"] as Vector2).distance_to(target) <= float(ho[1]) + 1e-6, "%s: a hit bursts on its target (%.1f m off)" % [name, (hb["pos"] as Vector2).distance_to(target)])
+		var md := (mb["pos"] as Vector2).distance_to(target)
+		check(md >= float(mo[0]) - 1e-6 and md <= float(mo[1]) + 1e-6, "%s: a miss bursts beside it, %.0f m off (data %s)" % [name, md, str(mo)])
+		check(absf(float(hb["h"]) - 400.0) < 1e-9, "%s: a hit bursts at the target's height" % name)
+		check(float(mb["h"]) >= 400.0 + float(dh[0]) - 1e-6 and float(mb["h"]) <= 400.0 + float(dh[1]) + 1e-6, "%s: a miss bursts within the data's height band (%.0f m)" % [name, float(mb["h"])])
+		var hp: Array = []
+		var mp: Array = []
+		for p in f.puffs:
+			if p["kind"] == "flak":
+				if (p["unit"] as String) == "aa/1":
+					hp.append(p)
+				else:
+					mp.append(p)
+		eq(hp.size(), FxData.i(bg, "puffs_hit"), "%s: a hit leaves the data's number of puffs" % name)
+		eq(mp.size(), FxData.i(bg, "puffs_miss"), "%s: a miss, its own" % name)
+		var set_o: Dictionary = f.set_defs["flak:" + name]
+		for p in hp:
+			near(float(p["life"]) / (FxData.f(bg, "life_s") * FxData.f(bg, "hit_life_scale")), 1.0, 0.1001, "%s: a puff lives the data's life" % name)
+			eq(int(p["tone"]), FxData.i(bg, "tone_hit"), "%s: a hit is in its dense tone" % name)
+			check(float(p["born"]) - 10.0 < 0.3, "%s: the puffs come at the burst (%.2f s)" % [name, float(p["born"]) - 10.0])
+			check(float(p["h"]) == float(hb["h"]), "%s: at the burst's height, so its shadow gap is the altitude rule's" % name)
+		check(FxPuff.casts_shadow(set_o, 2) and FxPuff.casts_shadow(set_o, 1) and not FxPuff.casts_shadow(set_o, 0), "%s: a dense burst casts a ground shadow, thin ones none" % name)
+		var p0: Dictionary = hp[0]
+		var alive_hang := f.puff_state(p0, float(p0["born"]) + float(p0["life"]) * 0.4)
+		check(bool(alive_hang["alive"]) and float(alive_hang["alpha"]) > 0.0, "%s: a puff still hangs at two fifths of its life" % name)
+		eq(bool(f.puff_state(p0, float(p0["born"]) + float(p0["life"]) + 0.01)["alive"]), false, "%s: and is gone after its life" % name)
+		var big0 := float(f.puff_state(p0, float(p0["born"]) + 0.01)["scale"])
+		var big1 := float(f.puff_state(p0, float(p0["born"]) + 1.0)["scale"])
+		check(big1 > big0 * 1.2, "%s: it swells in its first second (%.2f to %.2f)" % [name, big0, big1])
+	# --- determinism and the late joiner
+	var fa := FxField.new(data)
+	var fb := FxField.new(data)
+	for f: FxField in [fa, fb]:
+		f.world_seed = 20261009
+		f.flak_burst(Vector2(1000, 1000), 300.0, 5.0, false, "x")
+		f.flak_burst(Vector2(1000, 1000), 300.0, 5.0, false, "y")
+		f.bomb_impact(Vector2(1200, 1100), 6.0, 45.0, "b", 0)
+		f.bomb_drop("b", 1, Vector2(400, 1100), 400.0, 2.0, Vector2(1210, 1100), 11.0)
+		f.ruin("t1", Vector2(1500, 1500), 7.0, "radio_tower", 12.0, 0.0)
+	eq(_strike_digest(fa), _strike_digest(fb), "two runs of the same strike calls make the same field")
+	check(fa.bursts[0]["pos"] != fa.bursts[1]["pos"] or fa.bursts[0]["seed"] != fa.bursts[1]["seed"], "two shots at one moment burst differently (the shot id tells them apart)")
+	var fo := FxField.new(data)
+	fo.world_seed = 20261009
+	fo.select_strike("F2", "B2", "R2")
+	fo.flak_burst(Vector2(1000, 1000), 300.0, 5.0, false, "x")
+	check(_strike_digest(fo) != _strike_digest(fa), "a different option makes a different field")
+	var fw := FxField.new(data)
+	fw.world_seed = 777
+	fw.ruin("t1", Vector2(1500, 1500), 7.0, "radio_tower", 12.0, 0.0)
+	check(fw.ruins[0]["seed"] != fa.ruins[0]["seed"], "another world seed makes another ruin")
+	# --- bombs
+	for name: String in data.bomb_option_names():
+		var f := FxField.new(data)
+		f.world_seed = 20261009
+		f.select_strike("", name)
+		var o := f.bomb_o
+		var fl := FxData.grp(o, "flash")
+		var blast := 45.0
+		var frames := FxData.arr(fl, "frames_s")
+		var early := 0
+		for t in frames:
+			if float(t) <= 0.5:
+				early += 1
+		check(early >= 4, "%s: the bomb's flash is drawn in %d frames within half a second (fast)" % [name, early])
+		check(float(frames[frames.size() - 1]) >= 1.5 and FxData.f(fl, "end_s") >= 2.5, "%s: the flipbook lingers to %.1f s (a slow decay)" % [name, FxData.f(fl, "end_s")])
+		f.bomb_impact(Vector2(2000, 2000), 10.0, blast, "b", 3)
+		eq(f.bursts.size(), 1, "%s: one flash" % name)
+		var bu: Dictionary = f.bursts[0]
+		eq(bu["phase"], "bomb", "%s: a bomb's flash" % name)
+		near(float(bu["radius_m"]), FxData.f(fl, "radius_frac") * blast, 1e-9, "%s: the flash is the data's fraction of the blast radius" % name)
+		eq(f.burst_frame(bu, 9.9), -1, "%s: nothing before the impact" % name)
+		eq(f.burst_frame(bu, 10.0), 0, "%s: the first frame at the impact" % name)
+		eq(f.burst_frame(bu, 10.0 + FxData.f(fl, "end_s") + 0.01), -1, "%s: over after its end" % name)
+		# the smoke burst: the data's puffs, thrown out fast, then hanging, thick (casts a shadow), a very slow decay
+		var sbg := FxData.grp(o, "smoke_burst")
+		var burst: Array = []
+		for p in f.puffs:
+			if p["kind"] == "burst":
+				burst.append(p)
+		eq(burst.size(), FxData.i(sbg, "count"), "%s: the smoke burst has the data's puffs" % name)
+		var last_b := 0.0
+		for p in burst:
+			last_b = maxf(last_b, float(p["born"]) - 10.0)
+			check(float(p["life"]) >= 28.0, "%s: a smoke puff lasts %.0f s (very slow decay)" % [name, float(p["life"])])
+			eq(int(p["tone"]), FxData.i(sbg, "tone"), "%s: in the data's thick tone" % name)
+		check(last_b <= 0.5, "%s: the burst is over in half a second (FAST): %.2f s" % [name, last_b])
+		check(FxPuff.casts_shadow(f.set_defs[(burst[0] as Dictionary)["set"]], FxData.i(sbg, "tone")), "%s: thick smoke casts a ground shadow" % name)
+		var b0: Dictionary = burst[0]
+		var d1 := ((f.puff_state(b0, float(b0["born"]) + 1.0)["pos"] as Vector2) - (b0["pos"] as Vector2) - (b0["wind"] as Vector2) * 1.0).length()
+		var d8 := ((f.puff_state(b0, float(b0["born"]) + 8.0)["pos"] as Vector2) - (b0["pos"] as Vector2) - (b0["wind"] as Vector2) * 8.0).length()
+		check(d1 > 3.0 and (d8 - d1) < 0.5 * d1, "%s: thrown out fast, then it hangs (%.1f m at 1 s, %.1f at 8 s)" % [name, d1, d8])
+		var rfr := FxData.arr(sbg, "radius_frac")
+		check(float(b0["r_m"]) / blast >= float(rfr[0]) - 1e-9 and float(b0["r_m"]) / blast <= float(rfr[1]) + 1e-9, "%s: its radius is a fraction of the blast radius, in the data's band" % name)
+		# the clods: thrown up, they rise and fall by the data's gravity, lie a while, are gone
+		var deb := FxData.grp(o, "debris")
+		eq(f.debris.size(), FxData.i(deb, "count"), "%s: the data's number of clods" % name)
+		var g := FxData.f(deb, "gravity_mps2")
+		var d: Dictionary = f.debris[0]
+		near(float(d["land_s"]), 2.0 * float(d["vz"]) / g, 1e-9, "%s: a clod lands when the data's gravity says" % name)
+		var apex := 0.0
+		var prev := -1.0
+		var rises := false
+		var falls := false
+		for k in 21:
+			var s := f.debris_state(d, 10.0 + float(k) * float(d["land_s"]) / 20.0)
+			var hh := float(s["h"])
+			if prev >= 0.0:
+				rises = rises or hh > prev + 1e-9
+				falls = falls or hh < prev - 1e-9
+			prev = hh
+			apex = maxf(apex, hh)
+			check(hh >= -1e-9, "%s: a clod is never under the ground" % name)
+		check(rises and falls and apex > 1.0, "%s: a clod goes up and comes down (apex %.1f m)" % [name, apex])
+		var landed := f.debris_state(d, 10.0 + float(d["land_s"]) + 0.5)
+		check(bool(landed["alive"]) and bool(landed["landed"]) and float(landed["h"]) == 0.0, "%s: it lies on the ground a while" % name)
+		eq(bool(f.debris_state(d, 10.0 + float(d["land_s"]) + float(d["rest_s"]) + 0.1)["alive"]), false, "%s: then it is gone" % name)
+		# the crater stays
+		eq(f.craters.size(), 1, "%s: a crater" % name)
+		var cr: Dictionary = f.craters[0]
+		eq(f.crater_alpha(cr, 9.9), 0.0, "%s: none before the impact" % name)
+		check(f.crater_alpha(cr, 10.0 + 0.3) > 0.0 and f.crater_alpha(cr, 10.0 + 0.3) < 1.0, "%s: it darkens over its first moments, under the smoke" % name)
+		eq(f.crater_alpha(cr, 10.0 + 100000.0), 1.0, "%s: and stays for the rest of the game" % name)
+		near(float(cr["size_m"]), blast, 1e-9, "%s: sized by the blast radius" % name)
+		f.prune(1e6)
+		eq(f.craters.size(), 1, "%s: pruning forgets the dead smoke but never a crater" % name)
+		# a stick of six, as the sim spaces it: one of each, in time order
+		var sf := FxField.new(data)
+		sf.select_strike("", name)
+		for i in 6:
+			sf.bomb_impact(Vector2(3000.0 + 10.2 * float(i), 2000.0), 20.0 + 0.12 * float(i), blast, "stick", i)
+		eq(sf.craters.size(), 6, "%s: a stick of six leaves six craters" % name)
+		eq(sf.bursts.size(), 6, "%s: and six flashes, 0.12 s apart" % name)
+		near(float(sf.bursts[5]["t0"]) - float(sf.bursts[0]["t0"]), 0.6, 1e-9, "%s: in the sim's order" % name)
+		check(sf.alive_puffs(21.0).size() > 0 and sf.alive_puffs(21.0 + 100.0).size() == 0, "%s: the stick's smoke hangs and is gone long after" % name)
+	# --- a falling bomb follows the sim's own arithmetic
+	var ff := FxField.new(data)
+	var rec := {"id": "u/1/0/2", "unit": "u", "drop_index": 0, "bomb": 2, "release_turn": 1, "release_t": 0.5, "x0": 100.0, "y0": 300.0, "h0": 113.0,
+		"x": 520.0, "y": 340.0, "fall_s": 4.8, "impact_turn": 1, "impact_t": 5.3}
+	ff.bomb_drop("u", 2, Vector2(100.0, 300.0), 113.0, 0.5, Vector2(520.0, 340.0), 5.3)
+	var dr: Dictionary = ff.drops[0]
+	eq(bool(ff.drop_state(dr, 0.4)["alive"]), false, "a bomb is not drawn before its release")
+	eq(bool(ff.drop_state(dr, 5.3)["alive"]), false, "nor after it lands")
+	var Bombs: GDScript = load("res://scripts/sim/bombs.gd") if ResourceLoader.exists("res://scripts/sim/bombs.gd") else null
+	var last_h := 1e9
+	for k in 9:
+		var t := 0.5 + 4.8 * float(k + 1) / 10.0
+		var s := ff.drop_state(dr, t)
+		check(bool(s["alive"]), "a bomb is in the air at %.2f s" % t)
+		check(float(s["h"]) < last_h, "and only falls")
+		last_h = float(s["h"])
+		var u := (t - 0.5) / 4.8
+		near(float(s["h"]), 113.0 * (1.0 - u * u), 1e-9, "its height is h0 (1 - u^2)")
+		if Bombs != null:
+			var sim: Dictionary = Bombs.bomb_position(rec, 1, t, 5.0)
+			near(float(s["h"]), float(sim["height_m"]), 1e-6, "its height is the sim's bomb_position (%.2f s)" % t)
+			check((s["pos"] as Vector2).is_equal_approx(Vector2(float(sim["x"]), float(sim["y"]))), "and so is its place")
+	# --- the radio tower
+	var M := FxRuin.tower_model(st.scene_seed, 0)
+	var sheet_ok: bool = float(M.p["base"]) >= 5.4 and float(M.p["base"]) <= 6.6 and float(M.p["height"]) >= 23.0 and float(M.p["height"]) <= 27.0 and int(M.p["sections"]) >= 5 and int(M.p["sections"]) <= 8
+	check(sheet_ok, "the tower is the unit sheet's: %.1f m base, %.0f m tall, %d sections, %s bracing" % [float(M.p["base"]), float(M.p["height"]), int(M.p["sections"]), str(M.p["brace"])])
+	eq(FxRuin.tower_model(st.scene_seed, 0), M, "the model is made once")
+	var UA: GDScript = load("res://scripts/ui/unit_marker_art.gd")
+	var ustyle := UiStyle.new()
+	if UA != null and UA.has_method("is_static") and UA.is_static("radio_tower") and ustyle.ok():
+		var theirs = UA.model_for(ustyle, "radio_tower")
+		var same := true
+		for k: String in M.p:
+			same = same and theirs.p.get(k) == M.p[k]
+		check(same, "the ruin is made of the parts of the very tower the unit marker draws (same seed, same parameters)")
+	eq(M.G["legs"].size(), 4, "four legs")
+	eq(M.G["footings"].size(), 4, "four footings")
+	near(M.G["levels"][M.G["levels"].size() - 1], float(M.p["height"]), 1e-9, "the lattice reaches the tower's height")
+	for name: String in data.ruin_option_names():
+		var f := FxField.new(data)
+		f.world_seed = 20261009
+		f.select_strike("", "", name)
+		var o := f.ruin_o
+		var col := FxData.grp(o, "collapse")
+		var fl := FxData.grp(o, "flash")
+		f.ruin("t1", Vector2(2000, 2000), 10.0, "radio_tower", 12.0, 0.0)
+		eq(f.ruins.size(), 1, "%s: a ruin" % name)
+		var r: Dictionary = f.ruins[0]
+		eq(f.ruin_alpha(r, 9.9), 0.0, "%s: none before the blast" % name)
+		eq(f.ruin_alpha(r, 10.0 + 100000.0), 1.0, "%s: and it stays for the rest of the game" % name)
+		var bu: Dictionary = f.bursts[0]
+		eq(bu["phase"], "tower", "%s: the blast's flash" % name)
+		near(float(bu["radius_m"]), FxData.f(fl, "radius_frac") * 12.0, 1e-9, "%s: the flash is the data's fraction of the tower's size" % name)
+		check(r["variant"] == int(r["seed"]) % FxData.i(o, "variants"), "%s: the ruin's variant comes from its seed" % name)
+		check(float(r["fall_rad"]) >= 0.0 and float(r["fall_rad"]) <= TAU + 0.01, "%s: the mast falls one way, from the seed" % name)
+		# the fall
+		var mode := FxData.s(col, "mode")
+		var dur := FxData.f(col, "duration_s")
+		var fs := FxData.arr(col, "frames_s")
+		if mode == "topple":
+			eq(f.ruin_collapse_frame(r, 9.9), -1, "%s: the mast stands before the blast" % name)
+			eq(f.ruin_collapse_frame(r, 10.0), 0, "%s: it begins to tip at the blast" % name)
+			var k_last := f.ruin_collapse_frame(r, 10.0 + dur - 0.01)
+			eq(k_last, fs.size() - 1, "%s: through the data's %d drawn angles" % [name, fs.size()])
+			eq(f.ruin_collapse_frame(r, 10.0 + dur + 0.01), -1, "%s: then it lies" % name)
+			check(f.ruin_lying(r, 10.0 + dur + 0.01) and not f.ruin_lying(r, 10.0 + dur - 0.01), "%s: the mast lies from the moment it is down" % name)
+			check(dur <= 3.0, "%s: it falls in %.1f s (fast)" % [name, dur])
+			var ends := 0
+			for p in f.puffs:
+				if p["kind"] == "burst" and absf((p["pos"] as Vector2).distance_to(Vector2(2000, 2000)) - 0.0) > 5.0:
+					ends += 1
+			check(ends > 0, "%s: a second burst of dust where the mast lands" % name)
+		else:
+			eq(f.ruin_collapse_frame(r, 10.5), -1, "%s: no mast falls" % name)
+			eq(f.ruin_lying(r, 11.0), FxData.b(FxData.grp(o, "lattice"), "fallen"), "%s: the lattice lies at the blast only if the option says" % name)
+		if FxData.i(FxData.grp(o, "debris"), "count") > 0:
+			var bars := 0
+			for d in f.debris:
+				if d["kind"] == "bar":
+					bars += 1
+			eq(bars, FxData.i(FxData.grp(o, "debris"), "count"), "%s: bars of lattice are flung out" % name)
+		# the column of smoke that thins over turns
+		var smo := FxData.grp(o, "smolder")
+		var colm: Array = []
+		for p in f.puffs:
+			if p["kind"] == "smolder":
+				colm.append(p)
+		check(colm.size() > 30, "%s: the ruin smokes in a column of puffs (%d)" % [name, colm.size()])
+		check(FxData.f(smo, "duration_s") >= 60.0, "%s: for %.0f s, twelve turns or more" % [name, FxData.f(smo, "duration_s")])
+		var gaps_ok := true
+		var tone_ok := true
+		var prev_gap := 0.0
+		for k in range(1, colm.size()):
+			var gap := float(colm[k]["born"]) - float(colm[k - 1]["born"])
+			gaps_ok = gaps_ok and gap + 1e-9 >= prev_gap
+			prev_gap = gap
+			tone_ok = tone_ok and int(colm[k]["tone"]) <= int(colm[k - 1]["tone"])
+		check(gaps_ok, "%s: the puffs come further apart as the column thins" % name)
+		check(tone_ok and int(colm[0]["tone"]) == 2 and int(colm[colm.size() - 1]["tone"]) == 0, "%s: it greys from the heavy tone to the thin" % name)
+		check(float(colm[0]["r_m"]) > float(colm[colm.size() - 1]["r_m"]), "%s: and narrows" % name)
+		var a5 := 0
+		var a45 := 0
+		var a_end := 0
+		var end_t := 0.0
+		for p in colm:
+			end_t = maxf(end_t, float(p["born"]) + float(p["life"]))
+			if bool(f.puff_state(p, 10.0 + 5.0)["alive"]):
+				a5 += 1
+			if bool(f.puff_state(p, 10.0 + 45.0)["alive"]):
+				a45 += 1
+		for p in colm:
+			if bool(f.puff_state(p, end_t + 0.01)["alive"]):
+				a_end += 1
+		check(a5 > 3 and a45 > 3, "%s: one turn later %d puffs are smoking, nine turns later %d" % [name, a5, a45])
+		eq(a_end, 0, "%s: and it stops in the end (the ruin stays)" % name)
+		f.prune(1e6)
+		eq(f.ruins.size(), 1, "%s: pruning never forgets the ruin" % name)
+		# a late joiner: the same call with the true time draws the same picture, and the bare ruin restores the same record
+		var fl2 := FxField.new(data)
+		fl2.world_seed = 20261009
+		fl2.select_strike("", "", name)
+		fl2.ruin("t1", Vector2(2000, 2000), 10.0, "radio_tower", 12.0, 0.0)
+		var g2 := FxField.new(data)
+		g2.world_seed = 20261009
+		g2.select_strike("", "", name)
+		var rec2 := g2.add_ruin("t1", Vector2(2000, 2000), 10.0, "radio_tower", 12.0, 0.0, int(r["seed"]))
+		eq([rec2["variant"], rec2["fall_rad"], rec2["seed"]], [r["variant"], r["fall_rad"], r["seed"]], "%s: the bare ruin restores the same variant and fall" % name)
+		var g3 := FxField.new(data)
+		g3.world_seed = 20261009
+		g3.select_strike("", "", name)
+		g3.ruin("t1", Vector2(2000, 2000), 10.0, "radio_tower", 12.0, 0.0)
+		eq(_strike_digest(fl2), _strike_digest(g3), "%s: a replay with the true time draws the same picture, the column and all" % name)
+	# a destroyed battery (any kind but the tower): the flash, smoke and column, a scorch and pit that stay; no mast
+	for name: String in data.ruin_option_names():
+		var fk := FxField.new(data)
+		fk.world_seed = 20261009
+		fk.select_strike("", "", name)
+		fk.ruin("aa1", Vector2(1000, 1000), 10.0, "anti_aircraft_battery", 14.0, 0.0)
+		eq(fk.ruins.size(), 1, "%s: a destroyed battery leaves a ruin record" % name)
+		eq(fk.ruins[0]["kind"], "anti_aircraft_battery", "%s: of its kind" % name)
+		eq(fk.ruin_collapse_frame(fk.ruins[0], 10.2), -1, "%s: no mast falls from a battery" % name)
+		eq(fk.ruin_lying(fk.ruins[0], 12.0), false, "%s: none lies" % name)
+		var bars_k := 0
+		var smolder_k := 0
+		for d in fk.debris:
+			if d["kind"] == "bar":
+				bars_k += 1
+		for p in fk.puffs:
+			if p["kind"] == "smolder":
+				smolder_k += 1
+		eq(bars_k, 0, "%s: no lattice is flung out of a battery" % name)
+		check(smolder_k > 30, "%s: but it smokes in a column (%d puffs)" % [name, smolder_k])
+	# --- every flash frame, puff, crater, clod, bomb, bar and the whole ruin can be DRAWN (headless: the drawing layer records)
+	var n_drawn := 0
+	for name: String in data.flak_option_names():
+		var o := data.flak_option(name)
+		var fl := FxData.grp(o, "flash")
+		for hit in [false, true]:
+			for t in FxData.arr(fl, "frames_s"):
+				var gg := InkCanvas.new(Vector2i(160, 160))
+				var def := fl.duplicate()
+				def["hit"] = hit
+				FxBurst.draw_burst(gg, st, def, float(t), 11, 40.0, Vector2(80, 80), false)
+				gg.discard()
+				n_drawn += 1
+		var po := FxData.grp(o, "puff").duplicate(true)
+		for tone in 3:
+			for stage in maxi(FxData.i(po, "stages"), 1):
+				var g3 := InkCanvas.new(Vector2i(100, 100))
+				FxPuff.draw_puff(g3, st, po, tone, 777 + tone, 22.0, Vector2(50, 50), stage)
+				g3.discard()
+				n_drawn += 1
+			var g4 := InkCanvas.new(Vector2i(100, 100))
+			FxPuff.draw_mask(g4, st, po, tone, 777 + tone, 22.0, Vector2(50, 50))
+			g4.discard()
+	for name: String in data.bomb_option_names():
+		var o := data.bomb_option(name)
+		var fl := FxData.grp(o, "flash")
+		for t in FxData.arr(fl, "frames_s"):
+			var gg := InkCanvas.new(Vector2i(160, 160))
+			FxBurst.draw_burst(gg, st, fl, float(t), 11, 40.0, Vector2(80, 80), true)
+			gg.discard()
+			n_drawn += 1
+		var gc := InkCanvas.new(Vector2i(120, 120))
+		FxBomb.draw_crater(gc, st, FxData.grp(o, "crater"), 5, 20.0, Vector2(60, 60))
+		gc.discard()
+		for m in [false, true]:
+			var gk := InkCanvas.new(Vector2i(30, 30))
+			FxBomb.draw_clod(gk, st, FxData.grp(o, "debris"), 3, 5.0, Vector2(15, 15), m)
+			gk.discard()
+			var gb := InkCanvas.new(Vector2i(40, 40))
+			FxBomb.draw_bomb(gb, st, FxData.grp(o, "fall"), 9.0, Vector2(20, 20), m)
+			gb.discard()
+		n_drawn += 5
+	var roles := {"cream": "ruin.cream", "rock": "ruin.rock", "roof": "ruin.roof", "wk": 1.5}
+	var gs := InkCanvas.new(Vector2i(300, 300))
+	FxRuin.draw_standing(gs, st, M, 4.0, Vector2(150, 150), st.palette["side_a"], roles, PI / 2.0)
+	gs.discard()
+	var gsm := InkCanvas.new(Vector2i(300, 300))
+	FxRuin.draw_standing_mask(gsm, st, M, 4.0, Vector2(150, 150), PI / 2.0)
+	gsm.discard()
+	for name: String in data.ruin_option_names():
+		var o := data.ruin_option(name)
+		var fl := FxData.grp(o, "flash")
+		for t in FxData.arr(fl, "frames_s"):
+			var gg := InkCanvas.new(Vector2i(200, 200))
+			FxBurst.draw_burst(gg, st, fl, float(t), 11, 50.0, Vector2(100, 100), true)
+			gg.discard()
+			n_drawn += 1
+		var gr := InkCanvas.new(Vector2i(300, 300))
+		FxRuin.draw_remains(gr, st, M, FxData.grp(o, "remains"), 4.0, Vector2(150, 150), 9, PI / 2.0)
+		gr.discard()
+		var gro := InkCanvas.new(Vector2i(300, 300))
+		FxRuin.draw_remains(gro, st, M, FxData.grp(o, "remains"), 4.0, Vector2(150, 150), 9, PI / 2.0, false)
+		gro.discard()
+		var brk := FxRuin.lattice_break(o, M, 9)
+		for th in [0.0, 0.5, PI * 0.5]:
+			var gl := InkCanvas.new(Vector2i(300, 200))
+			FxRuin.draw_lattice(gl, st, M, 4.0, Vector2(40, 100), th, float(brk["roll"]) * th / (PI * 0.5), brk if th >= PI * 0.5 else {}, 9, roles)
+			gl.discard()
+		var gbar := InkCanvas.new(Vector2i(60, 30))
+		FxRuin.draw_bar(gbar, st, 10.0, 4, Vector2(30, 15), false)
+		gbar.discard()
+		n_drawn += 5
+	check(n_drawn > 150, "every strike flash, puff, crater, clod, bomb, ruin and mast can be drawn (%d drawings)" % n_drawn)
+	# the standing tower geometry is the sheet's (the unit marker's, to the footing)
+	check(M.G["hut"].size() == 4 and M.G["cable"].size() == 2, "the hut and its cable")
+
+# The layer's calls (headless: state only, nothing drawn or baked).
+func _check_strike_layer(data: FxData) -> void:
+	var layer := FxLayer.new()
+	add_child(layer)
+	layer.setup(Transform2D(0.0, Vector2(2.0, 2.0), 0.0, Vector2.ZERO), 20261009)
+	layer.true_scale = 2.0
+	layer.flak_burst(Vector2(1000, 1000), 400.0, 1.0, true, "a")
+	layer.flak_burst(Vector2(1000, 1000), 400.0, 1.2, false, "b")
+	layer.bomb_drop("u", 0, Vector2(100, 100), 400.0, 0.0, Vector2(500, 100), 9.0)
+	layer.bomb_impact(Vector2(500, 100), 9.0, 45.0, "u", 0)
+	layer.ruin("t", Vector2(800, 800), 10.0, "radio_tower", 12.0, 0.0)
+	layer.add_crater("u", Vector2(900, 900), 3.0, 45.0, 123)
+	layer.add_ruin("t2", Vector2(1200, 1200), 4.0, "radio_tower", 12.0, 0.0, 321)
+	layer.set_time(11.0)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var s := layer.stats()
+	eq([s["craters"], s["ruins"], s["drops"]], [2, 2, 1], "the layer holds the strike: %s" % str(s))
+	check(int(s["bursts"]) == 4 and int(s["puffs"]) > 60 and int(s["debris"]) > 5, "its flashes, smoke and clods: %s" % str(s))
+	eq(int(s["bakes"]), 0, "headless: no art is baked")
+	layer.select_strike("F3", "B3", "R3")
+	eq([layer.field.flak_name, layer.field.bomb_name, layer.field.ruin_name], ["F3", "B3", "R3"], "select_strike chooses the strike's options")
+	layer.select_strike("", "B1", "")
+	eq([layer.field.flak_name, layer.field.bomb_name, layer.field.ruin_name], ["F3", "B1", "R3"], "and an empty name keeps the current one")
+	layer.clear()
+	var c := layer.stats()
+	eq([c["puffs"], c["bursts"], c["debris"], c["craters"], c["ruins"], c["drops"]], [0, 0, 0, 0, 0, 0], "clear() empties the strike too")
+	remove_child(layer)
+	layer.free()
+
+# The boards' records (variants/flak, bomb-impact, tower-ruin): nothing chosen, every frame listed, and the frames themselves when on disk.
+func _check_strike_boards() -> void:
+	for id: String in ["flak", "bomb-impact", "tower-ruin"]:
+		var path := "res://variants/%s/board.json" % id
+		if not check(FileAccess.file_exists(path), "%s: board.json exists" % id):
+			continue
+		var j: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if not check(j is Dictionary, "%s: board.json parses" % id):
+			continue
+		var d: Dictionary = j
+		eq(d.get("id"), id, "%s: its id" % id)
+		eq(int(d.get("seed", 0)), 20261009, "%s: seed 20261009" % id)
+		check(d.has("chosen") and d["chosen"] == null, "%s: nothing is chosen" % id)
+		var rec: Variant = d.get("recommendation")
+		check(rec is Dictionary and (rec as Dictionary).get("_proposed") == true and str((rec as Dictionary).get("option", "")) != "", "%s: the recommendation is labelled proposed" % id)
+		eq((d.get("options", []) as Array).size(), 4, "%s: four options" % id)
+		for o in d.get("options", []):
+			check((o as Dictionary).has("parameters") and (o as Dictionary).has("file"), "%s: option %s carries its parameter set and its sheet" % [id, (o as Dictionary).get("name")])
+		var lp := "res://variants/%s/frames.json" % id
+		if not check(FileAccess.file_exists(lp), "%s: frames.json exists" % id):
+			continue
+		var l: Variant = JSON.parse_string(FileAccess.get_file_as_string(lp))
+		if not check(l is Dictionary, "%s: frames.json parses" % id):
+			continue
+		var listed: Array = (l as Dictionary).get("options", [])
+		eq(listed.size(), 4, "%s: frames.json lists four options" % id)
+		var counted := 0
+		var missing_f: Array[String] = []
+		var first_rel := ""
+		var first_size: Array = []
+		for e in listed:
+			var rows: Array = (e as Dictionary).get("rows", [])
+			check(rows.size() >= 3, "%s %s: at least three rows" % [id, (e as Dictionary).get("option")])
+			for r in rows:
+				check(str((r as Dictionary).get("title", "")) != "", "every row has a title")
+				for fr in (r as Dictionary).get("frames", []):
+					counted += 1
+					var rel := str((fr as Dictionary).get("file", ""))
+					if first_rel == "":
+						first_rel = rel
+						first_size = (r as Dictionary).get("size_px", [0, 0])
+					if not FileAccess.file_exists(ProjectSettings.globalize_path("res://variants/%s/%s" % [id, rel])):
+						missing_f.append(rel)
+					check(str((fr as Dictionary).get("caption", "")) != "", "every frame has a caption: %s" % rel)
+		check(counted >= 60, "%s: frames.json lists %d frames" % [id, counted])
+		# The frames are regenerated by scripts/fx/fx_board_strike.gd and kept out of git (variants/*/frames/), so a fresh
+		# checkout has none: the files are checked only when present.
+		var first_abs := ProjectSettings.globalize_path("res://variants/%s/%s" % [id, first_rel])
+		if FileAccess.file_exists(first_abs):
+			check(missing_f.is_empty(), "%s: every listed frame exists as its own PNG: %s" % [id, str(missing_f.slice(0, 3))])
+			var im := Image.load_from_file(first_abs)
+			if check(im != null and not im.is_empty(), "%s: a frame loads" % id):
+				eq([im.get_width(), im.get_height()], [int(first_size[0]), int(first_size[1])], "%s: and it is the native size listed" % id)
+		else:
+			print("test_fx: the %s frames are not on disk (regenerate with fx_board_strike.gd); skipping the frame files" % id)
 
 # --- 7. The boards ------------------------------------------------------------------------------------------------------------
 

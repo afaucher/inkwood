@@ -1,0 +1,1688 @@
+{
+  "id": "tower-ruin",
+  "date": "2026-10-10",
+  "area": "Effects",
+  "question": "How does the strike's target look destroyed: the moment (the burst), the collapse, and what stays: a ruin (a broken base, scattered pieces), a crater, a smoke column that thins over turns; no fire. (Alex 2026-10-10: the target is a radio tower; the destroyed target is a ruin, crater and smoke column, no fire, from a board.) The standing tower is the unit sheet's.",
+  "source": "scripts/fx/fx_board_strike.gd (what=tower) over the real map (terrain provider) at 2 px/m; the tower is drawn from reference/mockups/unit_sheet.html's radio tower model (scripts/fx/fx_ruin.gd, the same seed as the unit marker's), the ruin is FxLayer.ruin",
+  "seed": 20261009,
+  "parameter": "data/fx/fx.json#ruin.options (every value a proposed record)",
+  "held_constant": {
+    "scene": "a radio tower (the sheet's variant 0) at the world layout's tower site, in the village compound, heading 0, destroyed at game time 100; side A",
+    "light": "sun azimuth 315, elevation 46; shadow strength 0.44",
+    "pen": "shadow side",
+    "fire": "none"
+  },
+  "options": [
+    {
+      "name": "R1",
+      "label": "R1 · Toppled mast",
+      "note": "PROPOSED. The tower is blown at its foot and the mast TOPPLES: the same lattice as the standing tower (the unit sheet's) tips over about its base through eight drawn angles in 1.6 s, a second burst of dust where it lands, then it lies broken in two places, members snapped and missing, the platform at the far end. What stays at the foot: a scorched blot with a crater, the four footings cracked and shifted (one gone), leg stumps bent outward, the hut roofless with a torn roof across the hole, the cable snapped. A thick column of the damage smoke rises from the base for about eighteen turns, thinning and greying.",
+      "file": "option_R1.png",
+      "parameters": {
+        "model": {
+          "variant": 0.0
+        },
+        "variants": 4.0,
+        "flash": {
+          "form": "knockout",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.3,
+            2.0,
+            3.0
+          ],
+          "end_s": 4.0,
+          "radius_frac": 0.5,
+          "hit_scale": 1.0,
+          "core_curve": [
+            [
+              0.0,
+              0.3
+            ],
+            [
+              0.06,
+              1.0
+            ],
+            [
+              0.2,
+              0.75
+            ],
+            [
+              0.6,
+              0.3
+            ],
+            [
+              1.5,
+              0.0
+            ]
+          ],
+          "core_role": "burst.core",
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.6,
+              0.6
+            ],
+            [
+              2.0,
+              0.0
+            ]
+          ],
+          "outline_scale": 1.0,
+          "spikes": 11.0,
+          "inner_frac": 0.5,
+          "outer_var": 0.5,
+          "star_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.3,
+              1.05
+            ],
+            [
+              0.6,
+              1.1
+            ]
+          ],
+          "fill_s": 0.09,
+          "hatch": 22.0,
+          "hatch_len": [
+            1.1,
+            1.8
+          ],
+          "hatch_in": 0.7,
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.5,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.8
+            ],
+            [
+              3.0,
+              0.3
+            ],
+            [
+              4.0,
+              0.0
+            ]
+          ],
+          "hatch_s": 0.2,
+          "dots": 120.0,
+          "dot_px": 0.9,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.4,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              0.9
+            ],
+            [
+              3.0,
+              0.4
+            ],
+            [
+              4.0,
+              0.0
+            ]
+          ],
+          "spread": 1.4,
+          "frag": 0.0,
+          "frag_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.8
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "frag_s": 0.2,
+          "frag_weight": 1.6,
+          "ground_ring": true,
+          "ring_s": 0.6,
+          "ring_r": 1.6,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              0.7
+            ],
+            [
+              3.5,
+              0.0
+            ]
+          ],
+          "ring_role": "ink.ring",
+          "ring_weight": 1.0,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.cool"
+        },
+        "smoke_burst": {
+          "smoke_option": "W1",
+          "count": 12.0,
+          "delay_s": 0.0,
+          "interval_s": 0.03,
+          "radius_frac": [
+            0.28,
+            0.5
+          ],
+          "speed_mps": [
+            0.4,
+            0.9
+          ],
+          "vel_tau_s": 0.5,
+          "grow": [
+            0.5,
+            1.7
+          ],
+          "grow_tau": 0.04,
+          "hold": 0.25,
+          "fade_power": 1.5,
+          "life_s": 40.0,
+          "tone": 2.0,
+          "rise_mps": 3.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "end_burst": {
+          "smoke_option": "W1",
+          "count": 8.0,
+          "delay_s": 1.4,
+          "interval_s": 0.03,
+          "radius_frac": [
+            0.22,
+            0.38
+          ],
+          "speed_mps": [
+            0.25,
+            0.6
+          ],
+          "vel_tau_s": 0.5,
+          "grow": [
+            0.5,
+            1.7
+          ],
+          "grow_tau": 0.04,
+          "hold": 0.25,
+          "fade_power": 1.5,
+          "life_s": 30.0,
+          "tone": 2.0,
+          "rise_mps": 3.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "plume": {
+          "smoke_option": "W1",
+          "count": 10.0,
+          "interval_s": 0.3,
+          "delay_s": 0.25,
+          "radius_frac": [
+            0.28,
+            0.46
+          ],
+          "spread_frac": 0.3,
+          "life_s": 48.0,
+          "grow": [
+            0.55,
+            1.6
+          ],
+          "hold": 0.22,
+          "fade_power": 1.5,
+          "tone": 2.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "smolder": {
+          "smoke_option": "W1",
+          "duration_s": 90.0,
+          "delay_s": 0.9,
+          "interval_s": [
+            0.45,
+            2.4
+          ],
+          "radius_frac": [
+            0.36,
+            0.16
+          ],
+          "tone_edges_frac": [
+            0.12,
+            0.45
+          ],
+          "life_s": 28.0,
+          "grow": [
+            0.7,
+            1.7
+          ],
+          "hold": 0.25,
+          "fade_power": 1.4,
+          "wind_jitter_mps": 1.1,
+          "rise_mps": 4.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "collapse": {
+          "mode": "topple",
+          "duration_s": 1.6,
+          "frames_s": [
+            0.0,
+            0.2,
+            0.4,
+            0.6,
+            0.8,
+            1.0,
+            1.2,
+            1.4
+          ],
+          "ease_pow": 2.0,
+          "end_frac": 0.85
+        },
+        "debris": {
+          "count": 0.0,
+          "speed_frac": [
+            0.3,
+            0.9
+          ],
+          "up_mps": [
+            8.0,
+            22.0
+          ],
+          "spin_dps": [
+            -500.0,
+            500.0
+          ],
+          "gravity_mps2": 14.0,
+          "drag_tau_s": 1.5,
+          "rest_s": 8.0,
+          "clod_variants": 1.0,
+          "bar_variants": 3.0,
+          "bar_frac": 0.1,
+          "h0_m": 8.0
+        },
+        "lattice": {
+          "fallen": true,
+          "breaks": 2.0,
+          "break_turn_deg": [
+            10.0,
+            28.0
+          ],
+          "roll_deg": [
+            18.0,
+            38.0
+          ],
+          "drop": 0.12,
+          "snap": 0.45,
+          "keep_frac": 1.0,
+          "weight_k": 1.7,
+          "cream_role": "ruin.cream"
+        },
+        "remains": {
+          "fade_in_s": 0.15,
+          "scorch": {
+            "dots_per_px2": 0.5,
+            "dot_px": 0.65,
+            "core_bias": 0.7,
+            "hatch": 30.0,
+            "hatch_weight": 1.1,
+            "crater": false,
+            "stretch": 1.0,
+            "dot_role": "scar.dot",
+            "dot_soft_role": "scar.dot.soft",
+            "hatch_role": "ink.hatch",
+            "wreck_pieces": []
+          },
+          "scorch_r_m": 8.0,
+          "crater": {
+            "form": "ringed",
+            "radius_frac": 0.0,
+            "variants": 1.0,
+            "stretch": 1.0,
+            "lobe_amp": 0.12,
+            "rim_out": 1.18,
+            "rim_role": "bomb.rim",
+            "pit_role": "bomb.pit",
+            "dots_per_px2": 0.5,
+            "dot_px": 0.65,
+            "core_bias": 0.7,
+            "hatch": 22.0,
+            "hatch_weight": 1.0,
+            "ring": true,
+            "ring_role": "ink.ring",
+            "ring_weight": 0.9,
+            "ring_alpha": 0.85,
+            "flecks": 10.0,
+            "dot_role": "scar.dot",
+            "dot_soft_role": "scar.dot.soft",
+            "hatch_role": "ink.hatch",
+            "fade_in_s": 0.9
+          },
+          "crater_r_m": 3.2,
+          "crater_dx_m": 0.0,
+          "crater_dy_m": 0.0,
+          "drop_role": "wreck.shade",
+          "footings_keep": 0.75,
+          "footing_tilt_deg": 14.0,
+          "footing_shift_m": 0.9,
+          "rock_role": "ruin.rock",
+          "stump_len_m": 3.2,
+          "stump_weight": 1.5,
+          "hut": "roofless",
+          "char_role": "ruin.char",
+          "roof_role": "ruin.roof",
+          "cable": true,
+          "scraps": 6.0,
+          "scrap_min_m": 3.0,
+          "scrap_max_m": 8.0,
+          "stub_leg": false,
+          "stub_h_m": 6.0
+        }
+      }
+    },
+    {
+      "name": "R2",
+      "label": "R2 · Blown apart",
+      "note": "PROPOSED. The mast does not fall: it is blown apart. Bars of lattice are flung out of the blast, spinning, and land round the base; nothing of the mast lies in one piece. What stays: a big pale-lipped crater with the four leg stumps splayed round it, the footings mostly gone, the hut a heap of rubble, scraps of lattice scattered widely. The same column of smoke.",
+      "file": "option_R2.png",
+      "parameters": {
+        "model": {
+          "variant": 0.0
+        },
+        "variants": 4.0,
+        "flash": {
+          "form": "knockout",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.3,
+            2.0,
+            3.0
+          ],
+          "end_s": 4.0,
+          "radius_frac": 0.6,
+          "hit_scale": 1.0,
+          "core_curve": [
+            [
+              0.0,
+              0.3
+            ],
+            [
+              0.06,
+              1.0
+            ],
+            [
+              0.2,
+              0.75
+            ],
+            [
+              0.6,
+              0.3
+            ],
+            [
+              1.5,
+              0.0
+            ]
+          ],
+          "core_role": "burst.core",
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.6,
+              0.6
+            ],
+            [
+              2.0,
+              0.0
+            ]
+          ],
+          "outline_scale": 1.0,
+          "spikes": 11.0,
+          "inner_frac": 0.5,
+          "outer_var": 0.5,
+          "star_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.3,
+              1.05
+            ],
+            [
+              0.6,
+              1.1
+            ]
+          ],
+          "fill_s": 0.09,
+          "hatch": 22.0,
+          "hatch_len": [
+            1.1,
+            1.8
+          ],
+          "hatch_in": 0.7,
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.5,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.8
+            ],
+            [
+              3.0,
+              0.3
+            ],
+            [
+              4.0,
+              0.0
+            ]
+          ],
+          "hatch_s": 0.2,
+          "dots": 120.0,
+          "dot_px": 0.9,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.4,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              0.9
+            ],
+            [
+              3.0,
+              0.4
+            ],
+            [
+              4.0,
+              0.0
+            ]
+          ],
+          "spread": 1.4,
+          "frag": 0.0,
+          "frag_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.8
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "frag_s": 0.2,
+          "frag_weight": 1.6,
+          "ground_ring": true,
+          "ring_s": 0.6,
+          "ring_r": 1.6,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              0.7
+            ],
+            [
+              3.5,
+              0.0
+            ]
+          ],
+          "ring_role": "ink.ring",
+          "ring_weight": 1.0,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.cool"
+        },
+        "smoke_burst": {
+          "smoke_option": "W1",
+          "count": 14.0,
+          "delay_s": 0.0,
+          "interval_s": 0.03,
+          "radius_frac": [
+            0.28,
+            0.5
+          ],
+          "speed_mps": [
+            0.4,
+            0.9
+          ],
+          "vel_tau_s": 0.5,
+          "grow": [
+            0.5,
+            1.7
+          ],
+          "grow_tau": 0.04,
+          "hold": 0.25,
+          "fade_power": 1.5,
+          "life_s": 40.0,
+          "tone": 2.0,
+          "rise_mps": 3.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "end_burst": {
+          "smoke_option": "W1",
+          "count": 0.0,
+          "delay_s": 1.4,
+          "interval_s": 0.03,
+          "radius_frac": [
+            0.22,
+            0.38
+          ],
+          "speed_mps": [
+            0.25,
+            0.6
+          ],
+          "vel_tau_s": 0.5,
+          "grow": [
+            0.5,
+            1.7
+          ],
+          "grow_tau": 0.04,
+          "hold": 0.25,
+          "fade_power": 1.5,
+          "life_s": 30.0,
+          "tone": 2.0,
+          "rise_mps": 3.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "plume": {
+          "smoke_option": "W1",
+          "count": 10.0,
+          "interval_s": 0.3,
+          "delay_s": 0.25,
+          "radius_frac": [
+            0.28,
+            0.46
+          ],
+          "spread_frac": 0.3,
+          "life_s": 48.0,
+          "grow": [
+            0.55,
+            1.6
+          ],
+          "hold": 0.22,
+          "fade_power": 1.5,
+          "tone": 2.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "smolder": {
+          "smoke_option": "W1",
+          "duration_s": 90.0,
+          "delay_s": 0.9,
+          "interval_s": [
+            0.45,
+            2.4
+          ],
+          "radius_frac": [
+            0.36,
+            0.16
+          ],
+          "tone_edges_frac": [
+            0.12,
+            0.45
+          ],
+          "life_s": 28.0,
+          "grow": [
+            0.7,
+            1.7
+          ],
+          "hold": 0.25,
+          "fade_power": 1.4,
+          "wind_jitter_mps": 1.1,
+          "rise_mps": 4.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "collapse": {
+          "mode": "blast",
+          "duration_s": 1.6,
+          "frames_s": [
+            0.0,
+            0.2,
+            0.4,
+            0.6,
+            0.8,
+            1.0,
+            1.2,
+            1.4
+          ],
+          "ease_pow": 2.0,
+          "end_frac": 0.85
+        },
+        "debris": {
+          "count": 16.0,
+          "speed_frac": [
+            0.3,
+            0.9
+          ],
+          "up_mps": [
+            8.0,
+            22.0
+          ],
+          "spin_dps": [
+            -500.0,
+            500.0
+          ],
+          "gravity_mps2": 14.0,
+          "drag_tau_s": 1.5,
+          "rest_s": 8.0,
+          "clod_variants": 1.0,
+          "bar_variants": 3.0,
+          "bar_frac": 0.1,
+          "h0_m": 10.0
+        },
+        "lattice": {
+          "fallen": false,
+          "breaks": 2.0,
+          "break_turn_deg": [
+            10.0,
+            28.0
+          ],
+          "roll_deg": [
+            18.0,
+            38.0
+          ],
+          "drop": 0.12,
+          "snap": 0.45,
+          "keep_frac": 1.0,
+          "weight_k": 1.7,
+          "cream_role": "ruin.cream"
+        },
+        "remains": {
+          "fade_in_s": 0.15,
+          "scorch": {
+            "dots_per_px2": 0.5,
+            "dot_px": 0.65,
+            "core_bias": 0.7,
+            "hatch": 30.0,
+            "hatch_weight": 1.1,
+            "crater": false,
+            "stretch": 1.0,
+            "dot_role": "scar.dot",
+            "dot_soft_role": "scar.dot.soft",
+            "hatch_role": "ink.hatch",
+            "wreck_pieces": []
+          },
+          "scorch_r_m": 10.0,
+          "crater": {
+            "form": "rimmed",
+            "radius_frac": 0.0,
+            "variants": 1.0,
+            "stretch": 1.0,
+            "lobe_amp": 0.12,
+            "rim_out": 1.18,
+            "rim_role": "bomb.rim",
+            "pit_role": "bomb.pit",
+            "dots_per_px2": 0.5,
+            "dot_px": 0.65,
+            "core_bias": 0.7,
+            "hatch": 22.0,
+            "hatch_weight": 1.0,
+            "ring": true,
+            "ring_role": "ink.ring",
+            "ring_weight": 0.9,
+            "ring_alpha": 0.85,
+            "flecks": 10.0,
+            "dot_role": "scar.dot",
+            "dot_soft_role": "scar.dot.soft",
+            "hatch_role": "ink.hatch",
+            "fade_in_s": 0.9
+          },
+          "crater_r_m": 5.0,
+          "crater_dx_m": 0.0,
+          "crater_dy_m": 0.0,
+          "drop_role": "wreck.shade",
+          "footings_keep": 0.35,
+          "footing_tilt_deg": 14.0,
+          "footing_shift_m": 0.9,
+          "rock_role": "ruin.rock",
+          "stump_len_m": 3.6,
+          "stump_weight": 1.5,
+          "hut": "rubble",
+          "char_role": "ruin.char",
+          "roof_role": "ruin.roof",
+          "cable": true,
+          "scraps": 16.0,
+          "scrap_min_m": 4.0,
+          "scrap_max_m": 12.0,
+          "stub_leg": false,
+          "stub_h_m": 6.0
+        }
+      }
+    },
+    {
+      "name": "R3",
+      "label": "R3 · One leg left standing",
+      "note": "PROPOSED. The mast topples and breaks into short pieces close to the base (only the lower third of the lattice lies there; the rest went with the blast), and ONE LEG is left standing, leaning, with a shadow by the sun: the one upright thing on a flat ruin, so a destroyed tower reads at once. The hut is gone to a burnt rectangle; a crater, cracked footings, scraps.",
+      "file": "option_R3.png",
+      "parameters": {
+        "model": {
+          "variant": 0.0
+        },
+        "variants": 4.0,
+        "flash": {
+          "form": "knockout",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.3,
+            2.0,
+            3.0
+          ],
+          "end_s": 4.0,
+          "radius_frac": 0.5,
+          "hit_scale": 1.0,
+          "core_curve": [
+            [
+              0.0,
+              0.3
+            ],
+            [
+              0.06,
+              1.0
+            ],
+            [
+              0.2,
+              0.75
+            ],
+            [
+              0.6,
+              0.3
+            ],
+            [
+              1.5,
+              0.0
+            ]
+          ],
+          "core_role": "burst.core",
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.6,
+              0.6
+            ],
+            [
+              2.0,
+              0.0
+            ]
+          ],
+          "outline_scale": 1.0,
+          "spikes": 11.0,
+          "inner_frac": 0.5,
+          "outer_var": 0.5,
+          "star_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.3,
+              1.05
+            ],
+            [
+              0.6,
+              1.1
+            ]
+          ],
+          "fill_s": 0.09,
+          "hatch": 22.0,
+          "hatch_len": [
+            1.1,
+            1.8
+          ],
+          "hatch_in": 0.7,
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.5,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.8
+            ],
+            [
+              3.0,
+              0.3
+            ],
+            [
+              4.0,
+              0.0
+            ]
+          ],
+          "hatch_s": 0.2,
+          "dots": 120.0,
+          "dot_px": 0.9,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.4,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              0.9
+            ],
+            [
+              3.0,
+              0.4
+            ],
+            [
+              4.0,
+              0.0
+            ]
+          ],
+          "spread": 1.4,
+          "frag": 0.0,
+          "frag_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.8
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "frag_s": 0.2,
+          "frag_weight": 1.6,
+          "ground_ring": true,
+          "ring_s": 0.6,
+          "ring_r": 1.6,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              0.7
+            ],
+            [
+              3.5,
+              0.0
+            ]
+          ],
+          "ring_role": "ink.ring",
+          "ring_weight": 1.0,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.cool"
+        },
+        "smoke_burst": {
+          "smoke_option": "W1",
+          "count": 12.0,
+          "delay_s": 0.0,
+          "interval_s": 0.03,
+          "radius_frac": [
+            0.28,
+            0.5
+          ],
+          "speed_mps": [
+            0.4,
+            0.9
+          ],
+          "vel_tau_s": 0.5,
+          "grow": [
+            0.5,
+            1.7
+          ],
+          "grow_tau": 0.04,
+          "hold": 0.25,
+          "fade_power": 1.5,
+          "life_s": 40.0,
+          "tone": 2.0,
+          "rise_mps": 3.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "end_burst": {
+          "smoke_option": "W1",
+          "count": 5.0,
+          "delay_s": 1.4,
+          "interval_s": 0.03,
+          "radius_frac": [
+            0.22,
+            0.38
+          ],
+          "speed_mps": [
+            0.25,
+            0.6
+          ],
+          "vel_tau_s": 0.5,
+          "grow": [
+            0.5,
+            1.7
+          ],
+          "grow_tau": 0.04,
+          "hold": 0.25,
+          "fade_power": 1.5,
+          "life_s": 30.0,
+          "tone": 2.0,
+          "rise_mps": 3.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "plume": {
+          "smoke_option": "W1",
+          "count": 10.0,
+          "interval_s": 0.3,
+          "delay_s": 0.25,
+          "radius_frac": [
+            0.28,
+            0.46
+          ],
+          "spread_frac": 0.3,
+          "life_s": 48.0,
+          "grow": [
+            0.55,
+            1.6
+          ],
+          "hold": 0.22,
+          "fade_power": 1.5,
+          "tone": 2.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "smolder": {
+          "smoke_option": "W1",
+          "duration_s": 90.0,
+          "delay_s": 0.9,
+          "interval_s": [
+            0.45,
+            2.4
+          ],
+          "radius_frac": [
+            0.36,
+            0.16
+          ],
+          "tone_edges_frac": [
+            0.12,
+            0.45
+          ],
+          "life_s": 28.0,
+          "grow": [
+            0.7,
+            1.7
+          ],
+          "hold": 0.25,
+          "fade_power": 1.4,
+          "wind_jitter_mps": 1.1,
+          "rise_mps": 4.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "collapse": {
+          "mode": "topple",
+          "duration_s": 1.4,
+          "frames_s": [
+            0.0,
+            0.2,
+            0.4,
+            0.6,
+            0.8,
+            1.0,
+            1.2
+          ],
+          "ease_pow": 2.0,
+          "end_frac": 0.4
+        },
+        "debris": {
+          "count": 8.0,
+          "speed_frac": [
+            0.3,
+            0.9
+          ],
+          "up_mps": [
+            8.0,
+            22.0
+          ],
+          "spin_dps": [
+            -500.0,
+            500.0
+          ],
+          "gravity_mps2": 14.0,
+          "drag_tau_s": 1.5,
+          "rest_s": 8.0,
+          "clod_variants": 1.0,
+          "bar_variants": 3.0,
+          "bar_frac": 0.1,
+          "h0_m": 12.0
+        },
+        "lattice": {
+          "fallen": true,
+          "breaks": 1.0,
+          "break_turn_deg": [
+            10.0,
+            28.0
+          ],
+          "roll_deg": [
+            18.0,
+            38.0
+          ],
+          "drop": 0.2,
+          "snap": 0.6,
+          "keep_frac": 0.45,
+          "weight_k": 1.7,
+          "cream_role": "ruin.cream"
+        },
+        "remains": {
+          "fade_in_s": 0.15,
+          "scorch": {
+            "dots_per_px2": 0.5,
+            "dot_px": 0.65,
+            "core_bias": 0.7,
+            "hatch": 30.0,
+            "hatch_weight": 1.1,
+            "crater": false,
+            "stretch": 1.0,
+            "dot_role": "scar.dot",
+            "dot_soft_role": "scar.dot.soft",
+            "hatch_role": "ink.hatch",
+            "wreck_pieces": []
+          },
+          "scorch_r_m": 8.0,
+          "crater": {
+            "form": "ringed",
+            "radius_frac": 0.0,
+            "variants": 1.0,
+            "stretch": 1.0,
+            "lobe_amp": 0.12,
+            "rim_out": 1.18,
+            "rim_role": "bomb.rim",
+            "pit_role": "bomb.pit",
+            "dots_per_px2": 0.5,
+            "dot_px": 0.65,
+            "core_bias": 0.7,
+            "hatch": 22.0,
+            "hatch_weight": 1.0,
+            "ring": true,
+            "ring_role": "ink.ring",
+            "ring_weight": 0.9,
+            "ring_alpha": 0.85,
+            "flecks": 10.0,
+            "dot_role": "scar.dot",
+            "dot_soft_role": "scar.dot.soft",
+            "hatch_role": "ink.hatch",
+            "fade_in_s": 0.9
+          },
+          "crater_r_m": 3.4,
+          "crater_dx_m": 0.0,
+          "crater_dy_m": 0.0,
+          "drop_role": "wreck.shade",
+          "footings_keep": 0.5,
+          "footing_tilt_deg": 14.0,
+          "footing_shift_m": 0.9,
+          "rock_role": "ruin.rock",
+          "stump_len_m": 3.2,
+          "stump_weight": 1.5,
+          "hut": "gone",
+          "char_role": "ruin.char",
+          "roof_role": "ruin.roof",
+          "cable": true,
+          "scraps": 8.0,
+          "scrap_min_m": 3.0,
+          "scrap_max_m": 8.0,
+          "stub_leg": true,
+          "stub_h_m": 7.0
+        }
+      }
+    },
+    {
+      "name": "R4",
+      "label": "R4 · Burnt blot",
+      "note": "PROPOSED. The least drawing: the tower is simply gone. A flash and the column of smoke; on the ground a large burnt blot (dirt stipple, ink hatch) with a deep pit wash, the four footings as ink squares and short stumps; the hut an outline. It reads at the far zoom as one dark mark with a smoke column over it, and is quick to draw. Nothing falls, nothing lies.",
+      "file": "option_R4.png",
+      "parameters": {
+        "model": {
+          "variant": 0.0
+        },
+        "variants": 4.0,
+        "flash": {
+          "form": "knockout",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.3,
+            2.0,
+            3.0
+          ],
+          "end_s": 4.0,
+          "radius_frac": 0.5,
+          "hit_scale": 1.0,
+          "core_curve": [
+            [
+              0.0,
+              0.3
+            ],
+            [
+              0.06,
+              1.0
+            ],
+            [
+              0.2,
+              0.75
+            ],
+            [
+              0.6,
+              0.3
+            ],
+            [
+              1.5,
+              0.0
+            ]
+          ],
+          "core_role": "burst.core",
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.6,
+              0.6
+            ],
+            [
+              2.0,
+              0.0
+            ]
+          ],
+          "outline_scale": 1.0,
+          "spikes": 11.0,
+          "inner_frac": 0.5,
+          "outer_var": 0.5,
+          "star_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.3,
+              1.05
+            ],
+            [
+              0.6,
+              1.1
+            ]
+          ],
+          "fill_s": 0.09,
+          "hatch": 22.0,
+          "hatch_len": [
+            1.1,
+            1.8
+          ],
+          "hatch_in": 0.7,
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.5,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.8
+            ],
+            [
+              3.0,
+              0.3
+            ],
+            [
+              4.0,
+              0.0
+            ]
+          ],
+          "hatch_s": 0.2,
+          "dots": 120.0,
+          "dot_px": 0.9,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.4,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              0.9
+            ],
+            [
+              3.0,
+              0.4
+            ],
+            [
+              4.0,
+              0.0
+            ]
+          ],
+          "spread": 1.4,
+          "frag": 0.0,
+          "frag_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.8
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "frag_s": 0.2,
+          "frag_weight": 1.6,
+          "ground_ring": true,
+          "ring_s": 0.6,
+          "ring_r": 1.6,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              0.7
+            ],
+            [
+              3.5,
+              0.0
+            ]
+          ],
+          "ring_role": "ink.ring",
+          "ring_weight": 1.0,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.cool"
+        },
+        "smoke_burst": {
+          "smoke_option": "W1",
+          "count": 12.0,
+          "delay_s": 0.0,
+          "interval_s": 0.03,
+          "radius_frac": [
+            0.28,
+            0.5
+          ],
+          "speed_mps": [
+            0.4,
+            0.9
+          ],
+          "vel_tau_s": 0.5,
+          "grow": [
+            0.5,
+            1.7
+          ],
+          "grow_tau": 0.04,
+          "hold": 0.25,
+          "fade_power": 1.5,
+          "life_s": 40.0,
+          "tone": 2.0,
+          "rise_mps": 3.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "end_burst": {
+          "smoke_option": "W1",
+          "count": 0.0,
+          "delay_s": 1.4,
+          "interval_s": 0.03,
+          "radius_frac": [
+            0.22,
+            0.38
+          ],
+          "speed_mps": [
+            0.25,
+            0.6
+          ],
+          "vel_tau_s": 0.5,
+          "grow": [
+            0.5,
+            1.7
+          ],
+          "grow_tau": 0.04,
+          "hold": 0.25,
+          "fade_power": 1.5,
+          "life_s": 30.0,
+          "tone": 2.0,
+          "rise_mps": 3.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "plume": {
+          "smoke_option": "W1",
+          "count": 10.0,
+          "interval_s": 0.3,
+          "delay_s": 0.25,
+          "radius_frac": [
+            0.28,
+            0.46
+          ],
+          "spread_frac": 0.3,
+          "life_s": 48.0,
+          "grow": [
+            0.55,
+            1.6
+          ],
+          "hold": 0.22,
+          "fade_power": 1.5,
+          "tone": 2.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "smolder": {
+          "smoke_option": "W1",
+          "duration_s": 90.0,
+          "delay_s": 0.9,
+          "interval_s": [
+            0.45,
+            2.4
+          ],
+          "radius_frac": [
+            0.36,
+            0.16
+          ],
+          "tone_edges_frac": [
+            0.12,
+            0.45
+          ],
+          "life_s": 28.0,
+          "grow": [
+            0.7,
+            1.7
+          ],
+          "hold": 0.25,
+          "fade_power": 1.4,
+          "wind_jitter_mps": 1.1,
+          "rise_mps": 4.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "collapse": {
+          "mode": "none",
+          "duration_s": 1.6,
+          "frames_s": [
+            0.0,
+            0.2,
+            0.4,
+            0.6,
+            0.8,
+            1.0,
+            1.2,
+            1.4
+          ],
+          "ease_pow": 2.0,
+          "end_frac": 0.85
+        },
+        "debris": {
+          "count": 0.0,
+          "speed_frac": [
+            0.3,
+            0.9
+          ],
+          "up_mps": [
+            8.0,
+            22.0
+          ],
+          "spin_dps": [
+            -500.0,
+            500.0
+          ],
+          "gravity_mps2": 14.0,
+          "drag_tau_s": 1.5,
+          "rest_s": 8.0,
+          "clod_variants": 1.0,
+          "bar_variants": 3.0,
+          "bar_frac": 0.1,
+          "h0_m": 8.0
+        },
+        "lattice": {
+          "fallen": false,
+          "breaks": 2.0,
+          "break_turn_deg": [
+            10.0,
+            28.0
+          ],
+          "roll_deg": [
+            18.0,
+            38.0
+          ],
+          "drop": 0.12,
+          "snap": 0.45,
+          "keep_frac": 1.0,
+          "weight_k": 1.7,
+          "cream_role": "ruin.cream"
+        },
+        "remains": {
+          "fade_in_s": 0.15,
+          "scorch": {
+            "dots_per_px2": 0.7,
+            "dot_px": 0.65,
+            "core_bias": 0.7,
+            "hatch": 44.0,
+            "hatch_weight": 1.2,
+            "crater": false,
+            "stretch": 1.0,
+            "dot_role": "scar.dot",
+            "dot_soft_role": "scar.dot.soft",
+            "hatch_role": "ink.hatch",
+            "wreck_pieces": []
+          },
+          "scorch_r_m": 10.0,
+          "crater": {
+            "form": "blot",
+            "radius_frac": 0.0,
+            "variants": 1.0,
+            "stretch": 1.0,
+            "lobe_amp": 0.12,
+            "rim_out": 1.18,
+            "rim_role": "bomb.rim",
+            "pit_role": "bomb.pit",
+            "dots_per_px2": 0.7,
+            "dot_px": 0.65,
+            "core_bias": 0.7,
+            "hatch": 22.0,
+            "hatch_weight": 1.0,
+            "ring": true,
+            "ring_role": "ink.ring",
+            "ring_weight": 0.9,
+            "ring_alpha": 0.85,
+            "flecks": 10.0,
+            "dot_role": "scar.dot",
+            "dot_soft_role": "scar.dot.soft",
+            "hatch_role": "ink.hatch",
+            "fade_in_s": 0.9
+          },
+          "crater_r_m": 4.2,
+          "crater_dx_m": 0.0,
+          "crater_dy_m": 0.0,
+          "drop_role": "wreck.shade",
+          "footings_keep": 0.9,
+          "footing_tilt_deg": 14.0,
+          "footing_shift_m": 0.9,
+          "rock_role": "ruin.rock",
+          "stump_len_m": 1.2,
+          "stump_weight": 1.5,
+          "hut": "roofless",
+          "char_role": "ruin.char",
+          "roof_role": "ruin.roof",
+          "cable": false,
+          "scraps": 3.0,
+          "scrap_min_m": 3.0,
+          "scrap_max_m": 8.0,
+          "stub_leg": false,
+          "stub_h_m": 6.0
+        }
+      }
+    }
+  ],
+  "sheet": "board.png (every option, scaled), compare.png (the options side by side, one key frame per row), option_<X>.png (each at full size, with the palette row and the specimen strip); every frame at native size in frames/, listed in frames.json",
+  "recommendation": {
+    "option": "R1",
+    "_proposed": true,
+    "_reason": "PROPOSED by Track X2, not Alex's call: R1 is the one that reads as THE TOWER destroyed: the same lattice (the unit sheet's) tips and lies broken, snapped in two places, beside a roofless hut, bent leg stumps, cracked footings, a crater and scorch, under a column of smoke that thins over eighteen turns. R2 (blown apart) is the cheapest to read as violence; R3 adds one leg left standing; R4 is the quietest (a burnt mark) and reads best at the planning view."
+  },
+  "chosen": null,
+  "chosen_by": null
+}

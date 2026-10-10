@@ -1,0 +1,729 @@
+{
+  "id": "flak",
+  "options": [
+    {
+      "option": "F1",
+      "label": "F1 · Ink-wash puff",
+      "note": "PROPOSED. A flak burst is a dark soft cloud, built the way the soft white smoke is (stepped translucent washes, no outline, the map shows through) in the palette's ink instead of white, so it cannot be mistaken for damage smoke. A fast flash first: a ragged knock-out disc (the lightest step of the palette, no fire) with ink hatch rays and flung dots, a heavier flash and fragments on a hit. The cloud then hangs a few turns, lightening as it ages. Thick enough to cast a shadow by the altitude rule.",
+      "rows": [
+        {
+          "title": "a. A MISS: the shell bursts beside the fighter; it flies on at 100 m/s (its tail leaves the frame by 1.5 s)",
+          "key": "miss",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/F1_miss_0.png",
+              "caption": "0 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_miss_1.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_miss_2.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_miss_3.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_miss_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_miss_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_miss_6.png",
+              "caption": "two turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F1_miss_7.png",
+              "caption": "three turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "b. A HIT: the shell bursts on the fighter",
+          "key": "hit",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/F1_hit_0.png",
+              "caption": "0 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_hit_1.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_hit_2.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_hit_3.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_hit_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_hit_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_hit_6.png",
+              "caption": "two turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F1_hit_7.png",
+              "caption": "three turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "c. A BARRAGE: two batteries, 20 shells in a turn (two hits among them) at a bomber crossing at 85 m/s; the planning view is the second half",
+          "key": "barrage",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/F1_barrage_0.png",
+              "caption": "mid-turn, 10 shells  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F1_barrage_1.png",
+              "caption": "the turn's end, 20 shells  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F1_barrage_2.png",
+              "caption": "one turn later  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F1_barrage_3.png",
+              "caption": "two turns later  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F1_barrage_4.png",
+              "caption": "the turn's end  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F1_barrage_5.png",
+              "caption": "two turns on  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F1_barrage_6.png",
+              "caption": "three turns on  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F1_barrage_7.png",
+              "caption": "five turns on  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "d. THE SHADOW BY THE ALTITUDE RULE (1% of the height, away from the sun): a miss and a hit at 120, 400 and 1,000 m, 1 s after the burst",
+          "key": "heights",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/F1_heights_0.png",
+              "caption": "120 m (low): its shadow nearly under it  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_heights_1.png",
+              "caption": "400 m (medium)  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F1_heights_2.png",
+              "caption": "1,000 m (high): its shadow well away  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "e. NEXT TO THE DAMAGE SMOKE (W1, soft white to grey): a fighter on its last pip trailing smoke, six shells bursting round it, one hit",
+          "key": "smoke",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/F1_smoke_0.png",
+              "caption": "1 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F1_smoke_1.png",
+              "caption": "3 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F1_smoke_2.png",
+              "caption": "6 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F1_smoke_3.png",
+              "caption": "12 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "F2",
+      "label": "F2 · Ragged burst",
+      "note": "PROPOSED. The classic flak puff as a pen would draw it: a jagged, spiky cloud (points, not scallops) in stepped ink washes, a few thin ink streamers trailing out of it (the shell's fragments), the streamers thinning as it ages. The flash is a ruled star, filled knock-out for its first frames and hollow ink after, with long rays. A hit is a bigger, denser burst with fragments thrown out.",
+      "rows": [
+        {
+          "title": "a. A MISS: the shell bursts beside the fighter; it flies on at 100 m/s (its tail leaves the frame by 1.5 s)",
+          "key": "miss",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/F2_miss_0.png",
+              "caption": "0 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_miss_1.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_miss_2.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_miss_3.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_miss_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_miss_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_miss_6.png",
+              "caption": "two turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F2_miss_7.png",
+              "caption": "three turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "b. A HIT: the shell bursts on the fighter",
+          "key": "hit",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/F2_hit_0.png",
+              "caption": "0 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_hit_1.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_hit_2.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_hit_3.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_hit_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_hit_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_hit_6.png",
+              "caption": "two turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F2_hit_7.png",
+              "caption": "three turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "c. A BARRAGE: two batteries, 20 shells in a turn (two hits among them) at a bomber crossing at 85 m/s; the planning view is the second half",
+          "key": "barrage",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/F2_barrage_0.png",
+              "caption": "mid-turn, 10 shells  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F2_barrage_1.png",
+              "caption": "the turn's end, 20 shells  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F2_barrage_2.png",
+              "caption": "one turn later  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F2_barrage_3.png",
+              "caption": "two turns later  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F2_barrage_4.png",
+              "caption": "the turn's end  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F2_barrage_5.png",
+              "caption": "two turns on  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F2_barrage_6.png",
+              "caption": "three turns on  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F2_barrage_7.png",
+              "caption": "five turns on  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "d. THE SHADOW BY THE ALTITUDE RULE (1% of the height, away from the sun): a miss and a hit at 120, 400 and 1,000 m, 1 s after the burst",
+          "key": "heights",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/F2_heights_0.png",
+              "caption": "120 m (low): its shadow nearly under it  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_heights_1.png",
+              "caption": "400 m (medium)  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F2_heights_2.png",
+              "caption": "1,000 m (high): its shadow well away  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "e. NEXT TO THE DAMAGE SMOKE (W1, soft white to grey): a fighter on its last pip trailing smoke, six shells bursting round it, one hit",
+          "key": "smoke",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/F2_smoke_0.png",
+              "caption": "1 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F2_smoke_1.png",
+              "caption": "3 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F2_smoke_2.png",
+              "caption": "6 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F2_smoke_3.png",
+              "caption": "12 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "F3",
+      "label": "F3 · Stippled burst",
+      "note": "PROPOSED. Pen and ink only: a burst is a dense patch of ink dots, thickest on the shadow side with short hatch strokes, over a faint ink patch; no wash, no fill. It reads as a pencil smudge in the sky and stays light on the map. The flash is flung ink dots and hatch rays with no white at all. Dots thin out as it ages.",
+      "rows": [
+        {
+          "title": "a. A MISS: the shell bursts beside the fighter; it flies on at 100 m/s (its tail leaves the frame by 1.5 s)",
+          "key": "miss",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/F3_miss_0.png",
+              "caption": "0 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_miss_1.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_miss_2.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_miss_3.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_miss_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_miss_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_miss_6.png",
+              "caption": "two turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F3_miss_7.png",
+              "caption": "three turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "b. A HIT: the shell bursts on the fighter",
+          "key": "hit",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/F3_hit_0.png",
+              "caption": "0 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_hit_1.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_hit_2.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_hit_3.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_hit_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_hit_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_hit_6.png",
+              "caption": "two turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F3_hit_7.png",
+              "caption": "three turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "c. A BARRAGE: two batteries, 20 shells in a turn (two hits among them) at a bomber crossing at 85 m/s; the planning view is the second half",
+          "key": "barrage",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/F3_barrage_0.png",
+              "caption": "mid-turn, 10 shells  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F3_barrage_1.png",
+              "caption": "the turn's end, 20 shells  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F3_barrage_2.png",
+              "caption": "one turn later  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F3_barrage_3.png",
+              "caption": "two turns later  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F3_barrage_4.png",
+              "caption": "the turn's end  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F3_barrage_5.png",
+              "caption": "two turns on  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F3_barrage_6.png",
+              "caption": "three turns on  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F3_barrage_7.png",
+              "caption": "five turns on  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "d. THE SHADOW BY THE ALTITUDE RULE (1% of the height, away from the sun): a miss and a hit at 120, 400 and 1,000 m, 1 s after the burst",
+          "key": "heights",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/F3_heights_0.png",
+              "caption": "120 m (low): its shadow nearly under it  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_heights_1.png",
+              "caption": "400 m (medium)  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F3_heights_2.png",
+              "caption": "1,000 m (high): its shadow well away  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "e. NEXT TO THE DAMAGE SMOKE (W1, soft white to grey): a fighter on its last pip trailing smoke, six shells bursting round it, one hit",
+          "key": "smoke",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/F3_smoke_0.png",
+              "caption": "1 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F3_smoke_1.png",
+              "caption": "3 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F3_smoke_2.png",
+              "caption": "6 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F3_smoke_3.png",
+              "caption": "12 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "F4",
+      "label": "F4 · Ring and core",
+      "note": "PROPOSED. The restrained one, a map symbol of a burst: a small dark core wash with open ink arcs round it like isobars, the arcs breaking as it ages. The flash is a small knock-out core and one expanding broken ring. A hit is the same with more dots and fragments. Lightest on the map; a barrage stays readable.",
+      "rows": [
+        {
+          "title": "a. A MISS: the shell bursts beside the fighter; it flies on at 100 m/s (its tail leaves the frame by 1.5 s)",
+          "key": "miss",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/F4_miss_0.png",
+              "caption": "0 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_miss_1.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_miss_2.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_miss_3.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_miss_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_miss_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_miss_6.png",
+              "caption": "two turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F4_miss_7.png",
+              "caption": "three turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "b. A HIT: the shell bursts on the fighter",
+          "key": "hit",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/F4_hit_0.png",
+              "caption": "0 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_hit_1.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_hit_2.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_hit_3.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_hit_4.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_hit_5.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_hit_6.png",
+              "caption": "two turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F4_hit_7.png",
+              "caption": "three turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "c. A BARRAGE: two batteries, 20 shells in a turn (two hits among them) at a bomber crossing at 85 m/s; the planning view is the second half",
+          "key": "barrage",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/F4_barrage_0.png",
+              "caption": "mid-turn, 10 shells  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F4_barrage_1.png",
+              "caption": "the turn's end, 20 shells  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F4_barrage_2.png",
+              "caption": "one turn later  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F4_barrage_3.png",
+              "caption": "two turns later  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F4_barrage_4.png",
+              "caption": "the turn's end  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F4_barrage_5.png",
+              "caption": "two turns on  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F4_barrage_6.png",
+              "caption": "three turns on  (zoom 0.35)"
+            },
+            {
+              "file": "frames/F4_barrage_7.png",
+              "caption": "five turns on  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "d. THE SHADOW BY THE ALTITUDE RULE (1% of the height, away from the sun): a miss and a hit at 120, 400 and 1,000 m, 1 s after the burst",
+          "key": "heights",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/F4_heights_0.png",
+              "caption": "120 m (low): its shadow nearly under it  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_heights_1.png",
+              "caption": "400 m (medium)  (zoom 1.00)"
+            },
+            {
+              "file": "frames/F4_heights_2.png",
+              "caption": "1,000 m (high): its shadow well away  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "e. NEXT TO THE DAMAGE SMOKE (W1, soft white to grey): a fighter on its last pip trailing smoke, six shells bursting round it, one hit",
+          "key": "smoke",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/F4_smoke_0.png",
+              "caption": "1 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F4_smoke_1.png",
+              "caption": "3 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F4_smoke_2.png",
+              "caption": "6 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            },
+            {
+              "file": "frames/F4_smoke_3.png",
+              "caption": "12 s: a damaged fighter, its white smoke, and flak  (zoom 0.60)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

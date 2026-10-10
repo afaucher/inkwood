@@ -115,6 +115,25 @@ func smoke_r2_option_names() -> Array:
 func crash_option_names() -> Array:
 	return _option_names("crash")
 
+# THE STRIKE's options (Track X2, 2026-10-10): flak bursts, bombs, the radio tower's ruin. All proposed.
+func flak_option_names() -> Array:
+	return _option_names("flak")
+
+func bomb_option_names() -> Array:
+	return _option_names("bomb")
+
+func ruin_option_names() -> Array:
+	return _option_names("ruin")
+
+func flak_option(name: String) -> Dictionary:
+	return _option("flak", name)
+
+func bomb_option(name: String) -> Dictionary:
+	return _option("bomb", name)
+
+func ruin_option(name: String) -> Dictionary:
+	return _option("ruin", name)
+
 func _option_names(kind: String) -> Array:
 	var out: Array = []
 	var sec: Variant = raw.get(kind)

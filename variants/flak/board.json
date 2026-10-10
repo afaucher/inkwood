@@ -1,0 +1,1492 @@
+{
+  "id": "flak",
+  "date": "2026-10-10",
+  "area": "Effects",
+  "question": "How does a flak burst look where an anti-aircraft battery's shell bursts near a plane: classic dark puffs in Inkwood's ink-and-wash terms, no fire; a fast flash and a slowly fading puff at the burst's height with its shadow by the altitude rule; hits and misses. (Alex 2026-10-10: the strike has two anti-aircraft batteries firing flak at the players' planes.)",
+  "source": "scripts/fx/fx_board_strike.gd (what=flak) over the real map (terrain provider) at 2 px/m, planes at the sandbox's own scale (36 px at zoom 1); the bursts are FxLayer.flak_burst",
+  "seed": 20261009,
+  "parameter": "data/fx/fx.json#flak.options (every value a proposed record)",
+  "held_constant": {
+    "scene": "a light fighter at 400 m heading 0.1 rad at 100 m/s over the first anti-aircraft battery site of the world layout (the battery is drawn by the unit marker art); the burst at game time 100",
+    "light": "sun azimuth 315, elevation 46; shadow strength 0.44",
+    "pen": "shadow side",
+    "fire": "none"
+  },
+  "options": [
+    {
+      "name": "F1",
+      "label": "F1 · Ink-wash puff",
+      "note": "PROPOSED. A flak burst is a dark soft cloud, built the way the soft white smoke is (stepped translucent washes, no outline, the map shows through) in the palette's ink instead of white, so it cannot be mistaken for damage smoke. A fast flash first: a ragged knock-out disc (the lightest step of the palette, no fire) with ink hatch rays and flung dots, a heavier flash and fragments on a hit. The cloud then hangs a few turns, lightening as it ages. Thick enough to cast a shadow by the altitude rule.",
+      "file": "option_F1.png",
+      "parameters": {
+        "flash": {
+          "form": "knockout",
+          "frames_s": [
+            0.0,
+            0.04,
+            0.09,
+            0.16,
+            0.26,
+            0.4,
+            0.6
+          ],
+          "end_s": 0.8,
+          "radius_frac": 0.55,
+          "hit_scale": 1.3,
+          "core_curve": [
+            [
+              0.0,
+              0.3
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.12,
+              0.7
+            ],
+            [
+              0.3,
+              0.25
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "core_role": "burst.core",
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.6
+            ],
+            [
+              0.6,
+              0.0
+            ]
+          ],
+          "outline_scale": 0.9,
+          "spikes": 11.0,
+          "inner_frac": 0.5,
+          "outer_var": 0.5,
+          "star_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.3,
+              1.05
+            ],
+            [
+              0.6,
+              1.1
+            ]
+          ],
+          "fill_s": 0.09,
+          "hatch": 12.0,
+          "hatch_len": [
+            1.1,
+            1.7
+          ],
+          "hatch_in": 0.75,
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.2,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.7
+            ],
+            [
+              0.8,
+              0.0
+            ]
+          ],
+          "hatch_s": 0.12,
+          "dots": 40.0,
+          "dot_px": 0.9,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.25,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.4,
+              0.8
+            ],
+            [
+              0.8,
+              0.0
+            ]
+          ],
+          "spread": 1.5,
+          "frag": 6.0,
+          "frag_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.8
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "frag_s": 0.2,
+          "frag_weight": 1.6,
+          "ground_ring": false,
+          "ring_s": 0.5,
+          "ring_r": 1.5,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.5,
+              0.5
+            ],
+            [
+              1.0,
+              0.0
+            ]
+          ],
+          "ring_role": "ink.ring",
+          "ring_weight": 1.0,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.cool"
+        },
+        "burst": {
+          "size_m": 12.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0,
+          "hit_offset_m": [
+            0.0,
+            4.0
+          ],
+          "miss_offset_m": [
+            30.0,
+            75.0
+          ],
+          "miss_dh_m": [
+            -35.0,
+            35.0
+          ],
+          "min_height_m": 6.0,
+          "puffs_hit": 3.0,
+          "puffs_miss": 2.0,
+          "radius_frac": [
+            0.34,
+            0.46
+          ],
+          "life_s": 14.0,
+          "hit_life_scale": 1.3,
+          "hit_radius_scale": 1.15,
+          "delay_s": 0.02,
+          "interval_s": 0.04,
+          "spread_frac": 0.22,
+          "rise_mps": 0.8,
+          "tone_hit": 2.0,
+          "tone_miss": 1.0
+        },
+        "puff": {
+          "form": "soft",
+          "variants": 4.0,
+          "radius_frac": [
+            0.36,
+            0.5
+          ],
+          "interval_s": [
+            0.3,
+            0.07
+          ],
+          "life_s": [
+            14.0,
+            20.0
+          ],
+          "grow": [
+            0.55,
+            1.35
+          ],
+          "grow_tau": 0.08,
+          "hold": 0.12,
+          "fade_power": 1.5,
+          "alpha_steps": [],
+          "intensity_floor": 0.3,
+          "tone_edges": [
+            0.45,
+            0.78
+          ],
+          "wind_mps": [
+            1.2,
+            0.5
+          ],
+          "wind_jitter_mps": 0.5,
+          "ground_shadow": true,
+          "tail_frac": 0.0,
+          "lobes_min": 3.0,
+          "lobes_max": 5.0,
+          "lobe_d": 0.34,
+          "lobe_d_var": 0.14,
+          "lobe_r": 0.46,
+          "lobe_r_var": 0.2,
+          "crown_r": 0.6,
+          "lobe_amp": 0.0,
+          "lobe_amp_var": 0.0,
+          "scallop_base": 3.5,
+          "scallop_div": 4.0,
+          "outline_weight_of": "tree_outline",
+          "outline_scale": 0.85,
+          "outline_ref_px": 14.0,
+          "outline_min_scale": 0.55,
+          "outline_role": "ink",
+          "outline_union": false,
+          "underside": false,
+          "lit_shift": 0.16,
+          "lit_roles": [
+            "flak.wash.0.0",
+            "flak.wash.0.1",
+            "flak.wash.0.2",
+            "flak.wash.1.0",
+            "flak.wash.1.1",
+            "flak.wash.1.2",
+            "flak.wash.2.0",
+            "flak.wash.2.1",
+            "flak.wash.2.2"
+          ],
+          "shade_roles": [
+            "flak.wash.0.0",
+            "flak.wash.0.1",
+            "flak.wash.0.2",
+            "flak.wash.1.0",
+            "flak.wash.1.1",
+            "flak.wash.1.2",
+            "flak.wash.2.0",
+            "flak.wash.2.1",
+            "flak.wash.2.2"
+          ],
+          "ticks": false,
+          "stipple_per_r": 0.0,
+          "stipple_role": "ink.soft",
+          "rings": 0.0,
+          "ring_role": "ink.ring",
+          "ring_style": "solid",
+          "dash_px": 3.0,
+          "gap_px": 2.2,
+          "ring_amp": 0.1,
+          "ring_amp_var": 0.1,
+          "stages": 3.0,
+          "stage_edges": [
+            0.22,
+            0.5
+          ],
+          "stage_ring_keep": [
+            0.8
+          ],
+          "stage_ring_alpha": [
+            1.0
+          ],
+          "stage_outline_keep": [
+            1.0
+          ],
+          "stretch": 1.0,
+          "shadow_min_tone": 1.0,
+          "arcs_min": 3.0,
+          "arcs_max": 5.0,
+          "arc_sweep_deg": [
+            150.0,
+            300.0
+          ],
+          "arc_spiral": 0.14,
+          "arc_weight": 1.15,
+          "peak_alpha": 1.0,
+          "burst_alpha": 1.0,
+          "arc_jitter": 0.22,
+          "soft_steps": 3.0,
+          "soft_core": 0.55,
+          "underlay_role": "smoke.b.underlay",
+          "patch_r": 0.8,
+          "core_bias": 0.8,
+          "dots_per_px2": [
+            0.07,
+            0.13,
+            0.22
+          ],
+          "dot_px": 0.6,
+          "dot_role": "ink.soft",
+          "dot_soft_role": "dirt.soft",
+          "shadow_bias": 0.7,
+          "hatch_count": [
+            2.0,
+            4.0,
+            7.0
+          ],
+          "hatch_role": "ink.hatch",
+          "hatch_weight": 0.75,
+          "spikes_min": 7.0,
+          "spikes_max": 10.0,
+          "spike_depth": 0.5,
+          "spike_var": 0.25,
+          "streamers": 3.0,
+          "streamer_len": [
+            0.3,
+            0.7
+          ],
+          "streamer_role": "ink.hatch",
+          "streamer_weight": 0.9,
+          "stage_streamer_keep": [
+            1.0,
+            0.6,
+            0.25
+          ]
+        }
+      }
+    },
+    {
+      "name": "F2",
+      "label": "F2 · Ragged burst",
+      "note": "PROPOSED. The classic flak puff as a pen would draw it: a jagged, spiky cloud (points, not scallops) in stepped ink washes, a few thin ink streamers trailing out of it (the shell's fragments), the streamers thinning as it ages. The flash is a ruled star, filled knock-out for its first frames and hollow ink after, with long rays. A hit is a bigger, denser burst with fragments thrown out.",
+      "file": "option_F2.png",
+      "parameters": {
+        "flash": {
+          "form": "star",
+          "frames_s": [
+            0.0,
+            0.04,
+            0.09,
+            0.16,
+            0.26,
+            0.4,
+            0.6
+          ],
+          "end_s": 0.8,
+          "radius_frac": 0.55,
+          "hit_scale": 1.3,
+          "core_curve": [
+            [
+              0.0,
+              0.3
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.12,
+              0.7
+            ],
+            [
+              0.3,
+              0.25
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "core_role": "burst.core",
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.6
+            ],
+            [
+              0.6,
+              0.0
+            ]
+          ],
+          "outline_scale": 1.1,
+          "spikes": 11.0,
+          "inner_frac": 0.5,
+          "outer_var": 0.5,
+          "star_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.3,
+              1.05
+            ],
+            [
+              0.6,
+              1.1
+            ]
+          ],
+          "fill_s": 0.09,
+          "hatch": 10.0,
+          "hatch_len": [
+            1.2,
+            1.9
+          ],
+          "hatch_in": 1.0,
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.2,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.7
+            ],
+            [
+              0.8,
+              0.0
+            ]
+          ],
+          "hatch_s": 0.12,
+          "dots": 24.0,
+          "dot_px": 0.9,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.25,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.4,
+              0.8
+            ],
+            [
+              0.8,
+              0.0
+            ]
+          ],
+          "spread": 1.5,
+          "frag": 8.0,
+          "frag_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.8
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "frag_s": 0.2,
+          "frag_weight": 1.6,
+          "ground_ring": false,
+          "ring_s": 0.5,
+          "ring_r": 1.5,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.5,
+              0.5
+            ],
+            [
+              1.0,
+              0.0
+            ]
+          ],
+          "ring_role": "ink.ring",
+          "ring_weight": 1.0,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.cool"
+        },
+        "burst": {
+          "size_m": 12.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0,
+          "hit_offset_m": [
+            0.0,
+            4.0
+          ],
+          "miss_offset_m": [
+            30.0,
+            75.0
+          ],
+          "miss_dh_m": [
+            -35.0,
+            35.0
+          ],
+          "min_height_m": 6.0,
+          "puffs_hit": 3.0,
+          "puffs_miss": 2.0,
+          "radius_frac": [
+            0.34,
+            0.46
+          ],
+          "life_s": 14.0,
+          "hit_life_scale": 1.3,
+          "hit_radius_scale": 1.15,
+          "delay_s": 0.02,
+          "interval_s": 0.04,
+          "spread_frac": 0.22,
+          "rise_mps": 0.8,
+          "tone_hit": 2.0,
+          "tone_miss": 1.0
+        },
+        "puff": {
+          "form": "ragged",
+          "variants": 4.0,
+          "radius_frac": [
+            0.36,
+            0.5
+          ],
+          "interval_s": [
+            0.3,
+            0.07
+          ],
+          "life_s": [
+            14.0,
+            20.0
+          ],
+          "grow": [
+            0.55,
+            1.35
+          ],
+          "grow_tau": 0.08,
+          "hold": 0.12,
+          "fade_power": 1.5,
+          "alpha_steps": [],
+          "intensity_floor": 0.3,
+          "tone_edges": [
+            0.45,
+            0.78
+          ],
+          "wind_mps": [
+            1.2,
+            0.5
+          ],
+          "wind_jitter_mps": 0.5,
+          "ground_shadow": true,
+          "tail_frac": 0.0,
+          "lobes_min": 3.0,
+          "lobes_max": 5.0,
+          "lobe_d": 0.34,
+          "lobe_d_var": 0.14,
+          "lobe_r": 0.46,
+          "lobe_r_var": 0.2,
+          "crown_r": 0.6,
+          "lobe_amp": 0.0,
+          "lobe_amp_var": 0.0,
+          "scallop_base": 3.5,
+          "scallop_div": 4.0,
+          "outline_weight_of": "tree_outline",
+          "outline_scale": 0.85,
+          "outline_ref_px": 14.0,
+          "outline_min_scale": 0.55,
+          "outline_role": "ink",
+          "outline_union": false,
+          "underside": false,
+          "lit_shift": 0.16,
+          "lit_roles": [
+            "flak.wash.0.0",
+            "flak.wash.0.1",
+            "flak.wash.0.2",
+            "flak.wash.1.0",
+            "flak.wash.1.1",
+            "flak.wash.1.2",
+            "flak.wash.2.0",
+            "flak.wash.2.1",
+            "flak.wash.2.2"
+          ],
+          "shade_roles": [
+            "flak.wash.0.0",
+            "flak.wash.0.1",
+            "flak.wash.0.2",
+            "flak.wash.1.0",
+            "flak.wash.1.1",
+            "flak.wash.1.2",
+            "flak.wash.2.0",
+            "flak.wash.2.1",
+            "flak.wash.2.2"
+          ],
+          "ticks": false,
+          "stipple_per_r": 0.0,
+          "stipple_role": "ink.soft",
+          "rings": 0.0,
+          "ring_role": "ink.ring",
+          "ring_style": "solid",
+          "dash_px": 3.0,
+          "gap_px": 2.2,
+          "ring_amp": 0.1,
+          "ring_amp_var": 0.1,
+          "stages": 3.0,
+          "stage_edges": [
+            0.22,
+            0.5
+          ],
+          "stage_ring_keep": [
+            0.8
+          ],
+          "stage_ring_alpha": [
+            1.0
+          ],
+          "stage_outline_keep": [
+            1.0
+          ],
+          "stretch": 1.0,
+          "shadow_min_tone": 1.0,
+          "arcs_min": 3.0,
+          "arcs_max": 5.0,
+          "arc_sweep_deg": [
+            150.0,
+            300.0
+          ],
+          "arc_spiral": 0.14,
+          "arc_weight": 1.15,
+          "peak_alpha": 1.0,
+          "burst_alpha": 1.0,
+          "arc_jitter": 0.22,
+          "soft_steps": 3.0,
+          "soft_core": 0.55,
+          "underlay_role": "smoke.b.underlay",
+          "patch_r": 0.8,
+          "core_bias": 0.8,
+          "dots_per_px2": [
+            0.07,
+            0.13,
+            0.22
+          ],
+          "dot_px": 0.6,
+          "dot_role": "ink.soft",
+          "dot_soft_role": "dirt.soft",
+          "shadow_bias": 0.7,
+          "hatch_count": [
+            2.0,
+            4.0,
+            7.0
+          ],
+          "hatch_role": "ink.hatch",
+          "hatch_weight": 0.75,
+          "spikes_min": 7.0,
+          "spikes_max": 10.0,
+          "spike_depth": 0.5,
+          "spike_var": 0.25,
+          "streamers": 3.0,
+          "streamer_len": [
+            0.3,
+            0.7
+          ],
+          "streamer_role": "ink.hatch",
+          "streamer_weight": 0.9,
+          "stage_streamer_keep": [
+            1.0,
+            0.6,
+            0.25
+          ]
+        }
+      }
+    },
+    {
+      "name": "F3",
+      "label": "F3 · Stippled burst",
+      "note": "PROPOSED. Pen and ink only: a burst is a dense patch of ink dots, thickest on the shadow side with short hatch strokes, over a faint ink patch; no wash, no fill. It reads as a pencil smudge in the sky and stays light on the map. The flash is flung ink dots and hatch rays with no white at all. Dots thin out as it ages.",
+      "file": "option_F3.png",
+      "parameters": {
+        "flash": {
+          "form": "stipple",
+          "frames_s": [
+            0.0,
+            0.04,
+            0.09,
+            0.16,
+            0.26,
+            0.4,
+            0.6
+          ],
+          "end_s": 0.8,
+          "radius_frac": 0.55,
+          "hit_scale": 1.3,
+          "core_curve": [
+            [
+              0.0,
+              0.3
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.12,
+              0.7
+            ],
+            [
+              0.3,
+              0.25
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "core_role": "burst.core",
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.6
+            ],
+            [
+              0.6,
+              0.0
+            ]
+          ],
+          "outline_scale": 0.9,
+          "spikes": 11.0,
+          "inner_frac": 0.5,
+          "outer_var": 0.5,
+          "star_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.3,
+              1.05
+            ],
+            [
+              0.6,
+              1.1
+            ]
+          ],
+          "fill_s": 0.09,
+          "hatch": 14.0,
+          "hatch_len": [
+            1.1,
+            1.55
+          ],
+          "hatch_in": 0.0,
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.2,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.7
+            ],
+            [
+              0.8,
+              0.0
+            ]
+          ],
+          "hatch_s": 0.12,
+          "dots": 90.0,
+          "dot_px": 0.9,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.3,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.4,
+              0.8
+            ],
+            [
+              0.8,
+              0.0
+            ]
+          ],
+          "spread": 1.5,
+          "frag": 6.0,
+          "frag_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.8
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "frag_s": 0.2,
+          "frag_weight": 1.6,
+          "ground_ring": false,
+          "ring_s": 0.5,
+          "ring_r": 1.5,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.5,
+              0.5
+            ],
+            [
+              1.0,
+              0.0
+            ]
+          ],
+          "ring_role": "ink.ring",
+          "ring_weight": 1.0,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.cool"
+        },
+        "burst": {
+          "size_m": 12.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0,
+          "hit_offset_m": [
+            0.0,
+            4.0
+          ],
+          "miss_offset_m": [
+            30.0,
+            75.0
+          ],
+          "miss_dh_m": [
+            -35.0,
+            35.0
+          ],
+          "min_height_m": 6.0,
+          "puffs_hit": 3.0,
+          "puffs_miss": 2.0,
+          "radius_frac": [
+            0.36,
+            0.5
+          ],
+          "life_s": 14.0,
+          "hit_life_scale": 1.3,
+          "hit_radius_scale": 1.15,
+          "delay_s": 0.02,
+          "interval_s": 0.04,
+          "spread_frac": 0.22,
+          "rise_mps": 0.8,
+          "tone_hit": 2.0,
+          "tone_miss": 1.0
+        },
+        "puff": {
+          "form": "stipple",
+          "variants": 4.0,
+          "radius_frac": [
+            0.36,
+            0.5
+          ],
+          "interval_s": [
+            0.3,
+            0.07
+          ],
+          "life_s": [
+            14.0,
+            20.0
+          ],
+          "grow": [
+            0.55,
+            1.35
+          ],
+          "grow_tau": 0.08,
+          "hold": 0.12,
+          "fade_power": 1.5,
+          "alpha_steps": [
+            1.0,
+            0.75,
+            0.5,
+            0.3,
+            0.15
+          ],
+          "intensity_floor": 0.3,
+          "tone_edges": [
+            0.45,
+            0.78
+          ],
+          "wind_mps": [
+            1.2,
+            0.5
+          ],
+          "wind_jitter_mps": 0.5,
+          "ground_shadow": true,
+          "tail_frac": 0.0,
+          "lobes_min": 3.0,
+          "lobes_max": 5.0,
+          "lobe_d": 0.34,
+          "lobe_d_var": 0.14,
+          "lobe_r": 0.46,
+          "lobe_r_var": 0.2,
+          "crown_r": 0.6,
+          "lobe_amp": 0.0,
+          "lobe_amp_var": 0.0,
+          "scallop_base": 3.5,
+          "scallop_div": 4.0,
+          "outline_weight_of": "tree_outline",
+          "outline_scale": 0.85,
+          "outline_ref_px": 14.0,
+          "outline_min_scale": 0.55,
+          "outline_role": "ink",
+          "outline_union": false,
+          "underside": false,
+          "lit_shift": 0.16,
+          "lit_roles": [
+            "flak.wash.0.0",
+            "flak.wash.0.1",
+            "flak.wash.0.2",
+            "flak.wash.1.0",
+            "flak.wash.1.1",
+            "flak.wash.1.2",
+            "flak.wash.2.0",
+            "flak.wash.2.1",
+            "flak.wash.2.2"
+          ],
+          "shade_roles": [
+            "flak.wash.0.0",
+            "flak.wash.0.1",
+            "flak.wash.0.2",
+            "flak.wash.1.0",
+            "flak.wash.1.1",
+            "flak.wash.1.2",
+            "flak.wash.2.0",
+            "flak.wash.2.1",
+            "flak.wash.2.2"
+          ],
+          "ticks": false,
+          "stipple_per_r": 0.0,
+          "stipple_role": "ink.soft",
+          "rings": 0.0,
+          "ring_role": "ink.ring",
+          "ring_style": "solid",
+          "dash_px": 3.0,
+          "gap_px": 2.2,
+          "ring_amp": 0.1,
+          "ring_amp_var": 0.1,
+          "stages": 3.0,
+          "stage_edges": [
+            0.22,
+            0.5
+          ],
+          "stage_ring_keep": [
+            0.8
+          ],
+          "stage_ring_alpha": [
+            1.0
+          ],
+          "stage_outline_keep": [
+            1.0
+          ],
+          "stretch": 1.0,
+          "shadow_min_tone": 1.0,
+          "arcs_min": 3.0,
+          "arcs_max": 5.0,
+          "arc_sweep_deg": [
+            150.0,
+            300.0
+          ],
+          "arc_spiral": 0.14,
+          "arc_weight": 1.15,
+          "peak_alpha": 1.0,
+          "burst_alpha": 1.0,
+          "arc_jitter": 0.22,
+          "soft_steps": 3.0,
+          "soft_core": 0.55,
+          "underlay_role": "flak.under",
+          "patch_r": 0.85,
+          "core_bias": 0.8,
+          "dots_per_px2": [
+            0.16,
+            0.3,
+            0.5
+          ],
+          "dot_px": 0.65,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "shadow_bias": 0.5,
+          "hatch_count": [
+            3.0,
+            6.0,
+            10.0
+          ],
+          "hatch_role": "ink.hatch",
+          "hatch_weight": 0.8,
+          "spikes_min": 7.0,
+          "spikes_max": 10.0,
+          "spike_depth": 0.5,
+          "spike_var": 0.25,
+          "streamers": 3.0,
+          "streamer_len": [
+            0.3,
+            0.7
+          ],
+          "streamer_role": "ink.hatch",
+          "streamer_weight": 0.9,
+          "stage_streamer_keep": [
+            1.0,
+            0.6,
+            0.25
+          ]
+        }
+      }
+    },
+    {
+      "name": "F4",
+      "label": "F4 · Ring and core",
+      "note": "PROPOSED. The restrained one, a map symbol of a burst: a small dark core wash with open ink arcs round it like isobars, the arcs breaking as it ages. The flash is a small knock-out core and one expanding broken ring. A hit is the same with more dots and fragments. Lightest on the map; a barrage stays readable.",
+      "file": "option_F4.png",
+      "parameters": {
+        "flash": {
+          "form": "ringpop",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.2
+          ],
+          "end_s": 1.4,
+          "radius_frac": 0.55,
+          "hit_scale": 1.3,
+          "core_curve": [
+            [
+              0.0,
+              0.2
+            ],
+            [
+              0.04,
+              0.6
+            ],
+            [
+              0.12,
+              0.45
+            ],
+            [
+              0.3,
+              0.15
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "core_role": "burst.core",
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.6
+            ],
+            [
+              0.6,
+              0.0
+            ]
+          ],
+          "outline_scale": 0.9,
+          "spikes": 11.0,
+          "inner_frac": 0.5,
+          "outer_var": 0.5,
+          "star_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.3,
+              1.05
+            ],
+            [
+              0.6,
+              1.1
+            ]
+          ],
+          "fill_s": 0.09,
+          "hatch": 12.0,
+          "hatch_len": [
+            1.1,
+            1.7
+          ],
+          "hatch_in": 0.75,
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.2,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.7
+            ],
+            [
+              0.8,
+              0.0
+            ]
+          ],
+          "hatch_s": 0.12,
+          "dots": 30.0,
+          "dot_px": 0.9,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.25,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.4,
+              0.8
+            ],
+            [
+              0.8,
+              0.0
+            ]
+          ],
+          "spread": 1.5,
+          "frag": 6.0,
+          "frag_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.8
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "frag_s": 0.2,
+          "frag_weight": 1.6,
+          "ground_ring": false,
+          "ring_s": 0.35,
+          "ring_r": 1.45,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.5,
+              0.7
+            ],
+            [
+              1.2,
+              0.0
+            ]
+          ],
+          "ring_role": "ink.ring",
+          "ring_weight": 1.0,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.cool"
+        },
+        "burst": {
+          "size_m": 12.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0,
+          "hit_offset_m": [
+            0.0,
+            4.0
+          ],
+          "miss_offset_m": [
+            30.0,
+            75.0
+          ],
+          "miss_dh_m": [
+            -35.0,
+            35.0
+          ],
+          "min_height_m": 6.0,
+          "puffs_hit": 2.0,
+          "puffs_miss": 2.0,
+          "radius_frac": [
+            0.36,
+            0.5
+          ],
+          "life_s": 14.0,
+          "hit_life_scale": 1.3,
+          "hit_radius_scale": 1.15,
+          "delay_s": 0.02,
+          "interval_s": 0.04,
+          "spread_frac": 0.22,
+          "rise_mps": 0.8,
+          "tone_hit": 2.0,
+          "tone_miss": 1.0
+        },
+        "puff": {
+          "form": "arcs",
+          "variants": 4.0,
+          "radius_frac": [
+            0.36,
+            0.5
+          ],
+          "interval_s": [
+            0.3,
+            0.07
+          ],
+          "life_s": [
+            14.0,
+            20.0
+          ],
+          "grow": [
+            0.55,
+            1.35
+          ],
+          "grow_tau": 0.08,
+          "hold": 0.12,
+          "fade_power": 1.5,
+          "alpha_steps": [],
+          "intensity_floor": 0.3,
+          "tone_edges": [
+            0.45,
+            0.78
+          ],
+          "wind_mps": [
+            1.2,
+            0.5
+          ],
+          "wind_jitter_mps": 0.5,
+          "ground_shadow": true,
+          "tail_frac": 0.0,
+          "lobes_min": 3.0,
+          "lobes_max": 5.0,
+          "lobe_d": 0.34,
+          "lobe_d_var": 0.14,
+          "lobe_r": 0.46,
+          "lobe_r_var": 0.2,
+          "crown_r": 0.6,
+          "lobe_amp": 0.0,
+          "lobe_amp_var": 0.0,
+          "scallop_base": 3.5,
+          "scallop_div": 4.0,
+          "outline_weight_of": "tree_outline",
+          "outline_scale": 0.85,
+          "outline_ref_px": 14.0,
+          "outline_min_scale": 0.55,
+          "outline_role": "ink",
+          "outline_union": false,
+          "underside": false,
+          "lit_shift": 0.16,
+          "lit_roles": [
+            "flak.core.0",
+            "flak.core.1",
+            "flak.core.2"
+          ],
+          "shade_roles": [
+            "flak.core.0",
+            "flak.core.1",
+            "flak.core.2"
+          ],
+          "ticks": false,
+          "stipple_per_r": 0.0,
+          "stipple_role": "ink.soft",
+          "rings": 0.0,
+          "ring_role": "ink.ring",
+          "ring_style": "solid",
+          "dash_px": 3.0,
+          "gap_px": 2.2,
+          "ring_amp": 0.1,
+          "ring_amp_var": 0.1,
+          "stages": 3.0,
+          "stage_edges": [
+            0.25,
+            0.55
+          ],
+          "stage_ring_keep": [
+            0.9,
+            0.65,
+            0.35
+          ],
+          "stage_ring_alpha": [
+            1.0,
+            0.8,
+            0.55
+          ],
+          "stage_outline_keep": [
+            1.0
+          ],
+          "stretch": 1.0,
+          "shadow_min_tone": 1.0,
+          "arcs_min": 4.0,
+          "arcs_max": 6.0,
+          "arc_sweep_deg": [
+            90.0,
+            260.0
+          ],
+          "arc_spiral": 0.14,
+          "arc_weight": 1.2,
+          "peak_alpha": 1.0,
+          "burst_alpha": 1.0,
+          "arc_jitter": 0.3,
+          "soft_steps": 3.0,
+          "soft_core": 0.55,
+          "underlay_role": "smoke.b.underlay",
+          "patch_r": 0.8,
+          "core_bias": 0.8,
+          "dots_per_px2": [
+            0.07,
+            0.13,
+            0.22
+          ],
+          "dot_px": 0.6,
+          "dot_role": "ink.soft",
+          "dot_soft_role": "dirt.soft",
+          "shadow_bias": 0.7,
+          "hatch_count": [
+            2.0,
+            4.0,
+            7.0
+          ],
+          "hatch_role": "ink.hatch",
+          "hatch_weight": 0.75,
+          "spikes_min": 7.0,
+          "spikes_max": 10.0,
+          "spike_depth": 0.5,
+          "spike_var": 0.25,
+          "streamers": 3.0,
+          "streamer_len": [
+            0.3,
+            0.7
+          ],
+          "streamer_role": "ink.hatch",
+          "streamer_weight": 0.9,
+          "stage_streamer_keep": [
+            1.0,
+            0.6,
+            0.25
+          ]
+        }
+      }
+    }
+  ],
+  "sheet": "board.png (every option, scaled), compare.png (the options side by side, one key frame per row), option_<X>.png (each at full size, with the palette row and the specimen strip); every frame at native size in frames/, listed in frames.json",
+  "recommendation": {
+    "option": "F1",
+    "_proposed": true,
+    "_reason": "PROPOSED by Track X2, not Alex's call: F1 builds the burst the way Alex's chosen damage smoke (W1, soft white to grey) is built, stepped translucent washes with no outline, in the palette's ink instead of white; it is the quietest of the four, reads as a dark cloud at both scales, cannot be mistaken for the white smoke, and avoids the star and scallop shapes the fire research found cartoony. F2 is the flak look at its most classic (a jagged cloud with streamers) if Alex wants more drawing in it."
+  },
+  "chosen": null,
+  "chosen_by": null
+}

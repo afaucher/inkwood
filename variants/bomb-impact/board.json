@@ -1,0 +1,1198 @@
+{
+  "id": "bomb-impact",
+  "date": "2026-10-10",
+  "area": "Effects",
+  "question": "How does a bomb hitting the ground look: a fast flash, a smoke burst (thick, shadowed), debris, then a crater mark that stays; and a stick of several bombs walking across the ground. (Alex 2026-10-10: bombers drop sticks of bombs; thick smoke casts a shadow; no fire.)",
+  "source": "scripts/fx/fx_board_strike.gd (what=bomb) over the real map (terrain provider) at 2 px/m, planes at the sandbox's own scale (36 px at zoom 1); the effects are FxLayer.bomb_drop and bomb_impact (blast radius 45 m, data/sim/bombs.json)",
+  "seed": 20261009,
+  "parameter": "data/fx/fx.json#bomb.options (every value a proposed record)",
+  "held_constant": {
+    "scene": "bombs from a bomber at 400 m and 85 m/s (fall 9.0 s, range 768 m), landing east of the village compound at game time 100; blast radius 45 m",
+    "light": "sun azimuth 315, elevation 46; shadow strength 0.44; a bomb's shadow 1% of its height along the light",
+    "pen": "shadow side",
+    "fire": "none"
+  },
+  "options": [
+    {
+      "name": "B1",
+      "label": "B1 · Flash, thick smoke, ringed pit",
+      "note": "PROPOSED. A fast knock-out flash (a ragged paper-light disc, ink hatch rays, flung dots, a ring of dust on the ground), a thick burst of the damage smoke thrown outward then hanging, casting its shadow, a billow that thins over turns, clods of earth thrown up and falling, and a crater that stays: an ink-wash pit with dirt stipple, short hatch on the wall toward the light and a broken ink ring on the lip.",
+      "file": "option_B1.png",
+      "parameters": {
+        "flash": {
+          "form": "knockout",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.3,
+            2.2
+          ],
+          "end_s": 3.0,
+          "radius_frac": 0.22,
+          "hit_scale": 1.3,
+          "core_curve": [
+            [
+              0.0,
+              0.3
+            ],
+            [
+              0.06,
+              1.0
+            ],
+            [
+              0.16,
+              0.65
+            ],
+            [
+              0.4,
+              0.2
+            ],
+            [
+              0.8,
+              0.0
+            ]
+          ],
+          "core_role": "burst.core",
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.6,
+              0.6
+            ],
+            [
+              1.5,
+              0.0
+            ]
+          ],
+          "outline_scale": 0.9,
+          "spikes": 11.0,
+          "inner_frac": 0.5,
+          "outer_var": 0.5,
+          "star_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.3,
+              1.05
+            ],
+            [
+              0.6,
+              1.1
+            ]
+          ],
+          "fill_s": 0.09,
+          "hatch": 18.0,
+          "hatch_len": [
+            1.1,
+            1.7
+          ],
+          "hatch_in": 0.7,
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.2,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.6,
+              0.7
+            ],
+            [
+              2.0,
+              0.2
+            ],
+            [
+              3.0,
+              0.0
+            ]
+          ],
+          "hatch_s": 0.12,
+          "dots": 70.0,
+          "dot_px": 0.9,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.25,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.9
+            ],
+            [
+              2.5,
+              0.2
+            ],
+            [
+              3.0,
+              0.0
+            ]
+          ],
+          "spread": 1.5,
+          "frag": 0.0,
+          "frag_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.8
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "frag_s": 0.2,
+          "frag_weight": 1.6,
+          "ground_ring": true,
+          "ring_s": 0.5,
+          "ring_r": 1.8,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.7
+            ],
+            [
+              2.5,
+              0.0
+            ]
+          ],
+          "ring_role": "ink.ring",
+          "ring_weight": 1.0,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.cool"
+        },
+        "smoke_burst": {
+          "smoke_option": "W1",
+          "count": 9.0,
+          "delay_s": 0.0,
+          "interval_s": 0.03,
+          "radius_frac": [
+            0.1,
+            0.17
+          ],
+          "speed_mps": [
+            0.4,
+            0.9
+          ],
+          "vel_tau_s": 0.5,
+          "grow": [
+            0.5,
+            1.6
+          ],
+          "grow_tau": 0.04,
+          "hold": 0.25,
+          "fade_power": 1.5,
+          "life_s": 30.0,
+          "tone": 2.0,
+          "rise_mps": 2.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "plume": {
+          "smoke_option": "W1",
+          "count": 7.0,
+          "interval_s": 0.25,
+          "delay_s": 0.2,
+          "radius_frac": [
+            0.1,
+            0.16
+          ],
+          "spread_frac": 0.16,
+          "life_s": 34.0,
+          "grow": [
+            0.55,
+            1.5
+          ],
+          "hold": 0.22,
+          "fade_power": 1.5,
+          "tone": 1.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "debris": {
+          "count": 10.0,
+          "speed_frac": [
+            0.25,
+            0.8
+          ],
+          "up_mps": [
+            10.0,
+            24.0
+          ],
+          "spin_dps": [
+            -360.0,
+            360.0
+          ],
+          "gravity_mps2": 18.0,
+          "drag_tau_s": 1.5,
+          "rest_s": 6.0,
+          "clod_variants": 3.0,
+          "clod_frac": 0.035,
+          "clod_role": "bomb.clod",
+          "bar_variants": 1.0
+        },
+        "crater": {
+          "form": "ringed",
+          "radius_frac": 0.11,
+          "variants": 4.0,
+          "stretch": 1.0,
+          "lobe_amp": 0.12,
+          "rim_out": 1.18,
+          "rim_role": "bomb.rim",
+          "pit_role": "bomb.pit",
+          "dots_per_px2": 0.5,
+          "dot_px": 0.65,
+          "core_bias": 0.7,
+          "hatch": 22.0,
+          "hatch_weight": 1.0,
+          "ring": true,
+          "ring_role": "ink.ring",
+          "ring_weight": 0.9,
+          "ring_alpha": 0.85,
+          "flecks": 10.0,
+          "dot_role": "scar.dot",
+          "dot_soft_role": "scar.dot.soft",
+          "hatch_role": "ink.hatch",
+          "fade_in_s": 0.9
+        },
+        "fall": {
+          "bomb_len_m": 2.6,
+          "bomb_w_frac": 0.32,
+          "min_px": 7.0,
+          "body_role": "bomb.body",
+          "stripe_role": "bomb.stripe"
+        }
+      }
+    },
+    {
+      "name": "B2",
+      "label": "B2 · Ink burst, dust, blot",
+      "note": "PROPOSED. No white at all: the blast is ink, as the crash board's stipple burst was with the fire off: flung dots and hatch rays, a ring of dust on the ground, then a grey burst of smoke (the plain translucent grey, W2, rather than white) and clods. What stays is a blot: dirt stipple and hatch, no ring, no pit wash (the burnt-ground look of terrain.burnt).",
+      "file": "option_B2.png",
+      "parameters": {
+        "flash": {
+          "form": "stipple",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.3,
+            2.2,
+            3.5
+          ],
+          "end_s": 4.5,
+          "radius_frac": 0.24,
+          "hit_scale": 1.3,
+          "core_curve": [
+            [
+              0.0,
+              0.3
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.12,
+              0.7
+            ],
+            [
+              0.3,
+              0.25
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "core_role": "burst.core",
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.6
+            ],
+            [
+              0.6,
+              0.0
+            ]
+          ],
+          "outline_scale": 0.9,
+          "spikes": 11.0,
+          "inner_frac": 0.5,
+          "outer_var": 0.5,
+          "star_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.3,
+              1.05
+            ],
+            [
+              0.6,
+              1.1
+            ]
+          ],
+          "fill_s": 0.09,
+          "hatch": 18.0,
+          "hatch_len": [
+            1.1,
+            1.55
+          ],
+          "hatch_in": 0.75,
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.5,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              0.8
+            ],
+            [
+              3.0,
+              0.45
+            ],
+            [
+              4.5,
+              0.2
+            ]
+          ],
+          "hatch_s": 0.2,
+          "dots": 150.0,
+          "dot_px": 0.9,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.25,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              1.0
+            ],
+            [
+              3.0,
+              0.7
+            ],
+            [
+              4.5,
+              0.2
+            ]
+          ],
+          "spread": 1.3,
+          "frag": 0.0,
+          "frag_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.8
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "frag_s": 0.2,
+          "frag_weight": 1.6,
+          "ground_ring": true,
+          "ring_s": 0.6,
+          "ring_r": 1.7,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.8
+            ],
+            [
+              3.0,
+              0.35
+            ],
+            [
+              4.5,
+              0.0
+            ]
+          ],
+          "ring_role": "ink.ring",
+          "ring_weight": 1.0,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.cool"
+        },
+        "smoke_burst": {
+          "smoke_option": "W2",
+          "count": 9.0,
+          "delay_s": 0.0,
+          "interval_s": 0.03,
+          "radius_frac": [
+            0.1,
+            0.17
+          ],
+          "speed_mps": [
+            0.4,
+            0.9
+          ],
+          "vel_tau_s": 0.5,
+          "grow": [
+            0.5,
+            1.6
+          ],
+          "grow_tau": 0.04,
+          "hold": 0.25,
+          "fade_power": 1.5,
+          "life_s": 30.0,
+          "tone": 2.0,
+          "rise_mps": 2.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "plume": {
+          "smoke_option": "W2",
+          "count": 7.0,
+          "interval_s": 0.25,
+          "delay_s": 0.2,
+          "radius_frac": [
+            0.1,
+            0.16
+          ],
+          "spread_frac": 0.16,
+          "life_s": 34.0,
+          "grow": [
+            0.55,
+            1.5
+          ],
+          "hold": 0.22,
+          "fade_power": 1.5,
+          "tone": 1.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "debris": {
+          "count": 12.0,
+          "speed_frac": [
+            0.25,
+            0.8
+          ],
+          "up_mps": [
+            10.0,
+            24.0
+          ],
+          "spin_dps": [
+            -360.0,
+            360.0
+          ],
+          "gravity_mps2": 18.0,
+          "drag_tau_s": 1.5,
+          "rest_s": 6.0,
+          "clod_variants": 3.0,
+          "clod_frac": 0.035,
+          "clod_role": "bomb.clod",
+          "bar_variants": 1.0
+        },
+        "crater": {
+          "form": "blot",
+          "radius_frac": 0.11,
+          "variants": 4.0,
+          "stretch": 1.0,
+          "lobe_amp": 0.16,
+          "rim_out": 1.18,
+          "rim_role": "bomb.rim",
+          "pit_role": "bomb.pit",
+          "dots_per_px2": 0.6,
+          "dot_px": 0.65,
+          "core_bias": 0.7,
+          "hatch": 28.0,
+          "hatch_weight": 1.0,
+          "ring": false,
+          "ring_role": "ink.ring",
+          "ring_weight": 0.9,
+          "ring_alpha": 0.85,
+          "flecks": 14.0,
+          "dot_role": "scar.dot",
+          "dot_soft_role": "scar.dot.soft",
+          "hatch_role": "ink.hatch",
+          "fade_in_s": 0.9
+        },
+        "fall": {
+          "bomb_len_m": 2.6,
+          "bomb_w_frac": 0.32,
+          "min_px": 7.0,
+          "body_role": "bomb.body",
+          "stripe_role": "bomb.stripe"
+        }
+      }
+    },
+    {
+      "name": "B3",
+      "label": "B3 · Shock ring, pale-lipped crater",
+      "note": "PROPOSED. The restrained one: a small knock-out core and one expanding broken ring (the shock), a smaller smoke burst, fewer clods. What stays is a crater with a pale lip of thrown earth (the lightest of the fills) round a dark pit: it reads as a hole at any distance, because it is a light ring round a dark centre.",
+      "file": "option_B3.png",
+      "parameters": {
+        "flash": {
+          "form": "ringpop",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.3,
+            2.2
+          ],
+          "end_s": 3.0,
+          "radius_frac": 0.22,
+          "hit_scale": 1.3,
+          "core_curve": [
+            [
+              0.0,
+              0.2
+            ],
+            [
+              0.06,
+              0.55
+            ],
+            [
+              0.16,
+              0.4
+            ],
+            [
+              0.4,
+              0.12
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "core_role": "burst.core",
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.6
+            ],
+            [
+              0.6,
+              0.0
+            ]
+          ],
+          "outline_scale": 0.9,
+          "spikes": 11.0,
+          "inner_frac": 0.5,
+          "outer_var": 0.5,
+          "star_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.3,
+              1.05
+            ],
+            [
+              0.6,
+              1.1
+            ]
+          ],
+          "fill_s": 0.09,
+          "hatch": 12.0,
+          "hatch_len": [
+            1.1,
+            1.7
+          ],
+          "hatch_in": 0.75,
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.2,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.7
+            ],
+            [
+              0.8,
+              0.0
+            ]
+          ],
+          "hatch_s": 0.12,
+          "dots": 60.0,
+          "dot_px": 0.9,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.25,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.8
+            ],
+            [
+              2.5,
+              0.0
+            ]
+          ],
+          "spread": 1.5,
+          "frag": 0.0,
+          "frag_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.8
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "frag_s": 0.2,
+          "frag_weight": 1.6,
+          "ground_ring": true,
+          "ring_s": 0.5,
+          "ring_r": 1.9,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.6
+            ],
+            [
+              2.5,
+              0.0
+            ]
+          ],
+          "ring_role": "ink.ring",
+          "ring_weight": 1.2,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.cool"
+        },
+        "smoke_burst": {
+          "smoke_option": "W1",
+          "count": 7.0,
+          "delay_s": 0.0,
+          "interval_s": 0.03,
+          "radius_frac": [
+            0.09,
+            0.15
+          ],
+          "speed_mps": [
+            0.4,
+            0.9
+          ],
+          "vel_tau_s": 0.5,
+          "grow": [
+            0.5,
+            1.6
+          ],
+          "grow_tau": 0.04,
+          "hold": 0.25,
+          "fade_power": 1.5,
+          "life_s": 30.0,
+          "tone": 2.0,
+          "rise_mps": 2.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "plume": {
+          "smoke_option": "W1",
+          "count": 5.0,
+          "interval_s": 0.25,
+          "delay_s": 0.2,
+          "radius_frac": [
+            0.1,
+            0.16
+          ],
+          "spread_frac": 0.16,
+          "life_s": 34.0,
+          "grow": [
+            0.55,
+            1.5
+          ],
+          "hold": 0.22,
+          "fade_power": 1.5,
+          "tone": 1.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "debris": {
+          "count": 8.0,
+          "speed_frac": [
+            0.25,
+            0.8
+          ],
+          "up_mps": [
+            10.0,
+            24.0
+          ],
+          "spin_dps": [
+            -360.0,
+            360.0
+          ],
+          "gravity_mps2": 18.0,
+          "drag_tau_s": 1.5,
+          "rest_s": 6.0,
+          "clod_variants": 3.0,
+          "clod_frac": 0.035,
+          "clod_role": "bomb.clod",
+          "bar_variants": 1.0
+        },
+        "crater": {
+          "form": "rimmed",
+          "radius_frac": 0.11,
+          "variants": 4.0,
+          "stretch": 1.0,
+          "lobe_amp": 0.12,
+          "rim_out": 1.18,
+          "rim_role": "bomb.rim",
+          "pit_role": "bomb.pit",
+          "dots_per_px2": 0.45,
+          "dot_px": 0.65,
+          "core_bias": 0.7,
+          "hatch": 18.0,
+          "hatch_weight": 1.0,
+          "ring": true,
+          "ring_role": "ink.ring",
+          "ring_weight": 0.9,
+          "ring_alpha": 0.85,
+          "flecks": 6.0,
+          "dot_role": "scar.dot",
+          "dot_soft_role": "scar.dot.soft",
+          "hatch_role": "ink.hatch",
+          "fade_in_s": 0.9
+        },
+        "fall": {
+          "bomb_len_m": 2.6,
+          "bomb_w_frac": 0.32,
+          "min_px": 7.0,
+          "body_role": "bomb.body",
+          "stripe_role": "bomb.stripe"
+        }
+      }
+    },
+    {
+      "name": "B4",
+      "label": "B4 · Star burst, hatched crater",
+      "note": "PROPOSED. A ruled star: a jagged blast filled knock-out for its first frames, then a hollow inked star, with long rays (the woodcut blast of the crash board, with no fire). The smoke burst is thicker and taller-lived. What stays is a deeply hatched crater: dense hatch on the inner wall, a heavier pit wash, a broken ring.",
+      "file": "option_B4.png",
+      "parameters": {
+        "flash": {
+          "form": "star",
+          "frames_s": [
+            0.0,
+            0.05,
+            0.1,
+            0.18,
+            0.3,
+            0.5,
+            0.8,
+            1.3,
+            2.2
+          ],
+          "end_s": 3.0,
+          "radius_frac": 0.26,
+          "hit_scale": 1.3,
+          "core_curve": [
+            [
+              0.0,
+              0.3
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.12,
+              0.7
+            ],
+            [
+              0.3,
+              0.25
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "core_role": "burst.core",
+          "outline_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.0,
+              0.8
+            ],
+            [
+              2.5,
+              0.2
+            ],
+            [
+              3.0,
+              0.0
+            ]
+          ],
+          "outline_scale": 0.9,
+          "spikes": 13.0,
+          "inner_frac": 0.5,
+          "outer_var": 0.5,
+          "star_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.04,
+              1.0
+            ],
+            [
+              0.3,
+              1.05
+            ],
+            [
+              0.6,
+              1.1
+            ]
+          ],
+          "fill_s": 0.09,
+          "hatch": 14.0,
+          "hatch_len": [
+            1.2,
+            1.9
+          ],
+          "hatch_in": 1.0,
+          "hatch_role": "ink.full",
+          "hatch_weight": 1.2,
+          "hatch_alpha": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.8,
+              0.8
+            ],
+            [
+              2.0,
+              0.3
+            ],
+            [
+              3.0,
+              0.0
+            ]
+          ],
+          "hatch_s": 0.12,
+          "dots": 50.0,
+          "dot_px": 0.9,
+          "dot_role": "ink.dot",
+          "dot_soft_role": "ink.soft",
+          "dot_s": 0.25,
+          "dot_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              1.5,
+              0.8
+            ],
+            [
+              3.0,
+              0.0
+            ]
+          ],
+          "spread": 1.5,
+          "frag": 0.0,
+          "frag_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.3,
+              0.8
+            ],
+            [
+              0.7,
+              0.0
+            ]
+          ],
+          "frag_s": 0.2,
+          "frag_weight": 1.6,
+          "ground_ring": true,
+          "ring_s": 0.5,
+          "ring_r": 2.0,
+          "ring_keep": [
+            [
+              0.0,
+              1.0
+            ],
+            [
+              0.5,
+              0.5
+            ],
+            [
+              1.0,
+              0.0
+            ]
+          ],
+          "ring_role": "ink.ring",
+          "ring_weight": 1.0,
+          "flash_s": 0.1,
+          "fire_curve": [
+            [
+              0.0,
+              0.4
+            ],
+            [
+              0.1,
+              0.9
+            ],
+            [
+              0.25,
+              0.5
+            ],
+            [
+              0.5,
+              0.0
+            ]
+          ],
+          "fire_role": "fire",
+          "pale_role": "fire.cool"
+        },
+        "smoke_burst": {
+          "smoke_option": "W1",
+          "count": 11.0,
+          "delay_s": 0.0,
+          "interval_s": 0.03,
+          "radius_frac": [
+            0.11,
+            0.19
+          ],
+          "speed_mps": [
+            0.4,
+            0.9
+          ],
+          "vel_tau_s": 0.5,
+          "grow": [
+            0.5,
+            1.6
+          ],
+          "grow_tau": 0.04,
+          "hold": 0.25,
+          "fade_power": 1.5,
+          "life_s": 34.0,
+          "tone": 2.0,
+          "rise_mps": 2.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "plume": {
+          "smoke_option": "W1",
+          "count": 9.0,
+          "interval_s": 0.25,
+          "delay_s": 0.2,
+          "radius_frac": [
+            0.1,
+            0.16
+          ],
+          "spread_frac": 0.16,
+          "life_s": 34.0,
+          "grow": [
+            0.55,
+            1.5
+          ],
+          "hold": 0.22,
+          "fade_power": 1.5,
+          "tone": 1.0,
+          "ground_shadow": true,
+          "shadow_min_tone": 1.0
+        },
+        "debris": {
+          "count": 10.0,
+          "speed_frac": [
+            0.25,
+            0.8
+          ],
+          "up_mps": [
+            10.0,
+            24.0
+          ],
+          "spin_dps": [
+            -360.0,
+            360.0
+          ],
+          "gravity_mps2": 18.0,
+          "drag_tau_s": 1.5,
+          "rest_s": 6.0,
+          "clod_variants": 3.0,
+          "clod_frac": 0.035,
+          "clod_role": "bomb.clod",
+          "bar_variants": 1.0
+        },
+        "crater": {
+          "form": "ringed",
+          "radius_frac": 0.11,
+          "variants": 4.0,
+          "stretch": 1.0,
+          "lobe_amp": 0.12,
+          "rim_out": 1.18,
+          "rim_role": "bomb.rim",
+          "pit_role": "bomb.pit",
+          "dots_per_px2": 0.4,
+          "dot_px": 0.65,
+          "core_bias": 0.7,
+          "hatch": 40.0,
+          "hatch_weight": 1.15,
+          "ring": true,
+          "ring_role": "ink.ring",
+          "ring_weight": 0.9,
+          "ring_alpha": 0.95,
+          "flecks": 8.0,
+          "dot_role": "scar.dot",
+          "dot_soft_role": "scar.dot.soft",
+          "hatch_role": "ink.hatch",
+          "fade_in_s": 0.9
+        },
+        "fall": {
+          "bomb_len_m": 2.6,
+          "bomb_w_frac": 0.32,
+          "min_px": 7.0,
+          "body_role": "bomb.body",
+          "stripe_role": "bomb.stripe"
+        }
+      }
+    }
+  ],
+  "sheet": "board.png (every option, scaled), compare.png (the options side by side, one key frame per row), option_<X>.png (each at full size, with the palette row and the specimen strip); every frame at native size in frames/, listed in frames.json",
+  "recommendation": {
+    "option": "B1",
+    "_proposed": true,
+    "_reason": "PROPOSED by Track X2, not Alex's call: B1 is the damage smoke's own language (a soft knock-out flash, thick white smoke thrown out and hanging, casting a shadow), with clods and an ink-ringed pit. B3 draws the lasting crater better (a pale lip round a dark pit reads as a hole at any distance): if Alex likes B1's blast and B3's crater, the crater is a separate data group and can be swapped."
+  },
+  "chosen": null,
+  "chosen_by": null
+}

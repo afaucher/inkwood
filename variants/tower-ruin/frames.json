@@ -1,0 +1,609 @@
+{
+  "id": "tower-ruin",
+  "options": [
+    {
+      "option": "R1",
+      "label": "R1 · Toppled mast",
+      "note": "PROPOSED. The tower is blown at its foot and the mast TOPPLES: the same lattice as the standing tower (the unit sheet's) tips over about its base through eight drawn angles in 1.6 s, a second burst of dust where it lands, then it lies broken in two places, members snapped and missing, the platform at the far end. What stays at the foot: a scorched blot with a crater, the four footings cracked and shifted (one gone), leg stumps bent outward, the hut roofless with a torn roof across the hole, the cable snapped. A thick column of the damage smoke rises from the base for about eighteen turns, thinning and greying.",
+      "rows": [
+        {
+          "title": "a. THE MOMENT AND THE COLLAPSE (the mast falls toward the south in this seed)",
+          "key": "moment",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/R1_moment_0.png",
+              "caption": "before: the tower stands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_moment_1.png",
+              "caption": "0 s: the blast  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_moment_2.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_moment_3.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_moment_4.png",
+              "caption": "0.6 s: the mast tips  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_moment_5.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_moment_6.png",
+              "caption": "1.4 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_moment_7.png",
+              "caption": "2 s: it is down  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. THE SMOKE COLUMN THINS OVER TURNS, AND WHAT STAYS (the wind carries the smoke to the east)",
+          "key": "after",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/R1_after_0.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_after_1.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_after_2.png",
+              "caption": "two turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_after_3.png",
+              "caption": "four turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_after_4.png",
+              "caption": "eight turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_after_5.png",
+              "caption": "sixteen turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_after_6.png",
+              "caption": "twenty-four turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_after_7.png",
+              "caption": "forty turns later: what stays  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. AT THE PLANNING VIEW: the column and the dark mark under it",
+          "key": "far",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/R1_far_0.png",
+              "caption": "one turn later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R1_far_1.png",
+              "caption": "three turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R1_far_2.png",
+              "caption": "six turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R1_far_3.png",
+              "caption": "twelve turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R1_far_4.png",
+              "caption": "twenty turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R1_far_5.png",
+              "caption": "forty turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "d. BEFORE AND AFTER, CLOSE: the tower and what is left of it, at the camera's two nearest zooms",
+          "key": "detail",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/R1_detail_0.png",
+              "caption": "before, close  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_detail_1.png",
+              "caption": "after: the ruin  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R1_detail_2.png",
+              "caption": "before, closest  (zoom 2.00)"
+            },
+            {
+              "file": "frames/R1_detail_3.png",
+              "caption": "after: the ruin, closest  (zoom 2.00)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "R2",
+      "label": "R2 · Blown apart",
+      "note": "PROPOSED. The mast does not fall: it is blown apart. Bars of lattice are flung out of the blast, spinning, and land round the base; nothing of the mast lies in one piece. What stays: a big pale-lipped crater with the four leg stumps splayed round it, the footings mostly gone, the hut a heap of rubble, scraps of lattice scattered widely. The same column of smoke.",
+      "rows": [
+        {
+          "title": "a. THE MOMENT AND THE COLLAPSE (the mast falls toward the south in this seed)",
+          "key": "moment",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/R2_moment_0.png",
+              "caption": "before: the tower stands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_moment_1.png",
+              "caption": "0 s: the blast  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_moment_2.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_moment_3.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_moment_4.png",
+              "caption": "0.6 s: the mast tips  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_moment_5.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_moment_6.png",
+              "caption": "1.4 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_moment_7.png",
+              "caption": "2 s: it is down  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. THE SMOKE COLUMN THINS OVER TURNS, AND WHAT STAYS (the wind carries the smoke to the east)",
+          "key": "after",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/R2_after_0.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_after_1.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_after_2.png",
+              "caption": "two turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_after_3.png",
+              "caption": "four turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_after_4.png",
+              "caption": "eight turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_after_5.png",
+              "caption": "sixteen turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_after_6.png",
+              "caption": "twenty-four turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_after_7.png",
+              "caption": "forty turns later: what stays  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. AT THE PLANNING VIEW: the column and the dark mark under it",
+          "key": "far",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/R2_far_0.png",
+              "caption": "one turn later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R2_far_1.png",
+              "caption": "three turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R2_far_2.png",
+              "caption": "six turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R2_far_3.png",
+              "caption": "twelve turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R2_far_4.png",
+              "caption": "twenty turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R2_far_5.png",
+              "caption": "forty turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "d. BEFORE AND AFTER, CLOSE: the tower and what is left of it, at the camera's two nearest zooms",
+          "key": "detail",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/R2_detail_0.png",
+              "caption": "before, close  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_detail_1.png",
+              "caption": "after: the ruin  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R2_detail_2.png",
+              "caption": "before, closest  (zoom 2.00)"
+            },
+            {
+              "file": "frames/R2_detail_3.png",
+              "caption": "after: the ruin, closest  (zoom 2.00)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "R3",
+      "label": "R3 · One leg left standing",
+      "note": "PROPOSED. The mast topples and breaks into short pieces close to the base (only the lower third of the lattice lies there; the rest went with the blast), and ONE LEG is left standing, leaning, with a shadow by the sun: the one upright thing on a flat ruin, so a destroyed tower reads at once. The hut is gone to a burnt rectangle; a crater, cracked footings, scraps.",
+      "rows": [
+        {
+          "title": "a. THE MOMENT AND THE COLLAPSE (the mast falls toward the south in this seed)",
+          "key": "moment",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/R3_moment_0.png",
+              "caption": "before: the tower stands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_moment_1.png",
+              "caption": "0 s: the blast  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_moment_2.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_moment_3.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_moment_4.png",
+              "caption": "0.6 s: the mast tips  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_moment_5.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_moment_6.png",
+              "caption": "1.4 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_moment_7.png",
+              "caption": "2 s: it is down  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. THE SMOKE COLUMN THINS OVER TURNS, AND WHAT STAYS (the wind carries the smoke to the east)",
+          "key": "after",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/R3_after_0.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_after_1.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_after_2.png",
+              "caption": "two turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_after_3.png",
+              "caption": "four turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_after_4.png",
+              "caption": "eight turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_after_5.png",
+              "caption": "sixteen turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_after_6.png",
+              "caption": "twenty-four turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_after_7.png",
+              "caption": "forty turns later: what stays  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. AT THE PLANNING VIEW: the column and the dark mark under it",
+          "key": "far",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/R3_far_0.png",
+              "caption": "one turn later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R3_far_1.png",
+              "caption": "three turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R3_far_2.png",
+              "caption": "six turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R3_far_3.png",
+              "caption": "twelve turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R3_far_4.png",
+              "caption": "twenty turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R3_far_5.png",
+              "caption": "forty turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "d. BEFORE AND AFTER, CLOSE: the tower and what is left of it, at the camera's two nearest zooms",
+          "key": "detail",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/R3_detail_0.png",
+              "caption": "before, close  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_detail_1.png",
+              "caption": "after: the ruin  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R3_detail_2.png",
+              "caption": "before, closest  (zoom 2.00)"
+            },
+            {
+              "file": "frames/R3_detail_3.png",
+              "caption": "after: the ruin, closest  (zoom 2.00)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "R4",
+      "label": "R4 · Burnt blot",
+      "note": "PROPOSED. The least drawing: the tower is simply gone. A flash and the column of smoke; on the ground a large burnt blot (dirt stipple, ink hatch) with a deep pit wash, the four footings as ink squares and short stumps; the hut an outline. It reads at the far zoom as one dark mark with a smoke column over it, and is quick to draw. Nothing falls, nothing lies.",
+      "rows": [
+        {
+          "title": "a. THE MOMENT AND THE COLLAPSE (the mast falls toward the south in this seed)",
+          "key": "moment",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/R4_moment_0.png",
+              "caption": "before: the tower stands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_moment_1.png",
+              "caption": "0 s: the blast  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_moment_2.png",
+              "caption": "0.1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_moment_3.png",
+              "caption": "0.3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_moment_4.png",
+              "caption": "0.6 s: the mast tips  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_moment_5.png",
+              "caption": "1 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_moment_6.png",
+              "caption": "1.4 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_moment_7.png",
+              "caption": "2 s: it is down  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. THE SMOKE COLUMN THINS OVER TURNS, AND WHAT STAYS (the wind carries the smoke to the east)",
+          "key": "after",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/R4_after_0.png",
+              "caption": "3 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_after_1.png",
+              "caption": "one turn later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_after_2.png",
+              "caption": "two turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_after_3.png",
+              "caption": "four turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_after_4.png",
+              "caption": "eight turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_after_5.png",
+              "caption": "sixteen turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_after_6.png",
+              "caption": "twenty-four turns later  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_after_7.png",
+              "caption": "forty turns later: what stays  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. AT THE PLANNING VIEW: the column and the dark mark under it",
+          "key": "far",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/R4_far_0.png",
+              "caption": "one turn later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R4_far_1.png",
+              "caption": "three turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R4_far_2.png",
+              "caption": "six turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R4_far_3.png",
+              "caption": "twelve turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R4_far_4.png",
+              "caption": "twenty turns later  (zoom 0.35)"
+            },
+            {
+              "file": "frames/R4_far_5.png",
+              "caption": "forty turns later  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "d. BEFORE AND AFTER, CLOSE: the tower and what is left of it, at the camera's two nearest zooms",
+          "key": "detail",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/R4_detail_0.png",
+              "caption": "before, close  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_detail_1.png",
+              "caption": "after: the ruin  (zoom 1.00)"
+            },
+            {
+              "file": "frames/R4_detail_2.png",
+              "caption": "before, closest  (zoom 2.00)"
+            },
+            {
+              "file": "frames/R4_detail_3.png",
+              "caption": "after: the ruin, closest  (zoom 2.00)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

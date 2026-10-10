@@ -25,6 +25,7 @@ const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 const FxData = preload("res://scripts/fx/fx_data.gd")
 const FxStyle = preload("res://scripts/fx/fx_style.gd")
 const FxBake = preload("res://scripts/fx/fx_bake.gd")
+const FxFlash = preload("res://scripts/fx/fx_flash.gd")
 
 const TONES := 3
 
@@ -193,6 +194,8 @@ static func draw_puff(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, seed_
 			_draw_arcs(g, st, o, tone, rng, r_px, c, seed_v, stage)
 		"stipple":
 			_draw_stipple(g, st, o, tone, rng, r_px, c)
+		"ragged":
+			FxFlash.draw_ragged(g, st, o, tone, rng, r_px, c, false, stage)
 		_:
 			push_error("FxPuff: unknown form '%s'" % form)
 	if sv != Vector2.ONE:
@@ -212,6 +215,8 @@ static func draw_mask(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, seed_
 	match form:
 		"lobed", "wash", "rings", "soft":
 			_draw_lobes(g, st, o, tone, rng, r_px, c, false, true, seed_v, 0)
+		"ragged":
+			FxFlash.draw_ragged(g, st, o, tone, rng, r_px, c, true, 0)
 		_:
 			# stipple, arcs: the patch they sit on
 			var pts := _patch(st, o, rng, r_px, c)
