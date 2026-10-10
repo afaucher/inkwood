@@ -1035,21 +1035,25 @@
         "C a target selection",
         "D target first, the step found for you"
       ],
-      "chosen": "a target selection: with a friendly unit selected, the player can also select an enemy unit or a point on the map as its target. The target does only two things: it shows on the side view, and it is what the unit's special uses when activated. Non-special weapons need no target: they fire on their own",
+      "chosen": "a target selection: with a friendly unit selected, the player can also select an enemy unit or a point on the map. It shows on the side view, and activating a special on a step takes it: the special is active and targeted FOR THAT STEP, so one unit can carry different targets (and different specials) on different steps. No target, no activation. Non-special weapons need no target: they fire on their own",
       "parameters": {
         "target": "an enemy unit or a point on the map, selected while a friendly unit is selected",
+        "binding": "per step: a special is activated on a step and keeps the target it was given there",
         "effects": [
           "shown on the side view",
-          "the target a special uses when activated"
+          "the target a special uses when activated on a step"
         ],
-        "guns": "no target (they autofire, decision fire-by-engagement-parameters)",
-        "no_target": "the special cannot be activated (Drop is disabled until the unit has a target)"
+        "no_target": "the special cannot be activated (Drop is disabled until there is a target)",
+        "set_by": "left-click an enemy unit, right-click a point on the map (Alex: fine for now; right-click beside right-drag panning is awkward and will change later)",
+        "outside_cone": "the special cannot be activated on that step; the card says why (Alex: sounds good)",
+        "aim_marker": "dragging a step's aim marker moves that step's target (Alex: sounds good)",
+        "guns": "no target (they autofire, decision fire-by-engagement-parameters)"
       },
       "applied_to": [
         "not built yet"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'For bombs, I expected area of effect as well. This implies each step might have a target which is either a unit or point. But this is only for specials. Let's look at our options here. Maybe a targeting selection is the right call. Specials use the current selection to set their target.' And: 'For selection, does this imply we have both a player unit and enemy unit selection?' Then: 'For targeting what I was actually thinking is when you have a friendly unit selected, you can also select either an enemy unit or a point on the map. The only thing it does is show on the side view and it is the target that the special will use if activated. Non-specials don't need targets because they autofire.' Still open (asked): how the target is set, whether each unit keeps its own, a drop whose target is outside the step's cone, the aim handle; and how the area of effect is drawn (a board). On no target set: 'No target set means you can't activate special.'"
+      "notes": "Alex: 'For bombs, I expected area of effect as well. This implies each step might have a target which is either a unit or point. But this is only for specials. Let's look at our options here. Maybe a targeting selection is the right call. Specials use the current selection to set their target.' And: 'For selection, does this imply we have both a player unit and enemy unit selection?' Then: 'For targeting what I was actually thinking is when you have a friendly unit selected, you can also select either an enemy unit or a point on the map. The only thing it does is show on the side view and it is the target that the special will use if activated. Non-specials don't need targets because they autofire.' On no target: 'No target set means you can't activate special.' On the details: 'The special is active and targeted for the step. 1 - fine for now. Right click drag is ackwards so we will change later. 2 - not sure if meaningful across multiple steps. In theory a unit could have two targets for different specials across two steps. 3/4 sounds good.' Still open: how the area of effect is drawn (a board); what a target that is a MOVING unit means at release (deferred until a special can hit one)."
     }
   ]
 }
