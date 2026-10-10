@@ -98,6 +98,6 @@
   "focus_for_how_it_sits": "lines",
   "palette_check": "The trail spends the side accent (side_a for the players: L 0.551, C 0.100, h 30; the same colour as the roundels, the roster marks and the brick-red cone wash). In OKLab distance (about 0.02 just noticeable, 0.1 plainly different): the trail at full alpha is 0.18 from a contour line and 0.16 from the plane's shadow over paper; at 45% alpha it is 0.14 from the paper, at 10% 0.03 (gone). The enemy's slate-blue trail is 0.16 from the shadow-tinted ground at full alpha but 0.05 at a third of it, so faded over a plane's shadow it drifts toward the shadow tint (a reason, besides Alex's, to keep trails to the players' planes).",
   "sheet": "board.png (rows A-F: zoom 1 | far play zoom; playback frames; how it sits; a palette strip)",
-  "chosen": null,
-  "chosen_by": null
+  "chosen": "D, one ribbon between the wingtips",
+  "chosen_by": "Alex, 2026-10-10"
 }

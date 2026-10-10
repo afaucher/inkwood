@@ -745,6 +745,30 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Also note I expect thick smoke to cast a shadow.'"
+    },
+    {
+      "id": "wingtip-trails",
+      "date": "2026-10-10",
+      "area": "UI, Units",
+      "question": "Wingtip trails in the players' colour covering the past turn (Alex's idea): which treatment?",
+      "board": "variants/wingtip-trails/",
+      "options": [
+        "A today",
+        "B two thin lines",
+        "C lines broken at each step",
+        "D one ribbon between the wingtips",
+        "E lines and a rung at each step",
+        "F tapered wake"
+      ],
+      "chosen": "D, one ribbon between the wingtips",
+      "parameters": {
+        "marker.trails.mode": "ribbon"
+      },
+      "applied_to": [
+        "data/ui/ui.json#marker.trails.mode"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'D · One ribbon between the wingtips'. Still proposed and open: own planes only, a one-turn window, whether the whole-flight line stops at the last turn's start, the trail's overlap with the cone wash behind a selected plane, a trail for a falling plane."
     }
   ]
 }

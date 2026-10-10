@@ -133,7 +133,9 @@
     "trails": {
       "_proposed": true,
       "_reason": "WINGTIP TRAILS (Alex 2026-10-10: 'For locating the players planes, what about wingtip trails in the players color? That cover the past turn.'). The board is variants/wingtip-trails/; EVERY VALUE HERE IS PROPOSED by Track U1 and nothing is chosen until Alex picks. mode: 'none' is today's look and the default (nothing is drawn); lines, steps, ribbon, rungs, wake are the board's options (see their blocks). Each wingtip's line starts AT the drawn wingtip (the wing outline's half-span, in the art's own metres, times the plane's drawn scale, so the two lines sit on the drawn wingtips at every zoom) and follows the unit's path over the last window_turns of play: the whole last resolved turn while planning, a rolling window behind the plane while a turn plays back. Drawn in the unit's side accent (side_a for the players, side_b for the enemy), fading from the plane to nothing at the far end. applies_to: 'own' = the player-controlled units only (Alex: 'the players planes'), 'all' = every unit in sight. Sizes in screen px. The trail is recorded from World history (World.sample at sample_s) when a turn is resolved, so it exists only for turns this client has seen resolve.",
-      "mode": "none",
+      "mode": "ribbon",
+      "decision": "wingtip-trails",
+      "_decided": "Alex 2026-10-10 on the board: 'D · One ribbon between the wingtips' -- mode ribbon. Still proposed: own planes only, a one-turn window, the whole-flight line giving way to the trail for the last turn, the overlap with the cone wash, and no trail for a falling plane.",
       "modes": ["none", "lines", "steps", "ribbon", "rungs", "wake"],
       "applies_to": "own",
       "window_turns": 1.0,

@@ -56,7 +56,8 @@ func setup(_main) -> void:
 	_saved = {"mode": _st.text("marker.trails.mode"), "applies": _st.text("marker.trails.applies_to"), "k": _st.num("marker.true_scale"),
 		"min_alpha": _st.num("marker.trails.min_alpha")}
 	_modes = _st.lookup("marker.trails.modes")
-	eq(_saved["mode"], "none", "the shipped default is 'none': today's look")
+	# Alex 2026-10-10 (decision wingtip-trails): D, one ribbon between the wingtips.
+	eq(_saved["mode"], "ribbon", "the data holds Alex's choice: the ribbon")
 	check(_modes.has("none") and _modes.size() >= 5, "the data lists the modes: %s" % str(_modes))
 
 	_w = World.new()
@@ -85,7 +86,8 @@ func setup(_main) -> void:
 		if turn_no == 1:
 			_w.begin_turn()
 
-	# 1. The default draws nothing.
+	# 1. Mode none (today's look before the choice) draws nothing.
+	_data("mode", "none")
 	eq(_tr.collect().size(), 0, "mode none: nothing is collected although two turns are on record")
 	check(_tr._buf.has("p1") and (_tr._buf["p1"]["t"] as PackedFloat64Array).size() > 20, "the turns are recorded all the same, so a trail can be switched on mid-game")
 	eq(_tr.failed_draws, 0, "mode none draws nothing, whole")
