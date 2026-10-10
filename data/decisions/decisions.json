@@ -1042,13 +1042,14 @@
           "shown on the side view",
           "the target a special uses when activated"
         ],
-        "guns": "no target (they autofire, decision fire-by-engagement-parameters)"
+        "guns": "no target (they autofire, decision fire-by-engagement-parameters)",
+        "no_target": "the special cannot be activated (Drop is disabled until the unit has a target)"
       },
       "applied_to": [
         "not built yet"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'For bombs, I expected area of effect as well. This implies each step might have a target which is either a unit or point. But this is only for specials. Let's look at our options here. Maybe a targeting selection is the right call. Specials use the current selection to set their target.' And: 'For selection, does this imply we have both a player unit and enemy unit selection?' Then: 'For targeting what I was actually thinking is when you have a friendly unit selected, you can also select either an enemy unit or a point on the map. The only thing it does is show on the side view and it is the target that the special will use if activated. Non-specials don't need targets because they autofire.' Still open (asked): how the target is set, whether each unit keeps its own, a drop whose target is outside the step's cone, no target set, the aim handle; and how the area of effect is drawn (a board)."
+      "notes": "Alex: 'For bombs, I expected area of effect as well. This implies each step might have a target which is either a unit or point. But this is only for specials. Let's look at our options here. Maybe a targeting selection is the right call. Specials use the current selection to set their target.' And: 'For selection, does this imply we have both a player unit and enemy unit selection?' Then: 'For targeting what I was actually thinking is when you have a friendly unit selected, you can also select either an enemy unit or a point on the map. The only thing it does is show on the side view and it is the target that the special will use if activated. Non-specials don't need targets because they autofire.' Still open (asked): how the target is set, whether each unit keeps its own, a drop whose target is outside the step's cone, the aim handle; and how the area of effect is drawn (a board). On no target set: 'No target set means you can't activate special.'"
     }
   ]
 }
