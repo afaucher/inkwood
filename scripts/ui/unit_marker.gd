@@ -16,12 +16,25 @@ extends Node2D
 
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
+const UnitStandout = preload("res://scripts/ui/unit_standout.gd")
 
 var unit_id: String = ""
 var silhouette: String = ""
 var size_m: float = 10.0
 var accent := Color.BLACK
 var selected: bool = false
+
+# THE STAND-OUT SWITCH (Track U1, data: marker.standout; unit_standout.gd). `own`
+# is set by the layer (a player-controlled unit); `draw_scale` is the plane's
+# drawn-size multiplier (1.0 unless the "larger" mode is on and the unit is
+# own); `ring` is the side ring the layer draws under the plane (empty: none).
+# With the default mode "none" nothing below is built and every number is
+# today's.
+var own: bool = false
+var draw_scale: float = 1.0
+var ring: Dictionary = {}
+var _shapes: Array = []        # UnitStandout.Shape nodes, in the layer's under node
+var _under_parent: Node = null
 
 var art: UnitMarkerArt.Art = null
 var plane: Sprite2D
@@ -33,8 +46,9 @@ var _checked_k: float = -1.0   # the marker.true_scale the art was last checked 
 var _style: UiStyle
 var _fallback_ink := Color.BLACK
 
-func setup(style: RefCounted, id: String, silhouette_id: String, size: float, side_accent: Color, shadow_parent: Node) -> void:
+func setup(style: RefCounted, id: String, silhouette_id: String, size: float, side_accent: Color, shadow_parent: Node, under_parent: Node = null) -> void:
 	_style = style as UiStyle
+	_under_parent = under_parent
 	unit_id = id
 	silhouette = silhouette_id
 	size_m = size
@@ -56,14 +70,53 @@ func setup(style: RefCounted, id: String, silhouette_id: String, size: float, si
 func _exit_tree() -> void:
 	if is_instance_valid(shadow):
 		shadow.queue_free()
+	_clear_shapes()
+
+# Applies a UnitStandout spec (parse()): builds or drops the shapes under the
+# plane, sets the ring and the drawn-size multiplier. Only a player-controlled
+# unit takes any of it. A spec with nothing in it leaves the marker exactly as
+# it was before the switch existed.
+func set_standout(spec: Dictionary) -> void:
+	_clear_shapes()
+	if own and _under_parent != null:
+		for s: Dictionary in spec["shapes"]:
+			var node := UnitStandout.Shape.new()
+			node.setup(s)
+			_under_parent.add_child(node)
+			_shapes.append(node)
+	ring = (spec["ring"] as Dictionary) if own else {}
+	# The drawn size takes effect at the next set_pose (k changes, so the art is looked at again).
+	draw_scale = float(spec["scale"]) if own else 1.0
+	_pose_shapes()
+
+func _clear_shapes() -> void:
+	for n: Variant in _shapes:
+		if is_instance_valid(n):
+			(n as Node).queue_free()
+	_shapes.clear()
+
+func _pose_shapes() -> void:
+	if _shapes.is_empty():
+		return
+	var show := visible and art != null and art.mask != null
+	var rot := screen_heading + PI / 2.0
+	var sc := Vector2.ZERO
+	if art != null:
+		sc = Vector2.ONE * (screen_ppm * _style.num("marker.true_scale") * draw_scale / art.ppm)
+	for n: Variant in _shapes:
+		var shape := n as UnitStandout.Shape
+		shape.visible = show
+		if show:
+			shape.pose(position, rot, sc.x, art.mask, art.origin, art.extent_m * art.ppm)
 
 # Pose the marker: screen position of the unit, the screen angle of its
 # heading, the host's px per metre there, and the shadow's screen offset.
 func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_offset_px: Vector2) -> void:
 	position = screen_pos
 	screen_heading = heading_screen
-	var k: float = _style.num("marker.true_scale")
-	# The art is baked for ppm x true_scale, so a change of EITHER re-checks it
+	var k: float = _style.num("marker.true_scale") * draw_scale
+	# The art is baked for ppm x true_scale (x the stand-out scale, 1.0 unless
+	# "larger" is on), so a change of ANY of them re-checks it
 	# (the plane-size knob changes only true_scale: the art stayed blurry, or
 	# coarse, until the next zoom).
 	if absf(ppm - screen_ppm) > 1e-6 or k != _checked_k:
@@ -87,11 +140,12 @@ func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_off
 		shadow.visible = visible
 	else:
 		shadow.visible = false
+	_pose_shapes()
 	queue_redraw()
 
 # Re-bake only when the host's scale has drifted past the data's ratio.
 func _ensure_art() -> void:
-	var want: float = screen_ppm * _style.num("marker.true_scale")
+	var want: float = screen_ppm * _style.num("marker.true_scale") * draw_scale
 	if art != null:
 		var ratio := want / art.ppm
 		var r: float = _style.num("unit_art.rebake_ratio")
@@ -110,7 +164,7 @@ func refresh_art() -> void:
 # Screen radius of the plane itself (for hits and the ring).
 func radius_px() -> float:
 	var ext := art.extent_m if art != null else size_m * 0.5
-	return ext * screen_ppm * float(_style.num("marker.true_scale"))
+	return ext * screen_ppm * float(_style.num("marker.true_scale")) * draw_scale
 
 func has_art() -> bool:
 	return art != null and art.texture != null

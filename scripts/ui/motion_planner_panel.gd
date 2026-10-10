@@ -173,6 +173,9 @@ func _draw() -> void:
 		elif world.phase != World.PHASE_PLANNING:
 			line1 = "the turn is %s" % world.phase
 			line2 = "orders open when it ends"
+		elif bool(u.down):
+			line1 = style.text("roster.text.down")
+			line2 = "a down unit takes no orders"
 		elif world.is_ready(local_player):
 			line1 = "%d of %d steps planned" % [placed, n]
 			line2 = "ready: change a plan to take it back"

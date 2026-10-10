@@ -11,7 +11,9 @@ extends Node2D
 #   layer.setup(world, host_mapping, selection)     # mapping: Transform2D or an
 #                                                   # object with world_to_screen
 #
-# Draw order, bottom to top: every unit's shadow (one CanvasGroup, composited
+# Draw order, bottom to top: the stand-out shapes and rings of the players' own
+# units (Track U1, data marker.standout; nothing at all in the default mode
+# "none"), every unit's shadow (one CanvasGroup, composited
 # once at the map's shadow strength, so overlapping shadows merge and never
 # darken twice -- the map's own shadow rule), every plane, then the marks: side
 # roundels, the selected unit's inked ring, and its leader line up to its
@@ -32,6 +34,7 @@ const UnitMarker = preload("res://scripts/ui/unit_marker.gd")
 const UiMapping = preload("res://scripts/ui/ui_mapping.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
+const UnitStandout = preload("res://scripts/ui/unit_standout.gd")
 
 var world: World = null
 var mapping: UiMapping = null
@@ -49,9 +52,12 @@ var playback_turn: int = 0
 # Held: playback stays where it is (scrubbing, screenshots).
 var playback_paused: bool = false
 
+var _under: Node2D            # the stand-out shapes and rings, below the shadows
 var _shadows: CanvasGroup
 var _planes: Node2D
 var _marks: Node2D
+var _standout: Dictionary = {}     # UnitStandout.parse() of the data's mode
+var _standout_mode := ""
 
 func setup(w: World, host_mapping: Variant, sel: RefCounted, st: RefCounted = null) -> void:
 	style = (st if st != null else UiStyle.shared()) as UiStyle
@@ -71,6 +77,10 @@ func set_mapping(host_mapping: Variant) -> void:
 	mapping = UiMapping.from(host_mapping) as UiMapping
 
 func _build() -> void:
+	_under = Node2D.new()
+	_under.name = "Under"
+	add_child(_under)
+	_under.draw.connect(_draw_under)
 	_shadows = CanvasGroup.new()
 	_shadows.name = "Shadows"
 	var tint: Color = style.color("unit_shadow")
@@ -97,10 +107,13 @@ func sync_units() -> void:
 			continue
 		var u = world.units[id]
 		var m := UnitMarker.new()
-		m.setup(style, id, u.def.silhouette, u.def.size_m, style.side_color(u.side), _shadows)
+		m.own = u.controller == World.CONTROLLER_PLAYER
+		m.setup(style, id, u.def.silhouette, u.def.size_m, style.side_color(u.side), _shadows, _under)
 		_planes.add_child(m)
 		markers[id] = m
 		m.selected = selection != null and selection.unit_id == id
+		if not _standout.is_empty():
+			m.set_standout(_standout)
 
 func marker(id: String) -> UnitMarker:
 	return markers.get(id)
@@ -136,6 +149,7 @@ func update_poses() -> void:
 		return
 	if world.units.size() != markers.size():
 		sync_units()
+	apply_standout()
 	for id: String in markers:
 		var m: UnitMarker = markers[id]
 		var vis := not unit_visible.is_valid() or bool(unit_visible.call(id))
@@ -146,10 +160,25 @@ func update_poses() -> void:
 		var pose := pose_of(id)
 		var wp := Vector2(float(pose["x"]), float(pose["y"]))
 		var sp: Vector2 = mapping.world_to_screen(wp)
-		var off: Vector2 = shadow_offset_px(wp, height_above_ground(pose))
+		var off: Vector2 = shadow_offset_px(wp, height_above_ground(pose), m.draw_scale)
 		m.set_pose(sp, mapping.screen_angle(wp, float(pose["heading"])), mapping.px_per_m(wp), off)
 	_marks.queue_redraw()
+	if not (_standout["ring"] as Dictionary).is_empty() or _ring_drawn:
+		_under.queue_redraw()
 	queue_redraw()
+
+# The stand-out mode (data marker.standout.mode), read again when it changes
+# (the data, or a host that sets it at run time: style.ui["marker"]["standout"]
+# ["mode"]); `force` re-reads the parameters too. Cheap when nothing changed.
+func apply_standout(force: bool = false) -> void:
+	var mode := style.text("marker.standout.mode")
+	if not force and mode == _standout_mode and not _standout.is_empty():
+		return
+	_standout_mode = mode
+	_standout = UnitStandout.parse(style, mode)
+	for id: String in markers:
+		(markers[id] as UnitMarker).set_standout(_standout)
+	_under.queue_redraw()
 
 # The shadow's screen offset for a plane `height_m` above the ground at `wp`:
 # the world offset (UiStyle.plane_shadow_offset_m) scaled by marker.true_scale,
@@ -157,8 +186,8 @@ func update_poses() -> void:
 # variants/plane-shadow-gap/). A plane drawn the same size at any map scale
 # keeps the same gap at the same altitude; before, the gap shrank 4x from
 # 4 px/m to 1 px/m while the plane stayed the same size.
-func shadow_offset_px(wp: Vector2, height_m: float) -> Vector2:
-	return mapping.screen_delta(wp, style.plane_shadow_offset_m(height_m) * style.num("marker.true_scale"))
+func shadow_offset_px(wp: Vector2, height_m: float, unit_scale: float = 1.0) -> Vector2:
+	return mapping.screen_delta(wp, style.plane_shadow_offset_m(height_m) * style.num("marker.true_scale") * unit_scale)
 
 # The unit under a screen point (the nearest within its hit radius), or "".
 func unit_at(screen_pt: Vector2) -> String:
@@ -261,6 +290,28 @@ func _draw() -> void:
 			draw_polyline(past, flown, 1.2, true)
 		if rest.size() > 1:
 			UiInk.dashed(self, rest, ahead, 1.0, 4.0, 4.0)
+
+# --- Under: the side rings (the shapes are nodes of their own) -----------------------------
+
+var _ring_drawn := false
+
+func _draw_under() -> void:
+	_ring_drawn = false
+	if world == null:
+		return
+	for id: String in markers:
+		var m: UnitMarker = markers[id]
+		if not m.visible or m.ring.is_empty():
+			continue
+		_ring_drawn = true
+		var spec: Dictionary = m.ring
+		var r := m.radius_px() + float(spec["pad_px"]) + float(spec["width_px"]) * 0.5
+		var col := Color(m.accent.r, m.accent.g, m.accent.b, float(spec["alpha"]))
+		var seed_value := (hash(id) & 0xFFFF) + 31
+		# The accent band, then a fine ink line on its outer edge (inked like the rest).
+		UiInk.ink_line(_under, UiInk.circle_pts(m.position, r, 48), true, col, float(spec["width_px"]), seed_value, 0.5)
+		UiInk.ink_line(_under, UiInk.circle_pts(m.position, r + float(spec["width_px"]) * 0.5 + float(spec["rim_px"]) * 0.4, 52),
+			true, spec["rim_color"], float(spec["rim_px"]), seed_value + 7, 0.5)
 
 # --- Marks: side roundels, the selection ring, the leader line ------------------------
 

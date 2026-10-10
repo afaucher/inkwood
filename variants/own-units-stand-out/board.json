@@ -1,0 +1,115 @@
+{
+  "id": "own-units-stand-out",
+  "date": "2026-10-09",
+  "area": "Units, UI",
+  "question": "How do the players' own units stand out on the busy background (dense trees, scarps, shadows, the fog edge)? Alex: 'a comparison board for figuring out how to make your own units stand out visually on the busy background.' The heavy fighter is faint over trees.",
+  "source": "scripts/ui/boards/standout_board_shot.gd: the running sandbox (scripts/app/sandbox.gd) over the real map, photographed once per option with ONLY data/ui/ui.json marker.standout.mode changed",
+  "seed": 20261009,
+  "held_constant": {
+    "scene": "the sandbox's three planes (light fighter and heavy fighter player-controlled, bomber AI), medium altitude, around (3000, 3620) m: a dense grove on the plateau edge with a scarp through it, open ground to the west and south",
+    "decisions_in_force": "shadow strength 0.44; pen 'shadow_side'; side colours brick red #A45A4E (allies, the players) and slate blue #4E72AC (axis); terrain with contours; level fills as they are; planes at their own scale (light fighter 36 px at zoom 1, never below 14 px); a plane's shadow gap follows its drawn size; fog with sight circles, an inked hatched edge and the topographic outside",
+    "views": {
+      "zoom_1": "the cluster at the frame's centre-left, camera zoom 1.0, 2 px/m map scale",
+      "far_play_zoom": "camera zoom 0.35 (data/view/camera.json zoom.start); planes at their minimum size, the light fighter 14 px wide; the fog's inked edge in view",
+      "selected": "zoom 1 with the heavy fighter selected (the selection ring and leader), planner fan hidden"
+    },
+    "far_zoom_note": "At zoom 1 the sight edge (800 m = 1,600 px) is off screen; it shows at the far zoom only."
+  },
+  "parameter": "data/ui/ui.json#marker.standout.mode (and the values of marker.standout.<mode>); 'none' is today's marker, drawn exactly as before. A mode may join effects with '+' (for example 'halo+ring').",
+  "options": [
+    {
+      "name": "A",
+      "title": "Today's marker",
+      "marker.standout.mode": "none",
+      "file": "a_today.png",
+      "proposed": true,
+      "parameters": {}
+    },
+    {
+      "name": "B",
+      "title": "Paper halo",
+      "marker.standout.mode": "halo",
+      "file": "b_halo.png",
+      "proposed": true,
+      "parameters": {
+        "halo": {
+          "radius_px": 5.0,
+          "soft_px": 3.0,
+          "role": {
+            "base": "paper",
+            "alpha": 0.92
+          }
+        }
+      }
+    },
+    {
+      "name": "C",
+      "title": "Paper lift",
+      "marker.standout.mode": "lift",
+      "file": "c_lift.png",
+      "proposed": true,
+      "parameters": {
+        "lift": {
+          "inner_k": 1.0,
+          "outer_k": 2.4,
+          "role": {
+            "base": "paper",
+            "alpha": 0.85
+          }
+        }
+      }
+    },
+    {
+      "name": "D",
+      "title": "Heavier outline",
+      "marker.standout.mode": "rim",
+      "file": "d_rim.png",
+      "proposed": true,
+      "parameters": {
+        "rim": {
+          "radius_px": 1.6,
+          "soft_px": 0.0,
+          "role": {
+            "base": "ink",
+            "alpha": 0.95
+          }
+        }
+      }
+    },
+    {
+      "name": "E",
+      "title": "Side-colour ring",
+      "marker.standout.mode": "ring",
+      "file": "e_ring.png",
+      "proposed": true,
+      "parameters": {
+        "ring": {
+          "pad_px": 3.5,
+          "width_px": 2.6,
+          "alpha": 0.95,
+          "rim_px": 0.9,
+          "rim_role": {
+            "base": "ink",
+            "alpha": 0.6
+          }
+        }
+      }
+    },
+    {
+      "name": "F",
+      "title": "Own planes larger",
+      "marker.standout.mode": "larger",
+      "file": "f_larger.png",
+      "proposed": true,
+      "parameters": {
+        "larger": {
+          "scale": 1.3
+        }
+      }
+    }
+  ],
+  "palette_check": "No option adds a hue: halo and lift are PAPER (L 0.847, the ground's own colour) at alpha 0.92 / 0.85, rim is INK at 0.95, ring is the unit's own side accent (side_a, side_b: equal OKLCH L 0.551, C 0.100) with an ink hairline at 0.6. The plane's fill (object fill, L 0.925) stays one step lighter than the paper it sits on; the halo's gain is a calm field (the trees' inked edges and shadows erased), not more lightness contrast.",
+  "sheet": "board.png (rows A-F: zoom 1 | far play zoom | selected; a palette strip below)",
+  "chosen": null,
+  "chosen_by": null
+}

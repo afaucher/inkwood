@@ -15,8 +15,22 @@ extends Node2D
 #                tie from the point asked for to where the envelope put it --
 #                what is drawn is always the CLAMPED result
 #
-# Other player units' plans show as faint curves, so co-op players can see
-# each other's work.
+# Other player units' plans show as thin, quiet curves ALL THE TIME while the
+# turn is planned (Alex 2026-10-09, co-op: last edit wins, with a full preview
+# so every player sees what has plans and what does not): a solid line with a
+# dot at each planned step, the carry-on rest dashed, and for a unit with no
+# plan only the dashed flight ("flies on"). They follow World.plan_changed, so
+# an edit another player makes (applied by the network layer through the World)
+# shows at once.
+#
+# NEVER AN AI UNIT'S PLAN (Alex): plan_shown(id) is the one rule every drawing
+# here goes through -- planning phase, a player-controlled unit, not down -- so
+# an AI-controlled unit's path, ghosts, fan and clamps are not drawn even when
+# it is the selected unit, and path_world / step_labels give nothing for it.
+# test_ui_coop fails if any of it is ever drawn.
+#
+# SPEED PER STEP: the lettering at a planned step's ghost is "n · 120 m/s", the
+# speed the step ends at (step_labels, data planner.speed_labels).
 #
 # INPUT IS THIN. Every action is a public method a test calls directly; the
 # mouse handlers (press / drag / release, screen points) only decide which one:
@@ -116,7 +130,17 @@ func can_plan(id: String = "") -> bool:
 		return false
 	if world.phase != World.PHASE_PLANNING:
 		return false
-	return world.units[id].controller == World.CONTROLLER_PLAYER
+	var u = world.units[id]
+	return u.controller == World.CONTROLLER_PLAYER and not bool(u.down)
+
+# Whether a unit's plan may be DRAWN at all (path, ghosts, fan, clamps): the
+# planning phase and a player-controlled unit that is not down. The one rule
+# every drawing here goes through; an AI unit's plan is never shown.
+func plan_shown(id: String) -> bool:
+	if world == null or not world.units.has(id) or world.phase != World.PHASE_PLANNING:
+		return false
+	var u = world.units[id]
+	return u.controller == World.CONTROLLER_PLAYER and not bool(u.down)
 
 # An edit is being made: a readied local player is un-readied.
 func _reopen() -> void:
@@ -329,8 +353,8 @@ func ready_blocker() -> Dictionary:
 		return {}
 	for id: String in world.units:
 		var u = world.units[id]
-		if u.controller != World.CONTROLLER_PLAYER or bool(u.out_of_bounds):
-			continue
+		if u.controller != World.CONTROLLER_PLAYER or bool(u.out_of_bounds) or bool(u.down):
+			continue   # (a down unit takes no orders: it cannot hold the turn up)
 		var st := world.planned_states(id)
 		for k in st.size():
 			var s: Dictionary = st[k]
@@ -423,8 +447,12 @@ func _on_selection(_id: String) -> void:
 func _process(_delta: float) -> void:
 	queue_redraw()  # the host's camera may move; the drawing is a handful of lines
 
-# The turn's curve in world metres, per step: [points, planned].
+# The turn's curve in world metres, per step: [points, planned]. Nothing for a
+# unit whose plan may not be shown (an AI unit's, a down unit's, outside the
+# planning phase): see plan_shown.
 func path_world(id: String) -> Array:
+	if not plan_shown(id):
+		return []
 	if _paths.has(id):
 		return _paths[id]
 	var out: Array = []
@@ -458,10 +486,11 @@ func _draw() -> void:
 	if world == null or world.phase != World.PHASE_PLANNING:
 		return
 	var sel := unit_id()
+	# Every other unit that takes the players' orders, thin and quiet, all the time.
 	for id: String in world.units:
-		if id != sel and world.units[id].controller == World.CONTROLLER_PLAYER:
-			_draw_curve(id, style.num("planner.others_alpha"))
-	if sel == "" or not world.units.has(sel) or world.units[sel].controller != World.CONTROLLER_PLAYER:
+		if id != sel and plan_shown(id):
+			_draw_curve(id, style.num("planner.others_alpha"), true)
+	if sel == "" or not plan_shown(sel):
 		_draw_refused()
 		return
 	_draw_ghosts(sel)
@@ -505,12 +534,13 @@ func _draw_fan() -> void:
 		draw_colored_polygon(poly, style.color("fan_fill"))
 	UiInk.ink_line(self, poly, true, edge, style.num("planner.fan_line_px"), 31, 0.4)
 
-func _draw_curve(id: String, alpha: float) -> void:
+# `quiet`: another unit's plan (data planner.others_*): thinner line, smaller dots.
+func _draw_curve(id: String, alpha: float, quiet: bool = false) -> void:
 	var solid := _fade(style.color("path"), alpha)
 	var carry := _fade(style.color("path_carry"), alpha)
-	var w: float = style.num("planner.path_line_px")
-	var wc: float = style.num("planner.carry_line_px")
-	var dot: float = style.num("planner.step_dot_px")
+	var w: float = style.num("planner.others_line_px") if quiet else style.num("planner.path_line_px")
+	var wc: float = style.num("planner.others_carry_line_px") if quiet else style.num("planner.carry_line_px")
+	var dot: float = style.num("planner.others_dot_px") if quiet else style.num("planner.step_dot_px")
 	for seg: Array in path_world(id):
 		var pts := _to_screen(seg[0])
 		if bool(seg[1]):
@@ -520,13 +550,44 @@ func _draw_curve(id: String, alpha: float) -> void:
 			UiInk.dashed(self, pts, carry, wc, style.num("planner.dash_px"), style.num("planner.gap_px"))
 			draw_circle(pts[pts.size() - 1], dot * 0.8, carry, false, 1.0, true)
 
+# The lettering at every step's ghost, as lines (empty for a step with none):
+# a planned step's number and the speed it ends at ("2 · 120 m/s", data
+# planner.speed_labels), and under it a change of altitude band ("climb to
+# high"). Nothing for a unit whose plan may not be shown.
+func step_labels(id: String = "") -> Array:
+	if id == "":
+		id = unit_id()
+	var out: Array = []
+	if not plan_shown(id):
+		return out
+	var u = world.units[id]
+	var st := states(id)
+	var prev_band: String = u.altitude_band
+	var unit_txt: String = style.text("roster.speed_unit")
+	var with_speed: bool = style.flag("planner.speed_labels")
+	for k in st.size():
+		var s: Dictionary = st[k]
+		var lines := PackedStringArray()
+		if bool(s["planned"]):
+			var head := str(k + 1)
+			if with_speed:
+				head += " · %d %s" % [roundi(float(s["speed"])), unit_txt]
+			lines.append(head)
+		var band := str(s["altitude_band"])
+		if band != prev_band:
+			var up: bool = u.def.envelope.bands.find(band) > u.def.envelope.bands.find(prev_band)
+			lines.append(("climb to " if up else "dive to ") + band)
+		out.append(lines)
+		prev_band = band
+	return out
+
 func _draw_ghosts(id: String) -> void:
 	var u = world.units[id]
 	var st := states(id)
+	var labels := step_labels(id)
 	var font: Font = style.font(true)
 	var small: float = style.num("fonts.small_px")
 	var ink: Color = style.color("ink_soft")
-	var prev_band: String = u.altitude_band
 	for k in st.size():
 		var s: Dictionary = st[k]
 		var wp := Vector2(float(s["x"]), float(s["y"]))
@@ -541,18 +602,12 @@ func _draw_ghosts(id: String) -> void:
 			draw_set_transform(sp, mapping.screen_angle(wp, float(s["heading"])) + PI / 2.0, Vector2(sc, sc))
 			draw_texture(art.texture, -art.origin, Color(1.0, 1.0, 1.0, a))
 			draw_set_transform_matrix(Transform2D.IDENTITY)
-		var band := str(s["altitude_band"])
-		var label := ""
-		if planned:
-			label = str(k + 1)
-		if band != prev_band:
-			var up: bool = u.def.envelope.bands.find(band) > u.def.envelope.bands.find(prev_band)
-			label += ("  climb to " if up else "  dive to ") + band
-		if label != "":
+		var lines: PackedStringArray = labels[k]
+		if not lines.is_empty():
 			# Lettering on the sun side of the ghost, clear of the curve's own shadow side.
 			var off: Vector2 = -style.shadow_dir() * (art.extent_m * ppm * scale_k + 6.0 if art != null else 14.0)
-			UiInk.text(self, font, sp + off + Vector2(-4.0, 0.0), label.strip_edges(), small, ink)
-		prev_band = band
+			for li in lines.size():
+				UiInk.text(self, font, sp + off + Vector2(-4.0, (small + 1.0) * float(li)), lines[li], small, ink)
 
 # The art a ghost of unit `id` is drawn with, scaled by the caller to the ghost's
 # own screen scale. It is the art the unit's MARKER holds (no bake at all, and

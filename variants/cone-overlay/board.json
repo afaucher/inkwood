@@ -1,0 +1,164 @@
+{
+  "id": "cone-overlay",
+  "date": "2026-10-09",
+  "area": "UI, Combat",
+  "question": "How are a weapon's engagement cones drawn on the map while planning? (a cone per weapon from its hardpoint; the same cone in height; better odds near the centre for machine guns)",
+  "source": "scripts/ui/boards/cone_board_shot.gd: the running sandbox over the real map with scripts/ui/cone_overlay.gd, photographed once per option with ONLY data/ui/ui.json planner.cones.mode changed; weapons are data/units/*.json weapons (Track C's records of variants/engagement-cones/weapons_proposed.json)",
+  "seed": 20261009,
+  "held_constant": {
+    "scene": "around (3000, 3620) m, the dense grove on the plateau edge; view 1: the heavy fighter selected 200 m behind the AI bomber, both heading east, each inside the other's cone; view 2 and 3: the light fighter selected, alone (the bomber 1,500 m away, out of sight)",
+    "zoom": {
+      "view_1_and_2": 0.35,
+      "view_3": 1.0
+    },
+    "decisions_in_force": "shadow strength 0.44; pen 'shadow_side'; side colours brick red (allies, the players) and slate blue (axis, the enemy); terrain with contours; planes at their own scale (light fighter 36 px at zoom 1, never below 14 px); fog with sight circles and an inked edge; cones start at the weapon's hardpoint; the same cone in height; machine guns have better odds near the cone's centre",
+    "weapons": {
+      "light_fighter": [
+        "Wing guns (fixed, 450 m, +-10 deg across, hardpoints [(-0.3, -3.0, 0.0), (-0.3, 3.0, 0.0)])"
+      ],
+      "heavy_fighter": [
+        "Nose cannon (fixed, 600 m, +-7 deg across, hardpoints [(8.0, 0.0, 0.0)])",
+        "Rear gunner (flexible, 350 m, +-50 deg across, hardpoints [(-3.5, 0.0, 0.8)])"
+      ],
+      "bomber": [
+        "Nose gun (flexible, 350 m, +-30 deg across, hardpoints [(10.5, 0.0, 0.0)])",
+        "Dorsal turret (turret, 400 m, +-110 deg across, hardpoints [(-1.0, 0.0, 1.5)])",
+        "Tail turret (turret, 400 m, +-40 deg across, hardpoints [(-10.5, 0.0, 0.5)])"
+      ]
+    }
+  },
+  "assumptions_proposed": [
+    "Own cones only for the selected player unit during planning; enemy cones only while that enemy is in sight (planner.cones.own, planner.cones.enemy)",
+    "Cones are drawn at the unit's current pose, not at a planned step's ghost",
+    "The wedge is the cone cut at the unit's own level; a weapon whose cone has no slice there (the bomber's dorsal turret, +35 +- 35 degrees) is a dashed rim marked overhead",
+    "Shading is relative to a weapon's own centre odds (combat.gd centre_factor); the label carries the weapon's name and its effective range in metres (centre odds could be added as a percentage)",
+    "Cones are drawn under the plane markers and above the map and the fog; the hardpoints, rims and lettering over the markers (the interior is under the planes so an enemy's wash does not tint your own plane)",
+    "EFFECTIVE RANGE (Alex: guns fire slightly over it): range_m is the effective range, drawn as the solid rim and labelled; a falloff zone of planner.cones.overshoot_fraction (0.2, proposed: the middle of Track C's 15 to 25%) beyond it fades the odds to nothing along a smoothstep, in each style's own way. Track C's real range factor replaces the stand-in through ConeOverlay.range_factor (CombatWeapon, distance_m) -> 0..1; the zone's size is read from it"
+  ],
+  "parameter": "data/ui/ui.json#planner.cones.mode (and planner.cones.<mode>)",
+  "options": [
+    {
+      "name": "A",
+      "title": "Outline and range ticks",
+      "planner.cones.mode": "outline",
+      "file": "a_outline.png",
+      "proposed": true,
+      "parameters": {
+        "tick_every_m": 100.0,
+        "tick_px": 3.5,
+        "centre_alpha": 0.4,
+        "fade_arcs": 3.0,
+        "fade_arc_alpha": 0.7
+      },
+      "common_parameters": {
+        "rim_px": 1.1,
+        "rim_role": {
+          "base": "ink",
+          "alpha": 0.8
+        },
+        "hardpoint_px": 1.9,
+        "overshoot_fraction": 0.2,
+        "falloff_side_alpha": 0.45,
+        "falloff_dash_px": 4.0,
+        "overhead_dash_px": 4.0,
+        "label": true,
+        "label_px": 11.0,
+        "own": "selected",
+        "enemy": "in_sight"
+      }
+    },
+    {
+      "name": "B",
+      "title": "Hatched wedge",
+      "planner.cones.mode": "hatch",
+      "file": "b_hatch.png",
+      "proposed": true,
+      "parameters": {
+        "spacing_px": 4.5,
+        "cell_px": 5.0,
+        "line_px": 0.9,
+        "angle_deg": 45.0,
+        "alpha": 0.85
+      },
+      "common_parameters": {
+        "rim_px": 1.1,
+        "rim_role": {
+          "base": "ink",
+          "alpha": 0.8
+        },
+        "hardpoint_px": 1.9,
+        "overshoot_fraction": 0.2,
+        "falloff_side_alpha": 0.45,
+        "falloff_dash_px": 4.0,
+        "overhead_dash_px": 4.0,
+        "label": true,
+        "label_px": 11.0,
+        "own": "selected",
+        "enemy": "in_sight"
+      }
+    },
+    {
+      "name": "C",
+      "title": "Stippled odds",
+      "planner.cones.mode": "stipple",
+      "file": "c_stipple.png",
+      "proposed": true,
+      "parameters": {
+        "cell_px": 4.2,
+        "dot_px": 0.95,
+        "alpha": 0.85,
+        "gamma": 1.0
+      },
+      "common_parameters": {
+        "rim_px": 1.1,
+        "rim_role": {
+          "base": "ink",
+          "alpha": 0.8
+        },
+        "hardpoint_px": 1.9,
+        "overshoot_fraction": 0.2,
+        "falloff_side_alpha": 0.45,
+        "falloff_dash_px": 4.0,
+        "overhead_dash_px": 4.0,
+        "label": true,
+        "label_px": 11.0,
+        "own": "selected",
+        "enemy": "in_sight"
+      }
+    },
+    {
+      "name": "D",
+      "title": "Wash in the side colour",
+      "planner.cones.mode": "wash",
+      "file": "d_wash.png",
+      "proposed": true,
+      "parameters": {
+        "steps": 5.0,
+        "alpha_rim": 0.07,
+        "alpha_centre": 0.3,
+        "alpha_flat": 0.15,
+        "fall_steps": 4.0
+      },
+      "common_parameters": {
+        "rim_px": 1.1,
+        "rim_role": {
+          "base": "ink",
+          "alpha": 0.8
+        },
+        "hardpoint_px": 1.9,
+        "overshoot_fraction": 0.2,
+        "falloff_side_alpha": 0.45,
+        "falloff_dash_px": 4.0,
+        "overhead_dash_px": 4.0,
+        "label": true,
+        "label_px": 11.0,
+        "own": "selected",
+        "enemy": "in_sight"
+      }
+    }
+  ],
+  "palette_check": "No option adds a hue. The interior of a cone is the unit's own side accent (side_a, side_b: equal OKLCH L 0.551, C 0.100); the rim, the ticks and the lettering are ink; the label's halo is paper. Outline uses only ink; hatch and stipple draw the accent as thin ink-like marks (no fill); the wash is the accent mixed toward paper by 7 to 30% alpha, a lighter, less chromatic tint of the same hue. Over warm paper the slate-blue wash is nearly neutral (C 0.009 at 0.30), so in D the two sides differ less in tint than in marks (salmon against grey); B and C keep each side's hue.",
+  "sheet": "board.png (rows A-D: heavy and bomber at 0.35 | light fighter at 0.35 and 1.0 | hardpoints x5; the side view and a palette strip below)",
+  "chosen": null,
+  "chosen_by": null
+}
