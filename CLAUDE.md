@@ -280,6 +280,14 @@ Properties of Godot and PowerShell, not of that game. Entries marked
   segfaults at exit** (exit 139; 2 of 2 with the baker's terrain task in
   flight, observed 2026-10-09). Clear the baker (`baker.clear()`, as
   `sandbox.shutdown()` does) before quitting a shot script or probe.
+- **Headless runs draw no frames**: `Engine.get_frames_drawn()` stays 0 and
+  `InkCanvas.collect_async` logs an engine error there (2026-10-10, the map
+  performance track). Async read-backs are proven by a windowed run
+  (`scripts/render/map_look_hash.gd`), not by the gate.
+- **A Dictionary used as a Dictionary key hashes by CONTENT** (2026-10-10):
+  two equal-looking records collide; key by an id instead.
+- **A runtime error inside a `--script` coroutine leaves the process idle
+  until killed** (2026-10-10), like a compile error in a dependency.
 - **`RenderingDevice.get_captured_timestamp_gpu_time` is in NANOseconds**,
   the CPU time in microseconds (2026-10-09). Per-viewport GPU time can be
   read through the `vp_begin_<id>` / `vp_end_<id>` timestamp names.
