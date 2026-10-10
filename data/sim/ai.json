@@ -136,6 +136,55 @@
     }
   },
 
+  "patrol": {
+    "_about": "Role patrol (a fighter), Track S2, proposed 2026-10-10 for the strike's one enemy fighter (Alex's decision strike-plan: 'one patrolling enemy fighter'): fly a loop of waypoints, engage an enemy that comes within the engage radius, break off by health, leash or a run of turns without a firing chance, return to the loop. The engage and the break-off are the escort's, with the loop in place of the protected unit (scripts/sim/ai_pilot.gd _plan_patrol).",
+    "capture_radius_m": {
+      "value": 250,
+      "_proposed": true,
+      "_reason": "a waypoint counts as reached inside this, and the patrol turns for the next: two and a half light-fighter steps at patrol speed, a little under its 286 m turn radius at cruise, so the loop is flown as a rounded polygon and not a series of orbits round each point"
+    },
+    "speed_fraction_of_cruise": {
+      "value": 0.85,
+      "_proposed": true,
+      "_reason": "a patrol loiters at 85 m/s, a little under the light fighter's 100 m/s cruise: economical, easier to turn on, and it can still dash when it engages (the engage speed catches the target up)"
+    },
+    "engage_radius_m": {
+      "value": 650,
+      "_proposed": true,
+      "_reason": "a known enemy inside this of the patrol itself is engaged: inside its own 800 m sight, so only enemies it really sees, and about the escort's self radius (600 m) plus a turn of closing. A patrol has no one to protect, so only the distance to itself counts"
+    },
+    "leash_m": {
+      "value": 1500,
+      "_proposed": true,
+      "_reason": "break off when farther than this from the loop (the nearest point of the closed polyline through the waypoints): a dozen seconds of flight, so the patrol cannot be led across the map and still be on its beat when the bomber arrives. Roughly the escort's 1,200 m leash plus the loop's own width"
+    },
+    "break_off_health_fraction": {
+      "value": 0.5,
+      "_proposed": true,
+      "_reason": "the escort's rule: break off, and patrol without engaging for the rest of the mission, below half health (a light fighter at 1 pip of 3); strictly below, so a half-health plane still fights"
+    },
+    "no_chance_turns": {
+      "value": 4,
+      "_proposed": true,
+      "_reason": "the escort's rule: break off after this many engaged turns in a row in which the patrol's own plan never brings the target into its forward cone"
+    },
+    "engage_range_fraction": {
+      "value": 0.6,
+      "_proposed": true,
+      "_reason": "the escort's rule: the range it tries to hold behind the target, as a fraction of the forward weapon's range"
+    },
+    "catchup_time_s": {
+      "value": 5,
+      "_proposed": true,
+      "_reason": "the escort's rule: the speed correction closes the gap to the wanted range in about one turn"
+    },
+    "match_band": {
+      "value": true,
+      "_proposed": true,
+      "_reason": "the escort's rule: an engaging fighter moves to the target's altitude band, since the cone is as narrow in height as across"
+    }
+  },
+
   "fallback_weapons": {
     "_about": "PLACEHOLDER cones, used only for a unit type whose UnitDef has no weapons yet (Track C adds def.weapons; this section is then dead and should be deleted). Copied from variants/engagement-cones/weapons_proposed.json, the forward weapon of each type: the cone's centre bearing from the nose (mount), half angles across and in height, the centre elevation, and the range.",
     "light_fighter": {

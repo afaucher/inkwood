@@ -46,6 +46,20 @@ extends RefCounted
 #   resolved   histories are on the units and in turn_resolved; plans are
 #              consumed. begin_turn() starts the next planning phase.
 #
+# THE STRIKE (Track S2, proposed 2026-10-10; Alex's decisions strike-target, bomb-release,
+# bomb-load, strike-plan). Two things join the turn loop:
+#   STATIC UNITS (data/units: mobility "static" -- a radio tower, an anti-aircraft battery) never
+#              move, turn or plan: plan_step refuses them, their one step a turn stands still, and
+#              they do not hold up the ready-up (an AI side made only of static units has no one
+#              to wait for; participants() leaves the AI out). They fire (flak, aimed up: combat.gd)
+#              and are fired at and bombed; at 0 health they are DOWN with the fate "destroyed".
+#   BOMBS      a step request may carry {"drop": {"aim": [x, y]}} (envelope.gd; the physics, the
+#              cone and the events are in bombs.gd). drop_cone() / drop_spread() answer the
+#              interface, bombs_left() the load, plan_step() reports the drop in the returned
+#              state's "drop". A bomb falls for seconds and may land in a LATER turn: the bombs
+#              still falling are `bombs_in_flight`, carried by resolve() and handed to a client
+#              by apply_resolution (the result's "bombs").
+#
 # LEAVING THE MAP is an event, not an error: the step state carries
 # out_of_bounds, a "left_bounds" / "returned_to_bounds" event goes into the
 # turn's events, and unit_left_bounds fires. What should happen to such a unit
@@ -66,6 +80,8 @@ const Unit = preload("res://scripts/sim/unit.gd")
 const Envelope = preload("res://scripts/sim/envelope.gd")
 const CombatRules = preload("res://scripts/sim/combat_rules.gd")
 const CombatResolver = preload("res://scripts/sim/combat_resolver.gd")
+const BombRules = preload("res://scripts/sim/bomb_rules.gd")
+const Bombs = preload("res://scripts/sim/bombs.gd")
 
 const PHASE_PLANNING := "planning"
 const PHASE_RESOLVING := "resolving"
@@ -92,17 +108,23 @@ var quiet: bool = false
 # World resolves, so only the host rolls.
 var rng_seed: int = 0
 var combat: CombatRules         # data/sim/combat.json: the tick, the odds factors, the fall
+var bombs: BombRules            # data/sim/bombs.json: the fall, the cone, the spread, the blast
+# Bombs released and not yet landed (bombs.gd header has the record): carried across turns by
+# resolve(), handed to a client by apply_resolution(), read by the effects and the interface.
+var bombs_in_flight: Array = []
 
 var _combat_resolver: CombatResolver
 
-func _init(turn_path: String = SimRules.TURN_PATH, altitude_path: String = SimRules.ALTITUDE_PATH, unit_dir: String = UnitDef.UNITS_DIR, combat_path: String = CombatRules.PATH) -> void:
+func _init(turn_path: String = SimRules.TURN_PATH, altitude_path: String = SimRules.ALTITUDE_PATH, unit_dir: String = UnitDef.UNITS_DIR, combat_path: String = CombatRules.PATH, bombs_path: String = BombRules.PATH) -> void:
 	rules = SimRules.new(turn_path, altitude_path)
 	units_dir = unit_dir
 	errors.append_array(rules.errors)
 	bounds = rules.bounds
 	combat = CombatRules.new(combat_path)
 	errors.append_array(combat.errors)
-	_combat_resolver = CombatResolver.new(combat)
+	bombs = BombRules.new(bombs_path)
+	errors.append_array(bombs.errors)
+	_combat_resolver = CombatResolver.new(combat, bombs)
 
 func ok() -> bool:
 	return errors.is_empty()
@@ -183,6 +205,7 @@ func add_unit(spec: Dictionary) -> String:
 	u.speed = float(speed)
 	u.altitude_band = band
 	u.health = def.health
+	u.drops_left = def.bomb_drops
 	u.out_of_bounds = not in_bounds(u.x, u.y)
 	units[id] = u
 	if controller == CONTROLLER_AI and not ready.has(AI_PLAYER):
@@ -210,6 +233,8 @@ func plan_step(unit_id: String, step_index: int, request: Variant) -> Dictionary
 		return {}
 	if u.down:
 		return _fail_d("plan_step: unit '%s' is down (%s) and takes no orders" % [unit_id, u.fate if u.fate != "" else "down"])
+	if u.def.is_static():
+		return _fail_d("plan_step: unit '%s' is a static %s and takes no orders" % [unit_id, u.type])
 	if phase != PHASE_PLANNING:
 		return _fail_d("plan_step: plans change only in the planning phase (phase is %s)" % phase)
 	var n := u.def.actions_per_turn
@@ -219,6 +244,16 @@ func plan_step(unit_id: String, step_index: int, request: Variant) -> Dictionary
 	if problem != "":
 		return _fail_d("plan_step: " + problem)
 	var req: Dictionary = Envelope.normalize_request(request).duplicate(true)
+	if req.has("drop"):
+		# A drop (bombs.gd): only a unit with bombs, and no more drops in the turn than it has left.
+		if not u.def.carries_bombs():
+			return _fail_d("plan_step: a %s carries no bombs" % u.type)
+		var used := 0
+		for i in u.plan.size():
+			if i != step_index and (u.plan[i] as Dictionary).has("drop"):
+				used += 1
+		if used + 1 > u.drops_left:
+			return _fail_d("plan_step: unit '%s' has %d drop(s) left and %d already planned this turn" % [unit_id, u.drops_left, used])
 	while u.plan.size() < step_index:
 		u.plan.append({})
 	if step_index < u.plan.size():
@@ -236,6 +271,8 @@ func clear_plan(unit_id: String) -> void:
 	if u.down:
 		_fail("clear_plan: unit '%s' is down (%s) and takes no orders" % [unit_id, u.fate if u.fate != "" else "down"])
 		return
+	if u.def.is_static():
+		return   # a static unit has no plan to clear (plan_step refuses it)
 	if phase != PHASE_PLANNING:
 		_fail("clear_plan: plans change only in the planning phase (phase is %s)" % phase)
 		return
@@ -267,14 +304,134 @@ func reachable(unit_id: String, step_index: int) -> Dictionary:
 		from = _run_plan(u)[step_index - 1]
 	return u.def.envelope.reachable(from, rules.step_dt(n))
 
+# --- Bombs: what the interface asks (Track S2; bombs.gd has the model) ---------------------------
+
+# The unit's bomb load: {drops_left (passes it can still make, as the turn began), drops_max (and
+# drops_total: the type's), per_drop (bombs in a stick), planned (drops in the current plan), carries}.
+# All zeros and false for a unit that carries no bombs.
+func bombs_left(unit_id: String) -> Dictionary:
+	var u := _unit(unit_id)
+	if u == null:
+		return {}
+	var planned := 0
+	for st: Variant in u.plan:
+		if (st as Dictionary).has("drop"):
+			planned += 1
+	return {
+		"drops_left": u.drops_left, "drops_max": u.def.bomb_drops, "drops_total": u.def.bomb_drops,
+		"per_drop": u.def.bomb_per_drop, "planned": planned, "carries": u.def.carries_bombs(),
+	}
+
+# THE CONE OF A STEP: where bombs released on step `step_index` of the unit's current plan can land
+# (the step as it is planned now: plan its motion first, then ask). Returns {} (and last_error) for a
+# unit with no bombs, a down unit or a step out of range. Otherwise:
+#   ok            true
+#   polygon       PackedVector2Array, metres: the region the aim point may be placed in (the union of the
+#                 cone's footprint at each moment of the step); an aim outside it is moved inside it
+#   ideal_aim     Vector2 (also under "ideal"): the ideal aim point -- where a bomb released at the middle
+#                 of the step lands, release error 0 there
+#   ideal_curve   PackedVector2Array: the ideal point for each moment of the step (aiming along it is
+#                 ideal whatever the moment)
+#   release_path  PackedVector2Array: the bomber's positions through the step
+#   height_m, speed, heading   the bomber in the middle of the step
+#   range_m, fall_s, ideal_deg  the ideal ground range, fall time and release angle (degrees below the
+#                 horizon) there
+#   half_across_deg, half_height_deg   the cone's size
+#   spread_ideal_m, spread_rim_m   one bomb's scatter (sigma, metres) at the ideal aim and on the rim
+#   drops_left, per_drop
+#   aim_info      when `aim` (a Vector2 or [x, y]) is given: drop_spread()'s answer for it
+func drop_cone(unit_id: String, step_index: int, aim: Variant = null) -> Dictionary:
+	var ctx := _drop_context("drop_cone", unit_id, step_index)
+	if ctx.is_empty():
+		return {}
+	var u: Unit = ctx["unit"]
+	var samples: Array = ctx["samples"]
+	var mid := Bombs.sample_at(samples, 0.5 * (float((samples[0] as Dictionary)["t"]) + float((samples[samples.size() - 1] as Dictionary)["t"])))
+	var rng := Bombs.ideal_range(float(mid["speed"]), float(mid["height_m"]), bombs.gravity)
+	var path := PackedVector2Array()
+	for sm: Dictionary in samples:
+		path.append(Vector2(float(sm["x"]), float(sm["y"])))
+	var ideal := Bombs.ideal_point(samples, bombs)
+	var out := {
+		"ok": true, "unit": unit_id, "step": step_index,
+		"polygon": Bombs.cone_polygon(samples, bombs),
+		"ideal_aim": ideal, "ideal": ideal,
+		"ideal_curve": Bombs.impact_curve(samples, bombs),
+		"release_path": path,
+		"height_m": float(mid["height_m"]), "speed": float(mid["speed"]), "heading": float(mid["heading"]),
+		"range_m": rng, "fall_s": Bombs.fall_time(float(mid["height_m"]), bombs.gravity),
+		"ideal_deg": rad_to_deg(Bombs.ideal_depression(float(mid["speed"]), float(mid["height_m"]), bombs.gravity)),
+		"half_across_deg": bombs.cone_half_across_deg, "half_height_deg": bombs.cone_half_height_deg,
+		"spread_ideal_m": Bombs.spread_m(float(mid["height_m"]), 1.0, bombs),
+		"spread_rim_m": Bombs.spread_m(float(mid["height_m"]), Bombs.accuracy(1.0, bombs), bombs),
+		"drops_left": u.drops_left, "per_drop": u.def.bomb_per_drop,
+	}
+	if aim != null:
+		out["aim_info"] = drop_spread(unit_id, step_index, aim)
+	return out
+
+# WHAT AN AIM POINT GETS in a step (Bombs.plan_drop): {} on the errors drop_cone() has, or
+#   ok, aim (Vector2: the point moved inside the cone if it was outside), requested (Vector2),
+#   clamped (bool), spread {radius_m, along_m, across_m, heading} (one bomb's scatter, sigma, metres;
+#   heading the bomber's at the release), spread_m, quality (also "accuracy": 0..1, the weapons' centre
+#   factor of the release error; 1 at the ideal release angle), r (the release error as a fraction of
+#   the cone: 1 is the rim), release (Vector2, where the bomber is when the stick goes), release_t
+#   (seconds into the turn), release_height_m, fall_s, range_m (the ideal ground range), ideal_deg,
+#   depression_deg (the angle below the horizon the aim point is seen at the release), error_deg
+#   (depression minus ideal), across_deg (the aim's bearing off the bomber's heading), impact_t
+#   (seconds after the start of this turn at which the stick's centre lands), lands_in_turn,
+#   stick_length_m, per_drop.
+func drop_spread(unit_id: String, step_index: int, aim: Variant) -> Dictionary:
+	var a := _aim_point(aim)
+	if a.is_empty():
+		return _fail_d("drop_spread: the aim is a Vector2 or [x, y] of finite numbers, got %s" % str(aim))
+	var ctx := _drop_context("drop_spread", unit_id, step_index)
+	if ctx.is_empty():
+		return {}
+	var u: Unit = ctx["unit"]
+	var d := Bombs.plan_drop(ctx["samples"], float(a[0]), float(a[1]), bombs)
+	var rel: Dictionary = d["release"]
+	var sigma := float(d["spread_m"])
+	var impact_t := float(d["impact_t"])
+	return {
+		"ok": true,
+		"aim": Vector2(float((d["aim"] as Array)[0]), float((d["aim"] as Array)[1])),
+		"requested": Vector2(float(a[0]), float(a[1])),
+		"clamped": d["clamped"],
+		"spread": {"radius_m": sigma, "along_m": sigma, "across_m": sigma, "heading": float(rel["heading"])},
+		"spread_m": sigma, "quality": d["accuracy"], "accuracy": d["accuracy"], "r": d["r"],
+		"release": Vector2(float(rel["x"]), float(rel["y"])), "release_t": d["release_t"], "release_height_m": rel["height_m"],
+		"fall_s": d["fall_s"], "range_m": d["range_m"], "ideal_deg": d["ideal_deg"], "depression_deg": d["depression_deg"],
+		"error_deg": d["error_deg"], "across_deg": d["across_deg"], "impact_t": impact_t,
+		"lands_in_turn": turn + int(floorf(impact_t / rules.turn_seconds + 1e-9)),
+		"stick_length_m": float(maxi(u.def.bomb_per_drop - 1, 0)) * float(rel["speed"]) * bombs.release_interval_s,
+		"per_drop": u.def.bomb_per_drop,
+	}
+
+# The bombs still falling, for a joining client (WorldSync's snapshot should carry them) and its twin.
+func net_bombs() -> Array:
+	return bombs_in_flight.duplicate(true)
+
+func apply_net_bombs(list: Array) -> void:
+	bombs_in_flight = list.duplicate(true)
+
+static func _aim_point(v: Variant) -> Array:
+	if v is Vector2:
+		return [(v as Vector2).x, (v as Vector2).y] if (v as Vector2).is_finite() else []
+	if v is Array and (v as Array).size() >= 2 and _is_finite_number(v[0]) and _is_finite_number(v[1]):
+		return [float(v[0]), float(v[1])]
+	return []
+
 # --- Ready-up ----------------------------------------------------------------
 
 # Everyone whose ready flag holds up the turn: the active human players, and
-# the AI if any unit is AI-controlled.
+# the AI if any MOBILE unit is AI-controlled (a static unit has no plan to make, so an AI
+# side that is only towers and batteries has nothing to wait for).
 func participants() -> Array[String]:
 	var out: Array[String] = players.duplicate()
 	for id: String in units:
-		if (units[id] as Unit).controller == CONTROLLER_AI:
+		var u: Unit = units[id]
+		if u.controller == CONTROLLER_AI and not u.def.is_static():
 			out.append(AI_PLAYER)
 			break
 	return out
@@ -366,18 +523,24 @@ func resolve() -> Dictionary:
 		cursor[id] = s
 
 	# COMBAT, after motion (which it does not change; Track C, combat.gd). The
-	# sampler reads the histories just built, so they go on the units first.
+	# sampler reads the histories just built, so they go on the units first. The
+	# bombers' drops are counted against their loads first (bombs.gd), and the
+	# resolver releases and lands the bombs on its ticks.
 	for id: String in units:
-		(units[id] as Unit).history = histories[id]
+		var u: Unit = units[id]
+		_apply_drop_limits(u, histories[id], 1)
+		u.history = histories[id]
 	var fight := _combat_resolver.run(units, histories, turn, rng_seed, rules.turn_seconds,
 		func(uid: String, t: float) -> Dictionary: return sample(uid, t, "history"),
-		func(band: String) -> float: return band_height(band))
+		func(band: String) -> float: return band_height(band), bombs_in_flight)
 	var down_at: Dictionary = fight["down_at"]
 	var fates: Dictionary = fight["fates"]
+	bombs_in_flight = fight["bombs"]
 	for id: String in units:
 		var u: Unit = units[id]
 		u.health = int(fight["health"][id])
 		u.down_at = NAN
+		u.drops_left = maxi(u.drops_left - int((fight["released"] as Dictionary).get(id, 0)), 0)
 	# Units that went down this turn: their fate. An exploded unit is gone at
 	# down_at. An out-of-control one is flown on from there: its path after
 	# down_at is rebuilt as a fall (the states before are untouched).
@@ -416,7 +579,7 @@ func resolve() -> Dictionary:
 		var u: Unit = units[id]
 		var h: Array = histories[id]
 		var last: Dictionary = h[h.size() - 1]
-		if crash_at.has(id) or (down_at.has(id) and u.fate == Unit.FATE_EXPLODED):
+		if crash_at.has(id) or (down_at.has(id) and (u.fate == Unit.FATE_EXPLODED or u.fate == Unit.FATE_DESTROYED)):
 			# It stops where it exploded or struck the ground, not where its path
 			# would have ended the turn.
 			var stop: float = float(crash_at[id]) if crash_at.has(id) else float(down_at[id])
@@ -440,7 +603,7 @@ func resolve() -> Dictionary:
 		if ev["type"] == "left_bounds":
 			unit_left_bounds.emit(str(ev["unit"]), turn, int(ev["step"]))
 	turn_resolved.emit(turn, histories, events)
-	return {"turn": turn, "histories": histories, "events": events, "units": _net_states()}
+	return {"turn": turn, "histories": histories, "events": events, "units": _net_states(), "bombs": bombs_in_flight.duplicate(true)}
 
 # THE NETWORK CONTRACT (proposed by the lead for the first fight, 2026-10-09;
 # Alex: the host resolves each turn and sends the result): a World that did
@@ -476,6 +639,8 @@ func apply_resolution(result: Dictionary) -> bool:
 		u.apply_net_state(states[id])
 		u.history = (histories[id] as Array).duplicate(true)
 		u.plan.clear()
+	# The bombs still falling after this turn (a result without them has none).
+	bombs_in_flight = (result.get("bombs", []) as Array).duplicate(true)
 	_set_phase(PHASE_RESOLVED)
 	var events: Array = (result["events"] as Array).duplicate(true)
 	for ev: Dictionary in events:
@@ -565,6 +730,7 @@ func _run_plan(u: Unit) -> Array:
 	for k in u.def.actions_per_turn:
 		cur = _step(u, k, cur)
 		out.append(cur)
+	_apply_drop_limits(u, out, 0)
 	return out
 
 # One step: the unit's request for step k (or "carry on"), clamped from `prev`.
@@ -578,7 +744,8 @@ func _step(u: Unit, k: int, prev: Dictionary) -> Dictionary:
 		fs["step"] = k
 		fs["t"] = rules.turn_seconds * float(k + 1) / float(n)
 		return fs
-	if u.down:
+	# A unit that is down takes no orders and a static one never had any: it stands where it is.
+	if u.down or u.def.is_static():
 		var ws := prev.duplicate(true)
 		ws["speed"] = 0.0
 		ws["turn"] = 0.0
@@ -595,7 +762,62 @@ func _step(u: Unit, k: int, prev: Dictionary) -> Dictionary:
 	s["t"] = rules.turn_seconds * float(k + 1) / float(n)
 	s["planned"] = planned
 	s["out_of_bounds"] = not in_bounds(float(s["x"]), float(s["y"]))
+	if req is Dictionary and (req as Dictionary).has("drop"):
+		s["drop"] = _drop_state(u, k, prev, s, req)
 	return s
+
+# --- Bombs (Track S2; scripts/sim/bombs.gd has the model) -----------------------------------------
+
+# The analysis of the drop a step's request carries (Bombs.plan_drop), for the step that goes from
+# `prev` to `cur`; {"ok": false, "reason": ...} when it cannot happen (a unit with no bombs).
+# Drop limits (no drops left) are applied by _apply_drop_limits once the whole turn's states exist.
+func _drop_state(u: Unit, k: int, prev: Dictionary, cur: Dictionary, req: Variant) -> Dictionary:
+	var aim := Envelope.drop_aim(req)
+	if aim.is_empty():
+		return {"ok": false, "reason": "no_aim"}
+	if not u.def.carries_bombs():
+		return {"ok": false, "reason": "no_bombs", "requested": aim}
+	return Bombs.plan_drop(_drop_samples(u, k, prev, cur), float(aim[0]), float(aim[1]), bombs)
+
+# The unit and the bomber through step `step_index` of its current plan, for drop_cone and
+# drop_spread: {unit, samples}, or {} with last_error for a unit with no bombs, a down unit or a
+# step out of range.
+func _drop_context(who: String, unit_id: String, step_index: int) -> Dictionary:
+	var u := _unit(unit_id)
+	if u == null:
+		return {}
+	if not u.def.carries_bombs():
+		return _fail_d("%s: a %s carries no bombs" % [who, u.type])
+	if u.down:
+		return _fail_d("%s: unit '%s' is down" % [who, unit_id])
+	var n := u.def.actions_per_turn
+	if step_index < 0 or step_index >= n:
+		return _fail_d("%s: a %s has steps 0..%d this turn, got %d" % [who, u.type, n - 1, step_index])
+	var states := _run_plan(u)
+	var prev: Dictionary = _start_state(u) if step_index == 0 else states[step_index - 1]
+	return {"unit": u, "samples": _drop_samples(u, step_index, prev, states[step_index])}
+
+# The bomber through step k, from `prev` to `cur` (bombs.gd make_samples).
+func _drop_samples(u: Unit, k: int, prev: Dictionary, cur: Dictionary) -> Array:
+	var n := u.def.actions_per_turn
+	var t0 := rules.turn_seconds * float(k) / float(n)
+	var t1 := rules.turn_seconds * float(k + 1) / float(n)
+	return Bombs.make_samples(prev, cur, t0, t1, _state_height(prev), _state_height(cur), bombs.release_samples)
+
+# Count a turn's drops against the unit's load: the first drops_left drops stand, the rest are refused
+# ({"ok": false, "reason": "no_drops"}). `states` are the step states in order, `first` the index of
+# the first step in the array (1 in a history, whose entry 0 is the start of the turn).
+func _apply_drop_limits(u: Unit, states: Array, first: int) -> void:
+	var used := 0
+	for i in range(first, states.size()):
+		var d: Variant = (states[i] as Dictionary).get("drop")
+		if not (d is Dictionary) or (d as Dictionary).get("ok", false) != true:
+			continue
+		if used >= u.drops_left:
+			var refused: Dictionary = {"ok": false, "reason": "no_drops", "requested": (d as Dictionary).get("requested", [])}
+			(states[i] as Dictionary)["drop"] = refused
+		else:
+			used += 1
 
 func _start_state(u: Unit) -> Dictionary:
 	var s := u.state()

@@ -65,6 +65,9 @@ var down_at: float = NAN
 const FATE_EXPLODED := "exploded"
 const FATE_OUT_OF_CONTROL := "out_of_control"
 const FATE_CRASHED := "crashed"
+# A ground unit (a radio tower, a battery) at 0 health: Track S2, 2026-10-10 (the strike). Not
+# an aircraft's fate: it does not explode or fall, it stays where it is, down. Also `down`.
+const FATE_DESTROYED := "destroyed"
 var fate: String = ""
 # Metres above the ground (0 m; the sim has no terrain) while out of control: a
 # continuous height, since a unit otherwise has only altitude bands. 0 once
@@ -73,6 +76,9 @@ var fall_height_m: float = NAN
 # Which way the out-of-control spiral turns: +1 right (clockwise on screen), -1
 # left, 0 when not falling. From the fate roll.
 var fall_dir: int = 0
+# Drops (passes) the unit has left to make (Track S2, 2026-10-10: bomb_load in the type's data,
+# set by World.add_unit, one fewer for each drop it releases). 0 for a unit that carries no bombs.
+var drops_left: int = 0
 
 func state() -> Dictionary:
 	return {"x": x, "y": y, "heading": heading, "speed": speed, "altitude_band": altitude_band}
@@ -106,6 +112,7 @@ func to_dict() -> Dictionary:
 		"fate": fate,
 		"fall_height_m": fall_height_m,
 		"fall_dir": fall_dir,
+		"drops_left": drops_left,
 	}
 
 # Everything a resolve changes, for sending a resolved turn over the network
@@ -117,7 +124,7 @@ func net_state() -> Dictionary:
 	var s := {
 		"x": x, "y": y, "heading": heading, "speed": speed, "altitude_band": altitude_band,
 		"out_of_bounds": out_of_bounds, "health": health, "down": down, "down_at": down_at,
-		"fate": fate, "fall_dir": fall_dir,
+		"fate": fate, "fall_dir": fall_dir, "drops_left": drops_left,
 	}
 	if is_finite(fall_height_m):
 		s["fall_height_m"] = fall_height_m
@@ -131,4 +138,5 @@ func apply_net_state(s: Dictionary) -> void:
 	down_at = float(s["down_at"])
 	fate = str(s.get("fate", ""))
 	fall_dir = int(s.get("fall_dir", 0))
+	drops_left = int(s.get("drops_left", drops_left))
 	fall_height_m = float(s.get("fall_height_m", NAN))

@@ -8,6 +8,9 @@ extends RefCounted
 # there. That is all. The design doc's Enemy AI (mission goals, patrol, engage,
 # disengage; execution plan component 14) replaces it.
 #
+# A STATIC unit (a radio tower, a battery: data/units mobility "static") is skipped -- it has no plan to
+# make and does not hold up the ready-up (World.participants()); the AI readies only for mobile units.
+#
 # IT USES ONLY THE WORLD'S PUBLIC API -- units, bounds, phase, steps_per_turn,
 # clear_plan, plan_step, reachable, commit and the phase_changed signal --
 # exactly what a player's UI uses, so the AI cannot do anything a player
@@ -56,6 +59,9 @@ func plan_turn() -> void:
 	var any := false
 	for id: String in world.units:
 		if world.units[id].controller != World.CONTROLLER_AI:
+			continue
+		# A static unit (a tower, a battery) has no plan to make and does not hold up the turn.
+		if world.units[id].def.is_static():
 			continue
 		any = true
 		# A down unit takes no orders (combat: plan_step refuses it); the AI

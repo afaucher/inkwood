@@ -31,6 +31,9 @@ var source: String = ""
 var id: String = ""
 var name: String = ""
 var domain: String = ""
+# "mobile" or "static" (data/units/_schema.json "mobility"). A static unit (a radio
+# tower, an anti-aircraft battery) never moves, turns or plans; see is_static().
+var mobility: String = ""
 var size_m: float = NAN
 var actions_per_turn: int = 0
 var health: int = 0
@@ -44,6 +47,10 @@ var envelope: Envelope = null
 # each with one or more hardpoints. Empty when the file is not ok().
 var weapons: Array[CombatWeapon] = []
 var weapon_values: Array = []     # the validated weapons section as plain values (an Array of Dictionaries)
+# What the unit can drop (data/units/_schema.json "bomb_load"): separate drops (passes) and
+# bombs in a drop. 0 and 0 for a unit that carries no bombs.
+var bomb_drops: int = 0
+var bomb_per_drop: int = 0
 var errors: Array[String] = []
 
 static func path_for(type_id: String, units_dir: String = UNITS_DIR) -> String:
@@ -74,6 +81,7 @@ func _init(unit_source: Variant, band_order: Array, quiet: bool = false, label: 
 		id = str(v.get("id", ""))
 		name = str(v.get("name", ""))
 		domain = str(v.get("domain", ""))
+		mobility = str(v.get("mobility", ""))
 		size_m = float(v.get("size_m", NAN))
 		actions_per_turn = int(v.get("actions_per_turn", 0))
 		health = int(v.get("health", 0))
@@ -81,6 +89,9 @@ func _init(unit_source: Variant, band_order: Array, quiet: bool = false, label: 
 		silhouette = str((v.get("drawing", {}) as Dictionary).get("silhouette", ""))
 		envelope_values = v.get("envelope", {})
 		weapon_values = v.get("weapons", [])
+		var bomb_section: Dictionary = v.get("bomb_load", {})
+		bomb_drops = int(bomb_section.get("drops", 0))
+		bomb_per_drop = int(bomb_section.get("per_drop", 0))
 		_check(r, stem)
 	errors = r.errors
 	if errors.is_empty():
@@ -90,6 +101,15 @@ func _init(unit_source: Variant, band_order: Array, quiet: bool = false, label: 
 
 func ok() -> bool:
 	return errors.is_empty()
+
+# A static unit never moves, turns or plans (the World refuses its plans and does not
+# wait for it in the ready-up).
+func is_static() -> bool:
+	return mobility == "static"
+
+# Does the unit carry bombs (a bomb_load with drops)?
+func carries_bombs() -> bool:
+	return bomb_drops > 0
 
 # Walk one level of the schema: read every listed field by its kind, then
 # reject keys the schema does not list. Returns the plain values.
@@ -177,6 +197,24 @@ func _check(r: Records, stem: String) -> void:
 	var vdive := float(e.get("dive_speed_max_mps", NAN))
 	if not (vmin <= vcr and vcr <= vmax and vmax <= vdive):
 		r.err("envelope speeds must satisfy speed_min <= speed_cruise <= speed_max <= dive_speed_max, got %s <= %s <= %s <= %s" % [vmin, vcr, vmax, vdive])
+	if mobility == "static":
+		# A static unit has nothing to fly: every speed and rate is zero, it cannot change band.
+		for k: String in ["speed_min_mps", "speed_cruise_mps", "speed_max_mps", "dive_speed_max_mps", "accel_mps2", "decel_mps2", "turn_bleed_mps2"]:
+			var kv := float(e.get(k, 0.0))
+			if not is_nan(kv) and kv != 0.0:
+				r.err("a static unit never moves: envelope.%s must be 0, got %s" % [k, str(e.get(k))])
+		if int(e.get("bands_per_step", 0)) != 0:
+			r.err("a static unit never changes band: envelope.bands_per_step must be 0")
+		var curve: Array = e.get("turn_rate_curve_dps", [PackedFloat64Array(), PackedFloat64Array()])
+		for rate: float in (curve[1] as PackedFloat64Array):
+			if rate != 0.0:
+				r.err("a static unit never turns: envelope.turn_rate_curve_dps must be all 0, got %s" % str(rate))
+	# Bombs (Alex 2026-10-10, decision bomb-load): a unit that drops anything has at least two
+	# drops, and a drop of at least one bomb; one that drops nothing has neither.
+	if bomb_drops == 1:
+		r.err("bomb_load.drops = 1: a bomber has at least two drops (Alex 2026-10-10: multiple passes, everything gets at least two)")
+	if (bomb_drops > 0) != (bomb_per_drop > 0):
+		r.err("bomb_load: drops (%d) and per_drop (%d) are both 0 or both above 0" % [bomb_drops, bomb_per_drop])
 	var bands: Array = e.get("altitude_bands", [])
 	var start := str(e.get("start_band", ""))
 	if start != "" and not bands.has(start):

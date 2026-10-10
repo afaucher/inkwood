@@ -3,6 +3,7 @@
   "id": "heavy_fighter",
   "name": "Heavy fighter",
   "domain": "air",
+  "mobility": "mobile",
   "size_m": { "value": 16, "_proposed": true, "_reason": "twin-engine fighter span: P-38 15.8 m, Bf 110 16.3 m" },
   "actions_per_turn": { "value": 4, "decision": "demo-baseline", "_reason": "Alex 2026-10-09 accepted this as the demo baseline. Was proposed: fast but less agile than the light fighter: one decision point fewer; 4 steps of 1.25 s in a 5 s turn" },
   "health": { "value": 5, "_proposed": true, "_reason": "between the light fighter and the bomber" },
@@ -60,5 +61,9 @@
       "damage_pips": { "value": 1, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
       "rolls_per_second": { "value": 2, "_proposed": true, "_reason": "Track C proposal (not in the lead's sheet): the same burst rate as the fighters' machine guns" }
     }
-  ]
+  ],
+  "bomb_load": {
+    "drops": { "value": 0, "_proposed": true, "_reason": "Track S2 (2026-10-10): a fighter carries no bombs; the strike's bomb drop is a bomber's special" },
+    "per_drop": { "value": 0, "_proposed": true, "_reason": "a fighter drops nothing: 0 bombs a drop, to match 0 drops" }
+  }
 }

@@ -26,6 +26,10 @@ extends RefCounted
 #       mission.target_radius_m in the same file. A unit that went down this
 #       turn counts only up to the moment it went down (Unit.down_at); one that
 #       was already down counts for nothing.
+#   {"type": "turn_limit",  "turn": n}                      (Track S2, 2026-10-10: the strike)
+#       the game has reached the end of turn n: it holds when the turn just resolved is n or
+#       later, at the END of that turn (t = turn_seconds), so a win earlier in turn n still
+#       beats it. Meant as a LOSE condition ("lose at a turn limit", Alex's strike-plan).
 #
 #   var m := Mission.new(world, spec)       # spec: see intercept()
 #   m.attach()                              # evaluates after every turn_resolved
@@ -57,7 +61,8 @@ const LOST := "lost"
 const TYPE_UNIT_DOWN := "unit_down"
 const TYPE_ALL_DOWN := "all_down"
 const TYPE_UNIT_WITHIN := "unit_within"
-const TYPES := [TYPE_UNIT_DOWN, TYPE_ALL_DOWN, TYPE_UNIT_WITHIN]
+const TYPE_TURN_LIMIT := "turn_limit"
+const TYPES := [TYPE_UNIT_DOWN, TYPE_ALL_DOWN, TYPE_UNIT_WITHIN, TYPE_TURN_LIMIT]
 
 var world: World = null
 var spec: Dictionary = {}
@@ -97,6 +102,17 @@ static func intercept(bomber: String, target: Array, radius_m: float = 0.0, cont
 		"target": target,
 		"win": [{"type": TYPE_UNIT_DOWN, "unit": bomber}],
 		"lose": [within, {"type": TYPE_ALL_DOWN, "controller": controller}],
+	}
+
+# The Strike mission as a spec (Track S2, 2026-10-10; Alex's decision strike-plan: "win when the
+# target is destroyed, lose when the bomber is down or at a turn limit"): won when `tower` is
+# down; lost when `bomber` is down, or when turn `turn_limit` has been played without the
+# tower going down. The tower is judged like any unit: Unit.down, at the moment it went down.
+static func strike(tower: String, bomber: String, turn_limit: int) -> Dictionary:
+	return {
+		"id": "strike",
+		"win": [{"type": TYPE_UNIT_DOWN, "unit": tower}],
+		"lose": [{"type": TYPE_UNIT_DOWN, "unit": bomber}, {"type": TYPE_TURN_LIMIT, "turn": turn_limit}],
 	}
 
 # Evaluate after each resolve (or let attach() do it). `result` is
@@ -171,6 +187,11 @@ func _check(c: Dictionary) -> Dictionary:
 			return {"t": latest, "reason": "%s down" % _set_label(c)}
 		TYPE_UNIT_WITHIN:
 			return _check_within(c)
+		TYPE_TURN_LIMIT:
+			# The end of turn n: the turn just resolved is n or later (a turn after the limit, if the
+			# mission is only evaluated late, still holds).
+			if turn >= int(c["turn"]):
+				return {"t": world.rules.turn_seconds, "reason": "turn %d was played without the objective" % int(c["turn"])}
 	return {}
 
 # The first sampled time this turn the unit was within the radius of the point.
@@ -279,6 +300,9 @@ func _validate_condition(c: Variant, label: String) -> void:
 	match type:
 		TYPE_UNIT_DOWN:
 			_need_unit(d, "unit", label)
+		TYPE_TURN_LIMIT:
+			if not ((d.get("turn") is float or d.get("turn") is int) and float(d["turn"]) >= 1.0 and float(d["turn"]) == floorf(float(d["turn"]))):
+				_err("%s: 'turn' must be a whole number of turns, 1 or more" % label)
 		TYPE_UNIT_WITHIN:
 			_need_unit(d, "unit", label)
 			var of: Variant = d.get("of")

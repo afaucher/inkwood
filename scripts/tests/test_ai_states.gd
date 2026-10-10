@@ -73,6 +73,7 @@ func setup(_main) -> void:
 	_never_reads_a_players_plan()
 	_determinism()
 	_stays_on_the_map()
+	_patrol_tests()
 	finish()
 
 # --- Scenario helpers -----------------------------------------------------------
@@ -204,7 +205,7 @@ func _assignments() -> void:
 		["an escort with no protect", "escort_1", {"role": "escort"}],
 		["an escort protecting a player's unit", "escort_1", {"role": "escort", "protect": "p1"}],
 		["an escort protecting itself", "escort_1", {"role": "escort", "protect": "escort_1"}],
-		["an unknown role", "escort_1", {"role": "patrol"}],
+		["an unknown role", "escort_1", {"role": "dance"}],
 		["a band the type cannot hold", "bomber_1", {"role": "strike", "target": [2000.0, 2000.0], "band": "surface"}],
 		["orders that are not a Dictionary", "bomber_1", "strike"],
 	]
@@ -737,3 +738,316 @@ func _stays_on_the_map() -> void:
 	eq(outside, 0, "no AI unit left the map in 20 turns")
 	eq(turned_away, 0, "the bomber that began inside the margin, heading inward, flew on")
 	print("  map: 20 turns, closest approach to an edge %.0f m" % min_edge)
+
+# --- The patrol (Track S2, 2026-10-10: the strike's one enemy fighter) ------------------
+#
+# A fighter flies a loop of waypoints, engages an enemy that comes within patrol.engage_radius_m,
+# breaks off by the escort's rules (health, leash, no firing chance, target gone), returns to the
+# loop and patrols again; it never reads a player's plan; static units are not planned.
+
+const LOOP := [[2000.0, 2000.0], [3000.0, 2000.0], [3000.0, 3000.0], [2000.0, 3000.0]]
+
+# An AI patrol fighter at the loop's first corner heading east in `band`, and an enemy (a player's
+# fighter) if `enemy` is given: {fwd, rgt, dh, speed, band, type} relative to the patrol.
+func _patrol_world(enemy: Dictionary = {}, band := "medium", world: World = null) -> World:
+	var w: World = world if world != null else World.new()
+	check(w.ok(), "the world's data loads: %s" % str(w.errors))
+	w.add_player("local")
+	eq(w.add_unit({"id": "patrol_1", "type": "light_fighter", "side": "axis", "controller": "ai", "x": 2000.0, "y": 2000.0, "heading": 0.0, "speed": 85.0, "altitude_band": band}), "patrol_1", "the patrol is added")
+	if not enemy.is_empty():
+		var p := _rel({"x": 2000.0, "y": 2000.0, "heading": 0.0}, float(enemy["fwd"]), float(enemy["rgt"]))
+		eq(w.add_unit({"id": "p1", "type": enemy.get("type", "light_fighter"), "side": "allies", "controller": "player", "x": p.x, "y": p.y,
+			"heading": float(enemy["dh"]), "speed": enemy.get("speed", 100.0), "altitude_band": enemy.get("band", band)}), "p1", "the enemy is added")
+	for id: String in w.units:
+		w.units[id].health = TOUGH
+	return w
+
+func _patrol_pilot(w: World, tweak: Dictionary = {}) -> AiPilot:
+	var ai := AiPilot.new()
+	check(ai.ok(), "the AI's data loads: %s" % str(ai.errors))
+	for k: String in tweak:
+		var parts := k.split(".")
+		ai.params.set_value(parts[0], parts[1], tweak[k])
+	check(ai.attach(w, {"patrol_1": {"role": "patrol", "route": LOOP}}), "the pilot attaches: %s" % str(ai.errors))
+	return ai
+
+func _loop_distance(p: Vector2) -> float:
+	var best := INF
+	for i in LOOP.size():
+		var a: Array = LOOP[i]
+		var b: Array = LOOP[(i + 1) % LOOP.size()]
+		best = minf(best, Geometry2D.get_closest_point_to_segment(p, Vector2(float(a[0]), float(a[1])), Vector2(float(b[0]), float(b[1]))).distance_to(p))
+	return best
+
+func _patrol_tests() -> void:
+	_patrol_assignments()
+	_patrol_flies_the_loop()
+	_patrol_engages()
+	_patrol_radius_and_sight()
+	_patrol_breaks_off_by_leash()
+	_patrol_breaks_off_by_no_chance()
+	_patrol_breaks_off_by_health()
+	_patrol_target_gone()
+	_patrol_never_reads_a_players_plan()
+	_patrol_determinism()
+	_static_units_are_not_planned()
+
+func _patrol_assignments() -> void:
+	var w := _patrol_world({"fwd": 3000.0, "rgt": 0.0, "dh": PI})
+	w.add_unit({"id": "tower", "type": "radio_tower", "side": "axis", "controller": "ai", "x": 2500.0, "y": 2500.0, "heading": 0.0})
+	var ai := AiPilot.new("res://data/sim/ai.json", true)
+	check(ai.attach(w, {"patrol_1": {"role": "patrol", "route": LOOP}}), "a patrol with a loop of four attaches")
+	eq((ai.assignments["patrol_1"]["route"] as Array).size(), 4, "the loop is the route as given (no target appended: it never ends)")
+	var cases: Array = [
+		["a patrol with no route", "patrol_1", {"role": "patrol"}],
+		["a patrol with one waypoint", "patrol_1", {"role": "patrol", "route": [[2000.0, 2000.0]]}],
+		["a patrol whose route is not points", "patrol_1", {"role": "patrol", "route": [[1.0], [2.0]]}],
+		["a patrol in a band the type cannot hold", "patrol_1", {"role": "patrol", "route": LOOP, "band": "surface"}],
+		["orders for a player's unit", "p1", {"role": "patrol", "route": LOOP}],
+		["orders for a static unit", "tower", {"role": "patrol", "route": LOOP}],
+		["a role nobody knows", "patrol_1", {"role": "dance"}],
+	]
+	for c: Array in cases:
+		check(not ai.assign(str(c[1]), c[2]), "%s is refused" % c[0])
+	check(String(ai.errors[ai.errors.size() - 2]).contains("static"), "the static unit's refusal says so: %s" % str(ai.errors))
+	check(ai.assign("patrol_1", {"role": "patrol", "route": [[2000.0, 2000.0], [3000.0, 2000.0]], "band": "high"}), "a loop of two waypoints in another band is accepted")
+	eq(ai.assignments["patrol_1"]["band"], "high", "the band is kept")
+
+# Round the loop, twice and a bit, in order, holding the band, near the loop, at the patrol speed.
+func _patrol_flies_the_loop() -> void:
+	var w := _patrol_world()
+	var ai := _patrol_pilot(w)
+	var expected_speed: float = w.units["patrol_1"].def.envelope.speed_cruise * ai.params.num("patrol", "speed_fraction_of_cruise")
+	var wps: Array[int] = [int(ai.info("patrol_1")["wp"])]
+	var max_off := 0.0
+	var states: Array[String] = []
+	var speeds: Array[float] = []
+	var left := 0
+	for turn_no in 22:
+		var res := _turn(w)
+		var u: Variant = w.units["patrol_1"]
+		max_off = maxf(max_off, _loop_distance(Vector2(float(u.x), float(u.y))))
+		states.append(ai.state_of("patrol_1"))
+		speeds.append(float(u.speed))
+		for ev: Dictionary in res["events"]:
+			if str(ev["type"]) == "left_bounds":
+				left += 1
+		eq(u.altitude_band, "medium", "turn %d: the band is held" % (turn_no + 1))
+		_next(w)
+		wps.append(int(ai.info("patrol_1")["wp"]))
+	# The waypoint index only ever steps to the next one, round the loop.
+	var steps := 0
+	var ordered := true
+	for i in range(1, wps.size()):
+		if wps[i] != wps[i - 1]:
+			steps += 1
+			if wps[i] != (wps[i - 1] + 1) % LOOP.size():
+				ordered = false
+	check(ordered, "the waypoints are taken in order, round the loop: %s" % str(wps))
+	check(steps >= 8, "two laps and more: %d waypoints taken in 22 turns" % steps)
+	check(states.all(func(s: String) -> bool: return s == AiPilot.S_PATROL), "it stays in the patrol state: %s" % str(states))
+	check(max_off < 450.0, "it stays near the loop (at most %.0f m off)" % max_off)
+	var mean_speed := 0.0
+	for s: float in speeds:
+		mean_speed += s
+	mean_speed /= float(speeds.size())
+	check(absf(mean_speed - expected_speed) < 10.0, "at about the patrol speed (%.1f m/s against %.1f)" % [mean_speed, expected_speed])
+	eq(left, 0, "it never left the map")
+	eq(ai.transitions.size(), 0, "and never changed state")
+
+# An enemy crosses its nose: it engages, brings the target into its cone, takes its band.
+func _patrol_engages() -> void:
+	var w := _patrol_world({"fwd": 450.0, "rgt": 350.0, "dh": -PI / 2.0, "speed": 100.0, "band": "high"})
+	var ai := _patrol_pilot(w, {"patrol.no_chance_turns": 1000})
+	var t := _transition_to(ai, "patrol_1", AiPilot.S_ENGAGE, AiPilot.R_ENEMY)
+	check(not t.is_empty(), "the patrol engages an enemy inside its engage radius: %s" % str(ai.transitions))
+	eq(int(ai.info("patrol_1")["since"]), 1, "on the first turn it sees it")
+	eq(ai.info("patrol_1")["target"], "p1", "its target is the enemy")
+	var contact := 0.0
+	var in_band := false
+	for turn_no in 4:
+		_turn(w)
+		contact += _contact(w, ai, "patrol_1", "p1")
+		if w.units["patrol_1"].altitude_band == "high":
+			in_band = true
+		_next(w)
+	print("  patrol engage: the target was in the patrol's cone for %.2f s over 4 turns" % contact)
+	check(contact >= 2.0, "steering brought the target into the forward cone (%.2f s)" % contact)
+	check(in_band, "the patrol matched the target's altitude band (high)")
+
+# Inside sight but outside the engage radius: seen, not engaged. Outside sight: not even seen.
+func _patrol_radius_and_sight() -> void:
+	var radius := AiPilot.new().params.num("patrol", "engage_radius_m")
+	var sight: float = World.new().unit_def("light_fighter").sight_range_m
+	var inside := _patrol_world({"fwd": radius - 50.0, "rgt": 0.0, "dh": PI, "speed": 100.0})
+	var ai_in := _patrol_pilot(inside)
+	eq(ai_in.state_of("patrol_1"), AiPilot.S_ENGAGE, "an enemy %.0f m away (radius %.0f) is engaged" % [radius - 50.0, radius])
+	var between := _patrol_world({"fwd": radius + 50.0, "rgt": 0.0, "dh": PI, "speed": 100.0})
+	var ai_b := _patrol_pilot(between)
+	check(ai_b.sees("p1"), "an enemy %.0f m away is in sight (sight %.0f)" % [radius + 50.0, sight])
+	eq(ai_b.state_of("patrol_1"), AiPilot.S_PATROL, "but beyond the engage radius: not engaged")
+	var out := _patrol_world({"fwd": sight + 100.0, "rgt": 0.0, "dh": PI, "speed": 100.0})
+	var ai_o := _patrol_pilot(out)
+	check(not ai_o.sees("p1"), "an enemy beyond sight is not seen")
+	eq(ai_o.state_of("patrol_1"), AiPilot.S_PATROL, "so it patrols on")
+
+# Leash: the enemy flies away; the patrol follows until it is farther than leash_m from the loop,
+# breaks off, flies back, and patrols again.
+func _patrol_breaks_off_by_leash() -> void:
+	var w := _patrol_world({"fwd": 450.0, "rgt": 350.0, "dh": -PI / 2.0, "speed": 160.0})
+	var ai := _patrol_pilot(w, {"patrol.no_chance_turns": 1000, "patrol.leash_m": 400.0})
+	var dist_at_plan := {}
+	for turn_no in 14:
+		var u: Variant = w.units["patrol_1"]
+		dist_at_plan[w.turn] = _loop_distance(Vector2(float(u.x), float(u.y)))
+		_turn(w)
+		_next(w)
+	var off := _transition_to(ai, "patrol_1", AiPilot.S_RETURN, AiPilot.R_LEASH)
+	check(not off.is_empty(), "the patrol breaks off by the leash: %s" % str(_transitions(ai, "patrol_1")))
+	if not off.is_empty():
+		var turn_off := int(off["turn"])
+		check(float(dist_at_plan[turn_off]) > 400.0, "it was beyond the leash when it did (%.0f m of 400 m)" % float(dist_at_plan[turn_off]))
+		check(float(dist_at_plan[turn_off - 1]) <= 400.0, "and not the turn before (%.0f m)" % float(dist_at_plan[turn_off - 1]))
+		var home := _transition_to(ai, "patrol_1", AiPilot.S_PATROL, AiPilot.R_REJOINED)
+		check(not home.is_empty() and int(home["turn"]) > turn_off, "it came back to the loop and patrols again: %s" % str(_transitions(ai, "patrol_1")))
+
+# No chance: the enemy outruns the patrol; after exactly no_chance_turns engaged turns without a
+# predicted firing chance the patrol breaks off (the leash is off so only that rule can end it).
+func _patrol_breaks_off_by_no_chance() -> void:
+	var w := _patrol_world({"fwd": 330.0, "rgt": 250.0, "dh": 0.0, "speed": 160.0})
+	var ai := _patrol_pilot(w, {"patrol.leash_m": 1.0e9})
+	var n := ai.params.whole("patrol", "no_chance_turns")
+	for turn_no in 14:
+		_turn(w)
+		_next(w)
+	var on := _transition_to(ai, "patrol_1", AiPilot.S_ENGAGE, AiPilot.R_ENEMY)
+	var off := _transition_to(ai, "patrol_1", AiPilot.S_RETURN, AiPilot.R_NO_CHANCE)
+	check(not on.is_empty() and not off.is_empty(), "it engaged, then broke off by the no-chance rule: %s" % str(_transitions(ai, "patrol_1")))
+	if not on.is_empty() and not off.is_empty():
+		eq(int(off["turn"]) - int(on["turn"]), n, "after exactly no_chance_turns (%d) engaged turns" % n)
+
+# Health: at exactly the fraction it still fights; one pip below it breaks off; a wounded patrol
+# never engages, however near the enemy.
+func _patrol_breaks_off_by_health() -> void:
+	var w := _patrol_world({"fwd": 450.0, "rgt": 350.0, "dh": -PI / 2.0, "speed": 100.0})
+	var ai := _patrol_pilot(w, {"patrol.leash_m": 1.0e9, "patrol.no_chance_turns": 1000})
+	for i in 2:
+		_turn(w)
+		_next(w)
+	eq(ai.state_of("patrol_1"), AiPilot.S_ENGAGE, "engaged after two turns")
+	var e: Variant = w.units["patrol_1"]
+	var hp: int = e.def.health
+	var frac := ai.params.num("patrol", "break_off_health_fraction")
+	e.health = int(ceil(frac * float(hp)))
+	ai.plan_turn()
+	eq(ai.state_of("patrol_1"), AiPilot.S_ENGAGE, "at the break-off fraction (%d of %d) it still fights" % [e.health, hp])
+	e.health = int(ceil(frac * float(hp))) - 1
+	ai.plan_turn()
+	eq(ai.state_of("patrol_1"), AiPilot.S_RETURN, "one pip below it breaks off (%d of %d)" % [e.health, hp])
+	eq(ai.info("patrol_1")["reason"], AiPilot.R_HEALTH, "for its health")
+	var w2 := _patrol_world({"fwd": 300.0, "rgt": 250.0, "dh": PI, "speed": 100.0})
+	w2.units["patrol_1"].health = 1
+	var ai2 := _patrol_pilot(w2)
+	for turn_no in 5:
+		_turn(w2)
+		_next(w2)
+	eq(_transition_to(ai2, "patrol_1", AiPilot.S_ENGAGE).size(), 0, "a wounded patrol never engages")
+	eq(ai2.state_of("patrol_1"), AiPilot.S_PATROL, "it flies its loop")
+
+# The target is forgotten or goes down: back to the loop.
+func _patrol_target_gone() -> void:
+	var w := _patrol_world({"fwd": 450.0, "rgt": 350.0, "dh": -PI / 2.0, "speed": 100.0})
+	var ai := _patrol_pilot(w, {"patrol.leash_m": 1.0e9, "patrol.no_chance_turns": 1000})
+	_turn(w)
+	_next(w)
+	eq(ai.state_of("patrol_1"), AiPilot.S_ENGAGE, "engaged")
+	w.units["p1"].down = true
+	w.units["p1"].down_at = NAN
+	ai.plan_turn()
+	eq(ai.state_of("patrol_1"), AiPilot.S_RETURN, "the target is down: the patrol goes back to its loop")
+	eq(ai.info("patrol_1")["reason"], AiPilot.R_TARGET_GONE, "because its target is gone")
+	for turn_no in 8:
+		_turn(w)
+		_next(w)
+	eq(ai.state_of("patrol_1"), AiPilot.S_PATROL, "and patrols again")
+
+# The patrol's plan is the same whether the player plans something wild or nothing, and a spy on the
+# World's API sees it never ask about the player's unit.
+func _patrol_never_reads_a_players_plan() -> void:
+	var enemy := {"fwd": 450.0, "rgt": 350.0, "dh": -PI / 2.0, "speed": 100.0}
+	var a := _patrol_world(enemy)
+	var b := _patrol_world(enemy)
+	var ai_a := _patrol_pilot(a)
+	var ai_b := _patrol_pilot(b)
+	for i in 2:
+		_turn(a)
+		_turn(b)
+		_next(a)
+		_next(b)
+	var before: Array = (a.units["patrol_1"].plan as Array).duplicate(true)
+	eq(before, b.units["patrol_1"].plan, "the same plans before the player plans anything")
+	_odd_plans(a)
+	ai_a.plan_turn()
+	eq(a.units["patrol_1"].plan, before, "the patrol's plan does not change when a player plans")
+	eq(a.units["patrol_1"].plan, b.units["patrol_1"].plan, "and equals the plan where nobody planned")
+	eq(ai_a.state_of("patrol_1"), ai_b.state_of("patrol_1"), "the state agrees too")
+	var spy := SpyWorld.new()
+	_patrol_world(enemy, "medium", spy)
+	spy.recording = true
+	var ai_spy := _patrol_pilot(spy)
+	spy.recording = false
+	for i in 3:
+		_odd_plans(spy)
+		_turn(spy)
+		spy.recording = true
+		_next(spy)
+		spy.recording = false
+	check(spy.calls.size() > 0, "the spy saw the AI plan (%d calls)" % spy.calls.size())
+	eq(spy.calls.filter(func(c: Array) -> bool: return str(c[1]) == "p1"), [], "the AI never asked the World about a player's unit")
+	check(ai_spy.ok(), "(the pilot, kept alive to plan every turn, had no errors)")
+
+func _patrol_determinism() -> void:
+	var runs: Array = []
+	for r in 2:
+		var w := _patrol_world({"fwd": 450.0, "rgt": 350.0, "dh": -PI / 2.0, "speed": 100.0})
+		var ai := _patrol_pilot(w)
+		var record: Array = []
+		for t in 12:
+			record.append(_turn(w)["histories"])
+			_next(w)
+		runs.append({"histories": record, "transitions": ai.transitions.duplicate(true), "info": ai.info("patrol_1")})
+	eq(runs[0], runs[1], "two identical games with a patrol are identical")
+
+# A static unit is never planned, takes no orders, and does not hold the AI's ready-up: a world
+# of a patrol and statics readies and resolves; a world of statics alone needs only the players.
+func _static_units_are_not_planned() -> void:
+	var w := _patrol_world({"fwd": 3000.0, "rgt": 0.0, "dh": PI})
+	w.add_unit({"id": "tower", "type": "radio_tower", "side": "axis", "controller": "ai", "x": 2500.0, "y": 2500.0, "heading": 0.0})
+	w.add_unit({"id": "aa", "type": "anti_aircraft_battery", "side": "axis", "controller": "ai", "x": 2300.0, "y": 2300.0, "heading": 0.0})
+	var ai := _patrol_pilot(w)
+	eq(w.units["tower"].plan.size(), 0, "the tower has no plan")
+	eq(w.units["aa"].plan.size(), 0, "nor the battery")
+	check(w.units["patrol_1"].plan.size() > 0, "the patrol does")
+	check(w.is_ready(World.AI_PLAYER), "the AI readied up")
+	for turn_no in 3:
+		_turn(w)
+		_next(w)
+	eq(w.units["tower"].plan.size(), 0, "still no plan for the tower after three turns")
+	eq(ai.errors, [] as Array[String], "and the AI complained of nothing")
+	# Statics alone: the AI has nothing to plan and nothing to wait for.
+	var w2 := World.new()
+	w2.quiet = true
+	w2.add_player("local")
+	w2.add_unit({"id": "tower", "type": "radio_tower", "side": "axis", "controller": "ai", "x": 2500.0, "y": 2500.0, "heading": 0.0})
+	w2.add_unit({"id": "p1", "type": "light_fighter", "side": "allies", "controller": "player", "x": 1000.0, "y": 1000.0, "heading": 0.0})
+	var ai2 := AiPilot.new()
+	check(ai2.attach(w2, {}), "a pilot with nothing to command attaches")
+	eq(w2.participants(), ["local"] as Array[String], "the AI is not a participant when it is only statics")
+	check(w2.commit("local"), "the player alone readies the turn")
+	check(not w2.resolve().is_empty(), "and it resolves: %s" % w2.last_error)
+	# A static AI unit is an observer: what its sight covers the AI knows (it reads only public state, as ever).
+	var w3 := _patrol_world({"fwd": 2500.0, "rgt": 2000.0, "dh": PI, "speed": 100.0})
+	w3.add_unit({"id": "aa", "type": "anti_aircraft_battery", "side": "axis", "controller": "ai", "x": float(w3.units["p1"].x) - 300.0, "y": float(w3.units["p1"].y), "heading": 0.0})
+	var ai3 := _patrol_pilot(w3)
+	check(ai3.sees("p1"), "a plane inside a battery's sight is seen by the AI, far from the patrol's own")
+	eq(ai3.state_of("patrol_1"), AiPilot.S_PATROL, "(the patrol still engages only what comes near it)")

@@ -10,3 +10,17 @@ the file. None is a decision until Alex makes it one (see
 `data/decisions/decisions.json`). `test_unit_defs` checks every file here
 and recomputes the map-size rule in `data/sim/turn.json`, so a retune that
 outgrows the map fails the gate.
+
+## The strike's units (Track S2, 2026-10-10)
+
+`radio_tower.json` and `anti_aircraft_battery.json` are **static** units
+(`"mobility": "static"`): they never move, turn or plan, their envelope is all
+zeros on the `surface` band, the World gives them one step a turn that stands
+still and does not wait for them in the ready-up. A destroyed one is down with
+the fate `destroyed` and stays in `World.units`. The battery's one weapon, flak,
+is a cone aimed up and all around (`half_across_deg` 180 means the azimuth is
+not part of the cone). Every file carries a `bomb_load` section (`drops`,
+`per_drop`): 0 and 0 for units that drop nothing, at least two drops for those
+that do (Alex: everything gets at least two). The bombs' physics is shared and
+lives in `data/sim/bombs.json`. All values are proposed; the tuning tables are
+printed by `scripts/test_support/strike_tuning.gd`.

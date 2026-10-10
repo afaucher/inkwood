@@ -170,7 +170,8 @@ func _plane(def: UnitDef) -> void:
 func _ship() -> void:
 	var rec := func(v: Variant) -> Dictionary: return {"value": v, "_proposed": true, "_reason": "test ship"}
 	var d := {
-		"id": "test_ship", "name": "Test ship", "domain": "sea",
+		"id": "test_ship", "name": "Test ship", "domain": "sea", "mobility": "mobile",
+		"bomb_load": {"drops": rec.call(0), "per_drop": rec.call(0)},
 		"size_m": rec.call(120), "actions_per_turn": rec.call(2), "health": rec.call(20),
 		"sight_range_m": rec.call(3000), "drawing": {"silhouette": "small_cruiser"}, "weapons": [],
 		"envelope": {

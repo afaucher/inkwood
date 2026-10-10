@@ -16,7 +16,7 @@ const CombatWeapon = preload("res://scripts/sim/combat_weapon.gd")
 
 # The demo's air units (design doc, Initial unit roster). More files may exist;
 # these must.
-const REQUIRED := ["light_fighter", "heavy_fighter", "bomber"]
+const REQUIRED := ["light_fighter", "heavy_fighter", "bomber", "radio_tower", "anti_aircraft_battery"]
 
 # Tracking rates by mounting, across every unit file (the design: a fixed gun tolerates less crossing than a gunner).
 var _fixed_tracking: Array[float] = []
@@ -35,11 +35,14 @@ func setup(_main) -> void:
 		finish()
 		return
 	var fields: Dictionary = (schema as Dictionary)["fields"]
-	for f: String in ["id", "name", "domain", "size_m", "actions_per_turn", "health", "sight_range_m", "drawing", "envelope", "weapons"]:
+	for f: String in ["id", "name", "domain", "mobility", "size_m", "actions_per_turn", "health", "sight_range_m", "drawing", "envelope", "weapons", "bomb_load"]:
 		check(fields.has(f), "schema lists '%s'" % f)
 	var weapon_fields: Dictionary = (fields.get("weapons", {}) as Dictionary).get("item_fields", {})
 	for f: String in ["id", "name", "kind", "hardpoints", "mount_deg", "half_across_deg", "elevation_deg", "half_height_deg", "effective_range_m", "base_hit_chance", "rim_odds_factor", "falloff_exponent", "tracking_dps", "damage_pips", "rolls_per_second"]:
 		check(weapon_fields.has(f), "schema lists weapons[].%s" % f)
+	var load_fields: Dictionary = (fields.get("bomb_load", {}) as Dictionary).get("fields", {})
+	for f: String in ["drops", "per_drop"]:
+		check(load_fields.has(f), "schema lists bomb_load.%s" % f)
 	var env_fields: Dictionary = (fields.get("envelope", {}) as Dictionary).get("fields", {})
 	for f: String in ["speed_min_mps", "speed_max_mps", "accel_mps2", "decel_mps2", "turn_rate_curve_dps", "turn_bleed_mps2", "climb_speed_cost_mps", "dive_speed_gain_mps", "altitude_bands", "reverse_from_stop"]:
 		check(env_fields.has(f), "schema lists envelope.%s" % f)
@@ -68,6 +71,7 @@ func setup(_main) -> void:
 			snappedf(rad_to_deg(def.envelope.turn_rate(def.envelope.speed_min)), 0.1),
 			str(def.envelope.bands)])
 		_check_weapons(def)
+		_check_load_and_mobility(def)
 	for id: String in REQUIRED:
 		check(found.has(id), "data/units/%s.json exists" % id)
 	check(not _fixed_tracking.is_empty() and not _gunner_tracking.is_empty() and _fixed_tracking.max() < _gunner_tracking.min(), "every fixed gun tracks worse than every flexible gun and turret (fixed up to %s deg/s, gunners from %s)" % [str(_fixed_tracking.max()), str(_gunner_tracking.min())])
@@ -100,6 +104,16 @@ func setup(_main) -> void:
 		["a tracking rate of nothing", "'weapons[0].tracking_dps' = 0.0 is outside"],
 		["no weapons list", "missing list 'weapons'"],
 		["a weapon that is not an object", "'weapons[0]' is not an object"],
+		["a mobility outside the two", "'mobility' = 'floating' is not one of"],
+		["no mobility", "missing text 'mobility'"],
+		["no bomb load", "missing section 'bomb_load'"],
+		["a static unit that moves", "a static unit never moves"],
+		["a static unit that turns", "a static unit never turns"],
+		["a static unit that changes band", "a static unit never changes band"],
+		["a bomber with one drop", "bomb_load.drops = 1: a bomber has at least two drops"],
+		["drops without bombs", "bomb_load: drops (3) and per_drop (0)"],
+		["bombs without drops", "bomb_load: drops (0) and per_drop (4)"],
+		["a negative bomb count", "'bomb_load.per_drop' = -1 is below 0"],
 	]
 	for c: Array in cases:
 		var what: String = c[0]
@@ -201,6 +215,31 @@ func _break(d: Dictionary, what: String) -> void:
 			d.erase("weapons")
 		"a weapon that is not an object":
 			d["weapons"] = [5]
+		"a mobility outside the two":
+			d["mobility"] = "floating"
+		"no mobility":
+			d.erase("mobility")
+		"no bomb load":
+			d.erase("bomb_load")
+		"a static unit that moves":
+			d["mobility"] = "static"
+		"a static unit that turns":
+			d["mobility"] = "static"
+			for k: String in ["speed_min_mps", "speed_cruise_mps", "speed_max_mps", "dive_speed_max_mps", "accel_mps2", "decel_mps2", "turn_bleed_mps2"]:
+				env[k] = {"value": 0, "_proposed": true, "_reason": "x"}
+		"a static unit that changes band":
+			d["mobility"] = "static"
+			for k: String in ["speed_min_mps", "speed_cruise_mps", "speed_max_mps", "dive_speed_max_mps", "accel_mps2", "decel_mps2", "turn_bleed_mps2"]:
+				env[k] = {"value": 0, "_proposed": true, "_reason": "x"}
+			env["turn_rate_curve_dps"] = {"value": [[0, 0]], "_proposed": true, "_reason": "x"}
+		"a bomber with one drop":
+			d["bomb_load"] = {"drops": {"value": 1, "_proposed": true, "_reason": "x"}, "per_drop": {"value": 2, "_proposed": true, "_reason": "x"}}
+		"drops without bombs":
+			d["bomb_load"] = {"drops": {"value": 3, "_proposed": true, "_reason": "x"}, "per_drop": {"value": 0, "_proposed": true, "_reason": "x"}}
+		"bombs without drops":
+			d["bomb_load"] = {"drops": {"value": 0, "_proposed": true, "_reason": "x"}, "per_drop": {"value": 4, "_proposed": true, "_reason": "x"}}
+		"a negative bomb count":
+			d["bomb_load"] = {"drops": {"value": 3, "_proposed": true, "_reason": "x"}, "per_drop": {"value": -1, "_proposed": true, "_reason": "x"}}
 		_:
 			fail("no such breakage: " + what)
 
@@ -236,7 +275,30 @@ func _check_weapons(def: UnitDef) -> void:
 			eq(def.weapons[0].damage_pips, 2, "the cannon does 2 pips")
 			eq(def.weapons[0].effective_range_m, 600.0, "...at 600 m")
 			eq(def.weapons[1].mount_deg, 180.0, "the rear gunner points rearward")
+		"radio_tower":
+			eq(ids, [] as Array[String], "radio tower: no weapons")
+		"anti_aircraft_battery":
+			eq(ids, ["flak"] as Array[String], "anti-aircraft battery: flak")
+			eq(def.weapons[0].half_across_deg, 180.0, "...all around")
+			check(def.weapons[0].elevation_deg > 0.0, "...aimed up (centre %s deg)" % def.weapons[0].elevation_deg)
 		"bomber":
 			eq(ids, ["nose_gun", "dorsal_turret", "tail_turret"] as Array[String], "bomber: nose gun, dorsal turret, tail turret")
 			eq(def.weapons[2].effective_range_m, 400.0, "the tail turret's effective range is 400 m")
 			eq(def.weapons[1].elevation_deg, 35.0, "the dorsal turret's cone is centred 35 deg up")
+
+# Mobility and the bomb load (Track S2, the strike): the static units are the tower and the battery, every
+# other file is mobile; a load is at least two drops (Alex: everything gets at least two) or nothing; the
+# fighters carry none and the bomber carries some; a smaller bomber would carry fewer (nothing here is smaller).
+func _check_load_and_mobility(def: UnitDef) -> void:
+	var is_ground_static := def.id == "radio_tower" or def.id == "anti_aircraft_battery"
+	eq(def.is_static(), is_ground_static, "%s: static exactly for the tower and the battery" % def.id)
+	eq(def.mobility, "static" if is_ground_static else "mobile", "%s: mobility is %s" % [def.id, "static" if is_ground_static else "mobile"])
+	check(def.bomb_drops == 0 or def.bomb_drops >= 2, "%s: a bomb load is at least two drops, or none (%d)" % [def.id, def.bomb_drops])
+	check((def.bomb_drops > 0) == (def.bomb_per_drop > 0), "%s: drops and bombs per drop are both there or both absent" % def.id)
+	eq(def.carries_bombs(), def.bomb_drops > 0, "%s: carries_bombs() follows the load" % def.id)
+	if def.id == "bomber":
+		check(def.carries_bombs(), "the bomber carries bombs (%d drops of %d)" % [def.bomb_drops, def.bomb_per_drop])
+	if def.domain == "air" and def.id != "bomber":
+		check(not def.carries_bombs(), "%s carries none" % def.id)
+	if is_ground_static:
+		check(def.envelope.speed_max == 0.0 and def.envelope.bands == (["surface"] as Array[String]), "%s: never moves, lives on the surface" % def.id)

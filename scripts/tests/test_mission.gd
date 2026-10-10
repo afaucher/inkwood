@@ -27,6 +27,7 @@ func setup(_main) -> void:
 	_attach_and_client()
 	_spec_errors()
 	_vocabulary()
+	_turn_limit_and_strike()
 	finish()
 
 # Two player fighters far from everything, an AI bomber (and its id "bomber_1")
@@ -272,3 +273,101 @@ func _vocabulary() -> void:
 	# The empty set is never "all down".
 	var m3 := Mission.new(_world(), {"win": [{"type": "all_down", "side": "nobody"}], "lose": [{"type": "unit_down", "unit": "p1"}]})
 	eq(m3.evaluate({"turn": 1})["state"], Mission.PLAYING, "an empty side is not 'all down'")
+
+# --- The turn limit and the Strike (Track S2, 2026-10-10) ---------------------------------------------
+#
+# Alex's strike-plan: "win when the target is destroyed, lose when the bomber is down or at a turn limit".
+# The target is a static ground unit and goes down with the fate "destroyed" like any unit goes down; the
+# turn limit is a lose condition that holds at the END of turn n.
+
+func _strike_world() -> World:
+	var w := World.new()
+	check(w.ok(), "the world's data loads: %s" % str(w.errors))
+	w.add_player("local")
+	w.add_unit({"id": "bomber", "type": "bomber", "side": "allies", "controller": "player", "x": 400.0, "y": 2500.0, "heading": 0.0, "altitude_band": "medium", "speed": 85.0})
+	w.add_unit({"id": "tower", "type": "radio_tower", "side": "axis", "controller": "ai", "x": 2500.0, "y": 2500.0, "heading": 0.0})
+	return w
+
+func _strike_turn(w: World) -> Dictionary:
+	w.commit("local")
+	var res := w.resolve()
+	check(not res.is_empty(), "the turn resolves: %s" % w.last_error)
+	return res
+
+func _turn_limit_and_strike() -> void:
+	var spec := Mission.strike("tower", "bomber", 3)
+	var w := _strike_world()
+	var m := Mission.new(w, spec)
+	check(m.ok(), "the Strike spec is valid: %s" % str(m.errors))
+	eq(spec["win"], [{"type": "unit_down", "unit": "tower"}], "won when the tower is down")
+	eq((spec["lose"] as Array).size(), 2, "lost two ways")
+	# Turns 1 and 2: nothing has happened, the limit is 3.
+	for turn_no in 2:
+		var res := _strike_turn(w)
+		eq(m.evaluate(res)["state"], Mission.PLAYING, "turn %d of a 3-turn limit: playing" % w.turn)
+		w.begin_turn()
+	# The end of turn 3: lost, at the end of the turn.
+	var res3 := _strike_turn(w)
+	var r := m.evaluate(res3)
+	eq(r["state"], Mission.LOST, "the end of turn 3 with the tower standing: lost")
+	check(str(r["reason"]).contains("3"), "the reason names the limit: %s" % r["reason"])
+	near(float(r["t"]), w.rules.turn_seconds, 1e-9, "at the end of the turn")
+	eq(r["turn"], 3, "on turn 3")
+	# A win earlier in the turn the limit falls in beats it.
+	var w2 := _strike_world()
+	var m2 := Mission.new(w2, Mission.strike("tower", "bomber", 1))
+	var res := _strike_turn(w2)
+	w2.units["tower"].down = true
+	w2.units["tower"].down_at = 3.2
+	w2.units["tower"].fate = "destroyed"
+	var r2 := m2.evaluate(res)
+	eq(r2["state"], Mission.WON, "the tower destroyed at 3.2 s of the last turn: won, not lost to the limit")
+	near(float(r2["t"]), 3.2, 1e-9, "at that moment")
+	# The bomber down earlier in the turn than the tower: lost to the bomber.
+	var w3 := _strike_world()
+	var m3 := Mission.new(w3, Mission.strike("tower", "bomber", 10))
+	var res3b := _strike_turn(w3)
+	w3.units["tower"].down = true
+	w3.units["tower"].down_at = 4.0
+	w3.units["bomber"].down = true
+	w3.units["bomber"].down_at = 1.5
+	var r3 := m3.evaluate(res3b)
+	eq(r3["state"], Mission.LOST, "the bomber down at 1.5 s, the tower at 4.0 s: lost")
+	check(str(r3["reason"]).contains("bomber"), "because of the bomber: %s" % r3["reason"])
+	# The bomber down on its own (no tower yet): lost at once, long before the limit.
+	var w4 := _strike_world()
+	var m4 := Mission.new(w4, Mission.strike("tower", "bomber", 10))
+	var res4 := _strike_turn(w4)
+	w4.units["bomber"].down = true
+	w4.units["bomber"].down_at = 2.0
+	eq(m4.evaluate(res4)["state"], Mission.LOST, "a bomber down loses the strike whatever the turn")
+	# Sticky: after the limit, a late win does not undo it.
+	w.units["tower"].down = true
+	w.units["tower"].down_at = NAN
+	eq(m.evaluate({"turn": 4})["state"], Mission.LOST, "a result is sticky: the limit is not undone by a tower falling later")
+	# A mission evaluated late (turn 5 of a 3-turn limit) is still lost to the limit.
+	var w5 := _strike_world()
+	var m5 := Mission.new(w5, Mission.strike("tower", "bomber", 3))
+	eq(m5.evaluate({"turn": 5})["state"], Mission.LOST, "evaluated after the limit it still holds")
+	# A client that applied the host's results reaches the host's verdict, the limit included.
+	var host := _strike_world()
+	var client := _strike_world()
+	var mh := Mission.new(host, Mission.strike("tower", "bomber", 2))
+	var mc := Mission.new(client, Mission.strike("tower", "bomber", 2))
+	mh.attach()
+	mc.attach()
+	for turn_no in 2:
+		var hr := _strike_turn(host)
+		check(client.apply_resolution(hr), "the client applies turn %d: %s" % [host.turn, client.last_error])
+		host.begin_turn()
+		client.begin_turn()
+	eq(mh.state, Mission.LOST, "the host's mission is lost at the limit")
+	eq(mc.state, mh.state, "and the client's agrees")
+	eq(mc.reason, mh.reason, "with the same reason")
+	# Bad specs: the limit must be a whole number of turns, 1 or more.
+	for bad: Variant in [0, -3, 2.5, "ten", null]:
+		var spec_bad := {"win": [{"type": "unit_down", "unit": "tower"}], "lose": [{"type": "turn_limit", "turn": bad}]}
+		check(not Mission.new(_strike_world(), spec_bad, "res://data/sim/ai.json", true).ok(), "a turn limit of %s is refused" % str(bad))
+	var no_turn := {"win": [{"type": "unit_down", "unit": "tower"}], "lose": [{"type": "turn_limit"}]}
+	check(not Mission.new(_strike_world(), no_turn, "res://data/sim/ai.json", true).ok(), "a turn limit with no turn is refused")
+	check(Mission.TYPES.has(Mission.TYPE_TURN_LIMIT), "the vocabulary lists turn_limit")

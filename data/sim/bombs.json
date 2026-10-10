@@ -1,0 +1,77 @@
+{
+  "_about": "The bombing model's constants (scripts/sim/bomb_rules.gd reads this; scripts/sim/bombs.gd, combat_resolver.gd and the World use it; the model is documented at the top of scripts/sim/bombs.gd). Alex's decisions behind it (decisions bomb-release and bomb-load, 2026-10-10): a bomb drop is PER STEP, like diving; the player sets the intent (an aim point) inside the step's cone; the accuracy depends on how close the release is to the IDEAL RELEASE ANGLE; height is a factor; several drops (passes), smaller bombers fewer, every bomber at least two. EVERY NUMBER HERE IS PROPOSED by Track S2 (2026-10-10), none is Alex's. Per-unit loads (drops, bombs per drop) are in data/units/<id>.json under bomb_load. Record shape: {value, _proposed, _reason} until a decision id replaces _proposed (scripts/sim/records.gd). Metres, seconds, degrees.",
+
+  "gravity_mps2": {
+    "value": 9.81,
+    "_proposed": true,
+    "_reason": "a released bomb carries the bomber's horizontal velocity and falls from its height above the ground with this acceleration, no drag, so it lands (speed x sqrt(2 height / g)) metres ahead of the release point. Plain physical gravity, so the fall times are honest: 5.0 s from the low band (120 m), 9.0 s from medium (400 m), 14.3 s from high (1000 m) -- a high drop lands almost three turns later. Raise it to shorten the falls (20 gives 3.5, 6.3 and 10 s); everything downstream reads this one number"
+  },
+
+  "cone_half_across_deg": {
+    "value": 8,
+    "_proposed": true,
+    "_reason": "half the width of the release cone in azimuth, from the bomber's heading at the release: the most the aim point may be off the line the bomb will fly along. 8 degrees is 112 m either side at 800 m; the bomb has the bomber's heading and cannot be thrown sideways, so this is narrow where a gun's cone is wide"
+  },
+  "cone_half_height_deg": {
+    "value": 8,
+    "_proposed": true,
+    "_reason": "half the height of the release cone in the angle below the horizon at which the aim point is seen: the most the actual release angle may differ from the IDEAL release angle (the angle whose line of sight passes through where the bomb will land). 8 degrees at medium height and 85 m/s (ideal 27.5 degrees) spans 19.5 to 35.5 degrees below the horizon, aim points from 560 m to 1,130 m ahead; wide enough that a drop is a decision in the step and not a pixel hunt, narrow enough that the step matters"
+  },
+  "cone_max_range_factor": {
+    "value": 2.0,
+    "_proposed": true,
+    "_reason": "the cone reaches no farther than this many times the ideal ground range. Without it a fast bomber in the low band (ideal angle 12 degrees at 110 m/s, cone height 8) would have a cone running on towards the horizon (1,560 m ahead); at 2 it ends 1,090 m ahead. For a bomber at cruise in the medium or high band the cone ends before the limit and it does not bite"
+  },
+  "rim_accuracy_factor": {
+    "value": 0.35,
+    "_proposed": true,
+    "_reason": "the accuracy factor at the rim of the cone (1 at the ideal release angle, falling to this at the rim): the same centre factor the weapons use (combat.gd centre_factor), here applied to the release-angle error. The scatter is divided by it, so a drop on the rim scatters 2.9 times as widely as a perfect one"
+  },
+  "falloff_exponent": {
+    "value": 1.5,
+    "_proposed": true,
+    "_reason": "the accuracy factor is 1 - (1 - rim_accuracy_factor) x r^this, r the release error as a fraction of the cone (0 ideal, 1 rim): 1.5 stays near the top through the inner half and drops towards the rim (1 would be a straight line, 2 flatter at the top)"
+  },
+  "release_samples": {
+    "value": 12,
+    "_proposed": true,
+    "_reason": "how many parts the bomber's step is cut into to find the release moment closest to the ideal angle for the aim point (and to draw the cone, which is the union of the cone's footprint at each part): a bomber step is 1.67 s and 140 m, so 12 parts are 12 m apart; the moment itself is then refined between the best part's neighbours"
+  },
+
+  "spread_base_m": {
+    "value": 8,
+    "_proposed": true,
+    "_reason": "the scatter of each bomb (one standard deviation, in each of the two ground axes) at the ideal release angle and no height: the floor, bombs are not rifle bullets"
+  },
+  "spread_per_height": {
+    "value": 0.045,
+    "_proposed": true,
+    "_reason": "Alex: height is a factor, more height more spread. Metres of scatter added per metre of height: low (120 m) 5 m, medium (400 m) 18 m, high (1,000 m) 45 m, on top of the base (8 m), before the release-angle factor divides it: 13, 26 and 53 m at the ideal release angle. The tuning table (scripts/test_support/strike_tuning.gd, B) gives what that does to the radio tower: a stick of four at the ideal release takes it from 8 pips to nothing in 1.4 drops on average from low, 2.2 from medium and 5.3 from high (19 percent within the bomber's three drops) Linear in height; a real bombsight's error is nearer to the square root but a straight line is easier to reason about and to tune"
+  },
+  "stick_error_fraction": {
+    "value": 0.6,
+    "_proposed": true,
+    "_reason": "a stick is correlated: part of each bomb's scatter is shared by the whole stick (the release was a little long or short for all of it) and part is its own. This is the share of one bomb's standard deviation that is the stick's; the bomb's own part is the rest in quadrature, so every bomb still scatters by the same total and only how alike the stick's bombs fall changes. 0 would be independent bombs, 1 a rigid stick"
+  },
+  "release_interval_s": {
+    "value": 0.12,
+    "_proposed": true,
+    "_reason": "the bombs of one drop leave in order, this long apart: at a bomber's cruise (85 m/s) the stick's bombs land 10 m apart along the track, a stick of four 31 m long, centred on the aim point"
+  },
+
+  "blast_pips_by_distance": {
+    "value": [[12, 3], [25, 2], [45, 1]],
+    "_proposed": true,
+    "_reason": "pips of damage a bomb's blast does to a unit at the surface, by the distance of the unit's centre from the impact: [[distance_m, pips], ...] read as 'within distance_m: pips', smaller distances first; beyond the last distance nothing. A direct hit on a radio tower (a 12 m structure) is 3 pips, near misses 2 and 1. The 45 m reach is a medium bomb's damage radius drawn large enough to read on a 5 km map and to give a stick of four a chance on a 26 m scatter"
+  },
+  "blast_height_m": {
+    "value": 25,
+    "_proposed": true,
+    "_reason": "the blast reaches units this high above the ground or lower: ground units and the surface band (0 m); an aircraft in the low band (120 m) is above it, so bombs hurt buildings, batteries and wrecks and not planes"
+  },
+  "blast_hits_own_side": {
+    "value": true,
+    "_proposed": true,
+    "_reason": "a blast does not know whose side a unit is on. The strike has no friendly ground units, so nothing depends on it; false would spare the bomber's own side"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "_about": "Anti-aircraft battery: the strike's defence (Alex's decision strike-plan, 2026-10-10: two batteries whose flak uses the cone system aimed upward, strong in the low and medium bands and weak in the high one). A STATIC unit (mobility 'static'): it never moves, turns or plans; its one weapon, FLAK, is an all-around cone aimed UP with flexible-gun tracking. Its band is the surface; it goes down with the fate 'destroyed' at 0 health, so bombs can silence it. EVERY NUMBER IS PROPOSED by Track S2 (2026-10-10); the bands come out as Alex asked from two numbers, the cone's lowest angle (2 degrees: nothing is out of the cone for being low) and the effective range (900 m, reach 1,080 m with the common 20 percent overshoot), which sits just under the high band's height (1,000 m). A plane flying straight over ONE battery takes, in expected pips (scripts/test_support/strike_tuning.gd, table A): bomber low 3.4, medium 2.7, high 0.35; light fighter low 2.3, medium 2.2, high 0.3. Two batteries on a bomber's bomb run at the tower (table C): it loses about half its 8 pips by the time the bombs land at low and medium (3.7 and 4.0), 0.2 at high. Record shape: data/units/_schema.json.",
+  "id": "anti_aircraft_battery",
+  "name": "Anti-aircraft battery",
+  "domain": "ground",
+  "mobility": "static",
+  "size_m": { "value": 14, "_proposed": true, "_reason": "a gun pit, a sandbag ring and two or three guns seen from above" },
+  "actions_per_turn": { "value": 1, "_proposed": true, "_reason": "a static unit has nothing to plan: one step a turn that stands still" },
+  "health": { "value": 4, "_proposed": true, "_reason": "a bomb's direct hit is 3 pips and a near miss 2 or 1 (data/sim/bombs.json): a battery goes down to two near hits or a direct hit and a graze, so the bomber can silence one on its way in at the price of bombs the tower needs" },
+  "sight_range_m": { "value": 700, "_proposed": true, "_reason": "spotters with the guns: sees about as far as a fighter's 800 m, a little less; the enemy AI counts what its units see (scripts/sim/ai_sense.gd), including its static units, so this is how far a battery warns the patrol" },
+  "drawing": {
+    "silhouette": "anti_aircraft_battery"
+  },
+  "envelope": {
+    "speed_min_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "speed_cruise_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "speed_max_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "dive_speed_max_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "accel_mps2": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "decel_mps2": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "reverse_from_stop": { "value": false, "_proposed": true, "_reason": "static: never moves" },
+    "turn_rate_curve_dps": { "value": [[0, 0]], "_proposed": true, "_reason": "static: never turns" },
+    "turn_bleed_mps2": { "value": 0, "_proposed": true, "_reason": "static: never turns" },
+    "turn_bleed_exponent": { "value": 1, "_proposed": true, "_reason": "static: never turns (the exponent is unused; it must be a number)" },
+    "altitude_bands": { "value": ["surface"], "_proposed": true, "_reason": "it stands on the ground: the surface band (data/sim/altitude.json)" },
+    "start_band": { "value": "surface", "_proposed": true, "_reason": "it stands on the ground" },
+    "bands_per_step": { "value": 0, "_proposed": true, "_reason": "static: never changes band" },
+    "climb_speed_cost_mps": { "value": 0, "_proposed": true, "_reason": "static: never changes band" },
+    "dive_speed_gain_mps": { "value": 0, "_proposed": true, "_reason": "static: never changes band" }
+  },
+  "weapons": [
+    {
+      "id": "flak",
+      "name": "Flak",
+      "kind": "flexible",
+      "hardpoints": { "value": [[0, 0, 6]], "_proposed": true, "_reason": "Track S2: the guns' muzzles about six metres above the ground, at the battery's centre; the height is part of the cone's geometry (a plane at 120 m is 114 m above the muzzle)" },
+      "mount_deg": { "value": 0, "_proposed": true, "_reason": "Track S2: the cone is all around (half_across 180), so the mount does not matter; 0 is the battery's heading" },
+      "half_across_deg": { "value": 180, "_proposed": true, "_reason": "Track S2: all around. 180 means the azimuth is not part of the cone test (combat.gd): flak fires at anything above it, whichever way the battery faces" },
+      "elevation_deg": { "value": 46, "_proposed": true, "_reason": "Track S2: Alex's accepted proposal, flak on upward cones. The cone is centred 46 degrees above the horizon" },
+      "half_height_deg": { "value": 44, "_proposed": true, "_reason": "Track S2: from 2 degrees above the horizon to straight up (90). 2 and not 10: a first try with a 10 degree floor left the low band (120 m) out of the cone beyond 680 m of ground distance and made it the LEAST dangerous band (measured at a base chance of 0.05: 1.8 pips a pass against the medium band's 1.9); with a 2 degree floor the cone's edge is the weapon's range (892 m at 120 m) and the low band comes out strongest (3.4 pips a pass against the medium band's 2.7)" },
+      "effective_range_m": { "value": 900, "_proposed": true, "_reason": "Track S2: strong in the low and medium bands, weak in the high one (Alex's accepted proposal). 900 m effective, 1,080 m reach with the common range_overshoot (data/sim/combat.json): the low band is inside the effective range out to 892 m of ground distance, the medium band out to 806 m; a plane overhead in the high band (1,000 m) is in the fringe at 42 percent of the odds, 200 m to one side at 26 percent, 400 m to one side at nothing" },
+      "base_hit_chance": { "value": 0.07, "_proposed": true, "_reason": "Track S2: a battery makes 0.14 hits a second on a plane in the cone before the other factors (two rolls a second at 0.07). Tuned in the tuning tables: at 0.05 a bomber lost 2.8 pips of 8 to two batteries before its bombs landed from low and 3.2 from medium and was never shot down from low, which is not 'strong'; at 0.07 it loses 3.7 and 4.0 and is shot down 1 and 11 percent of the time (aligned runs)" },
+      "rim_odds_factor": { "value": 1, "_proposed": true, "_reason": "Track S2: flat, as the other flexible guns and turrets: a gun crew aims within the arc" },
+      "falloff_exponent": { "value": 1, "_proposed": true, "_reason": "Track S2: no effect while the factor is flat (rim_odds_factor 1)" },
+      "tracking_dps": { "value": 20, "_proposed": true, "_reason": "Track S2: flexible-gun tracking (Alex's accepted proposal), 20 deg/s like the bomber's nose gun and the heavy fighter's rear gunner. A bomber overhead at 400 m crosses the line of sight at about 12 deg/s (factor 0.73); at 120 m at about 40 deg/s (0.2): flak cannot swing fast enough for a plane right overhead at low height, so the low band is most dangerous on the approach and the way out. Doubling it to 40 changed a pass over a battery by under 10 percent, so it is not the lever" },
+      "damage_pips": { "value": 1, "_proposed": true, "_reason": "Track S2: a burst is one pip, like a machine gun's hit; a bomber's 8 pips and a light fighter's 3 are weighed against it" },
+      "rolls_per_second": { "value": 2, "_proposed": true, "_reason": "Track S2: the same burst rate as every machine gun in the game" }
+    }
+  ],
+  "bomb_load": {
+    "drops": { "value": 0, "_proposed": true, "_reason": "a battery drops nothing" },
+    "per_drop": { "value": 0, "_proposed": true, "_reason": "a battery drops nothing" }
+  }
+}

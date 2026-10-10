@@ -1,8 +1,9 @@
 {
-  "_about": "Bomber (design doc, Initial unit roster: air; turret guns engage on their own, the bomb drop is manual -- specials are deferred for the demo). EVERY VALUE IS A PLACEHOLDER proposed by Track S on 2026-10-09; the unit design sheet and its variant boards replace them. Plausible for a WWII twin-engine medium bomber (B-25, He 111 class) at true scale. Not in the demo, which flies fighters. Record shape: data/units/_schema.json.",
+  "_about": "Bomber (design doc, Initial unit roster: air; turret guns engage on their own, the bomb drop is manual). EVERY VALUE IS A PLACEHOLDER proposed by Track S on 2026-10-09; the unit design sheet and its variant boards replace them. Plausible for a WWII twin-engine medium bomber (B-25, He 111 class) at true scale. Not in the first demo, which flew fighters; THE STRIKE (Track S2, 2026-10-10) is the players' bomber: it drops bombs, a special taken in one step (bomb_load below; the physics is data/sim/bombs.json, scripts/sim/bombs.gd). Record shape: data/units/_schema.json.",
   "id": "bomber",
   "name": "Bomber",
   "domain": "air",
+  "mobility": "mobile",
   "size_m": { "value": 20, "_proposed": true, "_reason": "medium bomber span: B-25 20.6 m, He 111 22.6 m" },
   "actions_per_turn": { "value": 3, "decision": "demo-baseline", "_reason": "Alex 2026-10-09 accepted this as the demo baseline. Was proposed: slowest and least agile aircraft: the fewest decision points; 3 steps of 1.67 s in a 5 s turn" },
   "health": { "value": 8, "_proposed": true, "_reason": "built to take hits: the most pips of the three aircraft" },
@@ -77,5 +78,9 @@
       "damage_pips": { "value": 1, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
       "rolls_per_second": { "value": 2, "_proposed": true, "_reason": "Track C proposal (not in the lead's sheet): the same burst rate as the fighters' machine guns" }
     }
-  ]
+  ],
+  "bomb_load": {
+    "drops": { "value": 3, "_proposed": true, "_reason": "Track S2 proposal (Alex 2026-10-10: several drops, multiple passes make sense, everything gets at least two, smaller bombers fewer): the medium bomber is the biggest bomber there is, so it gets three passes; a light bomber would get two and a heavy one four" },
+    "per_drop": { "value": 4, "_proposed": true, "_reason": "Track S2 proposal (Alex 2026-10-10: smaller bombers fewer bombs, per drop and in number of drops): a stick of four, twelve bombs in all; a light bomber would carry two a drop, a heavy one six" }
+  }
 }

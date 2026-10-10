@@ -23,6 +23,7 @@
     "id": { "kind": "text", "about": "Unit type id; must equal the file name without .json. The World's units refer to it as their 'type'." },
     "name": { "kind": "text", "about": "Display name, from the design doc's Initial unit roster." },
     "domain": { "kind": "enum", "values": ["air", "ground", "sea"], "about": "From the Initial unit roster table." },
+    "mobility": { "kind": "enum", "values": ["mobile", "static"], "about": "Track S2, 2026-10-10 (the strike). 'static' units never move, turn or plan: a radio tower, an anti-aircraft battery. The World refuses to plan them, gives them one step a turn that stands still, and does not wait for them in the ready-up; their envelope must be all zeros (unit_def.gd checks). 'mobile' is every unit that flies, drives or sails. Identity, not a number." },
     "size_m": { "kind": "number", "min": 0, "unit": "m", "about": "Largest planform dimension: wingspan for aircraft, length for tanks and ships. Drawing scale and, later, hit size." },
     "actions_per_turn": { "kind": "integer", "min": 1, "about": "Steps per turn: the number of points on the unit's motion curve each turn. data/sim/turn.json splits turn_seconds into this many equal steps." },
     "health": { "kind": "integer", "min": 1, "about": "Hit points; the unit card's pips. Combat (scripts/sim/combat_resolver.gd) takes a weapon's damage_pips from it per hit; at 0 the unit is down." },
@@ -64,7 +65,7 @@
         "kind": { "kind": "enum", "values": ["fixed", "flexible", "turret"], "about": "How it is mounted: fixed (points where the nose points), flexible (a gunner aims it within a cone) or turret (a powered mount with a wide arc). Identity, not a number: what it implies for the odds is in rim_odds_factor." },
         "hardpoints": { "kind": "points3", "unit": "m [forward, right, up]", "about": "Where the cone starts: offsets from the unit's centre in the airframe's axes. One or more; each hardpoint rolls on its own, with its own cone." },
         "mount_deg": { "kind": "number", "min": -180, "max": 180, "unit": "deg", "about": "The cone centre's direction relative to the nose, around: 0 forward, 180 rearward, positive to the right (clockwise seen from above)." },
-        "half_across_deg": { "kind": "number", "min": 0.1, "max": 180, "unit": "deg", "about": "Half the cone's width: the most the target may be off the centre, sideways." },
+        "half_across_deg": { "kind": "number", "min": 0.1, "max": 180, "unit": "deg", "about": "Half the cone's width: the most the target may be off the centre, sideways. 180 is ALL AROUND (Track S2, 2026-10-10: a flak battery fires at anything above it whichever way it faces): the azimuth is then not part of the cone test, only the height is." },
         "elevation_deg": { "kind": "number", "min": -90, "max": 90, "unit": "deg", "about": "The cone centre's elevation above the airframe's level." },
         "half_height_deg": { "kind": "number", "min": 0.1, "max": 90, "unit": "deg", "about": "Half the cone's height: the most the target may be off the centre, up or down. Firing between altitude bands is this same cone (Alex)." },
         "effective_range_m": { "kind": "number", "min": 1, "unit": "m", "about": "The weapon's EFFECTIVE range, slant metres (3D, from the hardpoint): inside it the \"range\" odds factor is 1. Alex 2026-10-09: a gun fires slightly over its effective range, so past it the odds fall smoothly to 0 at effective_range_m x (1 + range_overshoot), range_overshoot being data/sim/combat.json's (one for every weapon). CombatWeapon.range_m is the same number under its old name." },
@@ -74,6 +75,14 @@
         "tracking_dps": { "kind": "number", "min": 0.1, "unit": "deg/s", "about": "The \"crossing_rate\" odds factor (Alex 2026-10-10: relative velocity affects accuracy) is 1 / (1 + (rate / tracking_dps)^crossing_exponent), rate being the turn rate of the line of sight from the hardpoint to the target in degrees a second (the target's velocity relative to the shooter, across the line of fire, over the distance). So tracking_dps is the rate at which crossing halves the odds: small for a fixed gun (the pilot swings the whole plane), larger for a flexible gun or a turret (a gunner tracks). Closing speed costs nothing." },
         "damage_pips": { "kind": "integer", "min": 1, "about": "Health pips one hit takes." },
         "rolls_per_second": { "kind": "number", "min": 0.01, "unit": "1/s", "about": "How often each hardpoint rolls while it has a target in the cone, on the turn's clock (data/sim/combat.json tick_seconds is the finest it can be resolved)." }
+      }
+    },
+    "bomb_load": {
+      "kind": "section",
+      "about": "What the unit can drop (Track S2, 2026-10-10; Alex's decision bomb-load: several drops, i.e. several passes; the smaller the bomber, the fewer bombs, both per drop and in number of drops; everything gets at least two). A drop is a special taken in one step (scripts/sim/bombs.gd). Units that drop nothing carry 0 and 0. The bombs' physics (fall, cone, spread, blast) is shared and lives in data/sim/bombs.json.",
+      "fields": {
+        "drops": { "kind": "integer", "min": 0, "about": "How many separate drops (passes) the unit can make. 0 for a unit that carries no bombs; otherwise at least 2 (Alex), which unit_def.gd checks." },
+        "per_drop": { "kind": "integer", "min": 0, "about": "Bombs in one drop (a stick). 0 exactly when drops is 0." }
       }
     }
   }

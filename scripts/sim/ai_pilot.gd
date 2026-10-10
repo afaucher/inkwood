@@ -29,8 +29,13 @@ extends RefCounted
 #   {"role": "escort", "protect": unit id}
 #       Hold a station beside that unit (another AI-controlled unit), engage,
 #       break off, return. The protected unit is planned first.
+#   {"role": "patrol", "route": [[x, y], ...], "band": id}          (Track S2, 2026-10-10: the strike)
+#       Fly the loop of waypoints (two or more; round and round, in order, the last
+#       back to the first), engage an enemy that comes within the engage radius, break
+#       off and return to the loop. Needs a fighter with a forward weapon to engage.
 # An AI-controlled unit with NO assignment flies straight and keeps off the
-# map edge (role "idle"); a down unit is not planned.
+# map edge (role "idle"); a down unit is not planned. A STATIC unit (a tower, a
+# battery) is never planned and takes no assignment: it has no plan to make.
 #
 # STATES (per unit; the numbers behind every criterion are in data/sim/ai.json,
 # all proposed):
@@ -59,6 +64,15 @@ extends RefCounted
 #           free     the protected unit is down: hunt the nearest known enemy,
 #                    no leash, no break-off (proposed; nothing in the first fight
 #                    depends on it), else fly straight
+#   patrol  patrol   fly the loop at patrol.speed_fraction_of_cruise of cruise, holding the band
+#           engage   a known enemy came within patrol.engage_radius_m (and the patrol is not
+#                    wounded): the escort's engage -- lead pursuit, match its band. Breaks off to
+#                    `return` when health falls below patrol.break_off_health_fraction, when more
+#                    than patrol.leash_m from the loop, after patrol.no_chance_turns engaged turns
+#                    in a row whose plan never brings the target into the cone, or when the target is
+#                    gone and no other enemy qualifies
+#           return   fly back to the nearest waypoint of the loop, ignoring enemies; `patrol` again
+#                    once a waypoint is captured
 #   idle    idle     straight on at the current speed
 # Every state is edge-safe: if a plan would run the unit at the map edge (inside
 # edge_margin_turn_radii turn radii and closing on it), it turns to the centre
@@ -92,6 +106,7 @@ const AiCone = preload("res://scripts/sim/ai_cone.gd")
 
 const ROLE_STRIKE := "strike"
 const ROLE_ESCORT := "escort"
+const ROLE_PATROL := "patrol"
 const ROLE_IDLE := "idle"
 
 const S_ROUTE := "route"
@@ -101,6 +116,7 @@ const S_STATION := "station"
 const S_ENGAGE := "engage"
 const S_RETURN := "return"
 const S_FREE := "free"
+const S_PATROL := "patrol"
 const S_IDLE := "idle"
 
 # Transition reason codes (a transition also carries a `detail` sentence).
@@ -115,6 +131,7 @@ const R_THREAT := "threat"
 const R_HIT := "hit"
 const R_CALM := "calm"
 const R_ROUTE_END := "route_end"
+const R_REJOINED := "rejoined"
 
 var world: World = null
 var params: AiParams = null
@@ -174,6 +191,8 @@ func assign(id: String, spec: Variant) -> bool:
 	var u: Unit = world.units[id]
 	if u.controller != World.CONTROLLER_AI:
 		return _refuse("%s: not AI-controlled (the AI does not command a player's unit)" % label)
+	if u.def.is_static():
+		return _refuse("%s: a static %s has no orders to take" % [label, u.type])
 	if not (spec is Dictionary):
 		return _refuse("%s: orders are a Dictionary" % label)
 	var s: Dictionary = spec
@@ -218,8 +237,19 @@ func assign(id: String, spec: Variant) -> bool:
 			if (world.units[prot] as Unit).controller != World.CONTROLLER_AI:
 				return _refuse("%s: cannot protect '%s': it is not AI-controlled (the AI never reads a player's plan)" % [label, prot])
 			orders["protect"] = prot
+		ROLE_PATROL:
+			if not s.has("route") or not (s["route"] is Array) or (s["route"] as Array).size() < 2:
+				return _refuse("%s: a patrol needs a 'route' of two or more [x, y] points (a loop)" % label)
+			var loop: Array = []
+			for pt2: Variant in (s["route"] as Array):
+				var q2 := _point(pt2)
+				if q2.is_empty():
+					return _refuse("%s: route point %s is not [x, y] of finite numbers" % [label, str(pt2)])
+				loop.append(q2)
+			orders["route"] = loop
+			_warn_edge(label, u, loop)
 		_:
-			return _refuse("%s: role '%s' is not '%s' or '%s'" % [label, role, ROLE_STRIKE, ROLE_ESCORT])
+			return _refuse("%s: role '%s' is not '%s', '%s' or '%s'" % [label, role, ROLE_STRIKE, ROLE_ESCORT, ROLE_PATROL])
 	assignments[id] = orders
 	_mem.erase(id)
 	_mem_start.erase(id)
@@ -239,7 +269,10 @@ func plan_turn() -> void:
 		return
 	var ai_ids: Array[String] = []
 	for id: String in world.units:
-		if (world.units[id] as Unit).controller == World.CONTROLLER_AI:
+		var au: Unit = world.units[id]
+		# A static unit (a tower, a battery) has no plan to make: it is not planned and the AI
+		# does not ready up for it alone (World.participants()).
+		if au.controller == World.CONTROLLER_AI and not au.def.is_static():
 			ai_ids.append(id)
 	if ai_ids.is_empty():
 		return
@@ -275,6 +308,8 @@ func _plan_unit(id: String) -> void:
 			_plan_strike(id, a, m)
 		ROLE_ESCORT:
 			_plan_escort(id, a, m)
+		ROLE_PATROL:
+			_plan_patrol(id, a, m)
 		_:
 			_plan_idle(id, m)
 	_mem[id] = m
@@ -296,6 +331,8 @@ func _fresh_memory(id: String, a: Dictionary) -> Dictionary:
 		state = S_ROUTE
 	elif str(a["role"]) == ROLE_ESCORT:
 		state = S_STATION
+	elif str(a["role"]) == ROLE_PATROL:
+		state = S_PATROL
 	return {
 		"state": state, "reason": "", "detail": "", "since": world.turn,
 		"target": "", "wp": 0, "no_chance": 0, "chance": false, "alarm": 0,
@@ -414,6 +451,151 @@ func _band_away(u: Unit, threat_z: float, hold: String) -> String:
 		if sep > best_sep + 1e-9:
 			best = bands[i]
 			best_sep = sep
+	return best
+
+# --- Patrol --------------------------------------------------------------------
+
+# Track S2, proposed 2026-10-10 (the strike's one enemy fighter). The states are in the header; the
+# engage and the break-off are the escort's (engage_ctrl, has_chance, the no-chance count), with the
+# loop in place of the protected unit: the leash is the distance from the loop, the "station" it
+# returns to is the nearest waypoint.
+func _plan_patrol(id: String, a: Dictionary, m: Dictionary) -> void:
+	var p := params
+	var u: Unit = world.units[id]
+	var route: Array = a["route"]
+	var cone := _cone_for(u)
+	var can_fight := AiCone.usable(cone)
+	var enemies := sense.visible_enemies()
+	var wounded := float(u.health) < p.num("patrol", "break_off_health_fraction") * float(u.def.health)
+	var cap := p.num("patrol", "capture_radius_m")
+	var state := str(m["state"])
+	var wp := int(m["wp"]) % route.size()
+
+	if state == S_PATROL:
+		if can_fight and not wounded:
+			var t := _pick_patrol_target(enemies, u)
+			if not t.is_empty():
+				m["target"] = str(t["id"])
+				m["no_chance"] = 0
+				_enter(id, m, S_ENGAGE, R_ENEMY, "%s is within the engage radius" % t["id"])
+	elif state == S_ENGAGE:
+		var why := _patrol_break_off(u, route, m, wounded)
+		if not why.is_empty():
+			m["target"] = ""
+			wp = _nearest_waypoint(u.x, u.y, route)
+			_enter(id, m, S_RETURN, str(why["code"]), str(why["detail"]))
+		elif sense.entry(str(m["target"])).is_empty():
+			var t2 := _pick_patrol_target(enemies, u)
+			if not t2.is_empty():
+				m["target"] = str(t2["id"])
+				m["no_chance"] = 0
+			else:
+				m["target"] = ""
+				wp = _nearest_waypoint(u.x, u.y, route)
+				_enter(id, m, S_RETURN, R_TARGET_GONE, "the target is down or forgotten and no other enemy qualifies")
+	state = str(m["state"])
+
+	var target := {}
+	if state == S_ENGAGE:
+		target = sense.entry(str(m["target"]))
+	var wp_box: Array = [wp]
+	var ctrl: Callable
+	if not target.is_empty() and can_fight:
+		ctrl = _engage_ctrl(id, target, cone, "patrol")
+	else:
+		ctrl = _loop_ctrl(id, a, wp_box)
+	var r := steer.fly_safe(id, ctrl)
+	m["edge"] = r["edge"]
+	if not target.is_empty() and can_fight:
+		var chance := _has_chance(id, r["states"], target, cone)
+		m["chance"] = chance
+		m["no_chance"] = 0 if chance else int(m["no_chance"]) + 1
+		m["wp"] = wp
+		return
+	m["chance"] = false
+	if r["edge"]:
+		m["wp"] = wp
+		return
+	# Waypoints reached by the end of the turn, in order round the loop.
+	var w2: int = wp_box[0]
+	var states: Array = r["states"]
+	if not states.is_empty():
+		var last: Dictionary = states[states.size() - 1]
+		var guard := 0
+		while guard < route.size() and _near(float(last["x"]), float(last["y"]), route[w2], cap):
+			w2 = (w2 + 1) % route.size()
+			guard += 1
+	if state == S_RETURN and w2 != wp:
+		_enter(id, m, S_PATROL, R_REJOINED, "a waypoint of the loop was reached")
+	m["wp"] = w2
+
+# The visible enemy to engage from the loop: the nearest one within patrol.engage_radius_m of the
+# patrol itself. PROPOSED placeholder -- not a target-priority scheme, which is not designed yet.
+func _pick_patrol_target(enemies: Array[Dictionary], u: Unit) -> Dictionary:
+	var radius := params.num("patrol", "engage_radius_m")
+	var best := {}
+	var best_d := INF
+	for e: Dictionary in enemies:
+		var d := _d(u.x, u.y, float(e["x"]), float(e["y"]))
+		if d <= radius and d < best_d:
+			best = e
+			best_d = d
+	return best
+
+# {code, detail} if a patrol's break-off criterion holds, else {}.
+func _patrol_break_off(u: Unit, route: Array, m: Dictionary, wounded: bool) -> Dictionary:
+	var p := params
+	if wounded:
+		return {"code": R_HEALTH, "detail": "health %d of %d is below the break-off fraction %.2f" % [u.health, u.def.health, p.num("patrol", "break_off_health_fraction")]}
+	var off := _loop_distance(u.x, u.y, route)
+	if off > p.num("patrol", "leash_m"):
+		return {"code": R_LEASH, "detail": "%.0f m from the loop, leash %.0f m" % [off, p.num("patrol", "leash_m")]}
+	if int(m["no_chance"]) >= p.whole("patrol", "no_chance_turns"):
+		return {"code": R_NO_CHANCE, "detail": "no firing chance for %d turns" % int(m["no_chance"])}
+	return {}
+
+# Fly the loop: toward the waypoint `wp_box[0]`, taking the next (round the loop) each time one is
+# within patrol.capture_radius_m, at patrol.speed_fraction_of_cruise of cruise, holding the unit's band.
+func _loop_ctrl(id: String, a: Dictionary, wp_box: Array) -> Callable:
+	var u: Unit = world.units[id]
+	var route: Array = a["route"]
+	var cap := params.num("patrol", "capture_radius_m")
+	var speed := u.def.envelope.speed_cruise * params.num("patrol", "speed_fraction_of_cruise")
+	var hold := str(a["band"])
+	return func(_i: int, at: Dictionary, _t: float) -> Dictionary:
+		var w: int = wp_box[0]
+		var guard := 0
+		while guard < route.size() and _near(float(at["x"]), float(at["y"]), route[w], cap):
+			w = (w + 1) % route.size()
+			guard += 1
+		wp_box[0] = w
+		var wx := float((route[w] as Array)[0])
+		var wy := float((route[w] as Array)[1])
+		return {
+			"aim": func(s: Dictionary) -> float: return JsMath.atan2(wy - float(s["y"]), wx - float(s["x"])),
+			"speed": speed,
+			"band": hold,
+		}
+
+# The index of the loop's waypoint nearest to a point.
+func _nearest_waypoint(x: float, y: float, route: Array) -> int:
+	var best := 0
+	var best_d := INF
+	for i in route.size():
+		var d := _d(x, y, float((route[i] as Array)[0]), float((route[i] as Array)[1]))
+		if d < best_d:
+			best_d = d
+			best = i
+	return best
+
+# The distance from a point to the nearest point of the loop (the closed polyline through the waypoints).
+func _loop_distance(x: float, y: float, route: Array) -> float:
+	var best := INF
+	for i in route.size():
+		var q: Array = route[i]
+		var r: Array = route[(i + 1) % route.size()]
+		var c := Geometry2D.get_closest_point_to_segment(Vector2(x, y), Vector2(float(q[0]), float(q[1])), Vector2(float(r[0]), float(r[1])))
+		best = minf(best, c.distance_to(Vector2(x, y)))
 	return best
 
 # --- Escort --------------------------------------------------------------------
@@ -575,15 +757,15 @@ func _station_ctrl(id: String, prot_id: String) -> Callable:
 # at its seen speed (a target out of sight is taken to be where it was last
 # seen, standing still); each step aims the nose at where the target will be when
 # the step ends, from where the step really ends.
-func _engage_ctrl(id: String, e: Dictionary, cone: Dictionary) -> Callable:
+func _engage_ctrl(id: String, e: Dictionary, cone: Dictionary, section: String = "escort") -> Callable:
 	var p := params
 	var u: Unit = world.units[id]
 	var dt := world.step_dt(id)
-	var desired := p.num("escort", "engage_range_fraction") * float(cone["range_m"])
-	var catchup := p.num("escort", "catchup_time_s")
+	var desired := p.num(section, "engage_range_fraction") * float(cone["range_m"])
+	var catchup := p.num(section, "catchup_time_s")
 	var tp := _predict(e)
 	var tband := str(e["altitude_band"])
-	var match_band := p.flag("escort", "match_band") and u.def.envelope.bands.has(tband)
+	var match_band := p.flag(section, "match_band") and u.def.envelope.bands.has(tband)
 	return func(_i: int, at: Dictionary, t_end: float) -> Dictionary:
 		var then := _target_at(tp, t_end - dt)
 		var gap := _d(float(at["x"]), float(at["y"]), float(then[0]), float(then[1]))

@@ -50,6 +50,17 @@ const SHAPE := {
 		"forward_mount_tolerance_deg": ["n", 0.0, 180.0],
 		"match_band": ["b", 0, 0],
 	},
+	"patrol": {
+		"capture_radius_m": ["n", 1.0, INF],
+		"speed_fraction_of_cruise": ["n", 0.1, 3.0],
+		"engage_radius_m": ["n", 0.0, INF],
+		"leash_m": ["n", 0.0, INF],
+		"break_off_health_fraction": ["n", 0.0, 1.0],
+		"no_chance_turns": ["i", 1, INF],
+		"engage_range_fraction": ["n", 0.05, 1.0],
+		"catchup_time_s": ["n", 0.1, INF],
+		"match_band": ["b", 0, 0],
+	},
 	"mission": {
 		"sample_dt_s": ["n", 0.01, INF],
 		"target_radius_m": ["n", 1.0, INF],

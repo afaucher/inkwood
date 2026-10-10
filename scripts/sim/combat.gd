@@ -33,7 +33,8 @@ extends RefCounted
 # (the slant distance, so a target 600 m up is 600 m away): its effective range
 # stretched by range_overshoot while the "range" factor is on (a gun fires
 # slightly over its effective range, Alex), else the effective range alone, a
-# hard edge. Azimuth and
+# hard edge. A cone 180 degrees half-wide is ALL AROUND: azimuth then
+# does not count, only the height does (flak, aimed up). Azimuth and
 # elevation (a turret's traverse and elevation) rather than the true angle from
 # the axis because that is how a cone of +-110 degrees across and 35 +- 35 in
 # height reads, and for the narrow cones the two are the same.
@@ -124,6 +125,12 @@ extends RefCounted
 #   {"type": "crash", "turn", "unit", "t", "x", "y"}     later: an out-of-control
 #                                                        unit reached the ground
 #                                                        (this turn or a later one)
+#
+# THE STRIKE (Track S2, 2026-10-10) adds to these: a "down" event's fate may be "destroyed" (a ground
+# unit, never an aircraft: it stays where it is, down); a "hit" event's weapon may be "bomb" (its `by` the
+# bomber; the damage a blast's pips); and bomb_release / bomb_impact events join the list, with the
+# bombs' physics, in bombs.gd. Flak is an ordinary weapon (a cone aimed up, all around: a half width
+# of 180 degrees ignores the azimuth) whose "fire" events come from a battery, a static unit.
 #
 # A fire event's `hit` says whether the roll hit; a hit event follows its fire
 # event at once, and a down event follows the hit that took the last pip. A
@@ -253,7 +260,11 @@ static func evaluate_pose(p: Dictionary, weapon: CombatWeapon, target: Dictionar
 	var elevation := atan2(du, hypot(df, dr))
 	var across := wrap_angle(azimuth - weapon.mount)
 	var height := elevation - weapon.elevation
-	var a := across / weapon.half_across
+	# A half width of 180 degrees is ALL AROUND (Track S2, 2026-10-10: a flak battery fires at
+	# anything above it, whichever way it faces): the azimuth is then no part of the cone, only
+	# the height is. (Without this a cone 180 wide would still refuse a target behind it unless
+	# it sat exactly at the cone's elevation.)
+	var a := 0.0 if weapon.half_across >= PI - 1e-9 else across / weapon.half_across
 	var b := height / weapon.half_height
 	var r := sqrt(a * a + b * b)
 	out["across"] = across

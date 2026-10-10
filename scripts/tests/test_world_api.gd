@@ -44,6 +44,12 @@ const WORLD_METHODS := {
 	"band_height": ["band"],
 	"sample": ["unit_id", "t", "source"],
 	"ok": [],
+	# The strike (Track S2, 2026-10-10): what the interface and the network ask of the bombs.
+	"bombs_left": ["unit_id"],
+	"drop_cone": ["unit_id", "step_index", "aim"],
+	"drop_spread": ["unit_id", "step_index", "aim"],
+	"net_bombs": [],
+	"apply_net_bombs": ["list"],
 }
 const WORLD_SIGNALS := {
 	"phase_changed": ["phase"],
@@ -52,9 +58,9 @@ const WORLD_SIGNALS := {
 	"turn_resolved": ["turn", "histories", "events"],
 	"unit_left_bounds": ["unit_id", "turn", "step_index"],
 }
-const WORLD_PROPERTIES := ["units", "bounds", "turn", "phase", "players", "ready", "rules", "last_error", "quiet", "rng_seed", "combat"]
+const WORLD_PROPERTIES := ["units", "bounds", "turn", "phase", "players", "ready", "rules", "last_error", "quiet", "rng_seed", "combat", "bombs", "bombs_in_flight"]
 # The demo-plan's unit fields, plus what Track S adds.
-const UNIT_FIELDS := ["id", "type", "side", "controller", "x", "y", "heading", "speed", "altitude_band", "plan", "history", "def", "out_of_bounds", "health", "down", "down_at", "fate", "fall_height_m", "fall_dir"]
+const UNIT_FIELDS := ["id", "type", "side", "controller", "x", "y", "heading", "speed", "altitude_band", "plan", "history", "def", "out_of_bounds", "health", "down", "down_at", "fate", "fall_height_m", "fall_dir", "drops_left"]
 const STATE_KEYS := ["x", "y", "heading", "speed", "altitude_band", "turn", "clamped", "limits", "step", "t", "planned", "out_of_bounds"]
 const REACHABLE_KEYS := ["step_dt", "speed", "turn_max", "turn_rate", "turn_radius", "speed_lo", "speed_hi", "speed_lo_full_turn", "speed_hi_full_turn", "bands", "outline"]
 
@@ -116,8 +122,9 @@ func setup(_main) -> void:
 	w.turn_resolved.connect(func(t: int, h: Dictionary, e: Array) -> void: got.append([t, h, e]))
 	check(w.commit("local"), "commit returns true when everyone is ready")
 	var out := w.resolve()
-	for k: String in ["turn", "histories", "events"]:
+	for k: String in ["turn", "histories", "events", "units", "bombs"]:
 		check(out.has(k), "resolve() returns '%s'" % k)
+	eq(out["bombs"], [], "and no bombs are falling in a world that dropped none")
 	check((out["histories"] as Dictionary).has(id), "resolve() has a history for every unit")
 	eq(got.size(), 1, "turn_resolved fired once")
 	if got.size() == 1:

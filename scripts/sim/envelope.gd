@@ -21,6 +21,8 @@ extends RefCounted
 #            no band = stay; an empty request is "carry on" (inertia, not a stop)
 #        or  {to: Vector2 | [x, y], altitude_band}    steer for a point
 #        or  a bare Vector2                           the same as {to: point}
+#   any of them may also carry  drop: {aim: [x, y]}   a bomb drop in this step (a special, not
+#            a manoeuvre: clamp_step ignores it; scripts/sim/bombs.gd and the World use it)
 #   result:  the state after the step, plus turn (the heading change applied),
 #            clamped (bool) and limits (which limits bit: turn, speed, band,
 #            climb). Feeding a result back in as a request returns the same
@@ -362,7 +364,28 @@ static func request_error(request: Variant) -> String:
 			return "'%s' must be a finite number, got %s" % [k, str(r[k])]
 	if r.has("altitude_band") and not (r["altitude_band"] is String):
 		return "'altitude_band' must be a band id string, got %s" % str(r["altitude_band"])
+	if r.has("drop"):
+		var dr: Variant = r["drop"]
+		if not (dr is Dictionary) or not (dr as Dictionary).has("aim"):
+			return "'drop' must be {\"aim\": [x, y]}, got %s" % str(dr)
+		var aim := _point((dr as Dictionary)["aim"])
+		if not (is_finite(aim[0]) and is_finite(aim[1])):
+			return "'drop.aim' must be a Vector2 or [x, y] of finite numbers, got %s" % str((dr as Dictionary)["aim"])
 	return ""
+
+# The aim point of a request's bomb drop as [x, y] floats, or [] if the request carries none
+# (Track S2, 2026-10-10; scripts/sim/bombs.gd). The envelope itself ignores a drop: it is a
+# special taken in the step, not a manoeuvre.
+static func drop_aim(request: Variant) -> Array:
+	if not (request is Dictionary) or not (request as Dictionary).has("drop"):
+		return []
+	var dr: Variant = (request as Dictionary)["drop"]
+	if not (dr is Dictionary) or not (dr as Dictionary).has("aim"):
+		return []
+	var p := _point((dr as Dictionary)["aim"])
+	if not (is_finite(p[0]) and is_finite(p[1])):
+		return []
+	return [p[0], p[1]]
 
 static func _point(v: Variant) -> PackedFloat64Array:
 	if v is Vector2:
