@@ -536,6 +536,29 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'All players must ready up.'"
+    },
+    {
+      "id": "intercept-ai-behaviour",
+      "date": "2026-10-09",
+      "area": "Enemy AI, Scenarios",
+      "question": "Track E's open questions: the bomber's starting band; evading by band change; an escort re-engaging after breaking off for health",
+      "board": "none (questions from Track E's report)",
+      "options": [
+        "bomber starts high / medium",
+        "evade by changing one band (costs speed) / weave only",
+        "an escort that broke off for health never re-engages / may re-engage"
+      ],
+      "chosen": "the bomber can start high; evading by a one-band change stays; an escort that broke off for health does not re-engage, for now",
+      "parameters": {
+        "bomber_start_band": "high (the players must climb to reach it)",
+        "evade": "weave plus a change of one band (data/sim/ai.json strike.*)",
+        "escort_reengage_after_health_breakoff": false
+      },
+      "applied_to": [
+        "data/sim/ai.json (as built, commit 858ca10)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: '1. Bomber can start high 2. Sounds good 3 fine for now' -- read as answers to Track E's three questions (the lead's reading)."
     }
   ]
 }
