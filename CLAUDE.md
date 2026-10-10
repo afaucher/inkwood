@@ -180,6 +180,14 @@ Properties of Godot and PowerShell, not of that game. Entries marked
 - **`%` formatting has no `%g`.** Observed 2026-10-09: `"%.17g" % v` prints the
   format string back and logs "unsupported format character" per call. Use
   `String.num(v, digits)` for significant-digit output.
+- **`%` has no `%e` either**, and **`:=` on a `.filter()` result is a parse
+  error** (it returns a Variant Array). Observed 2026-10-09 by the combat track.
+- **`Array.sort_custom` is not stable** (observed 2026-10-09): equal keys can
+  swap. Where order must be deterministic (the combat events), merge sorted
+  lists or break ties on an index.
+- **Never delete a unit from `World.units` mid-game**: combat seeds every
+  roll from the shooter's index in that Dictionary, so removing one reshuffles
+  every later unit's dice. A destroyed unit stays, with `down` and `fate`.
 - **`load()` on a script with a parse error returns a NON-null resource on 4.7**
   (observed 2026-10-09, proved with a deliberately broken test). A `== null`
   guard never fires; `main.gd` checks `can_instantiate()` as well.
