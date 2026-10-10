@@ -17,7 +17,8 @@ extends Node2D
 # once at the map's shadow strength, so overlapping shadows merge and never
 # darken twice -- the map's own shadow rule), every plane, then the marks: side
 # roundels, the selected unit's inked ring, and its leader line up to its
-# roster row (the design doc's proposed selection treatment).
+# roster row (the design doc's proposed selection treatment; the line is OFF since Alex's
+# Strike playtest, 2026-10-10 -- data marker.leader_to_roster -- the ring is not).
 #
 # A DOWN UNIT (Track U2, part 2; the rules are scripts/ui/ui_fate.gd's): an exploded unit's
 # marker is gone from down_at (the effects layer takes over); an out-of-control unit's marker
@@ -463,8 +464,8 @@ func _draw_marks() -> void:
 			# Under the ring's ticks and the health arc's reach, centred: the badge is up-left, the leader to the
 			# right, the health arc on a diagonal, the shadow down-right (the paper under-stroke reads over it).
 			var txt := unit_label(id)
-			var px: float = style.num("fonts.small_px")
-			var font: Font = style.font(true)
+			var px: float = UiLabels.px(style)   # (readable lettering, Track C: labels.px in the semibold face of labels.font)
+			var font: Font = UiLabels.font(style)
 			var w := UiInk.text_width(font, txt, px) + 4.0
 			var y := m.position.y + r + style.num("marker.ring_gap_px") + style.num("marker.ring_tick_px") + style.num("labels.below_px") + px
 			UiLabels.draw(_marks, style, font, Vector2(m.position.x - w * 0.5, y), txt, px, style.color("label_ink"), w, HORIZONTAL_ALIGNMENT_CENTER)
@@ -481,11 +482,25 @@ func _draw_ring(m: UnitMarker, r: float, ink: Color, leader: Color) -> void:
 	var r2 := r + style.num("marker.ring_gap_px")
 	for d: Vector2 in [Vector2.UP, Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT]:
 		_marks.draw_line(c + d * (r2 + 1.0), c + d * (r2 + 1.0 + tick), ink, 1.0, true)
-	if style.flag("marker.leader_to_roster") and leader_target.is_valid():
-		var t: Vector2 = leader_target.call(m.unit_id)
-		if t.is_finite():
-			var dir := (t - c).normalized()
-			var a := c + dir * (r2 + 1.0)
-			if a.distance_to(t) > 4.0:
-				_marks.draw_line(a, t, leader, style.num("marker.leader_line_px"), true)
-				_marks.draw_circle(t, 2.2, ink, true, -1.0, true)
+	var tie := leader_points(m)
+	if tie.size() == 2:
+		_marks.draw_line(tie[0], tie[1], leader, style.num("marker.leader_line_px"), true)
+		_marks.draw_circle(tie[1], 2.2, ink, true, -1.0, true)
+
+# The selected unit's leader line to its roster row: [from the ring's outer tick, to the row's edge] in screen px, or EMPTY when it
+# is not drawn -- data marker.leader_to_roster is false (Alex 2026-10-10: "The bomber has a thin black line that just goes to the
+# top right corner? Lets identify that and remove it."), there is no row to point at, or the row is on the ring.
+func leader_points(m: UnitMarker) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	if not style.flag("marker.leader_to_roster") or not leader_target.is_valid():
+		return out
+	var t: Vector2 = leader_target.call(m.unit_id)
+	if not t.is_finite():
+		return out
+	var c := m.position
+	var r2 := ring_radius(m) + style.num("marker.ring_gap_px")
+	var a := c + (t - c).normalized() * (r2 + 1.0)
+	if a.distance_to(t) > 4.0:
+		out.append(a)
+		out.append(t)
+	return out

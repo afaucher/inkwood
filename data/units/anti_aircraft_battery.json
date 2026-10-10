@@ -67,5 +67,6 @@
   "bomb_load": {
     "drops": { "value": 0, "_proposed": true, "_reason": "a battery drops nothing" },
     "per_drop": { "value": 0, "_proposed": true, "_reason": "a battery drops nothing" }
-  }
+  },
+  "specials": []
 }

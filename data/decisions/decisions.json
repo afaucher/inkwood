@@ -772,7 +772,7 @@
         "data/ui/ui.json#marker.trails.mode"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'D · One ribbon between the wingtips'. Still proposed and open: own planes only, a one-turn window, whether the whole-flight line stops at the last turn's start, the trail's overlap with the cone wash behind a selected plane, a trail for a falling plane. Alex 2026-10-10: '2 all moving units' (trails on every moving unit, not only the players'); '5 yes' (a plane falling out of control leaves a trail). '3 yes, the trail is to the current position.' 'Ignore the cone/trail overlap for now.'"
+      "notes": "Alex: 'D · One ribbon between the wingtips'. Still proposed and open: own planes only, a one-turn window, whether the whole-flight line stops at the last turn's start, the trail's overlap with the cone wash behind a selected plane, a trail for a falling plane. Alex 2026-10-10: '2 all moving units' (trails on every moving unit, not only the players'); '5 yes' (a plane falling out of control leaves a trail). '3 yes, the trail is to the current position.' 'Ignore the cone/trail overlap for now.' SUPERSEDED IN PART by playtest-strike-1 (2026-10-10): the whole-flight line after the trail is removed (Alex: 'Remove that line'); the ribbon trails stay."
     },
     {
       "id": "node-hover",
@@ -1171,7 +1171,12 @@
       "chosen": "the fog and map must be prerendered: panning while paused must not hang or paint in; the thin flown-path line is removed (the ribbon trails stay); the leader line to the roster is removed; the planner's clamp mark (the X where the pointer was left while dragging, and its dashed line) is removed; weapon arcs can be toggled off; the lettering next to planes must be readable; sight follows the pilot: an exploded plane stops revealing, a falling one keeps a reduced sight that depends on its height until it hits; the bomb controls must not be a separate control scheme (redesign pending)",
       "parameters": {},
       "applied_to": [
-        "in progress: Track P (prerender), Track C (lines, toggle, lettering), Track S (sight of downed planes)"
+        "data/ui/ui.json marker.leader_to_roster false, marker.trails.whole_flight_line false, planner.clamp_marks false (Track C)",
+        "the weapon-arcs toggle: an on-screen button in the roster header, no key (decision onscreen-buttons)",
+        "proposed: planner.cones.overhead_footprint false (the bomber's dashed arcs were the dorsal turret's cone, which covers only above the bomber)",
+        "labels: 14 px upright semibold, full ink, firmer halo (labels.*)",
+        "sight follows the pilot: 9abee92, ba13a78 (decision sight-follows-pilot)",
+        "the prerender and the bomb controls: in progress"
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Drawing the fog is still extremely slow. I thought we prerendered everything? Just scrolling around a map while the game is paused hangs and slowly paints in the colors then the contour lines. ... This should be cheap to render.' 'The bomb controls are wildly bad. It is VERY hard to see what is happening. Dropping the bomb shouldn't be a separate control scheme. We have a 'drop' button but I can't get it to highlight. There is a huge nebulus red blob _ahead_ of the plane but nothing connects 'I am selecting the bomb special on step 2' with this red blob. And it moves with subsequent steps??' 'There are too many extraneous lines being drawn as well': the bomber's dashed arcs to either side (unclear what they cover); 'We need to be able to toggle off the weapon arcs'; the thin red/blue line after the ribbon 'Remove that line'; 'The bomber has a thin black line that just goes to the top right corner? Lets identify that and remove it'; the dashed line to a little X: 'The little X is where I left the mouse when dragging the point. We don't care about that at all.'; 'The text next to each plane is unreadable using the small thin font - these MUST be read to be useful'. 'A destroyed plane keeps the fog away. Ideally we have this track the pilot. So a destroyed plane should loose the fog. One disabled and falling should keep it but with reduced distance until it hits. (take height into account too).'"
@@ -1211,7 +1216,9 @@
         "step_strip": "a clickable indicator of the steps on the orders card: shows which steps are planned and selects a step; only an already planned step or the next unplanned one can be clicked"
       },
       "applied_to": [
-        "in progress: the bomb-controls redesign"
+        "scripts/ui/motion_planner.gd (focus_step / select_step / select_next_step, begin_edit with a grab and planner.select.slop_px, the selected node), scripts/ui/motion_planner_panel.gd (the header names the step; the step strip: step_marks, press_step), scripts/ui/unit_ui.gd",
+        "data/ui/ui.json planner.select, orders.strip, orders.text; data/units/_schema.json specials, data/units/bomber.json (the words 'Bomb' + 'Drop')",
+        "tested by test_step_select, test_ui_bombs, test_ui_target, test_motion_planner, test_unit_defs"
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'The UI says 3 of 3 steps planned - I can move them but can I replan them? I actually want to be able to set my motion and come back to step 2/3 and tell it to drop the bomb then.' 'Selecting the node should select that step in the plan.' Before: the card acted on the last placed step until a step's handle was GRABBED (U3's proposal), invisible to the player. On the drop's mark: 'Specifically it should SAY in the step metadata the name of the special and the action. So Radio On, Bomb Drop, Turret Fire.' On the card: 'For orders - maybe we could have a clickable indicator for the steps that let you select the step from there and also see which steps are planned. You can only click an already planned step or the next unplanned.'"
@@ -1257,6 +1264,33 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Sorry, I was mixing two things. I meant if the plane drops such that the hills occlude the view you should see that happen (when LOS is enabled). However I think your version is actually more relevant. Basically going down the information you can gather is limited. Eventually I want to be able to bail when disabled and it would follow the pilot not the plane.'"
+    },
+    {
+      "id": "bomb-controls-redesign",
+      "date": "2026-10-10",
+      "area": "UI, Specials, Planning",
+      "question": "How is the bomb drop made part of planning a step, visibly tied to that step (the Strike playtest: 'Dropping the bomb shouldn't be a separate control scheme')?",
+      "board": "none (the lead's proposal for Alex's playtest; the screens are in tmp/stepdrop/)",
+      "options": [
+        "the cone wash for the card's step (as built: a red blob ahead of the plane that follows the last placed step)",
+        "the drop pinned to its step: a line from the step's node to the landing, ending in the area of effect; the cone only as a thin outline on the button's hover or while a landing point is dragged"
+      ],
+      "chosen": "PROPOSED by the lead and built by Track B, not chosen by Alex (he chose the parts in step-selection, onscreen-buttons and playtest-strike-1): the drop is the step's special, switched on from the card for the SELECTED step. One connected picture per drop, pinned to its step (placing or moving other steps never moves it); the cone is a thin outline from the selected step only while the pointer is on the special's button or a landing point is dragged; Track T's faint preview cone is off; the target in words is always on the card while the unit carries a special; the special's button wears the unit's own words; no keyboard shortcut is added",
+      "parameters": {
+        "pin": "data/ui/ui.json bombs.pin (enabled false brings the old looks back; press_in_cone false: a press in the undrawn cone no longer moves the target)",
+        "preview_cone": "data/ui/ui.json bombs.aim.preview_cone false",
+        "aoe": "the area-of-effect look is still bombs.aoe.mode (default tiers) until Alex picks from variants/bomb-aoe/",
+        "target_words": "data/ui/ui.json bombs.text.target_none / target_unit / target_point; the disabled reasons bombs.text.no_target / target_outside / none_left / place_first",
+        "words": "data/units/<id>.json specials [{id, name, action}] read through UnitDef.special_label: 'Bomb Drop' (Alex: 'it should SAY in the step metadata the name of the special and the action. So Radio On, Bomb Drop, Turret Fire.' -- the SHAPE of the record is proposed)",
+        "keys": "none added; B (drop) stays as it was"
+      },
+      "applied_to": [
+        "scripts/ui/motion_planner.gd, motion_planner_panel.gd, bomb_aim.gd, bomb_aim_art.gd, ui_ink.gd (bomb_glyph), unit_ui.gd",
+        "data/ui/ui.json planner.select, bombs.pin, bombs.text, orders; data/units/_schema.json, bomber.json; scripts/sim/unit_def.gd (specials)",
+        "tested by test_step_select, test_ui_bombs, test_ui_target, test_motion_planner, test_unit_defs; looks: scripts/app/stepdrop_shot.gd"
+      ],
+      "status": "proposed by the lead (built for Alex's playtest), not decided",
+      "notes": "Alex's words that it answers: 'The bomb controls are wildly bad. It is VERY hard to see what is happening. Dropping the bomb shouldn't be a separate control scheme. We have a drop button but I can't get it to highlight. There is a huge nebulus red blob _ahead_ of the plane but nothing connects I am selecting the bomb special on step 2 with this red blob. And it moves with subsequent steps?? What is happening?' Why it failed: Drop needed a target first and inside the step's cone, the only hint was a line on the card; the blob was that step's bomb cone drawn as a wash (a bomb released at 400 m carries about 770 m) plus Track T's faint preview cone; the card followed the LAST PLACED step, so the blob jumped to each new step."
     }
   ]
 }

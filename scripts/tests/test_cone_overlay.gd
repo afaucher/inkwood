@@ -16,6 +16,8 @@ extends "res://scripts/test_support/test_case.gd"
 #      keep a slice no wider than their cone
 #   4. ODDS: the shading is combat.gd's centre factor: 1 at a peaked gun's centre
 #      and its rim factor at the rim; even for a flat one
+#   6. THE ARCS SWITCH (Track C): every cone on the map goes with it, shown to start with, set for the
+#      session; and a cone with no slice at the plane's level (the dorsal turret) is not drawn
 #   5. EVERY STYLE DRAWS TO THE END, in both layers (a runtime error in a draw
 #      function ends it silently: each sub-draw returns true as its last act and
 #      the overlay tallies the ones that did not)
@@ -179,6 +181,46 @@ func setup(_main) -> void:
 		near(float(c["reach_px"]), float(wq.range_m) * 1.5 * PPM, float(wq.range_m) * 0.05 * PPM, "%s: the zone is as long as the host's factor says (a half of the range here)" % str(wq.id))
 		near(ConeOverlay.range_rel(c, float(c["range_px"]) * 1.25), 0.5, 1e-6, "%s: the host's factor is the one sampled" % str(wq.id))
 	_ov.range_factor = Callable()
+
+	# 6. The arcs switch (Track C, 2026-10-10; Alex: "We need to be able to toggle off the weapon arcs so we can see more easily." and
+	# "Lets prioritize onscreen buttons. No keyboard mapping."): one switch hides every cone on the map, the data starts it shown,
+	# and what the player sets stays for the session.
+	ConeOverlay.reset_view_setting()
+	eq(_st.flag("planner.cones.shown"), true, "6. the data starts the arcs shown")
+	eq(_ov.arcs_shown(), true, "6. so the overlay shows them")
+	_sel.select("p2")
+	var all_n := _ov.collect().size()
+	check(all_n >= 2 and _count(_ov.collect(), "ai1") == 3, "6. shown: the selected unit's cones and the enemy bomber's (%d records)" % all_n)
+	var got: Array = []
+	_ov.arcs_changed.connect(func(on: bool) -> void: got.append(on))
+	_ov.set_arcs_shown(false)
+	eq(_ov.collect().size(), 0, "6. hidden: every cone of the map is gone, own and enemy alike")
+	eq(got, [false], "6. and the switch said so once")
+	_ov.set_arcs_shown(false)
+	eq(got, [false], "6. setting it again says nothing")
+	var other := ConeOverlay.new()
+	add_child(other)
+	other.setup(_w, xf, _sel, _st)
+	eq(other.arcs_shown(), false, "6. it stays as set for the session: another overlay finds it hidden")
+	other.queue_free()
+	_ov.toggle_arcs()
+	eq(_ov.collect().size(), all_n, "6. toggled back: the same cones return")
+	eq(got, [false, true], "6. announced")
+	_st.ui["planner"]["cones"]["shown"] = false
+	ConeOverlay.reset_view_setting()
+	eq(_ov.arcs_shown(), false, "6. the data's starting state rules until the player sets it (shown false)")
+	eq(_ov.collect().size(), 0, "6. and then nothing is collected")
+	_st.ui["planner"]["cones"]["shown"] = true
+	ConeOverlay.reset_view_setting()
+	# 6b. No slice, no line: the dorsal turret's dashed footprint is not drawn unless the data says so.
+	var rear_all: Array = _of(_ov.collect(), "ai1")
+	var drawn_default: Array = ConeOverlay.drawn_cones(rear_all, _st)
+	eq(drawn_default.size(), 2, "6b. the bomber's cones that are drawn: the nose gun and the tail turret, not the dorsal turret")
+	for c: Dictionary in drawn_default:
+		check(float(c["half"]) > 0.0, "6b. %s has a slice at the plane's level" % str((c["weapon"] as Object).id))
+	_st.ui["planner"]["cones"]["overhead_footprint"] = true
+	eq(ConeOverlay.drawn_cones(rear_all, _st).size(), 3, "6b. overhead_footprint on: the dashed footprint is drawn again")
+	_st.ui["planner"]["cones"]["overhead_footprint"] = false
 
 	# 5. Every style draws, in both layers.
 	_sel.select("p2")

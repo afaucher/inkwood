@@ -133,3 +133,19 @@ static func text_width(font: Font, s: String, size: float) -> float:
 # shadow tint at the map's strength (the role carries both).
 static func card_shadow(ci: CanvasItem, r: Rect2, offset: Vector2, shadow: Color) -> void:
 	ci.draw_rect(Rect2(r.position + offset, r.size), shadow, true)
+
+# A small bomb (Track B, 2026-10-10): the mark of a step whose special is the bomb drop -- a body of radius `s`, a stem and two fins,
+# in `ink` on a pool of `paper` `halo` px wider. One drawing for the map's node and the orders card's step strip.
+static func bomb_glyph(ci: CanvasItem, c: Vector2, s: float, ink: Color, paper: Color, line_w: float, halo: float) -> void:
+	var stem_a := c + Vector2(0.0, -s)
+	var stem_b := c + Vector2(0.0, -s - 3.2)
+	var fin_l := stem_b + Vector2(-2.6, -1.8)
+	var fin_r := stem_b + Vector2(2.6, -1.8)
+	ci.draw_circle(c, s + halo, paper, true, -1.0, true)
+	for p: Vector2 in [fin_l, fin_r]:
+		ci.draw_line(stem_b, p, paper, line_w + halo, true)
+	ci.draw_line(stem_a, stem_b, paper, line_w + halo, true)
+	ci.draw_circle(c, s, ink, true, -1.0, true)
+	ci.draw_line(stem_a, stem_b, ink, line_w, true)
+	ci.draw_line(stem_b, fin_l, ink, line_w, true)
+	ci.draw_line(stem_b, fin_r, ink, line_w, true)

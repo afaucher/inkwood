@@ -30,5 +30,6 @@
   "bomb_load": {
     "drops": { "value": 0, "_proposed": true, "_reason": "a tower drops nothing" },
     "per_drop": { "value": 0, "_proposed": true, "_reason": "a tower drops nothing" }
-  }
+  },
+  "specials": []
 }

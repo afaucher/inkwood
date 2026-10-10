@@ -19,6 +19,11 @@ extends Node2D
 # of a side with a player-controlled unit is always drawn; any other unit's
 # track only where `point_visible` says that ground is in sight right now.
 #
+# THE LINE IS OFF (Alex 2026-10-10, the Strike playtest: "The red stripe behind the units is great for seeing them, but then we
+# transition to an extremely thin red/blue line which seems to serve no purpose but show you where you were. Remove that
+# line."): data marker.trails.whole_flight_line is false, and then _draw draws neither the line nor the dots. The RECORDING goes
+# on (point_count, length_m, tracks), so true brings the whole flight back; nothing else read the drawing.
+#
 # THE WINGTIP TRAIL TAKES THE LAST TURN (decision wingtip-trails, Alex 2026-10-10: "yes, the
 # trail is to the current position"; trails on every moving unit): a unit with a wingtip
 # trail (scripts/ui/wingtip_trails.gd, drawn by UnitUI) has this whole-flight line stop where
@@ -51,6 +56,7 @@ var trail_start: Callable = Callable()      # unit id -> game seconds its wingti
 #             marks: PackedInt32Array (index of the point that ends each turn), color: Color}
 var tracks: Dictionary = {}
 var _last_turn_end := 0.0           # game seconds at the end of the last recorded turn
+var _was_drawn := false             # whether the last frame drew the line (so the frame it goes off is redrawn empty)
 
 func setup(w: Object, host_view: Node2D, playback_layer: Object, st: RefCounted, sample_seconds: float, width_px: float) -> void:
 	world = w
@@ -108,8 +114,15 @@ func _on_turn_resolved(turn_no: int, _histories: Dictionary, _events: Array) -> 
 	_last_turn_end = t0 + turn_s
 	queue_redraw()
 
+# Whether the whole-flight line (and its dots) is drawn: data marker.trails.whole_flight_line. Off by Alex's word (see the header).
+func line_shown() -> bool:
+	return style != null and style.flag("marker.trails.whole_flight_line")
+
 func _process(_delta: float) -> void:
-	queue_redraw()   # the camera moves; the drawing is a few hundred points
+	var on := line_shown()
+	if on or _was_drawn:
+		queue_redraw()   # the camera moves; the drawing is a few hundred points (and one more frame when it goes off)
+	_was_drawn = on
 
 # How far the playback of the last resolved turn has got, in game seconds: INF when none is playing
 # (every recorded point may be drawn). The turn being played is the one resolved last: its game time
@@ -143,7 +156,7 @@ func drawn_points(unit_id: String) -> int:
 	return n
 
 func _draw() -> void:
-	if world == null or host == null or tracks.is_empty():
+	if world == null or host == null or tracks.is_empty() or not line_shown():
 		return
 	var xf: Transform2D = host.get_global_transform_with_canvas()
 	# (A host that has no px_per_m -- a plain Node2D standing in for the map in a test -- draws metres as pixels.)

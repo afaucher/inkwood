@@ -31,6 +31,14 @@ extends RefCounted
 #   aoe       {tiers, count, stick_px, sigma_px, angle, k_sigma}   what bomb_aoe_art.gd needs for the area of effect
 #   preview   bool                 only the cone (a faint wash and a dashed rim): the step the card is about has no drop yet and a
 #                                      target is set, so the player sees where the target must be (bombs.aim.preview_cone)
+#   --- Track B (the drop pinned to its step, 2026-10-10; data bombs.pin; PROPOSED) ---
+#   pin       bool                 draw ONE picture for this step (draw_pin): the thin cone outline when `cone` has points, the area
+#                                      of effect, a line from `node` to where the bombs land, the target, the crosshair, `num` at the
+#                                      landing, the words. Without it the looks above are drawn
+#   selected  bool                 the step the card is about: full ink; the other steps' pictures are quieter (bombs.pin.unselected_alpha)
+#   node      Vector2              the step's node on the screen, where the line starts (INF: no line)
+#   num       int                  the step's number (1 based)
+#   outline   bool                 with `preview`: only the thin outline of the cone, no wash (the pointer is on the special's button)
 #
 # THE LOOKS (bombs.aim.mode in data/ui/ui.json):
 #   outline   an inked rim, a dotted fall line from the release to the aim, a dashed spread
@@ -68,6 +76,8 @@ static func draw(ci: CanvasItem, rec: Dictionary, st: UiStyle, mode: String = ""
 		if under:
 			failed += 0 if _preview(ci, rec, st) else 1
 		return failed
+	if bool(rec.get("pin", false)):
+		return _draw_pin(ci, rec, st, under, over)
 	if bool(rec.get("quiet", false)):
 		if under:
 			failed += 0 if _quiet_under(ci, rec, st) else 1
@@ -141,10 +151,98 @@ static func _target_mark(ci: CanvasItem, rec: Dictionary, st: UiStyle, k: float,
 		return true
 	return TargetArt.draw(ci, str((t as Dictionary).get("kind", "point")), rec["aim"], st, float((t as Dictionary).get("radius_px", 0.0)), k, alpha)
 
+# --- Track B: the drop pinned to its step (data bombs.pin) -----------------------------------------------------------------------
+
+# ONE connected picture for a step with its special on (the record carries pin: true; `node` is the step's node on the screen,
+# `num` its number, `selected` whether it is the step the card is about). UNDER the planes: the thin outline of the cone (only
+# when the record carries one: the pointer is on the button, or the landing is dragged), the area of effect, the line from the
+# node to the landing. OVER them: the target's mark, the crosshair, the step's number at the landing, the words. Returns the
+# parts that did not reach their end.
+static func _draw_pin(ci: CanvasItem, rec: Dictionary, st: UiStyle, under: bool, over: bool) -> int:
+	var failed := 0
+	var alpha := 1.0 if bool(rec.get("selected", false)) else st.num("bombs.pin.unselected_alpha")
+	if under:
+		var cone: PackedVector2Array = rec["cone"]
+		if cone.size() >= 3:
+			UiInk.ink_line(ci, cone, true, _role(st, "bombs.aim.rim_role"), st.num("bombs.pin.cone.line_px"), int(rec.get("seed", 1)) & 0xFFFF, 0.5)
+		if not bool(rec.get("blocked", false)):
+			failed += BombAoeArt.draw(ci, rec, st)
+			if st.flag("bombs.pin.release_dot"):
+				failed += 0 if _fall_line(ci, rec, st) else 1
+			if st.flag("bombs.pin.spread_ellipse"):
+				failed += 0 if _spread(ci, rec, "outline", st) else 1
+		failed += 0 if _connector(ci, rec, st, alpha) else 1
+	if over:
+		failed += 0 if _target_mark(ci, rec, st, 1.0, alpha) else 1
+		failed += 0 if _crosshair(ci, rec["aim"], st, st.num("bombs.pin.crosshair_k"), alpha) else 1
+		failed += 0 if _flagged(ci, rec, st, 1.0) else 1
+		failed += 0 if _tag(ci, rec, st, alpha) else 1
+		failed += 0 if _label(ci, rec, st) else 1
+	return failed
+
+# Where the connector's line ends and the crosshair's ring begins: the line stops at the ring.
+static func _pin_reach(st: UiStyle) -> float:
+	return st.num("bombs.aim.mark.r_px") * st.num("bombs.pin.crosshair_k")
+
+# The line from the step's node to where the bombs land (the aim when the drop will not release): dashed ink on a paper
+# under-stroke, an arrowhead at the landing end. Starts start_gap_px from the node so the node and its bomb stay clear.
+static func _connector(ci: CanvasItem, rec: Dictionary, st: UiStyle, alpha: float) -> bool:
+	var node: Vector2 = rec.get("node", Vector2.INF)
+	if not node.is_finite():
+		return true
+	var end: Vector2 = lands_of(rec)
+	if not end.is_finite():
+		end = rec["aim"]
+	var d := end - node
+	var dist := d.length()
+	var gap: float = st.num("bombs.pin.start_gap_px")
+	var reach := _pin_reach(st)
+	if dist <= gap + reach + 2.0:
+		return true
+	var dir := d / dist
+	var a := node + dir * gap
+	var b := end - dir * reach
+	var col := _role(st, "bombs.pin.line_role")
+	col.a *= alpha
+	var halo := _role(st, "bombs.pin.halo_role")
+	halo.a *= alpha
+	var w: float = st.num("bombs.pin.line_px") * (1.0 if bool(rec.get("selected", false)) else 0.8)
+	ci.draw_line(a, b, halo, w + st.num("bombs.pin.halo_px"), true)
+	UiInk.dashed(ci, PackedVector2Array([a, b]), col, w, st.num("bombs.pin.dash_px"), st.num("bombs.pin.gap_px"))
+	var ah: float = st.num("bombs.pin.arrow_px")
+	var n := dir.orthogonal()
+	ci.draw_polyline(PackedVector2Array([b - dir * ah + n * ah * 0.5, b, b - dir * ah - n * ah * 0.5]), col, w, true)
+	return true
+
+# The step's number in a small paper disc beside the landing mark: the same figure as in the node, so the two ends read as one.
+static func _tag(ci: CanvasItem, rec: Dictionary, st: UiStyle, alpha: float) -> bool:
+	var num := int(rec.get("num", 0))
+	if num <= 0:
+		return true
+	var r: float = st.num("bombs.pin.tag.r_px")
+	var reach := _pin_reach(st) + st.num("bombs.aim.mark.tick_px") * st.num("bombs.pin.crosshair_k")
+	var c: Vector2 = rec["aim"] + Vector2(-1.0, -1.0).normalized() * (reach + r + 2.0)
+	var ink := _role(st, "bombs.aim.mark.role")
+	ink.a *= alpha
+	var paper := _role(st, "bombs.aim.halo_role")
+	paper.a *= alpha
+	ci.draw_circle(c, r + 1.0, paper, true, -1.0, true)
+	ci.draw_arc(c, r, 0.0, TAU, 28, ink, st.num("bombs.pin.tag.line_px"), true)
+	var px: int = int(st.num("bombs.pin.tag.px"))
+	var font: Font = st.label_font()
+	var txt := str(num)
+	var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	ci.draw_string(font, c + Vector2(-w * 0.5, float(px) * 0.36), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px, ink)
+	return true
+
 # The cone of the step the card is about, before Drop is on (a target is set): a faint wash and a dashed rim, nothing else.
+# With `outline` (Track B: the pointer is on the special's button) just the thin outline of bombs.pin.cone.
 static func _preview(ci: CanvasItem, rec: Dictionary, st: UiStyle) -> bool:
 	var cone: PackedVector2Array = rec["cone"]
 	if cone.size() < 3:
+		return true
+	if bool(rec.get("outline", false)):
+		UiInk.ink_line(ci, cone, true, _role(st, "bombs.aim.rim_role"), st.num("bombs.pin.cone.line_px"), int(rec.get("seed", 1)) & 0xFFFF, 0.5)
 		return true
 	var accent: Color = st.side_color(str(rec.get("side", "allies")))
 	if _ok(cone):

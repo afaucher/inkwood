@@ -38,6 +38,7 @@ const TargetArt = preload("res://scripts/ui/target_art.gd")
 
 const PPM := 0.5
 const ORIGIN := Vector2(1300.0, 1900.0)
+const LABEL := "Bomb Drop"   # the bomber's special as its data words it (data/units/bomber.json specials)
 
 var _w: World
 var _ui: UnitUI
@@ -287,7 +288,8 @@ func _enable_rules() -> bool:
 	_pl.place_point(Vector2(1650.0, 2400.0))
 	var cone: Dictionary = _pl.bombs.cone("b1", 0)
 	eq(_btn("drop")["enabled"], false, "3. a step placed, NO TARGET: Drop is disabled")
-	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.no_target"), "3. and the card's line says why: '%s'" % _ui.orders.bomb_caption())
+	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.no_target") % LABEL, "3. and the card's line says why, in plain words: '%s'" % _ui.orders.bomb_caption())
+	eq(_ui.orders.target_caption(), _st.text("bombs.text.target_none"), "3. and its target line is always there: '%s'" % _ui.orders.target_caption())
 	eq(_pl.drop_options()["available"], false, "3. drop_options agrees")
 	eq(_pl.toggle_drop(), {}, "3. B does nothing")
 	# A target outside the cone.
@@ -301,7 +303,8 @@ func _enable_rules() -> bool:
 	# Inside.
 	_ui.target.set_point(cone["ideal_aim"])
 	eq(_btn("drop")["enabled"], true, "3. a target inside the cone: Drop is enabled")
-	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.free") % [3, 3, 4], "3. the card shows the drops free")
+	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.free") % [1, LABEL, 3, 3], "3. the card shows the drops free")
+	eq(_ui.orders.target_caption(), _st.text("bombs.text.target_point"), "3. the target line names a point target: '%s'" % _ui.orders.target_caption())
 	# The cone is the STEP's: a second step whose cone does not hold it.
 	_pl.place_point(Vector2(1800.0, 2400.0))
 	_ui.target.set_point(_pl.bombs.cone("b1", 0)["ideal_aim"] - Vector2(400.0, 0.0))
@@ -314,7 +317,7 @@ func _enable_rules() -> bool:
 	_ui.target.set_point(_pl.bombs.cone("b1", 0)["ideal_aim"])
 	_w.units["b1"].drops_left = 0
 	_pl.set_focus_step(0)
-	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.none_left"), "3. no drops left is said first")
+	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.none_left") % LABEL, "3. no drops left is said first")
 	_w.units["b1"].drops_left = 3
 	# A fighter has no Drop at all, target or not.
 	_ui.select("p1")
@@ -333,8 +336,10 @@ func _step_target() -> bool:
 	var ideal := _tower_on_ideal(0)
 	# A unit target.
 	_ui.set_target_unit("tower")
+	eq(_ui.orders.target_caption(), _st.text("bombs.text.target_unit") % "radio tower", "4. the card's target line names the selection: '%s'" % _ui.orders.target_caption())
 	check(_pl.step_target(0).is_empty(), "4. before activation the step has no target")
 	check(not _pl.toggle_drop().is_empty(), "4. Drop with the tower as the target is taken")
+	check(_ui.orders.target_caption().begins_with("target: radio tower") and _ui.orders.target_caption().contains("accuracy"), "4. the step's own target on the card, with the drop's accuracy: '%s'" % _ui.orders.target_caption())
 	var st: Dictionary = _pl.step_target(0)
 	eq(st["unit"], "tower", "4. the step's target is the tower")
 	check((st["point"] as Vector2).distance_to(ideal) < 1e-3, "4. its point is where the tower is shown")

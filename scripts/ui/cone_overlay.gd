@@ -54,6 +54,17 @@ extends Node2D
 # planes, side_b for the enemy's): hue is reserved for paper, ink, shadow and the
 # accents. The rim, ticks and labels are ink; the lettering has a paper halo.
 #
+# THE ARCS SWITCH (Track C, 2026-10-10; Alex, on the Strike playtest: "We need to be able to toggle off the weapon arcs so we can
+# see more easily." and "Lets prioritize onscreen buttons. No keyboard mapping."): arcs_shown() says whether the map shows the
+# cones at all. The roster header's button (roster.arcs) flips it through UnitUI.toggle_arcs(); collect() gives nothing while
+# it is off, so every cone of the map goes (this layer and its Marks), and the choice stays for the session (a class-level
+# setting, so a new game or a rebuilt interface keeps it). The starting state is planner.cones.shown. It is not a key.
+# The side view's cones and the bomb cone are drawn by other files and are not part of it.
+#
+# NO SLICE, NO LINE (planner.cones.overhead_footprint, PROPOSED, off): a cone with no slice at the plane's own level (the
+# bomber's dorsal turret: it covers what is ABOVE the plane) used to be drawn as a dashed footprint -- the "dashed arcs to
+# either side" Alex could not read; with the switch off it draws nothing on the map (the side view shows it).
+#
 # It redraws only when something it shows changes (a selection, a pose, the camera,
 # the mode), not every frame: a wedge of stipple is a thousand dots.
 
@@ -63,6 +74,11 @@ const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
 const UiRoles = preload("res://scripts/ui/ui_roles.gd")
 const Combat = preload("res://scripts/sim/combat.gd")
+
+signal arcs_changed(shown: bool)
+
+# The arcs switch as the player left it this session: -1 not touched (planner.cones.shown rules), 0 hidden, 1 shown.
+static var _session_arcs := -1
 
 var world: World = null
 var mapping: UiMapping = null
@@ -99,6 +115,31 @@ func set_mapping(host_mapping: Variant) -> void:
 	mapping = UiMapping.from(host_mapping) as UiMapping
 	_sig = ""
 
+# --- The arcs switch ---------------------------------------------------------------------
+
+# Whether the map shows the weapon cones: what the player last set this session, else the data's starting state.
+func arcs_shown() -> bool:
+	if _session_arcs >= 0:
+		return _session_arcs == 1
+	return style != null and style.flag("planner.cones.shown")
+
+func set_arcs_shown(on: bool) -> void:
+	if on == arcs_shown():
+		return
+	_session_arcs = 1 if on else 0
+	_sig = ""        # the next _process redraws both layers whatever the cones are
+	queue_redraw()
+	if _marks != null:
+		_marks.queue_redraw()
+	arcs_changed.emit(on)
+
+func toggle_arcs() -> void:
+	set_arcs_shown(not arcs_shown())
+
+# Forgets what the player set (tests, a fresh session): the data's starting state rules again.
+static func reset_view_setting() -> void:
+	_session_arcs = -1
+
 func _process(_delta: float) -> void:
 	if world == null or mapping == null:
 		return
@@ -122,7 +163,7 @@ func _process(_delta: float) -> void:
 #    seam, maybe invalid)}
 func collect() -> Array:
 	var out: Array = []
-	if world == null or mapping == null or world.phase != World.PHASE_PLANNING:
+	if world == null or mapping == null or world.phase != World.PHASE_PLANNING or not arcs_shown():
 		return out
 	var own_rule := style.text("planner.cones.own")
 	var enemy_rule := style.text("planner.cones.enemy")
@@ -170,7 +211,7 @@ func collect() -> Array:
 	return out
 
 func _signature(cones: Array) -> String:
-	var parts := PackedStringArray([style.text("planner.cones.mode")])
+	var parts := PackedStringArray([style.text("planner.cones.mode"), str(style.flag("planner.cones.overhead_footprint"))])
 	for c: Dictionary in cones:
 		var a: Vector2 = c["apex"]
 		parts.append("%s.%s.%d:%.1f,%.1f,%.3f,%.1f,%.1f" % [c["unit"], (c["weapon"] as Object).id, c["hp"], a.x, a.y, c["phi"], c["range_px"], c["reach_px"]])
@@ -195,8 +236,9 @@ func _draw_marks() -> void:
 # Returns how many sub-draws did not reach their end (0 when all did): a runtime error ends
 # a GDScript function early and silently, so each returns true as its last act and the
 # tally says whether a frame was drawn whole.
-static func draw_cones(ci: CanvasItem, cones: Array, st: UiStyle, mode_override: String = "", layer: String = "all") -> int:
+static func draw_cones(ci: CanvasItem, all_cones: Array, st: UiStyle, mode_override: String = "", layer: String = "all") -> int:
 	var failed := 0
+	var cones := drawn_cones(all_cones, st)
 	var mode := mode_override if mode_override != "" else st.text("planner.cones.mode")
 	var rim_col: Color = UiRoles.resolve(st, st.lookup("planner.cones.rim_role"), "planner.cones.rim_role")
 	var rim_w: float = st.num("planner.cones.rim_px")
@@ -233,6 +275,18 @@ static func draw_cones(ci: CanvasItem, cones: Array, st: UiStyle, mode_override:
 		labelled[key] = true
 		failed += 0 if _draw_label(ci, c, cones, st, placed) else 1
 	return failed
+
+# The cone records that are drawn: all of them, but for those with no slice at the plane's own level (half 0: the dorsal turret,
+# which covers what is above the plane) while planner.cones.overhead_footprint is off -- those draw neither their rim nor their
+# hardpoint dot on the map. Side-on records (the side view's) are never dropped: their `half` is an elevation.
+static func drawn_cones(cones: Array, st: UiStyle) -> Array:
+	var out: Array = []
+	var keep_overhead := st.flag("planner.cones.overhead_footprint")
+	for c: Dictionary in cones:
+		if float(c["half"]) <= 0.0 and not keep_overhead and not bool(c.get("side_view", false)):
+			continue
+		out.append(c)
+	return out
 
 # Where a weapon's odds reach zero, in px: its effective range plus the overshoot. From the
 # host's range_factor when it has one (scanned out to twice the effective range for the

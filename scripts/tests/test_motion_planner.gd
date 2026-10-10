@@ -147,6 +147,21 @@ func setup(_main) -> void:
 	check(pl.press(h_screen), "pressing a handle re-drags that step")
 	pl.release(xf * a)
 	eq(pl.planned_count(), 1, "re-dragging does not add a step")
+	# Track B (Alex, step-selection: "Selecting the node should select that step in the plan."): a press and release on a node with no
+	# drag SELECTS the step and moves nothing; the drag is only a drag once the pointer has left planner.select.slop_px.
+	var h_now: Vector2 = xf * Vector2(float(pl.states()[0]["x"]), float(pl.states()[0]["y"]))
+	var x_now: float = float(pl.states()[0]["x"])
+	check(pl.press(h_now + Vector2(2.0, 1.0)), "a press near a node grabs it")
+	eq(pl.focus_step(), 0, "and selects its step at once")
+	check(pl.release(h_now + Vector2(2.0, 1.0)), "the release lets go")
+	near(float(pl.states()[0]["x"]), x_now, 1e-9, "a click moved nothing (the node was pressed 2 px from its centre)")
+	check(not pl.edit_was_moved(), "and says it was a click")
+	check(pl.press(h_now) and pl.drag(h_now + Vector2(1.0, 0.0)), "a drag within the slop")
+	near(float(pl.states()[0]["x"]), x_now, 1e-9, "moves nothing")
+	var y_now: float = float(pl.states()[0]["y"])
+	pl.drag(h_now + Vector2(-30.0, 0.0))
+	check(Vector2(float(pl.states()[0]["x"]), float(pl.states()[0]["y"])).distance_to(Vector2(x_now, y_now)) > 1.0 and pl.edit_was_moved(), "past it the node follows the pointer")
+	pl.release(h_now + Vector2(-30.0, 0.0))
 
 	# The real input path: mouse events through UnitUI's own handler (the map
 	# layers sit in a CanvasLayer, so viewport and layer points are the same).

@@ -77,6 +77,10 @@ func _signature(list: Array) -> String:
 		var tg: Dictionary = m.get("target", {})
 		parts.append("%s.%s.%s.%s.%s:%.1f,%.1f:%.1f" % [str(m.get("preview", false)), str(m.get("blocked", false)), str(m.get("poor", false)), str(tg.get("kind", "")), str(tg.get("unit", "")),
 			lands.x if lands.is_finite() else -1.0, lands.y if lands.is_finite() else -1.0, float((m.get("aoe", {}) as Dictionary).get("sigma_px", 0.0))])
+		# (Track B) the pinned picture: its step's node, whether it is the selected step, whether it is a bare outline
+		var node: Vector2 = m.get("node", Vector2.INF)
+		parts.append("pin%s.%s.%s.%d:%.1f,%.1f" % [str(m.get("pin", false)), str(m.get("selected", false)), str(m.get("outline", false)), int(m.get("num", 0)),
+			node.x if node.is_finite() else -1.0, node.y if node.is_finite() else -1.0])
 		var cone: PackedVector2Array = m["cone"]
 		if cone.size() > 0:
 			parts.append("%.1f,%.1f,%.1f,%.1f" % [cone[0].x, cone[0].y, cone[cone.size() / 2].x, cone[cone.size() / 2].y])

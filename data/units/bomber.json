@@ -82,5 +82,14 @@
   "bomb_load": {
     "drops": { "value": 3, "_proposed": true, "_reason": "Track S2 proposal (Alex 2026-10-10: several drops, multiple passes make sense, everything gets at least two, smaller bombers fewer): the medium bomber is the biggest bomber there is, so it gets three passes; a light bomber would get two and a heavy one four" },
     "per_drop": { "value": 4, "_proposed": true, "_reason": "Track S2 proposal (Alex 2026-10-10: smaller bombers fewer bombs, per drop and in number of drops): a stick of four, twelve bombs in all; a light bomber would carry two a drop, a heavy one six" }
-  }
+  },
+  "specials": [
+    {
+      "id": "bomb",
+      "name": "Bomb",
+      "action": "Drop",
+      "_proposed": true,
+      "_reason": "Track B (2026-10-10), on Alex's words: 'it should SAY in the step metadata the name of the special and the action. So Radio On, Bomb Drop, Turret Fire.' The words a step with the bomb drop on prints beside its number, speed and height, that the orders card names it by and that the Drop button wears: 'Bomb Drop'. The id 'bomb' is the drop of bomb_load (the plan request 'drop')."
+    }
+  ]
 }
