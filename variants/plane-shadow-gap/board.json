@@ -1,0 +1,29 @@
+{
+  "id": "plane-shadow-gap",
+  "date": "2026-10-09",
+  "area": "Units, Shadows",
+  "question": "Should a plane's shadow gap follow the map scale or the plane's drawn size?",
+  "source": "tmp/measure/shadow_gap.py: schematic plane at 2x, distances from the game's numbers (altitude x 0.01 / tan 46 deg; a 36 px fighter, 8.2 m long)",
+  "options": [
+    {
+      "name": "today",
+      "gap_px_at_400m": {
+        "1 px/m": 3.9,
+        "2 px/m": 7.7,
+        "4 px/m": 15.5
+      }
+    },
+    {
+      "name": "proposed",
+      "gap_px_at_400m": 17.0,
+      "by_altitude_px": {
+        "120 m": 5.1,
+        "400 m": 17.0,
+        "1000 m": 42.4
+      }
+    }
+  ],
+  "sheet": "board.png, by_altitude.png",
+  "chosen": "proposed",
+  "chosen_by": "Alex, 2026-10-09 ('Do the proposal')"
+}

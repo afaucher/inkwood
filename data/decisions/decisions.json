@@ -270,6 +270,31 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Let's disable trees blocking for now.' Line of sight itself stays off by default (vision.line_of_sight = none); terrain line of sight is a knob in the demo."
+    },
+    {
+      "id": "plane-shadow-gap",
+      "date": "2026-10-09",
+      "area": "Units, Shadows",
+      "question": "Should a plane's shadow gap follow the map scale or the plane's drawn size?",
+      "board": "variants/plane-shadow-gap/",
+      "options": [
+        "today: the gap in map metres (shrinks 4x from 4 to 1 px/m while the plane stays the same size)",
+        "proposed: the gap scaled with the plane's drawn size"
+      ],
+      "chosen": "proposed",
+      "parameters": {
+        "gap": "plane_shadow_offset_m(height) x marker.true_scale",
+        "at_zoom_1": {
+          "low_120m_px": 5,
+          "medium_400m_px": 17,
+          "high_1000m_px": 42
+        }
+      },
+      "applied_to": [
+        "scripts/ui/unit_marker_layer.gd#shadow_offset_px"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Do the proposal'. The altitude cue now reads the same at every map scale."
     }
   ]
 }

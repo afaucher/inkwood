@@ -146,10 +146,19 @@ func update_poses() -> void:
 		var pose := pose_of(id)
 		var wp := Vector2(float(pose["x"]), float(pose["y"]))
 		var sp: Vector2 = mapping.world_to_screen(wp)
-		var off: Vector2 = mapping.screen_delta(wp, style.plane_shadow_offset_m(height_above_ground(pose)))
+		var off: Vector2 = shadow_offset_px(wp, height_above_ground(pose))
 		m.set_pose(sp, mapping.screen_angle(wp, float(pose["heading"])), mapping.px_per_m(wp), off)
 	_marks.queue_redraw()
 	queue_redraw()
+
+# The shadow's screen offset for a plane `height_m` above the ground at `wp`:
+# the world offset (UiStyle.plane_shadow_offset_m) scaled by marker.true_scale,
+# so the gap follows the plane's DRAWN size, not the map's (Alex, 2026-10-09,
+# variants/plane-shadow-gap/). A plane drawn the same size at any map scale
+# keeps the same gap at the same altitude; before, the gap shrank 4x from
+# 4 px/m to 1 px/m while the plane stayed the same size.
+func shadow_offset_px(wp: Vector2, height_m: float) -> Vector2:
+	return mapping.screen_delta(wp, style.plane_shadow_offset_m(height_m) * style.num("marker.true_scale"))
 
 # The unit under a screen point (the nearest within its hit radius), or "".
 func unit_at(screen_pt: Vector2) -> String:

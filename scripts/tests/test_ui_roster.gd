@@ -108,6 +108,23 @@ func setup(_main) -> void:
 	check(off.length() > 1.0, "a plane at medium casts its shadow visibly apart (%.1f px)" % off.length())
 	check(off.normalized().dot(st.shadow_dir()) > 0.999, "the shadow falls away from the sun")
 	check(not UnitMarkerArt.can_bake() or m1.has_art(), "with a renderer, the marker has baked art")
+	# The gap follows the plane's DRAWN size (Alex, 2026-10-09, variants/plane-shadow-gap):
+	# true_scale x2 draws the plane twice as large and doubles its gap with it; and a
+	# host at half the px per metre with true_scale x2 (the plane drawn the same size,
+	# as the sandbox's own-scale rule does) keeps the gap unchanged.
+	var lst = ui.marker_layer.style
+	var k0: float = lst.num("marker.true_scale")
+	var wp1 := Vector2(float(u1.x), float(u1.y))
+	var h_med: float = w.band_height("medium")
+	var gap1: Vector2 = ui.marker_layer.shadow_offset_px(wp1, h_med)
+	lst.set_num("marker.true_scale", k0 * 2.0)
+	var gap2: Vector2 = ui.marker_layer.shadow_offset_px(wp1, h_med)
+	near(gap2.length(), gap1.length() * 2.0, 1e-3, "the shadow gap doubles with the plane's drawn size (true_scale x2)")
+	ui.set_mapping(xf.scaled_local(Vector2(0.5, 0.5)))
+	var gap_half: Vector2 = ui.marker_layer.shadow_offset_px(wp1, h_med)
+	near(gap_half.length(), gap1.length(), 1e-3, "at half the map scale with the plane drawn the same size, the gap is the same")
+	lst.set_num("marker.true_scale", k0)
+	ui.set_mapping(host)
 
 	# 5. Plan status and side marks.
 	ui.select("p1")
