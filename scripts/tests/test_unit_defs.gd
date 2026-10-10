@@ -278,9 +278,13 @@ func _check_weapons(def: UnitDef) -> void:
 		"radio_tower":
 			eq(ids, [] as Array[String], "radio tower: no weapons")
 		"anti_aircraft_battery":
-			eq(ids, ["flak"] as Array[String], "anti-aircraft battery: flak")
-			eq(def.weapons[0].half_across_deg, 180.0, "...all around")
-			check(def.weapons[0].elevation_deg > 0.0, "...aimed up (centre %s deg)" % def.weapons[0].elevation_deg)
+			# Two weapons since Alex's decision low-band-flak (2026-10-10, "make it more dangerous"): the heavy flak and,
+			# proposed by Track F, the light flak, short and fast, that covers the low band near the battery.
+			eq(ids, ["flak", "light_flak"] as Array[String], "anti-aircraft battery: flak and light flak")
+			for k in 2:
+				eq(def.weapons[k].half_across_deg, 180.0, "...%s: all around" % ids[k])
+				check(def.weapons[k].elevation_deg > 0.0, "...%s: aimed up (centre %s deg)" % [ids[k], def.weapons[k].elevation_deg])
+			check(def.weapons[1].effective_range_m < def.weapons[0].effective_range_m and def.weapons[1].tracking_dps > def.weapons[0].tracking_dps, "...the light flak is the short, fast one (%s m at %s deg/s against %s m at %s)" % [def.weapons[1].effective_range_m, def.weapons[1].tracking_dps, def.weapons[0].effective_range_m, def.weapons[0].tracking_dps])
 		"bomber":
 			eq(ids, ["nose_gun", "dorsal_turret", "tail_turret"] as Array[String], "bomber: nose gun, dorsal turret, tail turret")
 			eq(def.weapons[2].effective_range_m, 400.0, "the tail turret's effective range is 400 m")

@@ -17,9 +17,11 @@ outgrows the map fails the gate.
 (`"mobility": "static"`): they never move, turn or plan, their envelope is all
 zeros on the `surface` band, the World gives them one step a turn that stands
 still and does not wait for them in the ready-up. A destroyed one is down with
-the fate `destroyed` and stays in `World.units`. The battery's one weapon, flak,
-is a cone aimed up and all around (`half_across_deg` 180 means the azimuth is
-not part of the cone). Every file carries a `bomb_load` section (`drops`,
+the fate `destroyed` and stays in `World.units`. The battery has two weapons, both
+cones aimed up and all around (`half_across_deg` 180 means the azimuth is not part
+of the cone): `flak` (heavy, long reach) and `light_flak` (short and fast, so it
+reaches the low band near the battery and never the medium band; added by Track F
+on Alex's decision `low-band-flak`, 2026-10-10, numbers proposed). Every file carries a `bomb_load` section (`drops`,
 `per_drop`): 0 and 0 for units that drop nothing, at least two drops for those
 that do (Alex: everything gets at least two). The bombs' physics is shared and
 lives in `data/sim/bombs.json`. All values are proposed; the tuning tables are

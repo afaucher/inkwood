@@ -7,9 +7,17 @@ extends SceneTree
 #   $env:INKWOOD_STEAM = "off"
 #   build\deps\godot\4.7-stable\Godot_v4.7-stable_win64_console.exe --path . --headless --fixed-fps 60 --script res://scripts/test_support/strike_tuning.gd
 #
+#   Arguments after the script (any of A B C, and heavy_only):  `-- A C heavy_only`  plays the tables with
+#   the battery's FIRST weapon only (the heavy flak), i.e. the strike as it was before the light guns
+#   (data/decisions/decisions.json "low-band-flak", 2026-10-10), so a before and an after come from one
+#   script and one set of bomb code.
+#
 # A. FLAK, one battery, one plane flying straight and level over it (the plane has 999 pips so it
-#    stays up; the number is the EXPECTED pips of damage, the sum of the flak rolls' odds along the
-#    pass). Rows: type and band; columns: how far to one side of the battery the track passes.
+#    stays up; the number is the EXPECTED pips of damage, the sum of the BATTERY'S flak rolls' odds along
+#    the pass, split heavy + light). Rows: type and band; columns: how far to one side of the battery the
+#    track passes. (Until 2026-10-10 this summed EVERY fire event of the pass, so a bomber passing low
+#    right over the battery was credited with its own turret fire at the battery too: 0.6 pips of the
+#    3.41 once printed for it. Only the battery's rolls are damage to the plane.)
 # B. THE BOMBS: the pips a stick of the bomber's load does to the tower, by band and by how close the
 #    release is to ideal (release error r: 0 ideal, 0.5 half way to the rim of the cone, 1 the rim),
 #    and how many drops (passes) it takes on average to destroy the tower; SEEDS sticks each.
@@ -26,22 +34,36 @@ const Combat = preload("res://scripts/sim/combat.gd")
 const Mission = preload("res://scripts/sim/mission.gd")
 
 const SEEDS := 300
-const STRIKE_SEEDS := 100
+const STRIKE_SEEDS := 300       # (100 until 2026-10-10: the pips-lost mean of 100 seeds moves by about 0.5 from one set of seeds to another)
 const RUN_TURNS := 12
 const TOWER := Vector2(2500.0, 2500.0)
 const BATTERIES := [Vector2(2250.0, 2200.0), Vector2(2800.0, 2800.0)]
 
+var heavy_only := false
+
+# A World for a table. With `heavy_only` the battery keeps its first weapon (the heavy flak) alone.
+func _world() -> World:
+	var w := World.new()
+	if heavy_only:
+		var def := w.unit_def("anti_aircraft_battery")
+		while def.weapons.size() > 1:
+			def.weapons.pop_back()
+	return w
+
 func _initialize() -> void:
-	var w0 := World.new()
-	print("Strike tuning tables: proposed values only (data/units/*.json, data/sim/bombs.json, data/sim/combat.json). %d seeds a row." % SEEDS)
+	var parts := OS.get_cmdline_user_args()
+	heavy_only = parts.has("heavy_only")
+	var w0 := _world()
+	print("Strike tuning tables: proposed values only (data/units/*.json, data/sim/bombs.json, data/sim/combat.json). %d seeds a row.%s" % [SEEDS, "  HEAVY FLAK ONLY (the battery's first weapon)." if heavy_only else ""])
 	print("Bands (m): low %s, medium %s, high %s. Bomb gravity %s m/s^2; cone half %s x %s deg; spread %s + %s per m, over the accuracy factor (rim %s)." % [
 		w0.band_height("low"), w0.band_height("medium"), w0.band_height("high"), w0.bombs.gravity,
 		w0.bombs.cone_half_across_deg, w0.bombs.cone_half_height_deg, w0.bombs.spread_base_m, w0.bombs.spread_per_height, w0.bombs.rim_accuracy_factor])
-	print("Tower: %d pips. Battery: %d pips, flak %s m effective." % [
-		w0.unit_def("radio_tower").health, w0.unit_def("anti_aircraft_battery").health, w0.unit_def("anti_aircraft_battery").weapons[0].effective_range_m])
+	var guns: Array[String] = []
+	for wp in w0.unit_def("anti_aircraft_battery").weapons:
+		guns.append("%s %s m effective (reach %s m)" % [wp.id, wp.effective_range_m, wp.max_range_m(w0.combat.range_overshoot)])
+	print("Tower: %d pips. Battery: %d pips, %s." % [w0.unit_def("radio_tower").health, w0.unit_def("anti_aircraft_battery").health, ", ".join(guns)])
 	print("")
-	var parts := OS.get_cmdline_user_args()
-	if parts.is_empty():
+	if not (parts.has("A") or parts.has("B") or parts.has("C")):
 		parts = PackedStringArray(["A", "B", "C"])
 	if parts.has("A"):
 		_flak_table()
@@ -56,7 +78,7 @@ func _initialize() -> void:
 # --- A. flak ---------------------------------------------------------------------------
 
 func _flak_pass(type_id: String, band: String, offset_m: float) -> Dictionary:
-	var w := World.new()
+	var w := _world()
 	w.quiet = true
 	w.add_player("local")
 	var speed: float = w.unit_def(type_id).envelope.speed_cruise
@@ -64,29 +86,32 @@ func _flak_pass(type_id: String, band: String, offset_m: float) -> Dictionary:
 	w.add_unit({"id": "aa", "type": "anti_aircraft_battery", "side": "axis", "controller": "ai", "x": 2500.0, "y": 2500.0, "heading": 0.0})
 	w.units["p"].health = 999
 	var expected := 0.0
+	var light := 0.0
 	var rolls := 0
-	var seconds_in := 0.0
 	var turns := int(ceil(3600.0 / speed / 5.0)) + 1
 	for _t in turns:
 		w.commit("local")
 		var res := w.resolve()
 		for ev: Dictionary in res["events"]:
-			if ev["type"] == "fire":
+			# Only the battery's rolls are damage to the plane (the plane's own guns may fire back at the battery).
+			if ev["type"] == "fire" and ev["unit"] == "aa":
 				expected += float(ev["odds"])
+				if ev["weapon"] != "flak":
+					light += float(ev["odds"])
 				rolls += 1
 		w.begin_turn()
-	return {"expected": expected, "rolls": rolls}
+	return {"expected": expected, "light": light, "rolls": rolls}
 
 func _flak_table() -> void:
-	print("A. Flak: one battery, a plane flies straight over at cruise; expected pips of damage per pass (sum of the flak odds), and the rolls it drew.")
-	print("%-14s %-7s | %-16s %-16s %-16s %-16s" % ["plane", "band", "over it", "300 m aside", "600 m aside", "900 m aside"])
+	print("A. Flak: one battery, a plane flies straight over at cruise; expected pips of damage per pass (sum of the battery's flak odds; in brackets the part that is the light guns', any weapon but the first), and the rolls it drew.")
+	print("%-14s %-7s | %-24s %-24s %-24s %-24s" % ["plane", "band", "over it", "300 m aside", "600 m aside", "900 m aside"])
 	for type_id: String in ["bomber", "light_fighter"]:
 		for band: String in ["low", "medium", "high"]:
 			var cells: Array[String] = []
 			for off: float in [0.0, 300.0, 600.0, 900.0]:
 				var r := _flak_pass(type_id, band, off)
-				cells.append("%5.2f (%3d rolls)" % [r["expected"], r["rolls"]])
-			print("%-14s %-7s | %-16s %-16s %-16s %-16s" % [type_id, band, cells[0], cells[1], cells[2], cells[3]])
+				cells.append("%5.2f (light %4.2f) %3dr" % [r["expected"], r["light"], r["rolls"]])
+			print("%-14s %-7s | %-24s %-24s %-24s %-24s" % [type_id, band, cells[0], cells[1], cells[2], cells[3]])
 
 # --- B. bombs ---------------------------------------------------------------------------
 
@@ -144,7 +169,7 @@ func _bomb_table(w: World) -> void:
 # --- C. the strike run -----------------------------------------------------------------------
 
 func _strike_run(band: String, seed_value: int, flak_on: bool, lateral: float, r_max: float) -> Dictionary:
-	var w := World.new()
+	var w := _world()
 	w.quiet = true
 	w.rng_seed = seed_value
 	w.add_player("local")
