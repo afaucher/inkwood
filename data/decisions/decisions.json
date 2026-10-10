@@ -368,12 +368,15 @@
         "keep the ground low; hiding is for ground units"
       ],
       "chosen": "taller ground: mountainous islands, for tactical options",
-      "parameters": {},
+      "parameters": {
+        "deferred": "off for now; revisit once there are reasons to (Alex, 2026-10-09)",
+        "alternative": "bring the lowest flight band much closer to mountain height instead of (or as well as) raising the ground (Alex)"
+      },
       "applied_to": [
-        "nothing yet: how mountains read in ink, their heights and passability go to a board first (proposed)"
+        "nothing: deferred"
       ],
-      "status": "chosen by Alex",
-      "notes": "Alex: 'I definitely think we will want some taller ground. Like I said, we should be mountainous islands to give some tactical options.'"
+      "status": "chosen by Alex; deferred",
+      "notes": "Alex: 'I definitely think we will want some taller ground. Like I said, we should be mountainous islands to give some tactical options.' Later the same day: 'Let's leave mountains off for now. We'll come back and visit them once we have reasons to. Another way to do it would be having the lowest flight level be much closer to mountain height.'"
     },
     {
       "id": "turn-preview",
