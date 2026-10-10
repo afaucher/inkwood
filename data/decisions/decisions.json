@@ -687,6 +687,26 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Board 2 - color wash (selected only)'. The lead read 'selected only' as no enemy cones. Still proposed: cones at the current pose, a weapon with no slice at the plane's level drawn dashed as overhead."
+    },
+    {
+      "id": "fire-colour",
+      "date": "2026-10-10",
+      "area": "Effects, Palette",
+      "question": "The proposed fire accent oklch(0.72 0.14 56), a light saturated orange, for flashes, fireballs, flames and embers",
+      "board": "variants/crash-explosion/ (all four options use it); viewed at full size in the effects viewer artifact",
+      "options": [
+        "the proposed orange",
+        "more research first"
+      ],
+      "chosen": "rejected: it looks cartoony on this palette; research first",
+      "parameters": {
+        "data/fx/fx.json#accents.fire": "rejected; stays as a placeholder until the research and a new board round"
+      },
+      "applied_to": [
+        "research in progress: docs/proposals/fire-in-ink.md"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'The fire is not okay. It looks cartoony on this color palate. Let's do some more research.'"
     }
   ]
 }
