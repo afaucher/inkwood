@@ -271,9 +271,18 @@ Properties of Godot and PowerShell, not of that game. Entries marked
   runner as separate commands.
 - **A windowed `SceneTree` script (`--script`) can render offscreen** with
   `force_draw` from `_initialize()` (observed 2026-10-09; the shot scripts do).
-- **A `--script` run whose script fails to compile does not quit**: headless or
-  windowed, the process idles until killed (observed 2026-10-09). Give shot
-  scripts a timeout, and read the .err output when one seems to hang.
+- **A `--script` run whose DEPENDENCY fails to compile does not quit**:
+  headless or windowed, the process idles until killed (observed 2026-10-09).
+  A parse error in the `--script` file itself exits with code 1 at once
+  (observed the same day by the performance check). Give shot scripts a
+  timeout, and read the .err output when one seems to hang.
+- **Quitting while a WorkerThreadPool task is still running GDScript
+  segfaults at exit** (exit 139; 2 of 2 with the baker's terrain task in
+  flight, observed 2026-10-09). Clear the baker (`baker.clear()`, as
+  `sandbox.shutdown()` does) before quitting a shot script or probe.
+- **`RenderingDevice.get_captured_timestamp_gpu_time` is in NANOseconds**,
+  the CPU time in microseconds (2026-10-09). Per-viewport GPU time can be
+  read through the `vp_begin_<id>` / `vp_end_<id>` timestamp names.
 - **`RenderingServer.texture_2d_get` stalls on every frame in flight**
   (measured 2026-10-09: ~190 ms per sprite page). Use
   `RenderingDevice.texture_get_data_async` for read-backs.
