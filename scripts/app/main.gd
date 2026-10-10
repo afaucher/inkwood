@@ -85,19 +85,31 @@ func _unhandled_input(event: InputEvent) -> void:
 # --- Menu --------------------------------------------------------------------
 
 func _on_host_pressed() -> void:
-	_set_status("Creating lobby...")
+	# The transport is the 'net' knob (INKWOOD_NET): a Steam lobby as shipped, or ENet
+	# for two windows on one machine (Track N, proposed).
+	var via := _transport()
+	_set_status("Creating lobby..." if via == NetworkManager.Transport.STEAM else "Starting the host...")
 	# The host's net log goes on HERE, before the session exists: NetworkManager
 	# logs "hosting via steam" on the line before it emits session_started, so a
 	# switch flipped from that signal misses the one event it is most wanted for.
 	# Set locally, not pushed, and not as the knob's default (which would print
 	# [Net] lines under every test that stands up a session).
 	DebugSettings.set_value("net_log", 1)
-	await NetworkManager.host(NetworkManager.Transport.STEAM)
+	await NetworkManager.host(via, _net_port())
 
 # THE JOIN FLOW, verbatim from Bridge to Friendship: Join connects to the first
 # global Steam lobby it finds. One game at a time suits the test group (design
 # doc, decision log 2026-10-09); a lobby browser is deliberately not here.
+# (With the 'net' knob on enet it connects to INKWOOD_NET_ADDRESS, else this
+# machine, on the 'net_port' knob.)
 func _on_join_pressed() -> void:
+	if _transport() == NetworkManager.Transport.ENET:
+		var address := OS.get_environment("INKWOOD_NET_ADDRESS")
+		if address == "":
+			address = "127.0.0.1"
+		_set_status("Joining %s:%d..." % [address, _net_port()])
+		NetworkManager.join(NetworkManager.Transport.ENET, address, _net_port())
+		return
 	if not SteamManager.request_lobby_list():
 		return
 	_set_status("Searching for lobbies...")
@@ -112,13 +124,22 @@ func _on_join_pressed() -> void:
 func _on_local_pressed() -> void:
 	start_sandbox()
 
+func _transport() -> int:
+	return NetworkManager.Transport.ENET if DebugSettings.get_choice_name("net") == "enet" else NetworkManager.Transport.STEAM
+
+func _net_port() -> int:
+	return int(DebugSettings.get_value("net_port"))
+
 # --- The sandbox ---------------------------------------------------------------
 
 # Local: build the sandbox over the menu and hide the menu. Returns whether it
 # stands. The menu is hidden at once and the sandbox's own "Drawing the map..."
 # card covers the bake; a sandbox that did not build leaves the menu up with
 # the reason in the status line.
-func start_sandbox() -> bool:
+#
+# `role` (Track N, proposed): "" is Local; "host" or "client" starts the same
+# sandbox in the session NetworkManager just opened (_on_session_started).
+func start_sandbox(role: String = "") -> bool:
 	if sandbox != null:
 		return true
 	_local_pressed_ms = Time.get_ticks_msec()
@@ -127,6 +148,7 @@ func start_sandbox() -> bool:
 		_set_status("The sandbox did not compile -- see the Parse Error in the log.")
 		return false
 	var sb: Node = script.new()
+	sb.set("net_role", role)
 	add_child(sb)
 	if not bool(sb.call("ok")):
 		_set_status("The sandbox did not start: %s" % str(sb.get("errors")))
@@ -135,17 +157,21 @@ func start_sandbox() -> bool:
 	sandbox = sb
 	sb.connect("playable", _on_sandbox_playable)
 	menu.hide()
-	_set_status("Local sandbox.")
+	_set_status("Local sandbox." if role == "" else "%s sandbox." % role.capitalize())
 	return true
 
 func stop_sandbox() -> void:
 	if sandbox == null:
 		return
+	var networked := str(sandbox.get("net_role")) != ""
 	sandbox.call("shutdown")
 	sandbox.queue_free()
 	sandbox = null
 	menu.show()
 	_set_status("Back at the menu.")
+	# Out of the game is out of the session (NetworkManager.leave() ends it for the others too).
+	if networked and NetworkManager.active:
+		NetworkManager.leave()
 
 func _on_sandbox_playable() -> void:
 	print("[Main] Local pressed -> first playable frame in %d ms" % (Time.get_ticks_msec() - _local_pressed_ms))
@@ -155,6 +181,10 @@ func _on_sandbox_playable() -> void:
 # saved to INKWOOD_SHOT_OUT (else user://autostart.png) once it is playable and
 # has settled; then quit.
 func _autostart() -> void:
+	var mode := DebugSettings.get_choice_name("autostart")
+	if mode.begins_with("host") or mode.begins_with("join"):
+		await _autostart_net(mode)
+		return
 	if not start_sandbox():
 		get_tree().quit(1)
 		return
@@ -178,17 +208,62 @@ func _autostart() -> void:
 	await get_tree().process_frame
 	get_tree().quit(0 if err == OK else 1)
 
+# INKWOOD_AUTOSTART=host|join (Track N, proposed): press Host / Join without a
+# click, over the transport the 'net' knob names. With host_shot / join_shot it
+# is the TWO-WINDOW CHECK: one window hosts and the other joins; each plans one
+# plane through the planner, waits until it shows the other window's plan, saves
+# a frame (INKWOOD_SHOT_OUT, else tmp/net/<host|join>.png), readies, waits for the
+# host's resolve and the next turn, saves a second frame (..._turn2.png) and
+# quits 0, or 1 with the reason. How to run it: tmp/net/README.txt.
+func _autostart_net(mode: String) -> void:
+	if mode.begins_with("host"):
+		await _on_host_pressed()
+	else:
+		_on_join_pressed()
+	var t0 := Time.get_ticks_msec()
+	while sandbox == null and Time.get_ticks_msec() - t0 < 30000:
+		await get_tree().process_frame
+	if sandbox == null:
+		printerr("[Main] autostart %s: no session after 30 s (%s)" % [mode, status_label.text if status_label != null else ""])
+		get_tree().quit(1)
+		return
+	if not mode.ends_with("_shot"):
+		return
+	if not bool(sandbox.get("is_playable")):
+		await sandbox.playable
+	var out := OS.get_environment("INKWOOD_SHOT_OUT")
+	if out == "":
+		out = "tmp/net/%s.png" % ("host" if mode.begins_with("host") else "join")
+	if out.is_relative_path():
+		out = ProjectSettings.globalize_path("res://").path_join(out)
+	var problem: String = await sandbox.get("session").call("run_check", out)
+	if problem != "":
+		printerr("[Main] two-window check FAILED: ", problem)
+	else:
+		print("[Main] two-window check passed (%s)" % mode)
+	stop_sandbox()
+	await get_tree().process_frame
+	get_tree().quit(0 if problem == "" else 1)
+
 # --- Session -----------------------------------------------------------------
 
+# A session opened (Host: the lobby or the port is up; Join: connected to the
+# host): start the sandbox in it. Both machines build the same scenario World
+# (scripts/app/sandbox_session.gd, scripts/net/world_sync.gd); the host's
+# decides every turn. Alex 2026-10-09: Join connects straight to the first
+# global Steam game it finds; there is no lobby screen.
 func _on_session_started(is_host: bool) -> void:
-	# The menu stays visible: networking is not part of the sandbox demo (exit
-	# criterion 1: Local only), so a session has no world to show yet.
-	_set_status("%s via %s as peer %d. No networked world yet." % [
+	_set_status("%s via %s as peer %d." % [
 		"Hosting" if is_host else "Joined",
 		"steam" if NetworkManager.transport == NetworkManager.Transport.STEAM else "enet",
 		NetworkManager.local_id()])
+	if not start_sandbox("host" if is_host else "client"):
+		NetworkManager.leave()
 
+# The session is over (the host went away, or we left): out of the game.
 func _on_session_ended() -> void:
+	if sandbox != null:
+		stop_sandbox()
 	menu.show()
 	_set_status("Disconnected.")
 

@@ -45,9 +45,26 @@ const OPTIONS := {
 	"autostart": {
 		"section": "Diagnostics",
 		"label": "Autostart",
-		"choices": ["off", "local", "local_shot"],
+		"choices": ["off", "local", "local_shot", "host", "join", "host_shot", "join_shot"],
 		"default": 0,
-		"help": "'local' presses the menu's Local button at launch; 'local_shot' also saves one frame of the running sandbox (INKWOOD_SHOT_OUT, else user://autostart.png) once it is playable, and quits. For checking an exported build without a tool that drives the window.",
+		"help": "'local' presses the menu's Local button at launch; 'local_shot' also saves one frame of the running sandbox (INKWOOD_SHOT_OUT, else user://autostart.png) once it is playable, and quits. For checking an exported build without a tool that drives the window. 'host' / 'join' press Host / Join the same way (the transport is the 'net' knob); 'host_shot' / 'join_shot' also run the two-window check (proposed, Track N): wait for the other window, plan one plane each, wait until each window shows the other's plan, save a frame to INKWOOD_SHOT_OUT and quit.",
+	},
+	# --- Network (Track N, proposed) -----------------------------------------------
+	"net": {
+		"section": "Network",
+		"label": "Transport",
+		"choices": ["steam", "enet"],
+		"default": 0,
+		"help": "What Host and Join use. 'steam' is what ships (a Steam lobby; Join takes the first global lobby it finds). 'enet' is plain UDP: two windows on one machine, no Steam client needed. INKWOOD_NET=enet; Join connects to INKWOOD_NET_ADDRESS (default 127.0.0.1) on the 'net_port' knob.",
+	},
+	"net_port": {
+		"section": "Network",
+		"label": "ENet port",
+		"kind": "int",
+		"default": 27015,
+		"min": 1024,
+		"max": 65535,
+		"help": "The UDP port Host binds and Join connects to when the transport is 'enet' (NetworkManager.DEFAULT_PORT). INKWOOD_NET_PORT=28790.",
 	},
 	# --- Sandbox knobs (Track A; the F2 panel shows them) ---------------------------
 	# Index 0 is always "data": whatever the data files say (data/scenarios/

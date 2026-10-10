@@ -54,6 +54,7 @@ const SandboxTracks = preload("res://scripts/app/sandbox_tracks.gd")
 const SandboxKnobs = preload("res://scripts/app/sandbox_knobs.gd")
 const SandboxLoading = preload("res://scripts/app/sandbox_loading.gd")
 const SandboxHint = preload("res://scripts/app/sandbox_hint.gd")
+const SandboxSession = preload("res://scripts/app/sandbox_session.gd")
 const World = preload("res://scripts/sim/world.gd")
 const AiDumb = preload("res://scripts/sim/ai_dumb.gd")
 const Terrain = preload("res://scripts/world/terrain.gd")
@@ -83,6 +84,12 @@ var knobs: SandboxKnobs = null
 var loading: SandboxLoading = null    # the blocking card, then hidden
 var note: SandboxLoading = null       # the small "redrawing" note
 var hint: SandboxHint = null          # the keys, for the first seconds
+# NETWORKED (Track N, proposed): "" is Local, exactly as before; "host" or "client"
+# is a session (set by main.gd BEFORE add_child, from NetworkManager). Then the
+# World's player is this peer's ("peer_<id>"), the host resolves and the AI runs
+# on the host only: scripts/app/sandbox_session.gd.
+var net_role := ""
+var session: SandboxSession = null
 
 var ids: Array[String] = []
 var headless := false
@@ -154,8 +161,15 @@ func _build() -> void:
 		_ref_size = minf(_ref_size, float(world.units[id].def.size_m))
 		if world.units[id].controller == World.CONTROLLER_PLAYER:
 			_revealing[str(world.units[id].side)] = true
+	var local_player := scenario.local_player
+	if net_role != "":
+		session = SandboxSession.new()
+		add_child(session)
+		session.begin(self, net_role)
+		local_player = session.player
 	ai = AiDumb.new(world)
-	ai.attach()
+	if net_role != "client":
+		ai.attach()   # the enemy's plans exist on the host only
 
 	# The knobs that must be set before anything bakes: scale, pen, tree pool.
 	# "data" for the pen is what the DATA says (render_defaults.json linework.pen.mode),
@@ -222,7 +236,9 @@ func _build() -> void:
 	ui = UnitUI.new()
 	ui.name = "UnitUI"
 	add_child(ui)
-	ui.setup(world, map_view, scenario.local_player, _mount, null)
+	ui.setup(world, map_view, local_player, _mount, null)
+	if session != null:
+		session.attach_ui(ui)
 	ui.marker_layer.ground_height = func(x: float, y: float) -> float: return terrain.height_at(x, y)
 	ui.unit_focus_requested.connect(_on_focus_requested)
 	tracks.setup(world, map_view, ui.marker_layer, _style, scenario.view_num("track_sample_s"), scenario.view_num("track_line_px"))
@@ -378,6 +394,8 @@ func _finish_loading() -> void:
 	load_ms = float(Time.get_ticks_msec() - created_ms)
 	print("[Sandbox] first playable frame %.0f ms after the sandbox was created (building the parts %.0f ms; first view of %d chunks, %s)" % [
 		load_ms, build_ms, _load_total, "headless: no bake" if headless else "baked"])
+	if session != null:
+		session.on_playable()
 	playable.emit()
 
 func _check_rebake() -> void:
@@ -663,6 +681,8 @@ func frame_line() -> String:
 # the workers, so the pen can be put back safely after); the global pen; the
 # unit-art cache, whose entries were baked with it.
 func shutdown() -> void:
+	if session != null:
+		session.shutdown()
 	if DebugSettings.changed.is_connected(_on_knob_changed):
 		DebugSettings.changed.disconnect(_on_knob_changed)
 	if _style != null:
