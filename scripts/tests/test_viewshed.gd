@@ -634,6 +634,7 @@ func _vision() -> void:
 	w.add_unit({"id": "me", "type": "light_fighter", "side": "allies", "controller": "player", "x": site.x, "y": site.y, "heading": 0.0})
 	w.add_unit({"id": "foe", "type": "light_fighter", "side": "axis", "controller": "ai", "x": hidden.x, "y": hidden.y, "heading": 0.0})
 	var vw := FogVision.new()
+	vw.budget_ms = 0.0   # this block checks the shed CACHE (one whole sweep per update); slicing is checked below with its own budget
 	vw.attach_terrain(_terrain)
 	vw.set_line_of_sight(FogVision.LOS_TERRAIN)
 	vw.update_from_world(w)
