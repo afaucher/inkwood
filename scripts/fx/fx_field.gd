@@ -43,6 +43,11 @@ var crash_o: Dictionary = {}            # the crash option (groups)
 var common_ref_plane_m: float = 9.0
 var common_size_exp: float = 0.75
 var common_max_puffs: int = 1500
+# The fire machinery (flames, embers) runs only when this is true; the data's switch sets it (Alex 2026-10-10: no fire for now).
+var fire_on: bool = false
+# A smoke option the crash's trail, burst and plume are drawn in instead of the crash option's own (the board's
+# comparison frames: any damage-smoke variant as the crash smoke).
+var crash_smoke_override: String = ""
 
 var puffs: Array[Dictionary] = []
 var bursts: Array[Dictionary] = []
@@ -60,12 +65,14 @@ func _init(fx_data: FxData = null) -> void:
 	common_ref_plane_m = data.common_num("ref_plane_m")
 	common_size_exp = data.common_num("size_exp")
 	common_max_puffs = int(data.common_num("max_puffs"))
+	fire_on = data.fire_enabled()
 	select(data.working_default("smoke"), data.working_default("crash"))
 
 # Chooses the options the field runs (until Alex chooses; the data's working defaults otherwise).
-func select(smoke: String, crash: String) -> void:
+func select(smoke: String, crash: String, crash_smoke: String = "") -> void:
 	smoke_name = smoke
 	crash_name = crash
+	crash_smoke_override = crash_smoke
 	smoke_o = data.smoke_option(smoke)
 	crash_o = data.crash_option(crash)
 	set_defs.clear()
@@ -178,7 +185,7 @@ func _add_trail_puff(unit_id: String, kind: String, o: Dictionary, set_id: Strin
 		"r_m": r_m,
 		"tone": tone, "variant": int(rng.next() * float(FxData.i(o, "variants"))),
 		"life": fixed_life if fixed_life > 0.0 else FxPuff.life_s(o, i),
-		"wind": wind,
+		"wind": wind, "dir": 0.0 if is_nan(heading) else heading,
 	}
 	_add_puff(p)
 	return 1
@@ -225,9 +232,14 @@ func puff_state(p: Dictionary, t: float) -> Dictionary:
 			a = (1.0 - u * u) * (0.55 + 0.45 * float(blink < 0.62))
 		return {"alive": true, "pos": (p["pos"] as Vector2) + (p["wind"] as Vector2) * age, "h": float(p["h"]), "alpha": clampf(a, 0.0, 1.0), "scale": 1.0, "u": u}
 	var o: Dictionary = set_defs.get(p["set"], smoke_o)
+	var thrown := Vector2.ZERO
+	if p.has("vel"):
+		# a burst throws its smoke outward, fast, then drag takes it: v x tau x (1 - e^(-age / tau))
+		var tau := maxf(float(p["vel_tau"]), 1e-3)
+		thrown = (p["vel"] as Vector2) * (tau * (1.0 - exp(-age / tau)))
 	return {
 		"alive": true,
-		"pos": (p["pos"] as Vector2) + (p["wind"] as Vector2) * age,
+		"pos": (p["pos"] as Vector2) + (p["wind"] as Vector2) * age + thrown,
 		"h": float(p["h"]) + float(p.get("rise", 0.0)) * age,
 		"alpha": FxPuff.alpha_at(o, u),
 		"scale": FxPuff.grow_at(o, u),
@@ -269,22 +281,36 @@ func prune(t: float) -> void:
 # heavy smoke it leaves, the embers it sheds, and the pose the layer hangs its flame on.
 func ride(unit_id: String, world_pos: Vector2, height_m: float, t: float, size_m: float = 9.0, heading: float = NAN) -> int:
 	var fall := FxData.grp(crash_o, "falling")
-	var smoke_key := FxData.s(fall, "smoke_option")
-	var o := _fall_smoke(smoke_key)
+	var smoke_key := _smoke_key(FxData.s(fall, "smoke_option"))
+	var o := _fall_smoke(smoke_key, fall)
 	var i := FxData.f(fall, "intensity")
 	var made := _emit_trail(unit_id, "fall", o, "fall:" + smoke_key, i, FxData.i(fall, "tone"), FxData.f(fall, "interval_s"), world_pos, height_m, t, size_m, heading, FxData.f(fall, "life_s"))
 	var fl := FxData.grp(fall, "flame")
-	if FxData.b(fl, "enabled"):
+	if fire_on and FxData.b(fl, "enabled"):
 		var every := FxData.f(fl, "ember_every_s")
 		if every > 0.0:
 			made += _shed_embers(unit_id, fl, every, world_pos, height_m, t, size_m)
 	riders[unit_id] = {"pos": world_pos, "h": height_m, "heading": heading, "size_m": size_m, "t": t}
 	return made
 
-func _fall_smoke(smoke_key: String) -> Dictionary:
+# The smoke option a crash's smoke is drawn in: the crash option's own, or the board's override.
+func _smoke_key(declared: String) -> String:
+	return crash_smoke_override if crash_smoke_override != "" else declared
+
+# Thick smoke casts a ground shadow (Alex 2026-10-10), whatever the damage-smoke option says: the crash's groups
+# carry ground_shadow and shadow_min_tone, which the sets derived from the option take.
+func _shadow_flags(po: Dictionary, grp: Dictionary) -> void:
+	po["ground_shadow"] = FxData.b(grp, "ground_shadow")
+	po["shadow_min_tone"] = FxData.i(grp, "shadow_min_tone")
+	# a dense crash burst, plume, column or trail overlaps many puffs: a translucent option is drawn at its burst_alpha
+	po["peak_alpha"] = FxData.f(po, "burst_alpha")
+
+func _fall_smoke(smoke_key: String, fall: Dictionary) -> Dictionary:
 	var id := "fall:" + smoke_key
 	if not set_defs.has(id):
-		set_defs[id] = data.smoke_option(smoke_key)
+		var po := data.smoke_option(smoke_key).duplicate(true)
+		_shadow_flags(po, fall)
+		set_defs[id] = po
 	return set_defs[id]
 
 func _shed_embers(unit_id: String, fl: Dictionary, every: float, pos: Vector2, h: float, t: float, size_m: float) -> int:
@@ -327,6 +353,7 @@ func explode_midair(unit_id: String, world_pos: Vector2, height_m: float, t: flo
 		"size_m": size_m, "seed": int(rng.next() * 2147483647.0), "end_s": FxData.f(b, "end_s"),
 		"radius_m": _burst_radius_m(b, size_m) * FxData.f(mid, "radius_scale"),
 	})
+	_add_smoke_burst(unit_id, "mid", FxData.grp(mid, "smoke_burst"), world_pos, height_m, t, size_m, rng)
 	_add_plume(unit_id, "mid", FxData.grp(mid, "plume"), world_pos, height_m, t, size_m, rng)
 	_add_debris(unit_id, FxData.grp(mid, "debris"), world_pos, height_m, t, size_m, rng)
 
@@ -335,7 +362,7 @@ func _burst_radius_m(b: Dictionary, size_m: float) -> float:
 
 # The plume's puffs, born over the first moments, long-lived.
 func _add_plume(unit_id: String, phase: String, pl: Dictionary, pos: Vector2, h: float, t: float, size_m: float, rng: Mulberry32) -> void:
-	var smoke_key := FxData.s(pl, "smoke_option")
+	var smoke_key := _smoke_key(FxData.s(pl, "smoke_option"))
 	var id := "plume:%s:%s:%s" % [crash_name, phase, smoke_key]
 	if not set_defs.has(id):
 		var po := data.smoke_option(smoke_key).duplicate(true)
@@ -346,6 +373,7 @@ func _add_plume(unit_id: String, phase: String, pl: Dictionary, pos: Vector2, h:
 		po["hold"] = FxData.f(pl, "hold")
 		po["fade_power"] = FxData.f(pl, "fade_power")
 		po["alpha_steps"] = []
+		_shadow_flags(po, pl)
 		set_defs[id] = po
 	var o: Dictionary = set_defs[id]
 	var rf := FxData.arr(pl, "radius_frac")
@@ -367,7 +395,7 @@ func _add_plume(unit_id: String, phase: String, pl: Dictionary, pos: Vector2, h:
 # the wreck for the data's duration, born at a rate that falls as the wreck burns out, narrowing
 # and greying from the heavy tone to the thin one, each puff drifting downwind and rising.
 func _add_smolder(unit_id: String, sm: Dictionary, pos: Vector2, t: float, size_m: float, rng: Mulberry32) -> void:
-	var smoke_key := FxData.s(sm, "smoke_option")
+	var smoke_key := _smoke_key(FxData.s(sm, "smoke_option"))
 	var id := "smolder:%s:%s" % [crash_name, smoke_key]
 	var rf := FxData.arr(sm, "radius_frac")
 	if not set_defs.has(id):
@@ -380,6 +408,7 @@ func _add_smolder(unit_id: String, sm: Dictionary, pos: Vector2, t: float, size_
 		po["fade_power"] = FxData.f(sm, "fade_power")
 		po["alpha_steps"] = []
 		po["wind_jitter_mps"] = FxData.f(sm, "wind_jitter_mps")
+		_shadow_flags(po, sm)
 		set_defs[id] = po
 	var o: Dictionary = set_defs[id]
 	var dur := FxData.f(sm, "duration_s")
@@ -407,6 +436,42 @@ func _add_smolder(unit_id: String, sm: Dictionary, pos: Vector2, t: float, size_
 		})
 		# the interval stretches from its first value to its second over the duration
 		el += lerpf(float(iv[0]), float(iv[1]), fr)
+
+# THE SMOKE BURST (no fire: Alex 2026-10-10): an explosion is a quick thick burst of smoke. Puffs of the
+# smoke option, in the heavy tone, thrown outward fast from the burst point (v, slowed by drag) while they swell
+# quickly, rising a little, then hanging and fading very slowly like any plume. Thick, so it casts a shadow.
+func _add_smoke_burst(unit_id: String, phase: String, sb: Dictionary, pos: Vector2, h: float, t: float, size_m: float, rng: Mulberry32) -> void:
+	var smoke_key := _smoke_key(FxData.s(sb, "smoke_option"))
+	var id := "burst:%s:%s:%s" % [crash_name, phase, smoke_key]
+	var rf := FxData.arr(sb, "radius_frac")
+	if not set_defs.has(id):
+		var po := data.smoke_option(smoke_key).duplicate(true)
+		po["radius_frac"] = [minf(float(rf[0]), float(rf[1])), maxf(float(rf[0]), float(rf[1]))]
+		var life := FxData.f(sb, "life_s")
+		po["life_s"] = [life, life]
+		po["grow"] = FxData.arr(sb, "grow").duplicate()
+		po["grow_tau"] = FxData.f(sb, "grow_tau")
+		po["hold"] = FxData.f(sb, "hold")
+		po["fade_power"] = FxData.f(sb, "fade_power")
+		po["alpha_steps"] = []
+		_shadow_flags(po, sb)
+		set_defs[id] = po
+	var o: Dictionary = set_defs[id]
+	var sf := size_factor(size_m)
+	var sp := FxData.arr(sb, "speed_mps")
+	for k in FxData.i(sb, "count"):
+		var a := rng.next() * TAU
+		var v := lerpf(float(sp[0]), float(sp[1]), rng.next()) * sf
+		_add_puff({
+			"id": _new_id(), "unit": unit_id, "kind": "burst", "set": id,
+			"born": t + FxData.f(sb, "delay_s") + float(k) * FxData.f(sb, "interval_s"),
+			"pos": pos + Vector2.from_angle(a) * rng.next() * 0.15 * common_ref_plane_m * sf, "h": maxf(h, 0.0),
+			"rise": FxData.f(sb, "rise_mps"), "size_m": size_m,
+			"r_m": lerpf(float(rf[0]), float(rf[1]), rng.next()) * common_ref_plane_m * sf,
+			"tone": FxData.i(sb, "tone"), "variant": int(rng.next() * float(FxData.i(o, "variants"))),
+			"life": FxData.f(sb, "life_s"), "wind": _wind(o, rng),
+			"vel": Vector2.from_angle(a) * v, "vel_tau": FxData.f(sb, "vel_tau_s"),
+		})
 
 func _add_debris(unit_id: String, d: Dictionary, pos: Vector2, h: float, t: float, size_m: float, rng: Mulberry32) -> void:
 	var sp := FxData.arr(d, "speed_mps")
@@ -454,6 +519,7 @@ func impact(unit_id: String, ground_pos: Vector2, t: float, size_m: float = 9.0,
 		"size_m": size_m, "seed": int(rng.next() * 2147483647.0), "end_s": FxData.f(b, "end_s"),
 		"radius_m": _burst_radius_m(b, size_m) * FxData.f(imp, "radius_scale"),
 	})
+	_add_smoke_burst(unit_id, "hit", FxData.grp(imp, "smoke_burst"), ground_pos, 0.0, t, size_m, rng)
 	_add_plume(unit_id, "hit", FxData.grp(imp, "plume"), ground_pos, 0.0, t, size_m, rng)
 	_add_smolder(unit_id, FxData.grp(imp, "smolder"), ground_pos, t, size_m, rng)
 	add_scar(unit_id, ground_pos, t, size_m, (rng.next() * TAU) if is_nan(heading) else heading, int(rng.next() * 2147483647.0))
@@ -464,7 +530,7 @@ func add_scar(unit_id: String, ground_pos: Vector2, t: float, size_m: float, rot
 	var sc := FxData.grp(FxData.grp(crash_o, "impact"), "scar")
 	scars.append({"id": _new_id(), "unit": unit_id, "t0": t, "pos": ground_pos, "size_m": size_m, "rot": rot, "seed": seed_v,
 		"variant": seed_v % maxi(FxData.i(sc, "variants"), 1)})
-	var n := FxData.i(sc, "embers")
+	var n := FxData.i(sc, "embers") if fire_on else 0
 	if n > 0:
 		var rng := Mulberry32.new(FxBake.seed_of(world_seed, unit_id + "emb", seed_v))
 		var R := FxData.f(sc, "radius_frac") * common_ref_plane_m * size_factor(size_m)

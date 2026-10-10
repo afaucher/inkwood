@@ -1,0 +1,1688 @@
+{
+  "id": "damage-smoke-r2",
+  "size_px": [
+    560,
+    380
+  ],
+  "options": [
+    {
+      "option": "C0",
+      "label": "C0 · Today's C (the reference)",
+      "changes": "nothing: round 1's contour rings as they were (the reference)",
+      "note": "Round 1's contour rings exactly as it was: scalloped closed outlines, a cream see-through fill, two broken floret rings per lobe, round clumps. No ground shadow.",
+      "rows": [
+        {
+          "title": "one hit: 2 of 3 pips left (a thin trail)",
+          "frames": [
+            {
+              "file": "frames/C0_r1_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C0_r1_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C0_r1_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C0_r1_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C0_r1_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C0_r1_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C0_r1_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "two hits: 1 of 3 pips left (a thick trail)",
+          "frames": [
+            {
+              "file": "frames/C0_r2_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C0_r2_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C0_r2_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C0_r2_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C0_r2_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C0_r2_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C0_r2_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "In the grove (the 'looks like trees' test): the trail across the trees, close and at the planning view",
+          "frames": [
+            {
+              "file": "frames/C0_r3_0.png",
+              "caption": "thin trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C0_r3_1.png",
+              "caption": "thick trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C0_r3_2.png",
+              "caption": "thin trail across the grove, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C0_r3_3.png",
+              "caption": "thick trail across the grove, zoom 0.35 (5 s)"
+            }
+          ]
+        },
+        {
+          "title": "Beside the wingtip ribbon, as in the game (the damaged plane's side-colour ribbon over the smoke it leaves), and the other order, the ribbon under the smoke",
+          "frames": [
+            {
+              "file": "frames/C0_r4_0.png",
+              "caption": "thin trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C0_r4_1.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C0_r4_2.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C0_r4_3.png",
+              "caption": "thick trail, ribbon UNDER the smoke, zoom 1.0 (3 s): the other order"
+            }
+          ]
+        },
+        {
+          "title": "As the crash's smoke, with no fire: a quick thick burst of this smoke, debris pieces, then the smoke cooling and thinning very slowly; on the ground the smoking wreck",
+          "frames": [
+            {
+              "file": "frames/C0_r5_0.png",
+              "caption": "mid-air explosion, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C0_r5_1.png",
+              "caption": "mid-air explosion, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C0_r5_2.png",
+              "caption": "mid-air explosion, one turn later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C0_r5_3.png",
+              "caption": "ground crash, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C0_r5_4.png",
+              "caption": "ground crash, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C0_r5_5.png",
+              "caption": "ground crash, one turn: the wreck smoking later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C0_r5_6.png",
+              "caption": "ground crash, three turns: still smoking later (zoom 1.0)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "C1",
+      "label": "C1 · Smooth billows",
+      "changes": "no scallops: smooth round lobes with one smooth outline; thick smoke casts a shadow",
+      "note": "Changes: no scallops. Round lobes with one smooth outline round the whole cloud and smooth offset rings inside; no cusp ticks. Cream fill kept. Thick smoke casts a shadow.",
+      "rows": [
+        {
+          "title": "one hit: 2 of 3 pips left (a thin trail)",
+          "frames": [
+            {
+              "file": "frames/C1_r1_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C1_r1_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C1_r1_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C1_r1_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C1_r1_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C1_r1_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C1_r1_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "two hits: 1 of 3 pips left (a thick trail)",
+          "frames": [
+            {
+              "file": "frames/C1_r2_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C1_r2_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C1_r2_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C1_r2_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C1_r2_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C1_r2_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C1_r2_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "In the grove (the 'looks like trees' test): the trail across the trees, close and at the planning view",
+          "frames": [
+            {
+              "file": "frames/C1_r3_0.png",
+              "caption": "thin trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C1_r3_1.png",
+              "caption": "thick trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C1_r3_2.png",
+              "caption": "thin trail across the grove, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C1_r3_3.png",
+              "caption": "thick trail across the grove, zoom 0.35 (5 s)"
+            }
+          ]
+        },
+        {
+          "title": "Beside the wingtip ribbon, as in the game (the damaged plane's side-colour ribbon over the smoke it leaves), and the other order, the ribbon under the smoke",
+          "frames": [
+            {
+              "file": "frames/C1_r4_0.png",
+              "caption": "thin trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C1_r4_1.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C1_r4_2.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C1_r4_3.png",
+              "caption": "thick trail, ribbon UNDER the smoke, zoom 1.0 (3 s): the other order"
+            }
+          ]
+        },
+        {
+          "title": "As the crash's smoke, with no fire: a quick thick burst of this smoke, debris pieces, then the smoke cooling and thinning very slowly; on the ground the smoking wreck",
+          "frames": [
+            {
+              "file": "frames/C1_r5_0.png",
+              "caption": "mid-air explosion, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C1_r5_1.png",
+              "caption": "mid-air explosion, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C1_r5_2.png",
+              "caption": "mid-air explosion, one turn later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C1_r5_3.png",
+              "caption": "ground crash, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C1_r5_4.png",
+              "caption": "ground crash, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C1_r5_5.png",
+              "caption": "ground crash, one turn: the wreck smoking later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C1_r5_6.png",
+              "caption": "ground crash, three turns: still smoking later (zoom 1.0)"
+            }
+          ]
+        },
+        {
+          "title": "Beside today's C0: each pair is C0 (left) and this option (right), the thick trail across the grove, zoom 1.0 then zoom 0.35",
+          "frames": [
+            {
+              "file": "frames/C1_r6_0.png",
+              "caption": "C0, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C1_r6_1.png",
+              "caption": "C1, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C1_r6_2.png",
+              "caption": "C0, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C1_r6_3.png",
+              "caption": "C1, zoom 0.35 (5 s)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "C2",
+      "label": "C2 · Open contours",
+      "changes": "open arcs that never close instead of closed outlines; a cool grey wash instead of the cream fill; thick smoke casts a shadow",
+      "note": "Changes: open arcs that never close (isobars, a hand-drawn swirl) instead of closed outlines, and a faint cool grey wash instead of the cream fill. No scallops, no florets. Thick smoke casts a shadow.",
+      "rows": [
+        {
+          "title": "one hit: 2 of 3 pips left (a thin trail)",
+          "frames": [
+            {
+              "file": "frames/C2_r1_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C2_r1_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C2_r1_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C2_r1_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C2_r1_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C2_r1_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C2_r1_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "two hits: 1 of 3 pips left (a thick trail)",
+          "frames": [
+            {
+              "file": "frames/C2_r2_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C2_r2_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C2_r2_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C2_r2_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C2_r2_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C2_r2_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C2_r2_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "In the grove (the 'looks like trees' test): the trail across the trees, close and at the planning view",
+          "frames": [
+            {
+              "file": "frames/C2_r3_0.png",
+              "caption": "thin trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C2_r3_1.png",
+              "caption": "thick trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C2_r3_2.png",
+              "caption": "thin trail across the grove, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C2_r3_3.png",
+              "caption": "thick trail across the grove, zoom 0.35 (5 s)"
+            }
+          ]
+        },
+        {
+          "title": "Beside the wingtip ribbon, as in the game (the damaged plane's side-colour ribbon over the smoke it leaves), and the other order, the ribbon under the smoke",
+          "frames": [
+            {
+              "file": "frames/C2_r4_0.png",
+              "caption": "thin trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C2_r4_1.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C2_r4_2.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C2_r4_3.png",
+              "caption": "thick trail, ribbon UNDER the smoke, zoom 1.0 (3 s): the other order"
+            }
+          ]
+        },
+        {
+          "title": "As the crash's smoke, with no fire: a quick thick burst of this smoke, debris pieces, then the smoke cooling and thinning very slowly; on the ground the smoking wreck",
+          "frames": [
+            {
+              "file": "frames/C2_r5_0.png",
+              "caption": "mid-air explosion, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C2_r5_1.png",
+              "caption": "mid-air explosion, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C2_r5_2.png",
+              "caption": "mid-air explosion, one turn later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C2_r5_3.png",
+              "caption": "ground crash, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C2_r5_4.png",
+              "caption": "ground crash, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C2_r5_5.png",
+              "caption": "ground crash, one turn: the wreck smoking later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C2_r5_6.png",
+              "caption": "ground crash, three turns: still smoking later (zoom 1.0)"
+            }
+          ]
+        },
+        {
+          "title": "Beside today's C0: each pair is C0 (left) and this option (right), the thick trail across the grove, zoom 1.0 then zoom 0.35",
+          "frames": [
+            {
+              "file": "frames/C2_r6_0.png",
+              "caption": "C0, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C2_r6_1.png",
+              "caption": "C2, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C2_r6_2.png",
+              "caption": "C0, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C2_r6_3.png",
+              "caption": "C2, zoom 0.35 (5 s)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "C3",
+      "label": "C3 · Streaming band",
+      "changes": "streaming: each puff stretched along the flight path so the trail reads as a band; thick smoke casts a shadow",
+      "note": "Changes: each puff is stretched 2.4 times along the way it was flying and turned to it, so the overlapping puffs read as a moving band, not round clumps. Everything else is C0. Thick smoke casts a shadow.",
+      "rows": [
+        {
+          "title": "one hit: 2 of 3 pips left (a thin trail)",
+          "frames": [
+            {
+              "file": "frames/C3_r1_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C3_r1_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C3_r1_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C3_r1_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C3_r1_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C3_r1_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C3_r1_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "two hits: 1 of 3 pips left (a thick trail)",
+          "frames": [
+            {
+              "file": "frames/C3_r2_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C3_r2_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C3_r2_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C3_r2_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C3_r2_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C3_r2_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C3_r2_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "In the grove (the 'looks like trees' test): the trail across the trees, close and at the planning view",
+          "frames": [
+            {
+              "file": "frames/C3_r3_0.png",
+              "caption": "thin trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C3_r3_1.png",
+              "caption": "thick trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C3_r3_2.png",
+              "caption": "thin trail across the grove, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C3_r3_3.png",
+              "caption": "thick trail across the grove, zoom 0.35 (5 s)"
+            }
+          ]
+        },
+        {
+          "title": "Beside the wingtip ribbon, as in the game (the damaged plane's side-colour ribbon over the smoke it leaves), and the other order, the ribbon under the smoke",
+          "frames": [
+            {
+              "file": "frames/C3_r4_0.png",
+              "caption": "thin trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C3_r4_1.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C3_r4_2.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C3_r4_3.png",
+              "caption": "thick trail, ribbon UNDER the smoke, zoom 1.0 (3 s): the other order"
+            }
+          ]
+        },
+        {
+          "title": "As the crash's smoke, with no fire: a quick thick burst of this smoke, debris pieces, then the smoke cooling and thinning very slowly; on the ground the smoking wreck",
+          "frames": [
+            {
+              "file": "frames/C3_r5_0.png",
+              "caption": "mid-air explosion, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C3_r5_1.png",
+              "caption": "mid-air explosion, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C3_r5_2.png",
+              "caption": "mid-air explosion, one turn later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C3_r5_3.png",
+              "caption": "ground crash, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C3_r5_4.png",
+              "caption": "ground crash, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C3_r5_5.png",
+              "caption": "ground crash, one turn: the wreck smoking later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C3_r5_6.png",
+              "caption": "ground crash, three turns: still smoking later (zoom 1.0)"
+            }
+          ]
+        },
+        {
+          "title": "Beside today's C0: each pair is C0 (left) and this option (right), the thick trail across the grove, zoom 1.0 then zoom 0.35",
+          "frames": [
+            {
+              "file": "frames/C3_r6_0.png",
+              "caption": "C0, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C3_r6_1.png",
+              "caption": "C3, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C3_r6_2.png",
+              "caption": "C0, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C3_r6_3.png",
+              "caption": "C3, zoom 0.35 (5 s)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "C4",
+      "label": "C4 · Cool wash core (C + D)",
+      "changes": "tone: a light cool ink-wash core instead of the cream fill (C + D); thick smoke casts a shadow",
+      "note": "Changes: a light cool ink-wash core (the shadow tint toward the ink at alpha 0.12 to 0.3) replaces the cream fill, under the same scalloped outlines and rings. Thick smoke casts a shadow.",
+      "rows": [
+        {
+          "title": "one hit: 2 of 3 pips left (a thin trail)",
+          "frames": [
+            {
+              "file": "frames/C4_r1_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C4_r1_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C4_r1_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C4_r1_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C4_r1_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C4_r1_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C4_r1_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "two hits: 1 of 3 pips left (a thick trail)",
+          "frames": [
+            {
+              "file": "frames/C4_r2_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C4_r2_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C4_r2_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C4_r2_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C4_r2_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C4_r2_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C4_r2_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "In the grove (the 'looks like trees' test): the trail across the trees, close and at the planning view",
+          "frames": [
+            {
+              "file": "frames/C4_r3_0.png",
+              "caption": "thin trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C4_r3_1.png",
+              "caption": "thick trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C4_r3_2.png",
+              "caption": "thin trail across the grove, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C4_r3_3.png",
+              "caption": "thick trail across the grove, zoom 0.35 (5 s)"
+            }
+          ]
+        },
+        {
+          "title": "Beside the wingtip ribbon, as in the game (the damaged plane's side-colour ribbon over the smoke it leaves), and the other order, the ribbon under the smoke",
+          "frames": [
+            {
+              "file": "frames/C4_r4_0.png",
+              "caption": "thin trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C4_r4_1.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C4_r4_2.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C4_r4_3.png",
+              "caption": "thick trail, ribbon UNDER the smoke, zoom 1.0 (3 s): the other order"
+            }
+          ]
+        },
+        {
+          "title": "As the crash's smoke, with no fire: a quick thick burst of this smoke, debris pieces, then the smoke cooling and thinning very slowly; on the ground the smoking wreck",
+          "frames": [
+            {
+              "file": "frames/C4_r5_0.png",
+              "caption": "mid-air explosion, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C4_r5_1.png",
+              "caption": "mid-air explosion, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C4_r5_2.png",
+              "caption": "mid-air explosion, one turn later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C4_r5_3.png",
+              "caption": "ground crash, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C4_r5_4.png",
+              "caption": "ground crash, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C4_r5_5.png",
+              "caption": "ground crash, one turn: the wreck smoking later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C4_r5_6.png",
+              "caption": "ground crash, three turns: still smoking later (zoom 1.0)"
+            }
+          ]
+        },
+        {
+          "title": "Beside today's C0: each pair is C0 (left) and this option (right), the thick trail across the grove, zoom 1.0 then zoom 0.35",
+          "frames": [
+            {
+              "file": "frames/C4_r6_0.png",
+              "caption": "C0, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C4_r6_1.png",
+              "caption": "C4, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C4_r6_2.png",
+              "caption": "C0, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C4_r6_3.png",
+              "caption": "C4, zoom 0.35 (5 s)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "C5",
+      "label": "C5 · Dashed rings that break with age",
+      "changes": "dashed ring lines, and rings and outline that thin and break as the smoke ages; thick smoke casts a shadow",
+      "note": "Changes: the ring lines are dashed, and as a puff ages its rings and its outline thin and break up in three stages (fresh, half, mostly gone). Thick smoke casts a shadow.",
+      "rows": [
+        {
+          "title": "one hit: 2 of 3 pips left (a thin trail)",
+          "frames": [
+            {
+              "file": "frames/C5_r1_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C5_r1_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C5_r1_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C5_r1_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C5_r1_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C5_r1_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C5_r1_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "two hits: 1 of 3 pips left (a thick trail)",
+          "frames": [
+            {
+              "file": "frames/C5_r2_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C5_r2_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C5_r2_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C5_r2_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C5_r2_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C5_r2_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C5_r2_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "In the grove (the 'looks like trees' test): the trail across the trees, close and at the planning view",
+          "frames": [
+            {
+              "file": "frames/C5_r3_0.png",
+              "caption": "thin trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C5_r3_1.png",
+              "caption": "thick trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C5_r3_2.png",
+              "caption": "thin trail across the grove, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C5_r3_3.png",
+              "caption": "thick trail across the grove, zoom 0.35 (5 s)"
+            }
+          ]
+        },
+        {
+          "title": "Beside the wingtip ribbon, as in the game (the damaged plane's side-colour ribbon over the smoke it leaves), and the other order, the ribbon under the smoke",
+          "frames": [
+            {
+              "file": "frames/C5_r4_0.png",
+              "caption": "thin trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C5_r4_1.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C5_r4_2.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C5_r4_3.png",
+              "caption": "thick trail, ribbon UNDER the smoke, zoom 1.0 (3 s): the other order"
+            }
+          ]
+        },
+        {
+          "title": "As the crash's smoke, with no fire: a quick thick burst of this smoke, debris pieces, then the smoke cooling and thinning very slowly; on the ground the smoking wreck",
+          "frames": [
+            {
+              "file": "frames/C5_r5_0.png",
+              "caption": "mid-air explosion, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C5_r5_1.png",
+              "caption": "mid-air explosion, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C5_r5_2.png",
+              "caption": "mid-air explosion, one turn later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C5_r5_3.png",
+              "caption": "ground crash, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C5_r5_4.png",
+              "caption": "ground crash, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C5_r5_5.png",
+              "caption": "ground crash, one turn: the wreck smoking later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C5_r5_6.png",
+              "caption": "ground crash, three turns: still smoking later (zoom 1.0)"
+            }
+          ]
+        },
+        {
+          "title": "Beside today's C0: each pair is C0 (left) and this option (right), the thick trail across the grove, zoom 1.0 then zoom 0.35",
+          "frames": [
+            {
+              "file": "frames/C5_r6_0.png",
+              "caption": "C0, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C5_r6_1.png",
+              "caption": "C5, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C5_r6_2.png",
+              "caption": "C0, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C5_r6_3.png",
+              "caption": "C5, zoom 0.35 (5 s)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "C6",
+      "label": "C6 · Combined (proposed blend)",
+      "changes": "C2 + C3 + C4 + C5 together: open arcs, streaming, cool wash, ageing; thick smoke casts a shadow",
+      "note": "Changes (C2 + C3 + C4 + C5 together): open arcs, streaming along the flight path, the cool wash core, arcs that drop out and fade as the smoke ages, thick smoke casts a shadow. The blend I would try if Alex likes several of the levers.",
+      "rows": [
+        {
+          "title": "one hit: 2 of 3 pips left (a thin trail)",
+          "frames": [
+            {
+              "file": "frames/C6_r1_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C6_r1_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C6_r1_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C6_r1_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C6_r1_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C6_r1_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C6_r1_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "two hits: 1 of 3 pips left (a thick trail)",
+          "frames": [
+            {
+              "file": "frames/C6_r2_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C6_r2_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C6_r2_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/C6_r2_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/C6_r2_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C6_r2_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/C6_r2_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "In the grove (the 'looks like trees' test): the trail across the trees, close and at the planning view",
+          "frames": [
+            {
+              "file": "frames/C6_r3_0.png",
+              "caption": "thin trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C6_r3_1.png",
+              "caption": "thick trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C6_r3_2.png",
+              "caption": "thin trail across the grove, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C6_r3_3.png",
+              "caption": "thick trail across the grove, zoom 0.35 (5 s)"
+            }
+          ]
+        },
+        {
+          "title": "Beside the wingtip ribbon, as in the game (the damaged plane's side-colour ribbon over the smoke it leaves), and the other order, the ribbon under the smoke",
+          "frames": [
+            {
+              "file": "frames/C6_r4_0.png",
+              "caption": "thin trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C6_r4_1.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C6_r4_2.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C6_r4_3.png",
+              "caption": "thick trail, ribbon UNDER the smoke, zoom 1.0 (3 s): the other order"
+            }
+          ]
+        },
+        {
+          "title": "As the crash's smoke, with no fire: a quick thick burst of this smoke, debris pieces, then the smoke cooling and thinning very slowly; on the ground the smoking wreck",
+          "frames": [
+            {
+              "file": "frames/C6_r5_0.png",
+              "caption": "mid-air explosion, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C6_r5_1.png",
+              "caption": "mid-air explosion, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C6_r5_2.png",
+              "caption": "mid-air explosion, one turn later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C6_r5_3.png",
+              "caption": "ground crash, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C6_r5_4.png",
+              "caption": "ground crash, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C6_r5_5.png",
+              "caption": "ground crash, one turn: the wreck smoking later (zoom 1.0)"
+            },
+            {
+              "file": "frames/C6_r5_6.png",
+              "caption": "ground crash, three turns: still smoking later (zoom 1.0)"
+            }
+          ]
+        },
+        {
+          "title": "Beside today's C0: each pair is C0 (left) and this option (right), the thick trail across the grove, zoom 1.0 then zoom 0.35",
+          "frames": [
+            {
+              "file": "frames/C6_r6_0.png",
+              "caption": "C0, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C6_r6_1.png",
+              "caption": "C6, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/C6_r6_2.png",
+              "caption": "C0, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/C6_r6_3.png",
+              "caption": "C6, zoom 0.35 (5 s)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "W1",
+      "label": "W1 · Soft white to grey",
+      "changes": "plain translucent white-to-grey washes, no outline or rings or scallops, greying and thinning with age; thick smoke casts a shadow",
+      "note": "Plain translucent smoke: no outline, no rings, no scallops, soft stepped washes at low alpha; the map shows through and overlapping puffs build density where the trail is heavy. Fresh smoke is white and thickest (the knock-out step), and as it ages it greys (white toward the ink, no new hue) and thins, in three stages. Thick smoke casts a shadow.",
+      "rows": [
+        {
+          "title": "one hit: 2 of 3 pips left (a thin trail)",
+          "frames": [
+            {
+              "file": "frames/W1_r1_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W1_r1_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W1_r1_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W1_r1_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/W1_r1_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/W1_r1_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/W1_r1_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "two hits: 1 of 3 pips left (a thick trail)",
+          "frames": [
+            {
+              "file": "frames/W1_r2_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W1_r2_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W1_r2_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W1_r2_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/W1_r2_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/W1_r2_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/W1_r2_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "In the grove (the 'looks like trees' test): the trail across the trees, close and at the planning view",
+          "frames": [
+            {
+              "file": "frames/W1_r3_0.png",
+              "caption": "thin trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W1_r3_1.png",
+              "caption": "thick trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W1_r3_2.png",
+              "caption": "thin trail across the grove, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/W1_r3_3.png",
+              "caption": "thick trail across the grove, zoom 0.35 (5 s)"
+            }
+          ]
+        },
+        {
+          "title": "Beside the wingtip ribbon, as in the game (the damaged plane's side-colour ribbon over the smoke it leaves), and the other order, the ribbon under the smoke",
+          "frames": [
+            {
+              "file": "frames/W1_r4_0.png",
+              "caption": "thin trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W1_r4_1.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W1_r4_2.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/W1_r4_3.png",
+              "caption": "thick trail, ribbon UNDER the smoke, zoom 1.0 (3 s): the other order"
+            }
+          ]
+        },
+        {
+          "title": "As the crash's smoke, with no fire: a quick thick burst of this smoke, debris pieces, then the smoke cooling and thinning very slowly; on the ground the smoking wreck",
+          "frames": [
+            {
+              "file": "frames/W1_r5_0.png",
+              "caption": "mid-air explosion, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W1_r5_1.png",
+              "caption": "mid-air explosion, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W1_r5_2.png",
+              "caption": "mid-air explosion, one turn later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W1_r5_3.png",
+              "caption": "ground crash, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W1_r5_4.png",
+              "caption": "ground crash, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W1_r5_5.png",
+              "caption": "ground crash, one turn: the wreck smoking later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W1_r5_6.png",
+              "caption": "ground crash, three turns: still smoking later (zoom 1.0)"
+            }
+          ]
+        },
+        {
+          "title": "Beside today's C0: each pair is C0 (left) and this option (right), the thick trail across the grove, zoom 1.0 then zoom 0.35",
+          "frames": [
+            {
+              "file": "frames/W1_r6_0.png",
+              "caption": "C0, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W1_r6_1.png",
+              "caption": "W1, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W1_r6_2.png",
+              "caption": "C0, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/W1_r6_3.png",
+              "caption": "W1, zoom 0.35 (5 s)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "W2",
+      "label": "W2 · Soft grey",
+      "changes": "plain translucent grey only; thick smoke casts a shadow",
+      "note": "The same plain translucent puffs in one grey only (white toward the ink at 38%, no new hue); thin, medium and thick by alpha. Thick smoke casts a shadow.",
+      "rows": [
+        {
+          "title": "one hit: 2 of 3 pips left (a thin trail)",
+          "frames": [
+            {
+              "file": "frames/W2_r1_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W2_r1_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W2_r1_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W2_r1_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/W2_r1_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/W2_r1_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/W2_r1_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "two hits: 1 of 3 pips left (a thick trail)",
+          "frames": [
+            {
+              "file": "frames/W2_r2_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W2_r2_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W2_r2_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W2_r2_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/W2_r2_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/W2_r2_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/W2_r2_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "In the grove (the 'looks like trees' test): the trail across the trees, close and at the planning view",
+          "frames": [
+            {
+              "file": "frames/W2_r3_0.png",
+              "caption": "thin trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W2_r3_1.png",
+              "caption": "thick trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W2_r3_2.png",
+              "caption": "thin trail across the grove, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/W2_r3_3.png",
+              "caption": "thick trail across the grove, zoom 0.35 (5 s)"
+            }
+          ]
+        },
+        {
+          "title": "Beside the wingtip ribbon, as in the game (the damaged plane's side-colour ribbon over the smoke it leaves), and the other order, the ribbon under the smoke",
+          "frames": [
+            {
+              "file": "frames/W2_r4_0.png",
+              "caption": "thin trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W2_r4_1.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W2_r4_2.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/W2_r4_3.png",
+              "caption": "thick trail, ribbon UNDER the smoke, zoom 1.0 (3 s): the other order"
+            }
+          ]
+        },
+        {
+          "title": "As the crash's smoke, with no fire: a quick thick burst of this smoke, debris pieces, then the smoke cooling and thinning very slowly; on the ground the smoking wreck",
+          "frames": [
+            {
+              "file": "frames/W2_r5_0.png",
+              "caption": "mid-air explosion, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W2_r5_1.png",
+              "caption": "mid-air explosion, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W2_r5_2.png",
+              "caption": "mid-air explosion, one turn later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W2_r5_3.png",
+              "caption": "ground crash, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W2_r5_4.png",
+              "caption": "ground crash, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W2_r5_5.png",
+              "caption": "ground crash, one turn: the wreck smoking later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W2_r5_6.png",
+              "caption": "ground crash, three turns: still smoking later (zoom 1.0)"
+            }
+          ]
+        },
+        {
+          "title": "Beside today's C0: each pair is C0 (left) and this option (right), the thick trail across the grove, zoom 1.0 then zoom 0.35",
+          "frames": [
+            {
+              "file": "frames/W2_r6_0.png",
+              "caption": "C0, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W2_r6_1.png",
+              "caption": "W2, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W2_r6_2.png",
+              "caption": "C0, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/W2_r6_3.png",
+              "caption": "W2, zoom 0.35 (5 s)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "W3",
+      "label": "W3 · Soft white",
+      "changes": "plain translucent white only; thick smoke casts a shadow",
+      "note": "The same plain translucent puffs in white only (the knock-out step); thin, medium and thick by alpha. The lightest smoke: it may be too pale on the paper, which is what this option tests. Thick smoke casts a shadow.",
+      "rows": [
+        {
+          "title": "one hit: 2 of 3 pips left (a thin trail)",
+          "frames": [
+            {
+              "file": "frames/W3_r1_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W3_r1_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W3_r1_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W3_r1_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/W3_r1_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/W3_r1_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/W3_r1_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "two hits: 1 of 3 pips left (a thick trail)",
+          "frames": [
+            {
+              "file": "frames/W3_r2_0.png",
+              "caption": "0.1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W3_r2_1.png",
+              "caption": "0.3 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W3_r2_2.png",
+              "caption": "1 s (zoom 1.00)"
+            },
+            {
+              "file": "frames/W3_r2_3.png",
+              "caption": "3 s (zoom 0.35)"
+            },
+            {
+              "file": "frames/W3_r2_4.png",
+              "caption": "5 s (end of turn 1) (zoom 0.35)"
+            },
+            {
+              "file": "frames/W3_r2_5.png",
+              "caption": "one turn later (10 s) (zoom 0.35)"
+            },
+            {
+              "file": "frames/W3_r2_6.png",
+              "caption": "three turns later (20 s) (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "In the grove (the 'looks like trees' test): the trail across the trees, close and at the planning view",
+          "frames": [
+            {
+              "file": "frames/W3_r3_0.png",
+              "caption": "thin trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W3_r3_1.png",
+              "caption": "thick trail across the grove, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W3_r3_2.png",
+              "caption": "thin trail across the grove, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/W3_r3_3.png",
+              "caption": "thick trail across the grove, zoom 0.35 (5 s)"
+            }
+          ]
+        },
+        {
+          "title": "Beside the wingtip ribbon, as in the game (the damaged plane's side-colour ribbon over the smoke it leaves), and the other order, the ribbon under the smoke",
+          "frames": [
+            {
+              "file": "frames/W3_r4_0.png",
+              "caption": "thin trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W3_r4_1.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W3_r4_2.png",
+              "caption": "thick trail, ribbon over the smoke, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/W3_r4_3.png",
+              "caption": "thick trail, ribbon UNDER the smoke, zoom 1.0 (3 s): the other order"
+            }
+          ]
+        },
+        {
+          "title": "As the crash's smoke, with no fire: a quick thick burst of this smoke, debris pieces, then the smoke cooling and thinning very slowly; on the ground the smoking wreck",
+          "frames": [
+            {
+              "file": "frames/W3_r5_0.png",
+              "caption": "mid-air explosion, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W3_r5_1.png",
+              "caption": "mid-air explosion, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W3_r5_2.png",
+              "caption": "mid-air explosion, one turn later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W3_r5_3.png",
+              "caption": "ground crash, 0.3 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W3_r5_4.png",
+              "caption": "ground crash, 1.0 s later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W3_r5_5.png",
+              "caption": "ground crash, one turn: the wreck smoking later (zoom 1.0)"
+            },
+            {
+              "file": "frames/W3_r5_6.png",
+              "caption": "ground crash, three turns: still smoking later (zoom 1.0)"
+            }
+          ]
+        },
+        {
+          "title": "Beside today's C0: each pair is C0 (left) and this option (right), the thick trail across the grove, zoom 1.0 then zoom 0.35",
+          "frames": [
+            {
+              "file": "frames/W3_r6_0.png",
+              "caption": "C0, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W3_r6_1.png",
+              "caption": "W3, zoom 1.0 (3 s)"
+            },
+            {
+              "file": "frames/W3_r6_2.png",
+              "caption": "C0, zoom 0.35 (5 s)"
+            },
+            {
+              "file": "frames/W3_r6_3.png",
+              "caption": "W3, zoom 0.35 (5 s)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

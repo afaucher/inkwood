@@ -7,8 +7,11 @@ extends RefCounted
 # fractions, and given an alpha -- the same schema as data/ui/ui.json, resolved
 # here in one fixed order: base, toward, shade, alpha. No hex literal is in any
 # draw code. Hue stays reserved for paper, ink, shadow and the accents; the
-# accents are the two side colours (Alex) and `fire` (PROPOSED, fx.json
-# accents.fire, given in OKLCH beside the side colours' 0.551 / 0.100).
+# accents are the two side colours (Alex) and the effects' own base colours in fx.json
+# `accents`, given in OKLCH: `fire` (the scorch) and `fire_cool` (the cooling step), INTERIM
+# working values (the fire research's treatment 6, docs/proposals/fire-in-ink.md, after Alex
+# rejected the first orange; proposed, pending his pick) and `flash`, the knock-out step.
+# Any accent with an oklch value there is a base a role may name.
 #
 #   var st := FxStyle.shared()
 #   st.color("smoke.lit.0")     # a role -> Color
@@ -28,6 +31,8 @@ var params: Dictionary = {}      # render parameter name -> default
 var linework: Dictionary = {}    # element -> multiplier
 var detail_light := Vector2.ZERO
 var scene_seed: int = 0
+# The fire switch: false draws no flash, flames or embers (fx.json fire_switch.enabled; Alex: no fire for now).
+var fire_on: bool = false
 var errors: Array[String] = []
 
 var _roles: Dictionary = {}
@@ -47,8 +52,19 @@ func _init(fx_data: RefCounted = null) -> void:
 		_load_render(r)
 	else:
 		_err("%s did not load" % RENDER_PATH)
+	fire_on = data.fire_enabled()
 	var fo: Array = data.fire_oklch()
 	palette["fire"] = oklch(float(fo[0]), float(fo[1]), float(fo[2]))
+	# any other accent given in OKLCH is a base colour of its own (round 2: `flash`, the knock-out step)
+	var acc: Variant = data.raw.get("accents")
+	if acc is Dictionary:
+		for k: String in acc:
+			var rec: Variant = (acc as Dictionary)[k]
+			if k.begins_with("_") or k == "fire" or not (rec is Dictionary):
+				continue
+			var v: Variant = data.unwrap((rec as Dictionary).get("oklch"))
+			if v is Array and (v as Array).size() == 3:
+				palette[k] = oklch(float(v[0]), float(v[1]), float(v[2]))
 	for name: String in data.role_names():
 		_roles[name] = _resolve(name, data.role(name))
 

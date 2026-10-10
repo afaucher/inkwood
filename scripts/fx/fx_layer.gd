@@ -142,10 +142,23 @@ func set_mapping(host_mapping: Variant) -> void:
 	mapping = UiMapping.from(host_mapping) as UiMapping
 
 # Chooses the options (until Alex does, the data's working defaults); drops the baked art.
-func select(smoke: String, crash: String) -> void:
+func select(smoke: String, crash: String, crash_smoke: String = "") -> void:
 	_build()
-	field.select(smoke, crash)
+	field.select(smoke, crash, crash_smoke)
 	release_art()
+
+# The fire machinery's switch (data: fx.json fire_switch.enabled, off since Alex's "no fire for now").
+# Turning it on makes flames, embers, the flash and the fireball come back; it drops the baked art.
+func set_fire(on: bool) -> void:
+	_build()
+	if style.fire_on != on:
+		style.fire_on = on
+		field.fire_on = on
+		release_art()
+
+func is_fire() -> bool:
+	_build()
+	return style.fire_on
 
 # Puts the below-the-planes passes under `below` and `top` under `above` (both Nodes in the
 # screen-space parent the markers use; `above` null leaves everything in one place).
@@ -260,7 +273,7 @@ func _puffs_for(set_id: String, ppm_q: float, size_m: float) -> FxPuff.PuffSet:
 	return _puff_sets[key]
 
 func _burst_for(phase: String, ppm_q: float, size_m: float, radius_m: float) -> FxBurst.BurstSet:
-	var key := "%s|%.3f|%d|%.2f" % [phase, ppm_q, _size_class(size_m), radius_m]
+	var key := "%s|%.3f|%d|%.2f|f%d" % [phase, ppm_q, _size_class(size_m), radius_m, int(style.fire_on)]
 	if not _burst_sets.has(key):
 		var t0 := Time.get_ticks_usec()
 		var b := FxData.grp(field.crash_o, "burst")
@@ -271,7 +284,7 @@ func _burst_for(phase: String, ppm_q: float, size_m: float, radius_m: float) -> 
 	return _burst_sets[key]
 
 func _parts_for(ppm_q: float, size_m: float) -> FxBurst.PartsSet:
-	var key := "%.3f|%d" % [ppm_q, _size_class(size_m)]
+	var key := "%.3f|%d|f%d" % [ppm_q, _size_class(size_m), int(style.fire_on)]
 	if not _parts_sets.has(key):
 		var t0 := Time.get_ticks_usec()
 		_parts_sets[key] = FxBurst.bake_parts(style, field.crash_o, float(_size_class(size_m)), ppm_q, null, FxBake.seed_of(field.crash_name, "parts", _size_class(size_m)))
@@ -373,7 +386,7 @@ func _draw_shadows(item: CanvasItem, view: Rect2) -> void:
 		if p["kind"] == "ember" or p["kind"] == "scar_ember":
 			continue
 		var o: Dictionary = field.set_defs.get(p["set"], field.smoke_o)
-		if not FxData.b(o, "ground_shadow"):
+		if not FxPuff.casts_shadow(o, int(p["tone"])):
 			continue
 		var wp: Vector2 = s["pos"]
 		var off := _shadow_px(wp, float(s["h"]))
@@ -393,7 +406,7 @@ func _draw_shadows(item: CanvasItem, view: Rect2) -> void:
 		if float(s["alpha"]) < 0.25:
 			continue
 		var sc := (float(p["r_m"]) * ppm) / float(ps.radius_px[tone]) * float(s["scale"])
-		_blit(item, (ps.mask[tone] as Array)[v], ps.origin[tone], sp, 0.0, sc, _tint)
+		_blit(item, (ps.mask[tone] as Array)[v], ps.origin[tone], sp, _puff_rot(o, p, wp), sc, _tint)
 	for d in field.debris:
 		var st := field.debris_state(d, now)
 		if not bool(st["alive"]) or bool(st["landed"]):
@@ -410,6 +423,12 @@ func _draw_shadows(item: CanvasItem, view: Rect2) -> void:
 			continue
 		var v := int(d["variant"]) % ps.shard_masks.size()
 		_blit(item, ps.shard_masks[v], ps.shard_origin[v], sp, float(st["rot"]), ppm / q, _tint)
+
+# A stretched puff is drawn along the way it was flying (its `dir`, a world heading); a round one is not turned.
+func _puff_rot(o: Dictionary, p: Dictionary, wp: Vector2) -> float:
+	if FxPuff.stretch_xy(o) == Vector2.ONE:
+		return 0.0
+	return mapping.screen_angle(wp, float(p.get("dir", 0.0)))
 
 func _draw_air(item: CanvasItem, view: Rect2) -> void:
 	for pair in field.alive_puffs(now):
@@ -435,7 +454,9 @@ func _draw_air(item: CanvasItem, view: Rect2) -> void:
 		var tone: int = p["tone"]
 		var v := int(p["variant"]) % ps.variants
 		var sc := (float(p["r_m"]) * ppm) / float(ps.radius_px[tone]) * float(s["scale"])
-		_blit(item, (ps.tex[tone] as Array)[v], ps.origin[tone], sp, 0.0, sc, Color(1.0, 1.0, 1.0, float(s["alpha"])))
+		var po: Dictionary = field.set_defs.get(p["set"], field.smoke_o)
+		var stage := mini(FxPuff.stage_of(po, float(s["u"])), ps.stages - 1)
+		_blit(item, (ps.tex[tone] as Array)[v + ps.variants * stage], ps.origin[tone], sp, _puff_rot(po, p, wp), sc, Color(1.0, 1.0, 1.0, float(s["alpha"])))
 	for d in field.debris:
 		var st := field.debris_state(d, now)
 		if not bool(st["alive"]) or bool(st["landed"]):
@@ -456,7 +477,7 @@ func _draw_top(item: CanvasItem, view: Rect2) -> void:
 	# the flames on planes the sim is flying out of control
 	var fall := FxData.grp(field.crash_o, "falling")
 	var fl := FxData.grp(fall, "flame")
-	if FxData.b(fl, "enabled"):
+	if style.fire_on and FxData.b(fl, "enabled"):
 		for id: String in field.riders:
 			var r: Dictionary = field.riders[id]
 			if absf(float(r["t"]) - now) > 0.25:

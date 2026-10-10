@@ -26,6 +26,7 @@ const FxData = preload("res://scripts/fx/fx_data.gd")
 const FxStyle = preload("res://scripts/fx/fx_style.gd")
 const FxLayer = preload("res://scripts/fx/fx_layer.gd")
 const FxPlaneProxy = preload("res://scripts/fx/fx_plane_proxy.gd")
+const FxPass = preload("res://scripts/fx/fx_pass.gd")
 const FxPuff = preload("res://scripts/fx/fx_puff.gd")
 const FxBurst = preload("res://scripts/fx/fx_burst.gd")
 const FxBake = preload("res://scripts/fx/fx_bake.gd")
@@ -90,6 +91,8 @@ func _run() -> void:
 		await _probe_crash()
 	if what == "smoke" or what == "all":
 		await _smoke_board()
+	if what == "smoke2":
+		await _smoke_r2_board()
 	if what == "crash" or what == "all":
 		await _crash_board()
 	quit(1 if _failures > 0 else 0)
@@ -110,11 +113,21 @@ func _setup() -> void:
 	layer = CanvasLayer.new()
 	vp.add_child(layer)
 	proxy = FxPlaneProxy.new()
-	layer.add_child(proxy)
-	proxy.setup(view, ui_style, fxs)
+	var below := FxPass.new()   # the ribbons, when the board shows them under the smoke
+	below.name = "RibbonsBelow"
+	below.kind = "ribbons"
+	below.layer = proxy
+	layer.add_child(below)
+	proxy.below_node = below
 	fx = FxLayer.new()
 	layer.add_child(fx)
 	fx.setup(view, SEED)
+	layer.add_child(proxy)
+	proxy.setup(view, ui_style, fxs)
+	var above := Node2D.new()
+	above.name = "AbovePlanes"
+	layer.add_child(above)
+	fx.mount(layer, above)   # ground, shadows and air below the planes; flames and bursts above them
 	if not view.errors().is_empty():
 		printerr("[fx-board] map errors: ", view.errors())
 	print("[fx-board] map %s px/m, seed %d" % [view.px_per_m, SEED])
@@ -144,9 +157,11 @@ func _wait_map(max_s: float = 90.0) -> void:
 	await _frames(3)
 
 # One 1280x720 frame centred on `center` at `zoom`, cropped to `crop` round the centre.
-func _grab(center: Vector2, zoom: float, crop: Vector2i) -> Image:
+func _grab(center: Vector2, zoom: float, crop: Vector2i, pre: Callable = Callable()) -> Image:
 	_camera(center, zoom)
 	await _wait_map()
+	if pre.is_valid():
+		pre.call()   # (the camera has moved: screen positions from the map view are true now)
 	fx.queue_redraws()
 	proxy.refresh()
 	await _frames(2)
@@ -209,7 +224,7 @@ func _plane(pos: Vector2, heading: float, h: float, side: String = "side_a") -> 
 	return {"pos": pos, "heading": heading, "h": h, "type": "light_fighter", "side": side}
 
 # One damage-smoke frame: option, health, t seconds into the flight.
-func _smoke_frame(health: float, t: float, zoom: float, mode: String) -> Image:
+func _smoke_frame(health: float, t: float, zoom: float, mode: String, crop: Vector2i = SMOKE_CROP, ribbon: bool = false, ribbon_below: bool = false) -> Image:
 	fx.set_time(t)
 	var p := smoke_pose(t)
 	var pos := _pose_pos(p)
@@ -232,7 +247,13 @@ func _smoke_frame(health: float, t: float, zoom: float, mode: String) -> Image:
 		var rp := smoke_pose(2.5)
 		planes.append(_plane(_pose_pos(rp) + Vector2(-30.0, 95.0), float(rp["heading"]), SMOKE_H, "side_b"))
 	_set_planes(planes)
-	return await _grab(center, zoom, SMOKE_CROP)
+	proxy.ribbons = []
+	proxy.ribbons_below = ribbon_below
+	var pre := Callable()
+	if ribbon and t <= 5.0 + 1e-6:
+		pre = func() -> void:
+			proxy.ribbons = _ribbon_items(t)
+	return await _grab(center, zoom, crop, pre)
 
 func _smoke_option(name: String) -> Dictionary:
 	fx.select(name, fxd.working_default("crash"))
@@ -434,7 +455,7 @@ func _specimen_smoke(name: String) -> Image:
 	var z := 1.0
 	var k := true_scale_at(z)
 	var ppm := maxf(PLANE_PX * z, PLANE_MIN_PX) / 9.0
-	var size := Vector2i(560, 120)
+	var size := Vector2i(900, 120)
 	return await _specimen_base(size, func(cl: CanvasLayer) -> void:
 		_tree_sprite(Vector2(48, 60), cl, 19.0)
 		_tree_sprite(Vector2(100, 70), cl, 14.0)
@@ -454,12 +475,14 @@ func _specimen_smoke(name: String) -> Image:
 		for tone in FxPuff.TONES:
 			if ps == null:
 				break
-			var sp := Sprite2D.new()
-			sp.texture = (ps.tex[tone] as Array)[0]
-			sp.centered = false
-			sp.position = Vector2(x, 60.0) - ps.origin[tone] * 1.0
-			cl.add_child(sp)
-			x += ps.origin[tone].x * 2.0 + 40.0
+			for stage in ps.stages:
+				var sp := Sprite2D.new()
+				sp.texture = (ps.tex[tone] as Array)[ps.variants * stage]
+				sp.centered = false
+				sp.position = Vector2(x, 60.0) - ps.origin[tone] * 1.0
+				cl.add_child(sp)
+				x += ps.origin[tone].x * 2.0 + 8.0
+			x += 32.0
 	)
 
 # --- The crash board ------------------------------------------------------------------------------------------------------------
@@ -728,6 +751,297 @@ func _probe() -> void:
 	var b := await _smoke_frame(0.3333, 5.0, 0.35, "mid")
 	b.save_png(out_probe.path_join("probe_smoke_far.png"))
 	print("[fx-board] probe saved, stats ", fx.stats())
+
+# --- Damage smoke, round 2 ------------------------------------------------------------------------------------------------------
+
+const R2_CROP := Vector2i(560, 380)
+
+const R2_ROWS := [
+	{"key": "r1", "health": 0.6667, "title": "one hit: 2 of 3 pips left (a thin trail)"},
+	{"key": "r2", "health": 0.3333, "title": "two hits: 1 of 3 pips left (a thick trail)"},
+]
+
+# The 'looks like trees' test: the trail across a grove, close and at the planning view.
+const GROVE_COLS := [
+	{"health": 0.6667, "t": 3.0, "zoom": 1.0, "mode": "follow", "cap": "thin trail across the grove, zoom 1.0 (3 s)"},
+	{"health": 0.3333, "t": 3.0, "zoom": 1.0, "mode": "follow", "cap": "thick trail across the grove, zoom 1.0 (3 s)"},
+	{"health": 0.6667, "t": 5.0, "zoom": 0.35, "mode": "mid", "cap": "thin trail across the grove, zoom 0.35 (5 s)"},
+	{"health": 0.3333, "t": 5.0, "zoom": 0.35, "mode": "mid", "cap": "thick trail across the grove, zoom 0.35 (5 s)"},
+]
+
+# What each variant changes (board.json and the sheets say it plainly).
+const R2_CHANGES := {
+	"C0": "nothing: round 1's contour rings as they were (the reference)",
+	"C1": "no scallops: smooth round lobes with one smooth outline; thick smoke casts a shadow",
+	"C2": "open arcs that never close instead of closed outlines; a cool grey wash instead of the cream fill; thick smoke casts a shadow",
+	"C3": "streaming: each puff stretched along the flight path so the trail reads as a band; thick smoke casts a shadow",
+	"C4": "tone: a light cool ink-wash core instead of the cream fill (C + D); thick smoke casts a shadow",
+	"C5": "dashed ring lines, and rings and outline that thin and break as the smoke ages; thick smoke casts a shadow",
+	"C6": "C2 + C3 + C4 + C5 together: open arcs, streaming, cool wash, ageing; thick smoke casts a shadow",
+	"W1": "plain translucent white-to-grey washes, no outline or rings or scallops, greying and thinning with age; thick smoke casts a shadow",
+	"W2": "plain translucent grey only; thick smoke casts a shadow",
+	"W3": "plain translucent white only; thick smoke casts a shadow",
+}
+
+# The wingtip ribbon of the damaged plane (data/ui/ui.json marker.trails, mode ribbon): the records
+# WingtipTrails.collect() would make for it, built from the scenario's own path.
+func _ribbon_items(t: float) -> Array:
+	var half_m := UnitMarkerArt.half_span_m(ui_style, "light_fighter") * true_scale_at(_zoom)
+	var win := ui_style.num("marker.trails.window_turns") * TURN_S
+	var power := ui_style.num("marker.trails.fade_power")
+	var min_alpha := ui_style.num("marker.trails.min_alpha")
+	var step := ui_style.num("marker.trails.sample_s")
+	var left := PackedVector2Array()
+	var right := PackedVector2Array()
+	var centre := PackedVector2Array()
+	var age := PackedFloat64Array()
+	var stp := PackedInt32Array()
+	var k := 0
+	while true:
+		var tt := t - float(k) * step
+		if tt < -1e-9:
+			tt = 0.0
+		var a := clampf((t - tt) / win, 0.0, 1.0)
+		if pow(1.0 - a, power) < min_alpha:
+			break
+		var p := smoke_pose(tt)
+		var wp := _pose_pos(p)
+		var side_v := Vector2.from_angle(float(p["heading"]) + PI / 2.0) * half_m
+		left.append(view.world_to_screen(wp - side_v))
+		right.append(view.world_to_screen(wp + side_v))
+		centre.append(view.world_to_screen(wp))
+		age.append(a)
+		stp.append(0)
+		if tt <= 0.0:
+			break
+		k += 1
+	if left.size() < 2:
+		return []
+	return [{"unit": "p1", "side": "allies", "own": true, "accent": fxs.palette["side_a"], "left": left, "right": right,
+		"centre": centre, "age": age, "step": stp, "half_span_px": (left[0] as Vector2).distance_to(right[0]) * 0.5}]
+
+func _r2_frame(health: float, t: float, zoom: float, mode: String, ribbon: bool = false, below: bool = false) -> Image:
+	return await _smoke_frame(health, t, zoom, mode, R2_CROP, ribbon, below)
+
+func _r2_option_frames(name: String) -> Array:
+	var rows: Array = []
+	for r in R2_ROWS:
+		fx.clear()
+		fx.select(name, fxd.working_default("crash"))
+		fx.emit_path("p1", func(t: float) -> Dictionary: return smoke_pose(t), 0.0, 20.0, float(r["health"]), 9.0)
+		var imgs: Array = []
+		var caps: Array = []
+		for c in SMOKE_COLS:
+			imgs.append(await _r2_frame(float(r["health"]), float(c["t"]), float(c["zoom"]), str(c["mode"])))
+			caps.append("%s (zoom %.2f)" % [c["cap"], c["zoom"]])
+		rows.append({"key": r["key"], "title": r["title"], "frames": imgs, "caps": caps})
+		print("[fx-board] smoke-r2 %s %s: %d frames (%s)" % [name, r["key"], imgs.size(), str(fx.stats())])
+	# the grove frames: thin first, then thick (two emissions), shown in the order of GROVE_COLS
+	var grove_imgs: Array = [null, null, null, null]
+	for health in [0.6667, 0.3333]:
+		fx.clear()
+		fx.select(name, fxd.working_default("crash"))
+		fx.emit_path("p1", func(t: float) -> Dictionary: return smoke_pose(t), 0.0, 20.0, float(health), 9.0)
+		for i in GROVE_COLS.size():
+			var c: Dictionary = GROVE_COLS[i]
+			if absf(float(c["health"]) - float(health)) < 0.01:
+				grove_imgs[i] = await _r2_frame(float(c["health"]), float(c["t"]), float(c["zoom"]), str(c["mode"]))
+	var grove_caps: Array = []
+	for c in GROVE_COLS:
+		grove_caps.append(str(c["cap"]))
+	rows.append({"key": "r3", "title": "In the grove (the 'looks like trees' test): the trail across the trees, close and at the planning view", "frames": grove_imgs, "caps": grove_caps})
+	# the same trail as it sits in the game: under the damaged plane's wingtip ribbon (marker.trails, mode ribbon)
+	var rib_imgs: Array = []
+	var rib_caps: Array = []
+	for spec in [[0.6667, 3.0, 1.0, "follow", false, "thin trail, ribbon over the smoke, zoom 1.0 (3 s)"], [0.3333, 3.0, 1.0, "follow", false, "thick trail, ribbon over the smoke, zoom 1.0 (3 s)"], [0.3333, 5.0, 0.35, "mid", false, "thick trail, ribbon over the smoke, zoom 0.35 (5 s)"], [0.3333, 3.0, 1.0, "follow", true, "thick trail, ribbon UNDER the smoke, zoom 1.0 (3 s): the other order"]]:
+		fx.clear()
+		fx.select(name, fxd.working_default("crash"))
+		fx.emit_path("p1", func(t: float) -> Dictionary: return smoke_pose(t), 0.0, 20.0, float(spec[0]), 9.0)
+		rib_imgs.append(await _r2_frame(float(spec[0]), float(spec[1]), float(spec[2]), str(spec[3]), true, bool(spec[4])))
+		rib_caps.append(str(spec[5]))
+	rows.append({"key": "r4", "title": "Beside the wingtip ribbon, as in the game (the damaged plane's side-colour ribbon over the smoke it leaves), and the other order, the ribbon under the smoke", "frames": rib_imgs, "caps": rib_caps})
+	# the same smoke as the crash's smoke, with no fire (Alex 2026-10-10: "No fire for now. Just smoke."):
+	# a quick thick burst, debris pieces, then smoke thinning very slowly; on the ground the smoking wreck
+	var crash_imgs: Array = []
+	var crash_caps: Array = []
+	fx.clear()
+	fx.select(name, fxd.working_default("crash"), name)
+	fx.explode_midair("p1", MID_POS, 400.0, T0, 9.0, MID_HEADING)
+	for dt in [0.3, 1.0, 5.0]:
+		crash_imgs.append(await _r2_crash_frame("mid", float(dt)))
+		crash_caps.append("mid-air explosion, %s later (zoom 1.0)" % ("one turn" if dt >= 5.0 else "%.1f s" % dt))
+	fx.clear()
+	fx.select(name, fxd.working_default("crash"), name)
+	fx.impact("p1", _pose_pos(fall_pose(FALL_S)), T0, 9.0, float(fall_pose(FALL_S)["heading"]))
+	for dt in [0.3, 1.0, 5.0, 15.0]:
+		crash_imgs.append(await _r2_crash_frame("hit", float(dt)))
+		crash_caps.append("ground crash, %s later (zoom 1.0)" % ("one turn: the wreck smoking" if dt == 5.0 else ("three turns: still smoking" if dt >= 15.0 else "%.1f s" % dt)))
+	rows.append({"key": "r5", "title": "As the crash's smoke, with no fire: a quick thick burst of this smoke, debris pieces, then the smoke cooling and thinning very slowly; on the ground the smoking wreck", "frames": crash_imgs, "caps": crash_caps})
+	return rows
+
+# One frame of a crash in the smoke of the option being shown (the field already holds the event).
+func _r2_crash_frame(kind: String, dt: float) -> Image:
+	proxy.ribbons = []
+	fx.set_time(T0 + dt)
+	var g := _pose_pos(fall_pose(FALL_S))
+	if kind == "mid":
+		_set_planes([_ref_plane(MID_POS + Vector2(40.0, 105.0), MID_HEADING)])
+		return await _grab(MID_POS + Vector2(8.0, 14.0), 1.0, R2_CROP)
+	_set_planes([_ref_plane(g + Vector2(-60.0, 120.0), 0.4)])
+	var centre := g if dt < 4.0 else g + Vector2(30.0, 12.0)
+	return await _grab(centre, 1.0, R2_CROP)
+
+func _smoke_r2_board() -> void:
+	var names: Array = str(opts.get("options", ",".join(fxd.smoke_r2_option_names()))).split(",")
+	var dir := out_dir.path_join("damage-smoke-r2")
+	var fdir := dir.path_join("frames")
+	DirAccess.make_dir_recursive_absolute(fdir)
+	var data := {}
+	var specimens := {}
+	for name: String in names:
+		data[name] = await _r2_option_frames(name)
+		specimens[name] = await _specimen_smoke(name)
+	# beside today's C0: the close-up and the planning view, side by side
+	var ref: Array = data.get("C0", [])
+	if ref.is_empty():
+		# the reference is always part of the board
+		ref = await _r2_option_frames("C0")
+		data["C0"] = ref
+		if not names.has("C0"):
+			names.push_front("C0")
+			specimens["C0"] = await _specimen_smoke("C0")
+	for name: String in names:
+		if name == "C0":
+			continue
+		var grove: Dictionary = (data[name] as Array)[2]
+		var gref: Dictionary = (ref as Array)[2]
+		(data[name] as Array).append({"key": "r6", "title": "Beside today's C0: each pair is C0 (left) and this option (right), the thick trail across the grove, zoom 1.0 then zoom 0.35",
+			"frames": [gref["frames"][1], grove["frames"][1], gref["frames"][3], grove["frames"][3]],
+			"caps": ["C0, zoom 1.0 (3 s)", "%s, zoom 1.0 (3 s)" % name, "C0, zoom 0.35 (5 s)", "%s, zoom 0.35 (5 s)" % name]})
+	await _write_r2(names, data, specimens)
+
+func _write_r2(names: Array, data: Dictionary, specimens: Dictionary) -> void:
+	var dir := out_dir.path_join("damage-smoke-r2")
+	var cw := R2_CROP.x
+	var ch := R2_CROP.y
+	var cols := SMOKE_COLS.size()
+	var listing: Array = []
+	var json_opts: Array = []
+	# every frame as its own PNG at native size, and the listing the full-resolution viewer reads
+	for name: String in names:
+		var rows_out: Array = []
+		for r in data[name]:
+			var frames_out: Array = []
+			for i in r["frames"].size():
+				var rel := "frames/%s_%s_%d.png" % [name, r["key"], i]
+				var err := (r["frames"][i] as Image).save_png(dir.path_join(rel))
+				if err != OK:
+					printerr("[fx-board] could not write ", rel)
+					_failures += 1
+				frames_out.append({"file": rel, "caption": str(r["caps"][i])})
+			rows_out.append({"title": str(r["title"]), "frames": frames_out})
+		listing.append({"option": name, "label": fxd.option_label("smoke", name), "changes": str(R2_CHANGES.get(name, "")), "note": fxd.option_note("smoke", name), "rows": rows_out})
+	_write_json(dir.path_join("frames.json"), {"id": "damage-smoke-r2", "size_px": [cw, ch], "options": listing})
+	# one sheet per option at full size
+	for name: String in names:
+		var rows: Array = data[name]
+		var w := cols * (cw + 8) + 40
+		var h := 220 + rows.size() * (ch + 66) + 20
+		var sh := FxSheet.new(root, Vector2i(w, h))
+		sh.label("Damage smoke round 2, option %s" % fxd.option_label("smoke", name), Vector2(16, 10), 22, true)
+		var nl := sh.label("Changes: %s.   %s" % [R2_CHANGES.get(name, ""), fxd.option_note("smoke", name)], Vector2(16, 40), 13, false, FxSheet.DIM, w - 40.0)
+		var y := 52.0 + nl.size.y
+		sh.label("Beside a tree (38 px canopy) and a light fighter (36 px) at zoom 1.0, on the paper; the option's three tones, thin to heavy, fresh and aged:", Vector2(16, y), 12, false, FxSheet.DIM)
+		sh.image(specimens[name], Vector2(16, y + 18), 1.0)
+		_chips(sh, Vector2(16 + specimens[name].get_width() + 24, y + 22))
+		y += 18 + specimens[name].get_height() + 22
+		for r in rows:
+			sh.label(str(r["title"]), Vector2(16, y), 14, true)
+			y += 22
+			for k in r["frames"].size():
+				sh.image(r["frames"][k], Vector2(16 + k * (cw + 8), y), 1.0)
+				sh.label(str(r["caps"][k]), Vector2(16 + k * (cw + 8), y + ch + 4), 12, false, FxSheet.DIM)
+			y += ch + 40
+		await sh.save(dir.path_join("option_%s.png" % name), self)
+		sh.free_sheet()
+		json_opts.append({"name": name, "label": fxd.option_label("smoke", name), "changes": str(R2_CHANGES.get(name, "")), "note": fxd.option_note("smoke", name), "file": "option_%s.png" % name, "parameters": fxd.smoke_option(name)})
+	# the contact sheet: the thick trail's seven frames, then the grove frames, for every option
+	var sc := 0.4
+	var cell := Vector2(cw * sc, ch * sc)
+	var ncol := cols + 5
+	var bw := int(ncol * (cell.x + 6)) + 40
+	var bh := 150 + names.size() * int(cell.y + 56)
+	var bd := FxSheet.new(root, Vector2i(bw, bh))
+	bd.label("Damage smoke, round 2: contour rings that do not look like trees, and plain white and grey smoke  ·  seed %d, the real map" % SEED, Vector2(16, 10), 22, true)
+	bd.label("The thick trail (1 of 3 pips) over time, left to right: 0.1, 0.3, 1 s at zoom 1.0, then 3, 5, 10, 20 s at zoom 0.35; then the grove frames (thin and thick across the trees at zoom 1.0, thick at zoom 0.35), then the same smoke as a fire-free crash (the mid-air burst at 1 s, the smoking wreck one turn after the ground crash). The red ribbon is the damaged plane's wingtip trail (marker.trails, mode ribbon); the second plane is a healthy one of the other side. Thick smoke casts a ground shadow in every variant; C0 is round 1's C (no shadow). This sheet is shrunk: the full-size frames are in frames/, listed in frames.json. No fire in this round. ALL OPTIONS ARE PROPOSED; none is chosen.", Vector2(16, 42), 12, false, FxSheet.DIM, bw - 40.0)
+	var y2 := 120.0
+	for name: String in names:
+		bd.label("%s   ·   %s" % [fxd.option_label("smoke", name), R2_CHANGES.get(name, "")], Vector2(16, y2), 13, true)
+		y2 += 22
+		var rows: Array = data[name]
+		var thick: Array = rows[1]["frames"]
+		var grove: Array = rows[2]["frames"]
+		var cells: Array = []
+		for im in thick:
+			cells.append(im)
+		cells.append(grove[0])
+		cells.append(grove[1])
+		cells.append(grove[3])
+		var crash_row: Array = rows[4]["frames"]
+		cells.append(crash_row[1])   # the mid-air burst at 1 s
+		cells.append(crash_row[5])   # the smoking wreck, one turn after the crash
+		for k in cells.size():
+			var img: Image = cells[k]
+			var small := Image.create_from_data(img.get_width(), img.get_height(), false, img.get_format(), img.get_data())
+			small.resize(int(cell.x), int(cell.y), Image.INTERPOLATE_LANCZOS)
+			bd.image(small, Vector2(16 + k * (cell.x + 6), y2), 1.0)
+		y2 += cell.y + 34
+	await bd.save(dir.path_join("board.png"), self)
+	bd.free_sheet()
+	# the side-by-side sheet: today's C0 against each other option, close and far
+	var vs: Array = []
+	for n in names:
+		if n != "C0":
+			vs.append(n)
+	var sc2 := 0.75
+	var cell2 := Vector2(cw * sc2, ch * sc2)
+	var cw2 := int(4 * (cell2.x + 6)) + 40
+	var cmp := FxSheet.new(root, Vector2i(cw2, 90 + vs.size() * int(cell2.y + 50)))
+	cmp.label("Damage smoke round 2: today's C0 beside each option, the thick trail across the grove", Vector2(16, 10), 22, true)
+	cmp.label("Each row: C0 at zoom 1.0 (3 s) | the option at zoom 1.0 | C0 at zoom 0.35 (5 s) | the option at zoom 0.35. Shrunk to 75%; the native frames are in frames/.", Vector2(16, 42), 12, false, FxSheet.DIM, cw2 - 40.0)
+	var y3 := 76.0
+	for name: String in vs:
+		cmp.label("%s   ·   %s" % [fxd.option_label("smoke", name), R2_CHANGES.get(name, "")], Vector2(16, y3), 13, true)
+		y3 += 22
+		var r4: Dictionary = (data[name] as Array)[5]
+		for k in 4:
+			var img: Image = r4["frames"][k]
+			var small := Image.create_from_data(img.get_width(), img.get_height(), false, img.get_format(), img.get_data())
+			small.resize(int(cell2.x), int(cell2.y), Image.INTERPOLATE_LANCZOS)
+			cmp.image(small, Vector2(16 + k * (cell2.x + 6), y3), 1.0)
+		y3 += cell2.y + 26
+	await cmp.save(dir.path_join("compare.png"), self)
+	cmp.free_sheet()
+	_write_json(dir.path_join("board.json"), {
+		"id": "damage-smoke-r2",
+		"date": "2026-10-10",
+		"area": "Effects",
+		"question": "Round 2 of the damage smoke. Alex 2026-10-10: 'Contour rings for smoke is the current leader but it looks too much like trees', plus 'Let's also try a basic translucent, white and gray smoke'; thick smoke casts a shadow; no fire in this round.",
+		"source": "scripts/fx/fx_board.gd (what=smoke2) over the real map (terrain provider) at 2 px/m, planes at the sandbox's own scale (36 px at zoom 1); the wingtip ribbon is WingtipTrails.draw_items in ribbon mode",
+		"seed": SEED,
+		"parameter": "data/fx/fx.json#smoke_r2.options (every value a proposed record)",
+		"held_constant": {
+			"scene": "a light fighter, 9 m, 400 m up, 100 m/s, turning left 6 degrees per second from (2850, 2470) m; health 2/3 and 1/3",
+			"light": "sun azimuth 315, elevation 46; shadow strength 0.44; thick smoke's shadow = 1% of its height above ground along the light",
+			"pen": "shadow side", "wingtip_trail": "ribbon, side colour, own planes (data/ui/ui.json marker.trails)", "fire": "none",
+		},
+		"frames": {"time": SMOKE_COLS, "grove": GROVE_COLS},
+		"rows": R2_ROWS,
+		"options": json_opts,
+		"sheet": "board.png (contact sheet, shrunk), compare.png (C0 beside each option), option_<X>.png (each at full size); every frame at native size in frames/, listed in frames.json",
+		"chosen": null,
+		"chosen_by": null,
+	})
 
 # A handful of crash frames, one option, written to tmp/fx/ to check the look before a board.
 func _probe_crash() -> void:

@@ -1,0 +1,1222 @@
+{
+  "id": "damage-smoke-r2",
+  "date": "2026-10-10",
+  "area": "Effects",
+  "question": "Round 2 of the damage smoke. Alex 2026-10-10: 'Contour rings for smoke is the current leader but it looks too much like trees', plus 'Let's also try a basic translucent, white and gray smoke'; thick smoke casts a shadow; no fire in this round.",
+  "source": "scripts/fx/fx_board.gd (what=smoke2) over the real map (terrain provider) at 2 px/m, planes at the sandbox's own scale (36 px at zoom 1); the wingtip ribbon is WingtipTrails.draw_items in ribbon mode",
+  "seed": 20261009,
+  "parameter": "data/fx/fx.json#smoke_r2.options (every value a proposed record)",
+  "held_constant": {
+    "scene": "a light fighter, 9 m, 400 m up, 100 m/s, turning left 6 degrees per second from (2850, 2470) m; health 2/3 and 1/3",
+    "light": "sun azimuth 315, elevation 46; shadow strength 0.44; thick smoke's shadow = 1% of its height above ground along the light",
+    "pen": "shadow side",
+    "wingtip_trail": "ribbon, side colour, own planes (data/ui/ui.json marker.trails)",
+    "fire": "none"
+  },
+  "frames": {
+    "time": [
+      {
+        "t": 0.1,
+        "zoom": 1.0,
+        "mode": "follow",
+        "cap": "0.1 s"
+      },
+      {
+        "t": 0.3,
+        "zoom": 1.0,
+        "mode": "follow",
+        "cap": "0.3 s"
+      },
+      {
+        "t": 1.0,
+        "zoom": 1.0,
+        "mode": "follow",
+        "cap": "1 s"
+      },
+      {
+        "t": 3.0,
+        "zoom": 0.35,
+        "mode": "mid",
+        "cap": "3 s"
+      },
+      {
+        "t": 5.0,
+        "zoom": 0.35,
+        "mode": "mid",
+        "cap": "5 s (end of turn 1)"
+      },
+      {
+        "t": 10.0,
+        "zoom": 0.35,
+        "mode": "mid",
+        "cap": "one turn later (10 s)"
+      },
+      {
+        "t": 20.0,
+        "zoom": 0.35,
+        "mode": "mid",
+        "cap": "three turns later (20 s)"
+      }
+    ],
+    "grove": [
+      {
+        "health": 0.6667,
+        "t": 3.0,
+        "zoom": 1.0,
+        "mode": "follow",
+        "cap": "thin trail across the grove, zoom 1.0 (3 s)"
+      },
+      {
+        "health": 0.3333,
+        "t": 3.0,
+        "zoom": 1.0,
+        "mode": "follow",
+        "cap": "thick trail across the grove, zoom 1.0 (3 s)"
+      },
+      {
+        "health": 0.6667,
+        "t": 5.0,
+        "zoom": 0.35,
+        "mode": "mid",
+        "cap": "thin trail across the grove, zoom 0.35 (5 s)"
+      },
+      {
+        "health": 0.3333,
+        "t": 5.0,
+        "zoom": 0.35,
+        "mode": "mid",
+        "cap": "thick trail across the grove, zoom 0.35 (5 s)"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "key": "r1",
+      "health": 0.6667,
+      "title": "one hit: 2 of 3 pips left (a thin trail)"
+    },
+    {
+      "key": "r2",
+      "health": 0.3333,
+      "title": "two hits: 1 of 3 pips left (a thick trail)"
+    }
+  ],
+  "options": [
+    {
+      "name": "C0",
+      "label": "C0 · Today's C (the reference)",
+      "changes": "nothing: round 1's contour rings as they were (the reference)",
+      "note": "Round 1's contour rings exactly as it was: scalloped closed outlines, a cream see-through fill, two broken floret rings per lobe, round clumps. No ground shadow.",
+      "file": "option_C0.png",
+      "parameters": {
+        "form": "lobed",
+        "variants": 4.0,
+        "radius_frac": [
+          0.28,
+          0.66
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": false,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.34,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.07,
+        "lobe_amp_var": 0.07,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 0.85,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": false,
+        "underside": false,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "shade_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "ticks": true,
+        "stipple_per_r": 0.0,
+        "stipple_role": "ink.soft",
+        "rings": 2.0,
+        "ring_role": "ink.ring",
+        "ring_style": "solid",
+        "dash_px": 3.0,
+        "gap_px": 2.2,
+        "ring_amp": 0.1,
+        "ring_amp_var": 0.1,
+        "stages": 1.0,
+        "stage_edges": [],
+        "stage_ring_keep": [
+          0.8
+        ],
+        "stage_ring_alpha": [
+          1.0
+        ],
+        "stage_outline_keep": [
+          1.0
+        ],
+        "stretch": 1.0,
+        "shadow_min_tone": 0.0,
+        "arcs_min": 3.0,
+        "arcs_max": 5.0,
+        "arc_sweep_deg": [
+          150.0,
+          300.0
+        ],
+        "arc_spiral": 0.14,
+        "arc_weight": 1.15,
+        "peak_alpha": 1.0,
+        "burst_alpha": 1.0,
+        "arc_jitter": 0.22,
+        "soft_steps": 3.0,
+        "soft_core": 0.55
+      }
+    },
+    {
+      "name": "C1",
+      "label": "C1 · Smooth billows",
+      "changes": "no scallops: smooth round lobes with one smooth outline; thick smoke casts a shadow",
+      "note": "Changes: no scallops. Round lobes with one smooth outline round the whole cloud and smooth offset rings inside; no cusp ticks. Cream fill kept. Thick smoke casts a shadow.",
+      "file": "option_C1.png",
+      "parameters": {
+        "form": "lobed",
+        "variants": 4.0,
+        "radius_frac": [
+          0.28,
+          0.66
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": true,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.34,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.0,
+        "lobe_amp_var": 0.0,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 0.85,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": true,
+        "underside": false,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "shade_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "ticks": false,
+        "stipple_per_r": 0.0,
+        "stipple_role": "ink.soft",
+        "rings": 1.0,
+        "ring_role": "ink.ring",
+        "ring_style": "solid",
+        "dash_px": 3.0,
+        "gap_px": 2.2,
+        "ring_amp": 0.0,
+        "ring_amp_var": 0.0,
+        "stages": 1.0,
+        "stage_edges": [],
+        "stage_ring_keep": [
+          0.8
+        ],
+        "stage_ring_alpha": [
+          1.0
+        ],
+        "stage_outline_keep": [
+          1.0
+        ],
+        "stretch": 1.0,
+        "shadow_min_tone": 1.0,
+        "arcs_min": 3.0,
+        "arcs_max": 5.0,
+        "arc_sweep_deg": [
+          150.0,
+          300.0
+        ],
+        "arc_spiral": 0.14,
+        "arc_weight": 1.15,
+        "peak_alpha": 1.0,
+        "burst_alpha": 0.6,
+        "arc_jitter": 0.22,
+        "soft_steps": 3.0,
+        "soft_core": 0.55
+      }
+    },
+    {
+      "name": "C2",
+      "label": "C2 · Open contours",
+      "changes": "open arcs that never close instead of closed outlines; a cool grey wash instead of the cream fill; thick smoke casts a shadow",
+      "note": "Changes: open arcs that never close (isobars, a hand-drawn swirl) instead of closed outlines, and a faint cool grey wash instead of the cream fill. No scallops, no florets. Thick smoke casts a shadow.",
+      "file": "option_C2.png",
+      "parameters": {
+        "form": "arcs",
+        "variants": 4.0,
+        "radius_frac": [
+          0.28,
+          0.66
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": true,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.34,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.07,
+        "lobe_amp_var": 0.07,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 0.85,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": false,
+        "underside": false,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.r2.cool.core.0",
+          "smoke.r2.cool.core.1",
+          "smoke.r2.cool.core.2"
+        ],
+        "shade_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "ticks": true,
+        "stipple_per_r": 0.0,
+        "stipple_role": "ink.soft",
+        "rings": 2.0,
+        "ring_role": "ink.ring",
+        "ring_style": "solid",
+        "dash_px": 3.0,
+        "gap_px": 2.2,
+        "ring_amp": 0.1,
+        "ring_amp_var": 0.1,
+        "stages": 1.0,
+        "stage_edges": [],
+        "stage_ring_keep": [
+          0.8
+        ],
+        "stage_ring_alpha": [
+          1.0
+        ],
+        "stage_outline_keep": [
+          1.0
+        ],
+        "stretch": 1.0,
+        "shadow_min_tone": 1.0,
+        "arcs_min": 4.0,
+        "arcs_max": 6.0,
+        "arc_sweep_deg": [
+          70.0,
+          210.0
+        ],
+        "arc_spiral": 0.14,
+        "arc_weight": 1.15,
+        "peak_alpha": 1.0,
+        "burst_alpha": 0.45,
+        "arc_jitter": 0.34,
+        "soft_steps": 3.0,
+        "soft_core": 0.55,
+        "patch_r": 0.85
+      }
+    },
+    {
+      "name": "C3",
+      "label": "C3 · Streaming band",
+      "changes": "streaming: each puff stretched along the flight path so the trail reads as a band; thick smoke casts a shadow",
+      "note": "Changes: each puff is stretched 2.4 times along the way it was flying and turned to it, so the overlapping puffs read as a moving band, not round clumps. Everything else is C0. Thick smoke casts a shadow.",
+      "file": "option_C3.png",
+      "parameters": {
+        "form": "lobed",
+        "variants": 4.0,
+        "radius_frac": [
+          0.28,
+          0.66
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": true,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.34,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.07,
+        "lobe_amp_var": 0.07,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 0.55,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": false,
+        "underside": false,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "shade_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "ticks": true,
+        "stipple_per_r": 0.0,
+        "stipple_role": "ink.soft",
+        "rings": 2.0,
+        "ring_role": "ink.ring",
+        "ring_style": "solid",
+        "dash_px": 3.0,
+        "gap_px": 2.2,
+        "ring_amp": 0.1,
+        "ring_amp_var": 0.1,
+        "stages": 1.0,
+        "stage_edges": [],
+        "stage_ring_keep": [
+          0.8
+        ],
+        "stage_ring_alpha": [
+          0.7
+        ],
+        "stage_outline_keep": [
+          1.0
+        ],
+        "stretch": 2.4,
+        "shadow_min_tone": 1.0,
+        "arcs_min": 3.0,
+        "arcs_max": 5.0,
+        "arc_sweep_deg": [
+          150.0,
+          300.0
+        ],
+        "arc_spiral": 0.14,
+        "arc_weight": 1.15,
+        "peak_alpha": 1.0,
+        "burst_alpha": 1.0,
+        "arc_jitter": 0.22,
+        "soft_steps": 3.0,
+        "soft_core": 0.55
+      }
+    },
+    {
+      "name": "C4",
+      "label": "C4 · Cool wash core (C + D)",
+      "changes": "tone: a light cool ink-wash core instead of the cream fill (C + D); thick smoke casts a shadow",
+      "note": "Changes: a light cool ink-wash core (the shadow tint toward the ink at alpha 0.12 to 0.3) replaces the cream fill, under the same scalloped outlines and rings. Thick smoke casts a shadow.",
+      "file": "option_C4.png",
+      "parameters": {
+        "form": "lobed",
+        "variants": 4.0,
+        "radius_frac": [
+          0.28,
+          0.66
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": true,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.34,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.07,
+        "lobe_amp_var": 0.07,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 0.85,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": false,
+        "underside": false,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.r2.cool.0",
+          "smoke.r2.cool.1",
+          "smoke.r2.cool.2"
+        ],
+        "shade_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "ticks": true,
+        "stipple_per_r": 0.0,
+        "stipple_role": "ink.soft",
+        "rings": 2.0,
+        "ring_role": "ink.ring",
+        "ring_style": "solid",
+        "dash_px": 3.0,
+        "gap_px": 2.2,
+        "ring_amp": 0.1,
+        "ring_amp_var": 0.1,
+        "stages": 1.0,
+        "stage_edges": [],
+        "stage_ring_keep": [
+          0.8
+        ],
+        "stage_ring_alpha": [
+          1.0
+        ],
+        "stage_outline_keep": [
+          1.0
+        ],
+        "stretch": 1.0,
+        "shadow_min_tone": 1.0,
+        "arcs_min": 3.0,
+        "arcs_max": 5.0,
+        "arc_sweep_deg": [
+          150.0,
+          300.0
+        ],
+        "arc_spiral": 0.14,
+        "arc_weight": 1.15,
+        "peak_alpha": 1.0,
+        "burst_alpha": 0.45,
+        "arc_jitter": 0.22,
+        "soft_steps": 3.0,
+        "soft_core": 0.55
+      }
+    },
+    {
+      "name": "C5",
+      "label": "C5 · Dashed rings that break with age",
+      "changes": "dashed ring lines, and rings and outline that thin and break as the smoke ages; thick smoke casts a shadow",
+      "note": "Changes: the ring lines are dashed, and as a puff ages its rings and its outline thin and break up in three stages (fresh, half, mostly gone). Thick smoke casts a shadow.",
+      "file": "option_C5.png",
+      "parameters": {
+        "form": "lobed",
+        "variants": 4.0,
+        "radius_frac": [
+          0.28,
+          0.66
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": true,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.34,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.07,
+        "lobe_amp_var": 0.07,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 0.85,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": false,
+        "underside": false,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "shade_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "ticks": true,
+        "stipple_per_r": 0.0,
+        "stipple_role": "ink.soft",
+        "rings": 2.0,
+        "ring_role": "ink.ring",
+        "ring_style": "dashed",
+        "dash_px": 3.0,
+        "gap_px": 2.2,
+        "ring_amp": 0.1,
+        "ring_amp_var": 0.1,
+        "stages": 3.0,
+        "stage_edges": [
+          0.25,
+          0.55
+        ],
+        "stage_ring_keep": [
+          0.9,
+          0.6,
+          0.3
+        ],
+        "stage_ring_alpha": [
+          1.0,
+          0.8,
+          0.55
+        ],
+        "stage_outline_keep": [
+          1.0,
+          0.65,
+          0.35
+        ],
+        "stretch": 1.0,
+        "shadow_min_tone": 1.0,
+        "arcs_min": 3.0,
+        "arcs_max": 5.0,
+        "arc_sweep_deg": [
+          150.0,
+          300.0
+        ],
+        "arc_spiral": 0.14,
+        "arc_weight": 1.15,
+        "peak_alpha": 1.0,
+        "burst_alpha": 1.0,
+        "arc_jitter": 0.22,
+        "soft_steps": 3.0,
+        "soft_core": 0.55
+      }
+    },
+    {
+      "name": "C6",
+      "label": "C6 · Combined (proposed blend)",
+      "changes": "C2 + C3 + C4 + C5 together: open arcs, streaming, cool wash, ageing; thick smoke casts a shadow",
+      "note": "Changes (C2 + C3 + C4 + C5 together): open arcs, streaming along the flight path, the cool wash core, arcs that drop out and fade as the smoke ages, thick smoke casts a shadow. The blend I would try if Alex likes several of the levers.",
+      "file": "option_C6.png",
+      "parameters": {
+        "form": "arcs",
+        "variants": 4.0,
+        "radius_frac": [
+          0.28,
+          0.66
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": true,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.34,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.07,
+        "lobe_amp_var": 0.07,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 0.85,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": false,
+        "underside": false,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.r2.cool.core.0",
+          "smoke.r2.cool.core.1",
+          "smoke.r2.cool.core.2"
+        ],
+        "shade_roles": [
+          "smoke.c.fill.0",
+          "smoke.c.fill.1",
+          "smoke.c.fill.2"
+        ],
+        "ticks": true,
+        "stipple_per_r": 0.0,
+        "stipple_role": "ink.soft",
+        "rings": 2.0,
+        "ring_role": "ink.ring",
+        "ring_style": "solid",
+        "dash_px": 3.0,
+        "gap_px": 2.2,
+        "ring_amp": 0.1,
+        "ring_amp_var": 0.1,
+        "stages": 3.0,
+        "stage_edges": [
+          0.25,
+          0.55
+        ],
+        "stage_ring_keep": [
+          1.0,
+          0.7,
+          0.4
+        ],
+        "stage_ring_alpha": [
+          1.0,
+          0.8,
+          0.55
+        ],
+        "stage_outline_keep": [
+          1.0
+        ],
+        "stretch": 2.4,
+        "shadow_min_tone": 1.0,
+        "arcs_min": 4.0,
+        "arcs_max": 6.0,
+        "arc_sweep_deg": [
+          70.0,
+          210.0
+        ],
+        "arc_spiral": 0.14,
+        "arc_weight": 1.15,
+        "peak_alpha": 1.0,
+        "burst_alpha": 0.45,
+        "arc_jitter": 0.34,
+        "soft_steps": 3.0,
+        "soft_core": 0.55,
+        "patch_r": 0.85
+      }
+    },
+    {
+      "name": "W1",
+      "label": "W1 · Soft white to grey",
+      "changes": "plain translucent white-to-grey washes, no outline or rings or scallops, greying and thinning with age; thick smoke casts a shadow",
+      "note": "Plain translucent smoke: no outline, no rings, no scallops, soft stepped washes at low alpha; the map shows through and overlapping puffs build density where the trail is heavy. Fresh smoke is white and thickest (the knock-out step), and as it ages it greys (white toward the ink, no new hue) and thins, in three stages. Thick smoke casts a shadow.",
+      "file": "option_W1.png",
+      "parameters": {
+        "form": "soft",
+        "variants": 4.0,
+        "radius_frac": [
+          0.34,
+          0.8
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": true,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.4,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.0,
+        "lobe_amp_var": 0.0,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 0.85,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": false,
+        "underside": false,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.w.white.0",
+          "smoke.w.white.1",
+          "smoke.w.white.2",
+          "smoke.w.lgrey.0",
+          "smoke.w.lgrey.1",
+          "smoke.w.lgrey.2",
+          "smoke.w.grey.0",
+          "smoke.w.grey.1",
+          "smoke.w.grey.2"
+        ],
+        "shade_roles": [
+          "smoke.w.white.0",
+          "smoke.w.white.1",
+          "smoke.w.white.2",
+          "smoke.w.lgrey.0",
+          "smoke.w.lgrey.1",
+          "smoke.w.lgrey.2",
+          "smoke.w.grey.0",
+          "smoke.w.grey.1",
+          "smoke.w.grey.2"
+        ],
+        "ticks": false,
+        "stipple_per_r": 0.0,
+        "stipple_role": "ink.soft",
+        "rings": 0.0,
+        "ring_role": "ink.ring",
+        "ring_style": "solid",
+        "dash_px": 3.0,
+        "gap_px": 2.2,
+        "ring_amp": 0.1,
+        "ring_amp_var": 0.1,
+        "stages": 3.0,
+        "stage_edges": [
+          0.25,
+          0.55
+        ],
+        "stage_ring_keep": [
+          0.8
+        ],
+        "stage_ring_alpha": [
+          1.0
+        ],
+        "stage_outline_keep": [
+          1.0
+        ],
+        "stretch": 1.0,
+        "shadow_min_tone": 1.0,
+        "arcs_min": 3.0,
+        "arcs_max": 5.0,
+        "arc_sweep_deg": [
+          150.0,
+          300.0
+        ],
+        "arc_spiral": 0.14,
+        "arc_weight": 1.15,
+        "peak_alpha": 1.0,
+        "burst_alpha": 1.0,
+        "arc_jitter": 0.22,
+        "soft_steps": 3.0,
+        "soft_core": 0.55
+      }
+    },
+    {
+      "name": "W2",
+      "label": "W2 · Soft grey",
+      "changes": "plain translucent grey only; thick smoke casts a shadow",
+      "note": "The same plain translucent puffs in one grey only (white toward the ink at 38%, no new hue); thin, medium and thick by alpha. Thick smoke casts a shadow.",
+      "file": "option_W2.png",
+      "parameters": {
+        "form": "soft",
+        "variants": 4.0,
+        "radius_frac": [
+          0.34,
+          0.8
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": true,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.4,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.0,
+        "lobe_amp_var": 0.0,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 0.85,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": false,
+        "underside": false,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.w.mid.0",
+          "smoke.w.mid.1",
+          "smoke.w.mid.2"
+        ],
+        "shade_roles": [
+          "smoke.w.mid.0",
+          "smoke.w.mid.1",
+          "smoke.w.mid.2"
+        ],
+        "ticks": false,
+        "stipple_per_r": 0.0,
+        "stipple_role": "ink.soft",
+        "rings": 0.0,
+        "ring_role": "ink.ring",
+        "ring_style": "solid",
+        "dash_px": 3.0,
+        "gap_px": 2.2,
+        "ring_amp": 0.1,
+        "ring_amp_var": 0.1,
+        "stages": 1.0,
+        "stage_edges": [],
+        "stage_ring_keep": [
+          0.8
+        ],
+        "stage_ring_alpha": [
+          1.0
+        ],
+        "stage_outline_keep": [
+          1.0
+        ],
+        "stretch": 1.0,
+        "shadow_min_tone": 1.0,
+        "arcs_min": 3.0,
+        "arcs_max": 5.0,
+        "arc_sweep_deg": [
+          150.0,
+          300.0
+        ],
+        "arc_spiral": 0.14,
+        "arc_weight": 1.15,
+        "peak_alpha": 1.0,
+        "burst_alpha": 1.0,
+        "arc_jitter": 0.22,
+        "soft_steps": 3.0,
+        "soft_core": 0.55
+      }
+    },
+    {
+      "name": "W3",
+      "label": "W3 · Soft white",
+      "changes": "plain translucent white only; thick smoke casts a shadow",
+      "note": "The same plain translucent puffs in white only (the knock-out step); thin, medium and thick by alpha. The lightest smoke: it may be too pale on the paper, which is what this option tests. Thick smoke casts a shadow.",
+      "file": "option_W3.png",
+      "parameters": {
+        "form": "soft",
+        "variants": 4.0,
+        "radius_frac": [
+          0.34,
+          0.8
+        ],
+        "interval_s": [
+          0.3,
+          0.07
+        ],
+        "life_s": [
+          24.0,
+          40.0
+        ],
+        "grow": [
+          0.85,
+          1.6
+        ],
+        "grow_tau": 0.2,
+        "hold": 0.15,
+        "fade_power": 1.6,
+        "alpha_steps": [],
+        "intensity_floor": 0.3,
+        "tone_edges": [
+          0.45,
+          0.78
+        ],
+        "wind_mps": [
+          2.5,
+          1.0
+        ],
+        "wind_jitter_mps": 0.6,
+        "ground_shadow": true,
+        "tail_frac": 0.35,
+        "lobes_min": 4.0,
+        "lobes_max": 6.0,
+        "lobe_d": 0.36,
+        "lobe_d_var": 0.14,
+        "lobe_r": 0.4,
+        "lobe_r_var": 0.18,
+        "crown_r": 0.52,
+        "lobe_amp": 0.0,
+        "lobe_amp_var": 0.0,
+        "scallop_base": 3.5,
+        "scallop_div": 4.0,
+        "outline_weight_of": "tree_outline",
+        "outline_scale": 0.85,
+        "outline_ref_px": 14.0,
+        "outline_min_scale": 0.55,
+        "outline_role": "ink",
+        "outline_union": false,
+        "underside": false,
+        "lit_shift": 0.16,
+        "lit_roles": [
+          "smoke.w.white.0",
+          "smoke.w.white.1",
+          "smoke.w.white.2"
+        ],
+        "shade_roles": [
+          "smoke.w.white.0",
+          "smoke.w.white.1",
+          "smoke.w.white.2"
+        ],
+        "ticks": false,
+        "stipple_per_r": 0.0,
+        "stipple_role": "ink.soft",
+        "rings": 0.0,
+        "ring_role": "ink.ring",
+        "ring_style": "solid",
+        "dash_px": 3.0,
+        "gap_px": 2.2,
+        "ring_amp": 0.1,
+        "ring_amp_var": 0.1,
+        "stages": 1.0,
+        "stage_edges": [],
+        "stage_ring_keep": [
+          0.8
+        ],
+        "stage_ring_alpha": [
+          1.0
+        ],
+        "stage_outline_keep": [
+          1.0
+        ],
+        "stretch": 1.0,
+        "shadow_min_tone": 1.0,
+        "arcs_min": 3.0,
+        "arcs_max": 5.0,
+        "arc_sweep_deg": [
+          150.0,
+          300.0
+        ],
+        "arc_spiral": 0.14,
+        "arc_weight": 1.15,
+        "peak_alpha": 1.0,
+        "burst_alpha": 1.0,
+        "arc_jitter": 0.22,
+        "soft_steps": 3.0,
+        "soft_core": 0.55
+      }
+    }
+  ],
+  "sheet": "board.png (contact sheet, shrunk), compare.png (C0 beside each option), option_<X>.png (each at full size); every frame at native size in frames/, listed in frames.json",
+  "chosen": null,
+  "chosen_by": null
+}

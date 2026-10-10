@@ -4,9 +4,9 @@ extends "res://scripts/test_support/test_case.gd"
 # numbers, not the pixels (scripts/fx/fx_board.gd and fx_gallery_shot.gd are the looks).
 #
 #   1. data/fx/fx.json: every value is a PROPOSED value record with a reason; every
-#      colour role resolves to a palette colour; the proposed fire accent sits in
-#      the sRGB gamut, lighter and more chromatic than the side accents; the OKLCH
-#      maths reproduces Alex's side colours
+#      colour role resolves to a palette colour; the INTERIM fire (treatment 6 of docs/proposals/
+#      fire-in-ink.md) sits in the sRGB gamut at or below the side accents' chroma and 0.12 from
+#      both in OKLab, the flash is lighter than every fill; the OKLCH maths reproduces Alex's side colours
 #   2. damage smoke: none at full health; the puff rate, size and tone follow the
 #      data and grow as health falls; puffs are left on the emission grid; their fade
 #      follows the data (hold, the power curve, the palette's alpha steps) and ends at
@@ -20,6 +20,9 @@ extends "res://scripts/test_support/test_case.gd"
 #   5. the shadow rule: 1% of the height along the light, the unit markers' own
 #   6. the layer allocates nothing it does not free (nodes, puffs, caches), caps its puffs
 #   7. the boards' records exist and choose nothing
+#   8. round 2 of the damage smoke: C0 is round 1's C; the levers (no scallops, open arcs, streaming, cool
+#      wash, dashed and ageing rings) and the plain white / grey smoke are in the data; thick smoke casts a
+#      shadow; every option draws in every tone and stage; every frame of the board exists at native size
 
 const FxData = preload("res://scripts/fx/fx_data.gd")
 const FxStyle = preload("res://scripts/fx/fx_style.gd")
@@ -28,6 +31,7 @@ const FxPuff = preload("res://scripts/fx/fx_puff.gd")
 const FxBurst = preload("res://scripts/fx/fx_burst.gd")
 const FxLayer = preload("res://scripts/fx/fx_layer.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
+const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
 
 func setup(_main) -> void:
 	var data := FxData.new()
@@ -42,8 +46,10 @@ func setup(_main) -> void:
 	_check_smoke(data, st)
 	_check_determinism(data)
 	_check_crash(data)
+	_check_draw_crash(data, st)
 	_check_shadow(st)
 	_check_layer(data)
+	_check_r2(data, st)
 	_check_boards()
 	check(FxData.shared().ok(), "no data error was raised by any of the above: %s" % str(FxData.shared().errors))
 	finish()
@@ -56,8 +62,8 @@ func _walk_records(node: Variant, path: String, out: Array[String]) -> void:
 		return
 	var d: Dictionary = node
 	if d.has("value"):
-		if not (d.get("_proposed") == true):
-			out.append("%s is not marked _proposed" % path)
+		if not (d.get("_proposed") == true or d.has("decision")):
+			out.append("%s is not marked _proposed or backed by a decision" % path)
 		if not (d.get("_reason") is String) or str(d.get("_reason")).strip_edges() == "":
 			out.append("%s has no _reason" % path)
 		return
@@ -72,7 +78,7 @@ func _walk_records(node: Variant, path: String, out: Array[String]) -> void:
 
 func _check_data(data: FxData, st: FxStyle) -> void:
 	var bad: Array[String] = []
-	for sec: String in ["accents", "common", "working_default", "smoke", "crash"]:
+	for sec: String in ["accents", "common", "working_default", "fire_switch", "smoke", "crash"]:
 		var node: Variant = data.raw.get(sec)
 		if node is Dictionary and sec in ["smoke", "crash"]:
 			node = (node as Dictionary).get("options")
@@ -105,16 +111,38 @@ func _check_data(data: FxData, st: FxStyle) -> void:
 	near(b[2], 260.0, 2.0, "side B hue")
 	var back := FxStyle.oklch(0.551, 0.100, 30.0)
 	eq(back.to_html(false).to_upper(), "A45A4E", "oklch(0.551 0.100 30) is Alex's brick red")
-	# The proposed fire accent.
+	# The INTERIM fire (fire research, treatment 6: Alex rejected the orange): the gate invariants that document proposes.
 	var f: Array = data.fire_oklch()
 	var fc: Color = st.palette["fire"]
 	var fo := FxStyle.to_oklch(fc)
-	near(fo[0], float(f[0]), 0.012, "the fire accent round-trips through sRGB in lightness (in gamut)")
+	near(fo[0], float(f[0]), 0.012, "the scorch round-trips through sRGB in lightness (in gamut)")
 	near(fo[1], float(f[1]), 0.012, "and in chroma")
-	check(float(f[0]) > a[0] and float(f[1]) > a[1], "fire is lighter and more chromatic than the side colours (a flash, not a team)")
-	check(absf(fmod(float(f[2]) - a[2] + 540.0, 360.0) - 180.0) > 5.0 and float(f[2]) > a[2] + 10.0 and float(f[2]) < 90.0, "its hue sits between the brick red and the paper")
+	eq([float(f[0]), float(f[1]), float(f[2])], [0.70, 0.085, 70.0], "the interim scorch is the research's oklch(0.70 0.085 70), not the rejected orange")
+	check(float(f[1]) <= a[1], "fire chroma is at or below the side colours' (it never out-shouts them): %.3f vs %.3f" % [float(f[1]), a[1]])
+	check(_delta_e(fc, st.palette["side_a"]) >= 0.12 and _delta_e(fc, st.palette["side_b"]) >= 0.12, "fire is at least 0.12 from both side colours in OKLab (brick red is not fire)")
+	check(float(f[2]) > 55.0 and float(f[2]) < 85.0, "its hue is on the warm paper-ink axis (hue %.0f)" % float(f[2]))
+	var fl := FxStyle.to_oklch(st.palette["flash"])
+	var cool := FxStyle.to_oklch(st.palette["fire_cool"])
+	near(cool[0], 0.60, 0.012, "the cooling step: lightness 0.60")
+	check(cool[1] <= 0.05 and cool[1] < float(f[1]), "and a lower chroma than the scorch (%.3f)" % cool[1])
+	var top_fill := 0.0
+	for k in ["object_fill", "wall_fill", "rock_fill", "roof_lit"]:
+		top_fill = maxf(top_fill, float(FxStyle.to_oklch(st.palette[k])[0]))
+	check(fl[0] >= top_fill + 0.02, "the flash is lighter than every fill by at least 0.02 (%.3f vs %.3f)" % [fl[0], top_fill])
+	check(st.has_role("fire.cool") and not st.has_role("fire.pale"), "the cooling role replaces the old pale fire (which went peach)")
+	check(float(FxStyle.to_oklch(st.color("burst.core"))[0]) >= top_fill + 0.02, "the burst's core role is the knock-out step, lighter than every fill")
 	# The pen's ink is the palette's ink, exactly.
 	eq(st.color("ink").to_html(false), st.palette["ink"].to_html(false), "the ink role is the palette's ink (the pen keys on it)")
+
+# The distance between two colours in OKLab.
+func _delta_e(c1: Color, c2: Color) -> float:
+	var a := FxStyle.to_oklch(c1)
+	var b := FxStyle.to_oklch(c2)
+	var a1 := float(a[1]) * cos(deg_to_rad(float(a[2])))
+	var b1 := float(a[1]) * sin(deg_to_rad(float(a[2])))
+	var a2 := float(b[1]) * cos(deg_to_rad(float(b[2])))
+	var b2 := float(b[1]) * sin(deg_to_rad(float(b[2])))
+	return sqrt(pow(float(a[0]) - float(b[0]), 2.0) + pow(a1 - a2, 2.0) + pow(b1 - b2, 2.0))
 
 func _roles_in(v: Variant, path: String, st: FxStyle, missing: Array[String]) -> void:
 	if v is Dictionary:
@@ -374,10 +402,29 @@ func _check_crash(data: FxData) -> void:
 		for p in r.puffs:
 			if p["kind"] == "ember":
 				embers += 1
+		check(not r.fire_on, "%s: the fire switch is off in the data (Alex: no fire for now)" % name)
+		eq(embers, 0, "%s: no embers while the fire is off" % name)
+		# the machinery is still there behind the switch
+		var rf := FxField.new(data)
+		rf.select("A", name)
+		rf.fire_on = true
+		for k in 421:
+			var tt := float(k) / 30.0
+			rf.ride("f1", Vector2(2000.0 + 50.0 * tt, 2000.0), 400.0 * (1.0 - tt / 14.0), tt, 9.0, 0.0)
+		var embers_on := 0
+		for p in rf.puffs:
+			if p["kind"] == "ember":
+				embers_on += 1
 		if FxData.b(fl, "enabled") and FxData.f(fl, "ember_every_s") > 0.0:
-			check(embers > 20, "%s: a burning plane sheds embers (%d)" % [name, embers])
+			check(embers_on > 20, "%s: switched on, a burning plane sheds embers (%d)" % [name, embers_on])
 		else:
-			eq(embers, 0, "%s: this option sheds none" % name)
+			eq(embers_on, 0, "%s: this option sheds none" % name)
+		var smoke_trail := 0
+		for p in r.puffs:
+			if p["kind"] == "fall":
+				smoke_trail += 1
+		check(smoke_trail > 20 and (r.puffs[0] as Dictionary)["tone"] >= 1, "%s: an out-of-control plane trails heavy smoke with the fire off (%d puffs)" % [name, smoke_trail])
+		check(FxPuff.casts_shadow(r.set_defs["fall:" + FxData.s(fall, "smoke_option")], int(FxData.i(fall, "tone"))), "%s: the falling trail is thick: it casts a shadow" % name)
 		# --- (c) the ground impact
 		r.impact("f1", Vector2(2700, 2000), 14.0, 9.0, 0.3)
 		check(not r.riders.has("f1"), "%s: the crash ends the fall" % name)
@@ -400,7 +447,56 @@ func _check_crash(data: FxData) -> void:
 		for p in r.puffs:
 			if p["kind"] == "scar_ember":
 				ember_n += 1
-		eq(ember_n, FxData.i(sc, "embers"), "%s: the scar's embers" % name)
+		eq(ember_n, 0, "%s: no scar embers while the fire is off" % name)
+		var ri := FxField.new(data)
+		ri.select("A", name)
+		ri.fire_on = true
+		ri.impact("f1", Vector2(2700, 2000), 14.0, 9.0, 0.3)
+		var ember_on := 0
+		for p in ri.puffs:
+			if p["kind"] == "scar_ember":
+				ember_on += 1
+		eq(ember_on, FxData.i(sc, "embers"), "%s: switched on, the scar's embers come back" % name)
+		# THE SMOKE BURST (no fire): a quick thick burst of smoke, thrown out and then hanging, casting a shadow
+		var sbg := FxData.grp(imp, "smoke_burst")
+		var burst: Array = []
+		for p in r.puffs:
+			if p["kind"] == "burst":
+				burst.append(p)
+		eq(burst.size(), FxData.i(sbg, "count"), "%s: the impact's smoke burst has the data's puffs" % name)
+		var last_b := 0.0
+		for p in burst:
+			last_b = maxf(last_b, float(p["born"]) - 14.0)
+			check(float(p["life"]) >= 30.0, "%s: a burst puff lasts %.0f s (very slow decay)" % [name, float(p["life"])])
+			eq(int(p["tone"]), FxData.i(sbg, "tone"), "%s: the burst is in the data's tone" % name)
+		check(last_b <= 0.5, "%s: the burst is over in half a second (FAST): %.2f s" % [name, last_b])
+		check(FxPuff.casts_shadow(r.set_defs[(burst[0] as Dictionary)["set"]], int(FxData.i(sbg, "tone"))) or FxData.i(sbg, "tone") < 1, "%s: a thick burst casts a ground shadow" % name)
+		var b0: Dictionary = burst[0]
+		var d1 := ((r.puff_state(b0, float(b0["born"]) + 1.0)["pos"] as Vector2) - (b0["pos"] as Vector2) - (b0["wind"] as Vector2) * 1.0).length()
+		var d3 := ((r.puff_state(b0, float(b0["born"]) + 3.0)["pos"] as Vector2) - (b0["pos"] as Vector2) - (b0["wind"] as Vector2) * 3.0).length()
+		var d8 := ((r.puff_state(b0, float(b0["born"]) + 8.0)["pos"] as Vector2) - (b0["pos"] as Vector2) - (b0["wind"] as Vector2) * 8.0).length()
+		check(d1 > 3.0 and (d8 - d3) < 0.15 * d3, "%s: the burst is thrown out fast, then hangs (%.1f m at 1 s, %.1f at 3 s, %.1f at 8 s)" % [name, d1, d3, d8])
+		check(float(r.puff_state(b0, float(b0["born"]) + 1.0)["scale"]) > float(r.puff_state(b0, float(b0["born"]) + 0.02)["scale"]) * 1.4, "%s: and it swells quickly" % name)
+		# the mid-air burst hangs at the plane's height, so its shadow gap shows the altitude
+		var rm := FxField.new(data)
+		rm.select("A", name)
+		rm.explode_midair("m1", Vector2(2000, 2000), 400.0, 10.0, 9.0, 0.0)
+		var mid_n := 0
+		for p in rm.puffs:
+			if p["kind"] == "burst":
+				mid_n += 1
+				near(float(p["h"]), 400.0, 1e-9, "%s: the mid-air smoke burst is at 400 m" % name)
+		eq(mid_n, FxData.i(FxData.grp(FxData.grp(rm.crash_o, "midair"), "smoke_burst"), "count"), "%s: the mid-air burst has the data's puffs" % name)
+		# any smoke variant can be the crash's smoke
+		var ro := FxField.new(data)
+		ro.select("A", name, "C6")
+		ro.impact("f1", Vector2(2700, 2000), 0.0, 9.0, 0.3)
+		var found := false
+		for k: String in ro.set_defs:
+			if k.begins_with("burst:") and k.ends_with(":C6"):
+				found = true
+				eq(FxData.s(ro.set_defs[k], "form"), "arcs", "the crash's smoke can be drawn in another option (C6's form)")
+		check(found, "%s: the smoke override reaches the burst" % name)
 		# AN EXPLOSION, THEN A SMOKING WRECK (Alex): the wreck keeps smoking for turns, thinning as it goes
 		var smo := FxData.grp(imp, "smolder")
 		var dur := FxData.f(smo, "duration_s")
@@ -450,6 +546,46 @@ func _check_crash(data: FxData) -> void:
 		near(small, 1.0, 1e-9, "%s: a 9 m plane is the reference" % name)
 		check(big > 1.0 and big < 20.0 / 9.0, "%s: a 20 m bomber's burst is bigger but not 2.2 times" % name)
 
+# Every burst frame, flame, ember, piece, scar and wreck of every crash option can be drawn (the drawing layer
+# records headless; a missing data key is recorded by FxData and fails the last check of setup()).
+func _check_draw_crash(data: FxData, st: FxStyle) -> void:
+	var n := 0
+	for name: String in data.crash_option_names():
+		var co := data.crash_option(name)
+		var b := FxData.grp(co, "burst")
+		for ground in [false, true]:
+			for t in FxData.arr(b, "frames_s"):
+				var g := InkCanvas.new(Vector2i(120, 120))
+				FxBurst.draw_burst(g, st, b, float(t), 7, 30.0, Vector2(60, 60), ground)
+				g.discard()
+				n += 1
+		var fl := FxData.grp(FxData.grp(co, "falling"), "flame")
+		var g2 := InkCanvas.new(Vector2i(60, 60))
+		FxBurst.draw_flame(g2, st, fl, 5, 25.0, 10.0, Vector2(30, 3))
+		FxBurst.draw_ember(g2, st, fl, 1.4, Vector2(10, 10))
+		g2.discard()
+		var deb := FxData.grp(FxData.grp(co, "midair"), "debris")
+		for masked in [false, true]:
+			var g3 := InkCanvas.new(Vector2i(30, 30))
+			FxBurst.draw_shard(g3, st, deb, 3, 5.0, Vector2(15, 15), masked)
+			g3.discard()
+		var g4 := InkCanvas.new(Vector2i(120, 120))
+		FxBurst.draw_scar(g4, st, FxData.grp(FxData.grp(co, "impact"), "scar"), 9, 30.0, Vector2(60, 60), 36.0)
+		g4.discard()
+		n += 4
+	# ... and with the fire switched on (the machinery is still there)
+	st.fire_on = true
+	for name: String in data.crash_option_names():
+		var co := data.crash_option(name)
+		var b := FxData.grp(co, "burst")
+		for t in FxData.arr(b, "frames_s"):
+			var g := InkCanvas.new(Vector2i(120, 120))
+			FxBurst.draw_burst(g, st, b, float(t), 7, 30.0, Vector2(60, 60), true)
+			g.discard()
+			n += 1
+	st.fire_on = false
+	check(n > 100, "every crash option's burst frames (fire off and on), flame, ember, piece, scar and wreck can be drawn (%d drawings)" % n)
+
 # --- 5. The shadow rule ----------------------------------------------------------------------------------------------
 
 func _check_shadow(st: FxStyle) -> void:
@@ -473,6 +609,7 @@ func _check_layer(data: FxData) -> void:
 	add_child(layer)
 	layer.setup(Transform2D(0.0, Vector2(2.0, 2.0), 0.0, Vector2.ZERO), 20261009)
 	layer.true_scale = 2.0
+	check(not layer.is_fire(), "the layer runs with the fire switched off")
 	check(layer.ground_node != null and layer.shadow_node != null and layer.air_node != null and layer.top_node != null, "the layer builds its four passes")
 	var children: Array[Node] = [layer.ground_node, layer.shadow_node, layer.air_node, layer.top_node]
 	for k in 120:
@@ -509,6 +646,141 @@ func _check_layer(data: FxData) -> void:
 	weak = weakref(f)
 	f = null
 	eq(weak.get_ref(), null, "a dropped field is freed (no cycle)")
+
+# --- 8. Damage smoke, round 2 (variants/damage-smoke-r2/) ---------------------------------------------------------------------
+
+func _check_r2(data: FxData, st: FxStyle) -> void:
+	eq(data.smoke_r2_option_names(), ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "W1", "W2", "W3"], "round 2: the reference, six contour variants and three plain ones")
+	# every value is a proposed record, every role resolves
+	var bad: Array[String] = []
+	var r2: Dictionary = ((data.raw.get("smoke_r2") as Dictionary).get("options") as Dictionary)
+	for opt: String in r2:
+		_walk_records(r2[opt], "smoke_r2." + opt, bad)
+	check(bad.is_empty(), "round 2: every value is a proposed value record: %s" % str(bad.slice(0, 4)))
+	var missing: Array[String] = []
+	for name: String in data.smoke_r2_option_names():
+		_roles_in(data.smoke_option(name), "smoke_r2." + name, st, missing)
+	check(missing.is_empty(), "round 2: every colour role an option names exists: %s" % str(missing.slice(0, 4)))
+	# C0 is round 1's C, unchanged
+	eq(data.smoke_option("C0"), data.smoke_option("C"), "C0 is today's C exactly")
+	var c0 := data.smoke_option("C0")
+	check(not FxData.b(c0, "ground_shadow"), "C0, the reference, casts no shadow (as it did)")
+	# thick smoke casts a shadow in every variant, thin smoke does not
+	for name: String in data.smoke_r2_option_names():
+		if name == "C0":
+			continue
+		var o := data.smoke_option(name)
+		check(FxData.b(o, "ground_shadow"), "%s: thick smoke casts a ground shadow (Alex)" % name)
+		check(not FxPuff.casts_shadow(o, 0) and FxPuff.casts_shadow(o, 1) and FxPuff.casts_shadow(o, 2), "%s: from the medium tone up, not the thin" % name)
+	# the levers
+	var c1 := data.smoke_option("C1")
+	eq(FxData.f(c1, "lobe_amp"), 0.0, "C1: no scallops (round lobes)")
+	check(FxData.b(c1, "outline_union") and not FxData.b(c1, "ticks"), "C1: one smooth outline, no cusp ticks")
+	eq(FxData.s(data.smoke_option("C2"), "form"), "arcs", "C2: open arcs")
+	check(FxData.arr(data.smoke_option("C2"), "arc_sweep_deg")[1] < 360, "C2: an arc never closes")
+	for name: String in ["C3", "C6"]:
+		var o := data.smoke_option(name)
+		check(FxData.f(o, "stretch") > 1.5, "%s: streams along the flight path" % name)
+		var sv := FxPuff.stretch_xy(o)
+		check(sv.x > 1.0 and sv.y < 1.0 and absf(sv.x * sv.y - 1.0) < 0.35, "%s: longer along the path, area roughly kept (%s)" % [name, str(sv)])
+	eq(FxPuff.stretch_xy(c0), Vector2.ONE, "a round puff is not stretched")
+	var c4 := data.smoke_option("C4")
+	for r in FxData.arr(c4, "lit_roles"):
+		var col: Color = st.color(str(r))
+		check(col.a < 0.5 and col.b >= col.r, "C4: the core is a light cool wash (%s alpha %.2f)" % [r, col.a])
+	# ageing: rings and outline thin and break in stages, never come back
+	for name: String in ["C5", "C6"]:
+		var o := data.smoke_option(name)
+		eq(FxData.i(o, "stages"), 3, "%s: three age stages" % name)
+		eq(FxPuff.stage_of(o, 0.0), 0, "%s: a fresh puff is stage 0" % name)
+		eq(FxPuff.stage_of(o, 0.3), 1, "%s: a quarter through its life it is stage 1" % name)
+		eq(FxPuff.stage_of(o, 0.9), 2, "%s: late in its life, stage 2" % name)
+		var keep := FxData.arr(o, "stage_ring_keep")
+		check(keep.size() == 3 and float(keep[0]) >= float(keep[1]) and float(keep[1]) >= float(keep[2]) and float(keep[2]) < float(keep[0]), "%s: the rings thin as it ages: %s" % [name, str(keep)])
+	eq(FxData.s(data.smoke_option("C5"), "ring_style"), "dashed", "C5: dashed ring lines")
+	# the plain translucent smoke
+	var flash := FxStyle.to_oklch(st.palette["flash"])
+	near(flash[0], 0.967, 0.01, "the white is the knock-out step, lightness 0.967")
+	check(flash[1] < 0.03, "and it has almost no chroma (%.3f): no new hue" % flash[1])
+	var w1 := data.smoke_option("W1")
+	eq(FxData.s(w1, "form"), "soft", "W1: soft translucent puffs")
+	var roles := FxData.arr(w1, "lit_roles")
+	eq(roles.size(), 9, "W1: a wash for each of three stages and three tones")
+	for stage in 3:
+		for tone in 3:
+			var col: Color = st.color(str(roles[stage * 3 + tone]))
+			check(col.a > 0.0 and col.a < 0.7, "W1: stage %d tone %d is translucent (alpha %.2f): the map shows through" % [stage, tone, col.a])
+			var ok := FxStyle.to_oklch(col)
+			check(ok[1] < 0.05, "W1: stage %d tone %d has paper-level chroma at most (%.3f): no new hue" % [stage, tone, ok[1]])
+	for tone in 3:
+		var lw: float = FxStyle.to_oklch(st.color(str(roles[tone])))[0]
+		var lg: float = FxStyle.to_oklch(st.color(str(roles[3 + tone])))[0]
+		var gr: float = FxStyle.to_oklch(st.color(str(roles[6 + tone])))[0]
+		check(lw > lg and lg > gr, "W1: tone %d goes white, then light grey, then grey (L %.2f, %.2f, %.2f)" % [tone, lw, lg, gr])
+		var a_w: float = st.color(str(roles[tone])).a
+		var a_g: float = st.color(str(roles[6 + tone])).a
+		check(a_w > a_g, "W1: tone %d thins as it greys (alpha %.2f to %.2f)" % [tone, a_w, a_g])
+	check(not FxData.arr(w1, "lit_roles").has("ink"), "W1: no ink outline in it")
+	check(FxData.f(w1, "soft_steps") >= 2, "W1: stepped washes, not a gradient")
+	for name: String in ["W2", "W3"]:
+		eq(FxData.s(data.smoke_option(name), "form"), "soft", "%s: soft translucent puffs" % name)
+		eq(FxData.i(data.smoke_option(name), "stages"), 1, "%s: one colour at every age" % name)
+	# every option, tone, stage and form can be DRAWN (headless: the drawing layer records, nothing renders):
+	# a missing data key would be recorded by FxData and fail the last check of setup()
+	var n_drawn := 0
+	for kind: String in ["smoke", "r2"]:
+		var names: Array = data.smoke_option_names() if kind == "smoke" else data.smoke_r2_option_names()
+		for name: String in names:
+			var o := data.smoke_option(name)
+			for tone in 3:
+				for stage in maxi(FxData.i(o, "stages"), 1):
+					var g := InkCanvas.new(Vector2i(80, 80))
+					FxPuff.draw_puff(g, st, o, tone, 12345 + tone, 20.0, Vector2(40, 40), stage)
+					g.discard()
+					n_drawn += 1
+				var m := InkCanvas.new(Vector2i(80, 80))
+				FxPuff.draw_mask(m, st, o, tone, 12345 + tone, 20.0, Vector2(40, 40))
+				m.discard()
+	check(n_drawn >= 60, "every smoke option can be drawn in every tone and stage (%d drawings)" % n_drawn)
+	# the field carries the way a puff was flying, for the streaming options
+	var f := FxField.new(data)
+	f.select("C3", "A")
+	f.emit_damage_smoke("p1", Vector2(100, 100), 400.0, 0.4, 0.0, 9.0, 0.7)
+	check(f.puffs.size() == 1 and absf(float((f.puffs[0] as Dictionary)["dir"]) - 0.7) < 1e-9, "a puff remembers the heading it was left on (streaming turns it to it)")
+	# the boards' records and every frame, at native size
+	var path := "res://variants/damage-smoke-r2/board.json"
+	if check(FileAccess.file_exists(path), "damage-smoke-r2: board.json exists"):
+		var j: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if check(j is Dictionary, "damage-smoke-r2: board.json parses"):
+			check((j as Dictionary).get("chosen", 1) == null, "damage-smoke-r2: nothing is chosen")
+			eq(((j as Dictionary).get("options", []) as Array).size(), 10, "damage-smoke-r2: ten options")
+	var lp := "res://variants/damage-smoke-r2/frames.json"
+	if check(FileAccess.file_exists(lp), "damage-smoke-r2: frames.json exists"):
+		var l: Variant = JSON.parse_string(FileAccess.get_file_as_string(lp))
+		if check(l is Dictionary, "damage-smoke-r2: frames.json parses"):
+			var opts_l: Array = (l as Dictionary).get("options", [])
+			eq(opts_l.size(), 10, "frames.json lists ten options")
+			var size_a: Array = (l as Dictionary).get("size_px", [0, 0])
+			var counted := 0
+			var missing_f: Array[String] = []
+			for e in opts_l:
+				var rows: Array = (e as Dictionary).get("rows", [])
+				check(rows.size() >= 4, "%s: at least four rows (thin, thick, grove, ribbon; the others beside C0)" % (e as Dictionary).get("option"))
+				for r in rows:
+					check(str((r as Dictionary).get("title", "")) != "", "every row has a title")
+					for fr in (r as Dictionary).get("frames", []):
+						counted += 1
+						var rel := str((fr as Dictionary).get("file", ""))
+						var ap := ProjectSettings.globalize_path("res://variants/damage-smoke-r2/" + rel)
+						if not FileAccess.file_exists(ap):
+							missing_f.append(rel)
+						check(str((fr as Dictionary).get("caption", "")) != "", "every frame has a caption: %s" % rel)
+			check(missing_f.is_empty(), "every listed frame exists as its own PNG: %s" % str(missing_f.slice(0, 3)))
+			check(counted > 150, "frames.json lists %d frames" % counted)
+			# a frame is the native size
+			var im := Image.load_from_file(ProjectSettings.globalize_path("res://variants/damage-smoke-r2/frames/W1_r2_0.png"))
+			if check(im != null and not im.is_empty(), "a frame loads"):
+				eq([im.get_width(), im.get_height()], [int(size_a[0]), int(size_a[1])], "and it is the native size listed")
 
 # --- 7. The boards ------------------------------------------------------------------------------------------------------------
 

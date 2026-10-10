@@ -36,6 +36,7 @@ class PuffSet:
 	var ppm: float = 1.0
 	var size_m: float = 9.0
 	var variants: int = 0
+	var stages: int = 1          # age stages: tex[tone] holds variants x stages sprites, index = variant + variants x stage
 
 # --- Intensity -> what a puff is ------------------------------------------------------------------
 
@@ -78,6 +79,7 @@ static func alpha_at(o: Dictionary, u: float) -> float:
 	var a := 1.0
 	if u > hold:
 		a = pow(1.0 - (u - hold) / maxf(1.0 - hold, 1e-6), FxData.f(o, "fade_power"))
+	a *= FxData.f(o, "peak_alpha")
 	var steps := FxData.arr(o, "alpha_steps")
 	if steps.size() > 0:
 		# The fade in the palette's alpha steps (listed high to low): the smallest step still at or above `a`.
@@ -89,6 +91,31 @@ static func alpha_at(o: Dictionary, u: float) -> float:
 				best = float(s)
 		a = best
 	return a
+
+# The age stage a puff is drawn in at age fraction u: a puff whose rings thin and break as it
+# ages is baked in `stages` drawings and shows the one its age has reached.
+static func stage_of(o: Dictionary, u: float) -> int:
+	var n := FxData.i(o, "stages")
+	if n <= 1:
+		return 0
+	var e := FxData.arr(o, "stage_edges")
+	var k := 0
+	for x in e:
+		if u >= float(x):
+			k += 1
+	return mini(k, n - 1)
+
+# Whether a puff of this tone casts a ground shadow (thick smoke does; Alex 2026-10-10).
+static func casts_shadow(o: Dictionary, tone: int) -> bool:
+	return FxData.b(o, "ground_shadow") and tone >= FxData.i(o, "shadow_min_tone")
+
+# The puff drawing's stretch along the way it was flying: (x, y) scales, area kept roughly the
+# same: x along the flight path, which the layer turns to the puff's `dir`.
+static func stretch_xy(o: Dictionary) -> Vector2:
+	var s := FxData.f(o, "stretch")
+	if absf(s - 1.0) < 1e-6:
+		return Vector2.ONE
+	return Vector2(pow(s, 0.6), pow(s, -0.4))
 
 # --- Baking ---------------------------------------------------------------------------------------------
 
@@ -104,64 +131,95 @@ static func bake_set(st: FxStyle, o: Dictionary, ppm: float, size_m: float) -> P
 	ps.ppm = ppm
 	ps.size_m = size_m
 	ps.variants = FxData.i(o, "variants")
+	ps.stages = maxi(FxData.i(o, "stages"), 1)
 	if not FxBake.can_bake():
 		return null
 	var canvases: Array = []
 	var meta: Array = []
 	var margin := 3.0
+	var sv := stretch_xy(o)
 	for tone in TONES:
 		var r_px := maxf(radius_m(o, tone_intensity(o, tone), size_m) * ppm, 2.5)
-		var half := int(ceil(r_px * 1.12 + margin))
+		var half_x := int(ceil(r_px * sv.x * 1.12 + margin))
+		var half_y := int(ceil(r_px * sv.y * 1.12 + margin))
 		ps.radius_px.append(r_px)
-		ps.origin.append(Vector2(half, half))
+		ps.origin.append(Vector2(half_x, half_y))
 		ps.tex.append([])
 		ps.mask.append([])
-		for v in ps.variants:
-			var seed_v := FxBake.seed_of(FxData.s(o, "form"), tone * 97 + v, int(size_m * 10.0))
-			var g := InkCanvas.new(Vector2i(half * 2, half * 2))
-			g.line_cap = "round"
-			draw_puff(g, st, o, tone, seed_v, r_px, Vector2(half, half))
-			var m := InkCanvas.new(Vector2i(half * 2, half * 2))
-			draw_mask(m, st, o, tone, seed_v, r_px, Vector2(half, half))
-			canvases.append(g)
-			canvases.append(m)
-			meta.append([tone, v])
+		for stage in ps.stages:
+			for v in ps.variants:
+				var seed_v := FxBake.seed_of(FxData.s(o, "form"), tone * 97 + v, int(size_m * 10.0))
+				var g := InkCanvas.new(Vector2i(half_x * 2, half_y * 2))
+				g.line_cap = "round"
+				draw_puff(g, st, o, tone, seed_v, r_px, Vector2(half_x, half_y), stage)
+				canvases.append(g)
+				meta.append([tone, v, stage, false])
+				if stage == 0:
+					var m := InkCanvas.new(Vector2i(half_x * 2, half_y * 2))
+					draw_mask(m, st, o, tone, seed_v, r_px, Vector2(half_x, half_y))
+					canvases.append(m)
+					meta.append([tone, v, stage, true])
 	var imgs := FxBake.render(canvases)
 	for k in meta.size():
 		var tone: int = meta[k][0]
-		(ps.tex[tone] as Array).append(FxBake.texture(imgs[2 * k], false))
-		(ps.mask[tone] as Array).append(FxBake.texture(imgs[2 * k + 1], true))
+		if bool(meta[k][3]):
+			(ps.mask[tone] as Array).append(FxBake.texture(imgs[k], true))
+		else:
+			(ps.tex[tone] as Array).append(FxBake.texture(imgs[k], false))
 	return ps
 
 # --- Drawing --------------------------------------------------------------------------------------------
 
-# One puff at `at` (canvas px) with extent radius r_px.
-static func draw_puff(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, seed_v: int, r_px: float, at: Vector2) -> void:
+# One puff at `at` (canvas px) with extent radius r_px, in age stage `stage` (the rings thin and
+# break as it ages; stage 0 is the fresh drawing).
+static func draw_puff(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, seed_v: int, r_px: float, at: Vector2, stage: int = 0) -> void:
 	var form := FxData.s(o, "form")
 	var rng := Mulberry32.new(seed_v)
+	var sv := stretch_xy(o)
+	var c := at
+	if sv != Vector2.ONE:
+		g.save()
+		g.translate(at.x, at.y)
+		g.scale(sv.x, sv.y)
+		c = Vector2.ZERO
 	match form:
 		"lobed", "wash":
-			_draw_lobes(g, st, o, tone, rng, r_px, at, form == "wash", false)
+			_draw_lobes(g, st, o, tone, rng, r_px, c, form == "wash", false, seed_v, stage)
 		"rings":
-			_draw_rings(g, st, o, tone, rng, r_px, at)
+			_draw_lobes(g, st, o, tone, rng, r_px, c, false, false, seed_v, stage)
+		"soft":
+			_draw_lobes(g, st, o, tone, rng, r_px, c, false, false, seed_v, stage)
+		"arcs":
+			_draw_arcs(g, st, o, tone, rng, r_px, c, seed_v, stage)
 		"stipple":
-			_draw_stipple(g, st, o, tone, rng, r_px, at)
+			_draw_stipple(g, st, o, tone, rng, r_px, c)
 		_:
 			push_error("FxPuff: unknown form '%s'" % form)
+	if sv != Vector2.ONE:
+		g.restore()
 
 # The silhouette, white, for the puff's ground shadow.
 static func draw_mask(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, seed_v: int, r_px: float, at: Vector2) -> void:
 	var form := FxData.s(o, "form")
 	var rng := Mulberry32.new(seed_v)
+	var sv := stretch_xy(o)
+	var c := at
+	if sv != Vector2.ONE:
+		g.save()
+		g.translate(at.x, at.y)
+		g.scale(sv.x, sv.y)
+		c = Vector2.ZERO
 	match form:
-		"lobed", "wash", "rings":
-			_draw_lobes(g, st, o, tone, rng, r_px, at, false, true)
+		"lobed", "wash", "rings", "soft":
+			_draw_lobes(g, st, o, tone, rng, r_px, c, false, true, seed_v, 0)
 		_:
-			# stipple: the pale patch it sits on
-			var pts := _patch(st, o, rng, r_px, at)
+			# stipple, arcs: the patch they sit on
+			var pts := _patch(st, o, rng, r_px, c)
 			InkSprites.trace_path(g, pts)
 			g.fill_color = Color.WHITE
 			g.fill()
+	if sv != Vector2.ONE:
+		g.restore()
 
 static func _lobe_set(o: Dictionary, rng: Mulberry32, r_px: float, at: Vector2) -> Array:
 	var lx := 0.0
@@ -175,7 +233,7 @@ static func _lobe_set(o: Dictionary, rng: Mulberry32, r_px: float, at: Vector2) 
 		lobes.append({"x": at.x + cos(a) * d, "y": at.y + sin(a) * d, "R": r_px * (FxData.f(o, "lobe_r") + rng.next() * FxData.f(o, "lobe_r_var"))})
 	return [lobes, lx, ly]
 
-static func _draw_lobes(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, rng: Mulberry32, r_px: float, at: Vector2, wash: bool, mask_only: bool) -> void:
+static func _draw_lobes(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, rng: Mulberry32, r_px: float, at: Vector2, wash: bool, mask_only: bool, seed_v: int = 0, stage: int = 0) -> void:
 	var light := st.detail_light
 	var lset := _lobe_set(o, rng, r_px, at)
 	var lobes: Array[Dictionary] = lset[0]
@@ -185,8 +243,10 @@ static func _draw_lobes(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, rng
 	lobes.append({"x": at.x + (rng.next() - 0.5) * r_px * 0.12, "y": at.y + (rng.next() - 0.5) * r_px * 0.12, "R": r_px * FxData.f(o, "crown_r")})
 	var roles_lit := FxData.arr(o, "lit_roles")
 	var roles_shade := FxData.arr(o, "shade_roles")
-	var lit: Color = st.color(str(roles_lit[tone]))
-	var shade: Color = st.color(str(roles_shade[tone]))
+	var soft_form := FxData.s(o, "form") == "soft"
+	var role_i := (stage * TONES + tone) if soft_form else tone
+	var lit: Color = st.color(str(roles_lit[mini(role_i, roles_lit.size() - 1)]))
+	var shade: Color = st.color(str(roles_shade[mini(role_i, roles_shade.size() - 1)]))
 	var ink: Color = st.color(FxData.s(o, "outline_role"))
 	var underside := FxData.b(o, "underside")
 	var stip_n := FxData.f(o, "stipple_per_r")
@@ -196,6 +256,16 @@ static func _draw_lobes(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, rng
 	var weight := st.line_weight() * st.lw(FxData.s(o, "outline_weight_of")) * FxData.f(o, "outline_scale") * clampf(r_px / FxData.f(o, "outline_ref_px"), FxData.f(o, "outline_min_scale"), 1.0)
 	var soft: Color = st.color(FxData.s(o, "stipple_role"))
 	var ring_col: Color = st.color(FxData.s(o, "ring_role"))
+	var ring_amp := FxData.f(o, "ring_amp")
+	var ring_amp_var := FxData.f(o, "ring_amp_var")
+	var dashed := FxData.s(o, "ring_style") == "dashed"
+	var stage_keep := FxData.arr(o, "stage_ring_keep")
+	var stage_ring_a := FxData.arr(o, "stage_ring_alpha")
+	var stage_out := FxData.arr(o, "stage_outline_keep")
+	var ring_keep := float(stage_keep[mini(stage, stage_keep.size() - 1)])
+	var ring_alpha := float(stage_ring_a[mini(stage, stage_ring_a.size() - 1)])
+	var outline_keep := float(stage_out[mini(stage, stage_out.size() - 1)])
+	var brng := Mulberry32.new(seed_v + 7919)   # the outline's breaks: a stream of its own, so every stage draws the same puff
 	var union := wash or lit.a < 1.0   # a translucent fill is ONE union fill, so overlapping lobes never darken twice
 	var shapes: Array = []   # per lobe: [outline pts, inner pts, n, ph, amps, ns]
 	for L in lobes:
@@ -214,6 +284,26 @@ static func _draw_lobes(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, rng
 		for sh in shapes:
 			_add_poly(g, sh[0])
 		g.fill()
+		return
+	if soft_form:
+		# plain translucent smoke: no outline, no rings, no scallops. The lobes are filled as stepped
+		# washes (the whole cloud once per step, each step a little smaller), so overlapping steps build
+		# density toward the middle and the rim stays thin; the map shows through.
+		var steps := maxi(FxData.i(o, "soft_steps"), 1)
+		var a_each := 1.0 - pow(1.0 - lit.a, 1.0 / float(steps))
+		for j in steps:
+			var sc := lerpf(1.0, FxData.f(o, "soft_core"), float(j) / float(maxi(steps - 1, 1)))
+			g.begin_path()
+			for jj in lobes.size():
+				var L: Dictionary = lobes[jj]
+				var sh: Array = shapes[jj]
+				var pts_s: PackedVector2Array = sh[0]
+				var scaled := PackedVector2Array()
+				for q in pts_s:
+					scaled.push_back(Vector2(L.x + (q.x - L.x) * sc, L.y + (q.y - L.y) * sc))
+				_add_poly(g, scaled)
+			g.fill_color = Color(lit.r, lit.g, lit.b, a_each)
+			g.fill()
 		return
 	var k := FxData.f(o, "lit_shift")
 	var outer_only := union and FxData.b(o, "outline_union")
@@ -278,30 +368,32 @@ static func _draw_lobes(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, rng
 			var nk := maxi(3, n - q)
 			var am := PackedFloat64Array()
 			for _i in nk:
-				am.push_back(0.1 + rng.next() * 0.1)
+				am.push_back(ring_amp + rng.next() * ring_amp_var)
 			var ring: Array = InkSprites.scallop(L.x + light.x * R * 0.1 * q, L.y + light.y * R * 0.1 * q, R * s, nk, ph + q * 0.7, am, wob, ns + q * 31)
 			var rp: PackedVector2Array = ring[0]
 			var ri: PackedInt32Array = ring[1]
 			g.stroke_color = ring_col
 			g.line_width = st.line_weight() * st.lw("tree_inner_rings")
+			g.global_alpha = ring_alpha
 			g.begin_path()
-			var seg := -1
-			var draw := false
-			for jj in rp.size():
-				if ri[jj] != seg:
-					seg = ri[jj]
-					draw = rng.next() < 0.8
+			if dashed:
+				_dashed(g, rp, FxData.f(o, "dash_px"), FxData.f(o, "gap_px"), rng, ring_keep)
+			else:
+				var seg := -1
+				var draw := false
+				for jj in rp.size():
+					if ri[jj] != seg:
+						seg = ri[jj]
+						draw = rng.next() < ring_keep
+						if draw:
+							g.move_to(rp[jj].x, rp[jj].y)
+						continue
 					if draw:
-						g.move_to(rp[jj].x, rp[jj].y)
-					continue
-				if draw:
-					g.line_to(rp[jj].x, rp[jj].y)
+						g.line_to(rp[jj].x, rp[jj].y)
 			g.stroke()
+			g.global_alpha = 1.0
 		if not outer_only:
-			InkSprites.trace_path(g, pts)
-			g.stroke_color = ink
-			g.line_width = weight
-			g.stroke()
+			_outline(g, pts, ink, weight, outline_keep, brng)
 		if ticks:
 			g.stroke_color = ink
 			g.line_width = st.line_weight() * st.lw("cusp_ticks")
@@ -332,10 +424,111 @@ static func _draw_lobes(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, rng
 				g.arc(L.x + dx * d, L.y + dy * d, 0.45, 0.0, TAU)
 			g.fill()
 	if outer_only and outer.size() > 2:
-		InkSprites.trace_path(g, outer)
-		g.stroke_color = ink
-		g.line_width = weight
+		_outline(g, outer, ink, weight, outline_keep, brng)
+
+# A closed outline, whole (keep 1) or broken: drawn in runs of a few points, each kept by its own
+# draw of `brng`, so an older puff's outline has gaps where a fresh one has none.
+static func _outline(g: InkCanvas, pts: PackedVector2Array, ink: Color, weight: float, keep: float, brng: Mulberry32) -> void:
+	g.stroke_color = ink
+	g.line_width = weight
+	if keep >= 0.999:
+		InkSprites.trace_path(g, pts)
 		g.stroke()
+		return
+	var n := pts.size()
+	var run := 10
+	g.begin_path()
+	var k := 0
+	while k < n:
+		var keep_it := brng.next() < keep
+		var last := mini(k + run, n)
+		if keep_it:
+			g.move_to(pts[k].x, pts[k].y)
+			for j in range(k + 1, last + 1):
+				g.line_to(pts[j % n].x, pts[j % n].y)
+		k += run
+	g.stroke()
+
+# A polyline as dashes: `dash` px of line, `gap` px of nothing; each dash kept by a draw of rng.
+static func _dashed(g: InkCanvas, pts: PackedVector2Array, dash: float, gap: float, rng: Mulberry32, keep: float) -> void:
+	var run := 0.0
+	var on := true
+	var keep_it := rng.next() < keep
+	var prev := pts[0]
+	if keep_it:
+		g.move_to(prev.x, prev.y)
+	for i in range(1, pts.size()):
+		var p := pts[i]
+		var seg := prev.distance_to(p)
+		if seg < 1e-6:
+			continue
+		var pos := 0.0
+		while pos < seg:
+			var limit := (dash if on else gap) - run
+			var step := minf(limit, seg - pos)
+			var q := prev.lerp(p, (pos + step) / seg)
+			if on and keep_it:
+				g.line_to(q.x, q.y)
+			pos += step
+			run += step
+			if run >= (dash if on else gap) - 1e-9:
+				run = 0.0
+				on = not on
+				if on:
+					keep_it = rng.next() < keep
+					if keep_it:
+						g.move_to(q.x, q.y)
+		prev = p
+
+# The open-contour form: a few arcs that never close, like isobars or a hand-drawn swirl, over an
+# optional faint wash. No scalloped outline, no florets.
+static func _draw_arcs(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, rng: Mulberry32, r_px: float, at: Vector2, _seed_v: int, stage: int) -> void:
+	var core: Color = st.color(str(FxData.arr(o, "lit_roles")[tone]))
+	var patch := _patch(st, o, rng, r_px, at)
+	if core.a > 0.0:
+		InkSprites.trace_path(g, patch)
+		g.fill_color = core
+		g.fill()
+	var n := FxData.i(o, "arcs_min") + int(rng.next() * float(FxData.i(o, "arcs_max") - FxData.i(o, "arcs_min") + 1))
+	var sweep_r := FxData.arr(o, "arc_sweep_deg")
+	var spiral := FxData.f(o, "arc_spiral")
+	var ring_col: Color = st.color(FxData.s(o, "ring_role"))
+	var stage_keep := FxData.arr(o, "stage_ring_keep")
+	var stage_a := FxData.arr(o, "stage_ring_alpha")
+	var keep := float(stage_keep[mini(stage, stage_keep.size() - 1)])
+	var alpha := float(stage_a[mini(stage, stage_a.size() - 1)])
+	var dashed := FxData.s(o, "ring_style") == "dashed"
+	var wob := st.wobble()
+	g.stroke_color = ring_col
+	g.line_width = st.line_weight() * st.lw("tree_inner_rings") * FxData.f(o, "arc_weight")
+	g.global_alpha = alpha
+	for k in n:
+		var rk := r_px * (0.38 + 0.62 * (float(k) + rng.next() * 0.6) / float(n))
+		var c := at + Vector2(rng.next() - 0.5, rng.next() - 0.5) * r_px * FxData.f(o, "arc_jitter")
+		var a0 := rng.next() * TAU
+		var sweep := deg_to_rad(lerpf(float(sweep_r[0]), float(sweep_r[1]), rng.next()))
+		var steps := maxi(8, int(sweep / deg_to_rad(6.0)))
+		var kept := rng.next() < keep   # the same draw at every stage: an arc that goes stays gone
+		var pts := PackedVector2Array()
+		var ph := rng.next() * 10.0
+		for j in steps + 1:
+			var f := float(j) / float(steps)
+			var a := a0 + sweep * f
+			var rr := rk * (1.0 + spiral * (f - 0.5)) * (1.0 + wob * 0.03 * sin(ph + a * 3.0))
+			pts.push_back(Vector2(c.x + cos(a) * rr, c.y + sin(a) * rr))
+		if not kept:
+			continue
+		g.begin_path()
+		if dashed:
+			_dashed(g, pts, FxData.f(o, "dash_px"), FxData.f(o, "gap_px"), rng, 1.0)
+		else:
+			for j in pts.size():
+				if j == 0:
+					g.move_to(pts[j].x, pts[j].y)
+				else:
+					g.line_to(pts[j].x, pts[j].y)
+		g.stroke()
+	g.global_alpha = 1.0
 
 static func _area(poly: PackedVector2Array) -> float:
 	var a := 0.0
@@ -353,10 +546,6 @@ static func _add_poly(g: InkCanvas, pts: PackedVector2Array) -> void:
 		else:
 			g.line_to(pts[i].x, pts[i].y)
 	g.close_path()
-
-static func _draw_rings(g: InkCanvas, st: FxStyle, o: Dictionary, tone: int, rng: Mulberry32, r_px: float, at: Vector2) -> void:
-	# A lobed puff with the fill left to the data's `fill_roles` (a faint wash, or none) and the rings on.
-	_draw_lobes(g, st, o, tone, rng, r_px, at, false, false)
 
 static func _patch(st: FxStyle, o: Dictionary, rng: Mulberry32, r_px: float, at: Vector2) -> PackedVector2Array:
 	var n := 7

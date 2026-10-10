@@ -15,6 +15,7 @@ extends Node2D
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiMapping = preload("res://scripts/ui/ui_mapping.gd")
+const WingtipTrails = preload("res://scripts/ui/wingtip_trails.gd")
 const FxStyle = preload("res://scripts/fx/fx_style.gd")
 const FxBake = preload("res://scripts/fx/fx_bake.gd")
 const FxPass = preload("res://scripts/fx/fx_pass.gd")
@@ -25,6 +26,13 @@ var ui_style: UiStyle = null
 var fx_style: FxStyle = null
 var true_scale: float = 1.0
 var planes: Array[Dictionary] = []
+# Wingtip-trail records (WingtipTrails.collect()'s shape: left, right, centre, age, step, accent, half_span_px),
+# drawn in the ribbon mode under the planes, as the marker layer's trail node does. The board builds them.
+var ribbons: Array = []
+# false: the ribbons are drawn with the planes, over the smoke (the marker layer's order today); true: in a node of their
+# own the board puts BELOW the smoke, the alternative order the board shows beside it.
+var ribbons_below: bool = false
+var below_node: Node2D = null
 var shadow_node: CanvasGroup = null
 var plane_node: Node2D = null
 
@@ -54,6 +62,8 @@ func refresh() -> void:
 	if shadow_node != null:
 		shadow_node.queue_redraw()
 		plane_node.queue_redraw()
+	if below_node != null:
+		below_node.queue_redraw()
 
 func size_of(type: String) -> float:
 	return float(_size_m.get(type, 9.0))
@@ -61,6 +71,12 @@ func size_of(type: String) -> float:
 func draw_pass(item: CanvasItem, kind: String) -> void:
 	if mapping == null or not FxBake.can_bake():
 		return
+	if kind == "ribbons":
+		if ribbons_below and not ribbons.is_empty():
+			WingtipTrails.draw_items(item, ribbons, ui_style, "ribbon")
+		return
+	if kind == "planes" and not ribbons_below and not ribbons.is_empty():
+		WingtipTrails.draw_items(item, ribbons, ui_style, "ribbon")
 	for p in planes:
 		var wp: Vector2 = p["pos"]
 		var ppm := mapping.px_per_m(wp) * true_scale

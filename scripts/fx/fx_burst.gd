@@ -130,7 +130,7 @@ static func bake_parts(st: FxStyle, crash: Dictionary, size_m: float, ppm: float
 	var W := L * FxData.f(fl, "width_frac")
 	var fhalf := int(ceil(maxf(L, W) + 5.0))
 	ps.flame_origin = Vector2(fhalf, 3.0)
-	for k in FxData.i(fl, "frames"):
+	for k in (FxData.i(fl, "frames") if st.fire_on else 0):
 		var g := InkCanvas.new(Vector2i(fhalf * 2, int(ceil(L + 8.0))))
 		g.line_cap = "round"
 		draw_flame(g, st, fl, FxBake.seed_of("flame", k, seed_v), L, W, Vector2(fhalf, 3.0))
@@ -140,10 +140,11 @@ static func bake_parts(st: FxStyle, crash: Dictionary, size_m: float, ppm: float
 	var er := maxf(FxData.f(fl, "ember_px"), 1.0)
 	var ehalf := int(ceil(er + 3.0))
 	ps.ember_origin = Vector2(ehalf, ehalf)
-	var ge := InkCanvas.new(Vector2i(ehalf * 2, ehalf * 2))
-	draw_ember(ge, st, fl, er, Vector2(ehalf, ehalf))
-	canvases.append(ge)
-	kinds.append("ember")
+	if st.fire_on:
+		var ge := InkCanvas.new(Vector2i(ehalf * 2, ehalf * 2))
+		draw_ember(ge, st, fl, er, Vector2(ehalf, ehalf))
+		canvases.append(ge)
+		kinds.append("ember")
 	# debris shards
 	for k in FxData.i(deb, "shard_variants"):
 		var sp := maxf(FxData.f(deb, "shard_frac") * size_m * ppm, 2.5)
@@ -220,6 +221,8 @@ static func _dots(g: InkCanvas, pts: PackedVector2Array, r: float, col: Color) -
 
 # The fire disc, cream core and ink outline, shared by the stipple and ring forms.
 static func _fire_disc(g: InkCanvas, st: FxStyle, b: Dictionary, u: float, rng: Mulberry32, R: float, at: Vector2) -> void:
+	if not st.fire_on:
+		return   # no fire: Alex 2026-10-10
 	var rf := R * curve(FxData.arr(b, "fire_curve"), u)
 	var rc := R * curve(FxData.arr(b, "core_curve"), u)
 	var disc := _blob(st, rng, at.x, at.y, rf, 9)
@@ -309,6 +312,11 @@ static func _dust_ring(g: InkCanvas, st: FxStyle, b: Dictionary, u: float, R: fl
 static func _lobed_burst(g: InkCanvas, st: FxStyle, b: Dictionary, u: float, rng: Mulberry32, R: float, at: Vector2, ground: bool) -> void:
 	# a fireball is a puff whose lobes are fire coloured: the generator is the smoke's
 	var pb := FxData.grp(b, "puff")
+	if not st.fire_on:
+		# no fire: the ball is the smoke's own tones, thick from the first frame
+		pb = pb.duplicate()
+		pb["lit_roles"] = FxData.arr(pb, "lit_roles_nofire")
+		pb["shade_roles"] = FxData.arr(pb, "shade_roles_nofire")
 	var edges := FxData.arr(b, "stage_edges_s")
 	var stage := 0
 	for k in edges.size():
@@ -326,7 +334,8 @@ static func _lobed_burst(g: InkCanvas, st: FxStyle, b: Dictionary, u: float, rng
 		var d := R * (1.0 + rng.next() * 0.55) * ease_out(u / 0.3) * grow
 		if rng.next() < keep:
 			pts.push_back(Vector2(at.x + cos(a) * d, at.y + sin(a) * d))
-	_dots(g, pts, FxData.f(b, "ember_px"), st.color(FxData.s(b, "fire_role")))
+	if st.fire_on:
+		_dots(g, pts, FxData.f(b, "ember_px"), st.color(FxData.s(b, "fire_role")))
 	if ground:
 		_dust_ring(g, st, b, u, R, at, Mulberry32.new(54321))
 
@@ -386,7 +395,9 @@ static func _star_burst(g: InkCanvas, st: FxStyle, b: Dictionary, u: float, rng:
 	# the star: fire filled, then pale, then hollow ink
 	if scale > 0.02:
 		InkSprites.trace_path(g, star)
-		if fire > 0.5:
+		if not st.fire_on:
+			pass   # no fire: the star is its ink outline only
+		elif fire > 0.5:
 			g.fill_color = st.color(FxData.s(b, "fire_role"))
 			g.fill()
 		elif fire > 0.01:
@@ -399,7 +410,7 @@ static func _star_burst(g: InkCanvas, st: FxStyle, b: Dictionary, u: float, rng:
 		g.stroke()
 		g.global_alpha = 1.0
 		var core := curve(FxData.arr(b, "core_curve"), u)
-		if core > 0.5:
+		if st.fire_on and core > 0.5:
 			InkSprites.trace_path(g, star2)
 			g.fill_color = st.color(FxData.s(b, "core_role"))
 			g.fill()

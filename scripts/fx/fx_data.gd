@@ -84,6 +84,17 @@ func role_names() -> Array:
 				out.append(k)
 	return out
 
+# The fire machinery's switch (Alex 2026-10-10: "No fire for now. Just smoke."). Off: no flash, flames, embers or
+# fireball are drawn or made; a mid-air explosion and a crash are smoke events. The machinery stays in the code.
+func fire_enabled() -> bool:
+	var sec: Variant = raw.get("fire_switch")
+	if sec is Dictionary:
+		var v: Variant = unwrap((sec as Dictionary).get("enabled"))
+		if v is bool:
+			return v
+	_err_once("fire_switch", "fx.json fire_switch.enabled is not true/false")
+	return false
+
 func fire_oklch() -> Array:
 	var acc: Variant = raw.get("accents")
 	if acc is Dictionary and (acc as Dictionary).get("fire") is Dictionary:
@@ -95,6 +106,11 @@ func fire_oklch() -> Array:
 
 func smoke_option_names() -> Array:
 	return _option_names("smoke")
+
+# Round 2 of the damage smoke (variants/damage-smoke-r2/): C0 is round 1's option C as it was,
+# C1..C6 change what makes it read as a tree. smoke_option() finds them by name too.
+func smoke_r2_option_names() -> Array:
+	return _option_names("smoke_r2")
 
 func crash_option_names() -> Array:
 	return _option_names("crash")
@@ -117,12 +133,20 @@ func working_default(kind: String) -> String:
 	return "A"
 
 func smoke_option(name: String) -> Dictionary:
+	if _has_option("smoke_r2", name) and not _has_option("smoke", name):
+		return _option("smoke_r2", name)
 	return _option("smoke", name)
+
+func _has_option(kind: String, name: String) -> bool:
+	var sec: Variant = raw.get(kind)
+	return sec is Dictionary and (sec as Dictionary).get("options") is Dictionary and ((sec as Dictionary)["options"] as Dictionary).has(name)
 
 func crash_option(name: String) -> Dictionary:
 	return _option("crash", name)
 
 func option_label(kind: String, name: String) -> String:
+	if kind == "smoke" and _has_option("smoke_r2", name) and not _has_option("smoke", name):
+		kind = "smoke_r2"
 	var sec: Variant = raw.get(kind)
 	if sec is Dictionary and (sec as Dictionary).get("options") is Dictionary:
 		var o: Variant = ((sec as Dictionary)["options"] as Dictionary).get(name)
@@ -131,6 +155,8 @@ func option_label(kind: String, name: String) -> String:
 	return name
 
 func option_note(kind: String, name: String) -> String:
+	if kind == "smoke" and _has_option("smoke_r2", name) and not _has_option("smoke", name):
+		kind = "smoke_r2"
 	var sec: Variant = raw.get(kind)
 	if sec is Dictionary and (sec as Dictionary).get("options") is Dictionary:
 		var o: Variant = ((sec as Dictionary)["options"] as Dictionary).get(name)

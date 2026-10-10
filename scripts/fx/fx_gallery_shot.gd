@@ -4,8 +4,9 @@ extends SceneTree
 #
 #   $env:INKWOOD_STEAM = "off"
 #   build\deps\godot\4.7-stable\Godot_v4.7-stable_win64_console.exe --path . `
-#       --script res://scripts/fx/fx_gallery_shot.gd -- [what=puffs|bursts] [out=tmp/fx] [ppm=4]
+#       --script res://scripts/fx/fx_gallery_shot.gd -- [what=puffs|puffs2|bursts] [out=tmp/fx] [ppm=4]
 #
+# puffs2.png  round 2: a row per option C0..C6, three tones across, each in every age stage
 # puffs.png   a row per smoke option (A..D), three tones across, every variant, then at the planning scale
 # bursts.png  a row per crash option (A..D): the flipbook frames of the ground burst, then the
 #             flame, a piece of debris, the scars and an ember; the same at the planning scale
@@ -54,6 +55,8 @@ func _run() -> void:
 	var what := str(opts.get("what", "puffs"))
 	if what == "puffs":
 		_puffs(st, node, ppm)
+	elif what == "puffs2":
+		_puffs2(st, node, ppm)
 	else:
 		_bursts(st, node, ppm)
 	for i in 4:
@@ -89,6 +92,25 @@ func _puffs(st: FxStyle, node: Node2D, ppm: float) -> void:
 					x += tex.get_width() + 6.0
 				x += 24.0
 			y += float(ps.origin[2].y * 2.0) + 8.0
+		y += 20.0
+
+func _puffs2(st: FxStyle, node: Node2D, ppm: float) -> void:
+	var data: FxData = FxData.shared()
+	var y := 10.0
+	for s_ppm in [ppm, ppm * 0.4]:
+		for name: String in data.smoke_r2_option_names():
+			var o := data.smoke_option(name)
+			var ps := FxPuff.bake_set(st, o, s_ppm, 9.0)
+			var x := 10.0
+			var row_h := 0.0
+			for tone in FxPuff.TONES:
+				for stage in ps.stages:
+					var tex: Texture2D = (ps.tex[tone] as Array)[ps.variants * stage]
+					_sprite(node, tex, Vector2(x, y))
+					x += tex.get_width() + 6.0
+					row_h = maxf(row_h, tex.get_height())
+				x += 30.0
+			y += row_h + 8.0
 		y += 20.0
 
 func _bursts(st: FxStyle, node: Node2D, ppm: float) -> void:
