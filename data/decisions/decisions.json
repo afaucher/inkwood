@@ -1195,6 +1195,24 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Lets prioritize onscreen buttons. No keyboard mapping.' Existing keys (Enter readies, B drops, WASD/QE, F2, Esc, Tab) are untouched until he says otherwise."
+    },
+    {
+      "id": "step-selection",
+      "date": "2026-10-10",
+      "area": "UI, Planning, Specials",
+      "question": "How does a player reach an earlier step of the plan to change it (its band, its drop)?",
+      "board": "none (playtest, said in chat)",
+      "options": [],
+      "chosen": "selecting a step's node selects that step in the plan: the player can set the motion first and come back to step 2 or 3 to drop the bomb there",
+      "parameters": {
+        "select": "click a step's node",
+        "acts_on": "the card's Dive / Level / Climb / Drop act on the selected step"
+      },
+      "applied_to": [
+        "in progress: the bomb-controls redesign"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'The UI says 3 of 3 steps planned - I can move them but can I replan them? I actually want to be able to set my motion and come back to step 2/3 and tell it to drop the bomb then.' 'Selecting the node should select that step in the plan.' Before: the card acted on the last placed step until a step's handle was GRABBED (U3's proposal), invisible to the player."
     }
   ]
 }
