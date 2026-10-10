@@ -309,7 +309,9 @@
       "chosen": "a cone per weapon",
       "parameters": {
         "rule": "every weapon has its own cone; a bomber's tail turret and its front guns are different weapons with different cones",
-        "target_priority": "wanted eventually; not designed or built yet"
+        "target_priority": "wanted eventually; not designed or built yet",
+        "hardpoints": "every gun sits on a hardpoint, a mount point on the airframe ([forward, right, up] metres from the unit's centre); its cone starts there (Alex, later the same day: 'We will want guns to have hardpoints')",
+        "proposed_set": "variants/engagement-cones/weapons_proposed.json (the lead's proposal; Alex: 'Good start')"
       },
       "applied_to": [
         "nothing yet: the first-fight pass builds it (proposed plan in the design doc)"

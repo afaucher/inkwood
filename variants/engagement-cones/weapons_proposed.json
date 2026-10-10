@@ -1,0 +1,143 @@
+{
+  "light_fighter": {
+    "name": "Light fighter",
+    "side": "a",
+    "size": 10,
+    "weapons": [
+      {
+        "id": "wing_guns",
+        "name": "Wing guns",
+        "kind": "machine gun, fixed",
+        "hardpoints": [
+          [
+            -0.3,
+            -3.0,
+            0
+          ],
+          [
+            -0.3,
+            3.0,
+            0
+          ]
+        ],
+        "mount": 0,
+        "across": 10,
+        "height": 8,
+        "elev": 0,
+        "range": 450,
+        "falloff": "peaked",
+        "dmg": 1
+      }
+    ]
+  },
+  "heavy_fighter": {
+    "name": "Heavy fighter",
+    "side": "a",
+    "size": 16,
+    "weapons": [
+      {
+        "id": "nose_cannon",
+        "name": "Nose cannon",
+        "kind": "cannon, fixed",
+        "hardpoints": [
+          [
+            8.0,
+            0,
+            0
+          ]
+        ],
+        "mount": 0,
+        "across": 7,
+        "height": 6,
+        "elev": 0,
+        "range": 600,
+        "falloff": "peaked",
+        "dmg": 2
+      },
+      {
+        "id": "rear_gunner",
+        "name": "Rear gunner",
+        "kind": "machine gun, flexible",
+        "hardpoints": [
+          [
+            -3.5,
+            0,
+            0.8
+          ]
+        ],
+        "mount": 180,
+        "across": 50,
+        "height": 35,
+        "elev": 10,
+        "range": 350,
+        "falloff": "flat",
+        "dmg": 1
+      }
+    ]
+  },
+  "bomber": {
+    "name": "Bomber",
+    "side": "b",
+    "size": 20,
+    "weapons": [
+      {
+        "id": "nose_gun",
+        "name": "Nose gun",
+        "kind": "machine gun, flexible",
+        "hardpoints": [
+          [
+            10.5,
+            0,
+            0
+          ]
+        ],
+        "mount": 0,
+        "across": 30,
+        "height": 25,
+        "elev": 0,
+        "range": 350,
+        "falloff": "flat",
+        "dmg": 1
+      },
+      {
+        "id": "dorsal_turret",
+        "name": "Dorsal turret",
+        "kind": "machine gun, turret",
+        "hardpoints": [
+          [
+            -1.0,
+            0,
+            1.5
+          ]
+        ],
+        "mount": 180,
+        "across": 110,
+        "height": 35,
+        "elev": 35,
+        "range": 400,
+        "falloff": "flat",
+        "dmg": 1,
+        "label_at": 112
+      },
+      {
+        "id": "tail_turret",
+        "name": "Tail turret",
+        "kind": "machine gun, turret",
+        "hardpoints": [
+          [
+            -10.5,
+            0,
+            0.5
+          ]
+        ],
+        "mount": 180,
+        "across": 40,
+        "height": 30,
+        "elev": 0,
+        "range": 400,
+        "falloff": "flat",
+        "dmg": 1
+      }
+    ]
+  }
+}
