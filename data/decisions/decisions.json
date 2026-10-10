@@ -438,6 +438,26 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Host'."
+    },
+    {
+      "id": "dead-planes",
+      "date": "2026-10-09",
+      "area": "Combat, Effects",
+      "question": "What happens to a plane that goes down?",
+      "board": "none (said in chat)",
+      "options": [
+        "it stops where it went down (the first brief's placeholder)",
+        "it explodes mid-air, or goes out of control and crashes eventually"
+      ],
+      "chosen": "it explodes mid-air, or the players lose control of it and it crashes eventually",
+      "parameters": {
+        "proposed_details": "the fate is a seeded roll at the moment it goes down; out of control = nobody can plan it, the sim flies it down in a spiral over one or more turns until it hits the ground (a crash event); the chance and the fall are proposed values in data/sim/combat.json"
+      },
+      "applied_to": [
+        "Track C (combat), Track X (effects board), Track U2 (roster), in progress"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Dead planes should either explode mid air or lose control by players and crash eventually.'"
     }
   ]
 }
