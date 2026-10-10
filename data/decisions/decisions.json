@@ -516,6 +516,26 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'The health ring can stay on our planes for now.'"
+    },
+    {
+      "id": "joiners-ready-up",
+      "date": "2026-10-09",
+      "area": "Co-op and turns, Networking",
+      "question": "A player who joins mid-turn: must they Ready before the turn plays, or watch until the next turn?",
+      "board": "none (question from Track N's report)",
+      "options": [
+        "the joiner is an unready player and holds the turn until they Ready",
+        "the joiner watches until the next turn"
+      ],
+      "chosen": "all players must ready up, joiners included",
+      "parameters": {
+        "rule": "a player who joins mid-turn holds the turn until they Ready"
+      },
+      "applied_to": [
+        "scripts/net/world_sync.gd (built this way, commit de70857)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'All players must ready up.'"
     }
   ]
 }
