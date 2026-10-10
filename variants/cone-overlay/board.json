@@ -159,6 +159,6 @@
   ],
   "palette_check": "No option adds a hue. The interior of a cone is the unit's own side accent (side_a, side_b: equal OKLCH L 0.551, C 0.100); the rim, the ticks and the lettering are ink; the label's halo is paper. Outline uses only ink; hatch and stipple draw the accent as thin ink-like marks (no fill); the wash is the accent mixed toward paper by 7 to 30% alpha, a lighter, less chromatic tint of the same hue. Over warm paper the slate-blue wash is nearly neutral (C 0.009 at 0.30), so in D the two sides differ less in tint than in marks (salmon against grey); B and C keep each side's hue.",
   "sheet": "board.png (rows A-D: heavy and bomber at 0.35 | light fighter at 0.35 and 1.0 | hardpoints x5; the side view and a palette strip below)",
-  "chosen": null,
-  "chosen_by": null
+  "chosen": "D wash, own selected unit only, no enemy cones",
+  "chosen_by": "Alex, 2026-10-09"
 }

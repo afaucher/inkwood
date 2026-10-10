@@ -639,6 +639,54 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Reward'."
+    },
+    {
+      "id": "own-units-stand-out",
+      "date": "2026-10-09",
+      "area": "UI, Units",
+      "question": "How do your own units stand out on the busy background?",
+      "board": "variants/own-units-stand-out/",
+      "options": [
+        "A today's marker",
+        "B paper halo",
+        "C paper lift",
+        "D heavier outline",
+        "E side-colour ring",
+        "F own planes larger"
+      ],
+      "chosen": "A, today's marker -- none of the new options was quite there",
+      "parameters": {
+        "marker.standout.mode": "none"
+      },
+      "applied_to": [
+        "data/ui/ui.json#marker.standout.mode"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Board 1 - not quite there. Today's is the best.' The problem (e.g. the heavy fighter faint over trees) stays open for a later round."
+    },
+    {
+      "id": "cone-overlay",
+      "date": "2026-10-09",
+      "area": "UI, Combat",
+      "question": "How are engagement cones drawn on the map while planning?",
+      "board": "variants/cone-overlay/",
+      "options": [
+        "A outline with range ticks",
+        "B hatched wedge",
+        "C stippled odds",
+        "D wash in the side colour"
+      ],
+      "chosen": "D, the colour wash, for the selected unit only",
+      "parameters": {
+        "planner.cones.mode": "wash",
+        "planner.cones.own": "selected",
+        "planner.cones.enemy": "none"
+      },
+      "applied_to": [
+        "data/ui/ui.json#planner.cones"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Board 2 - color wash (selected only)'. The lead read 'selected only' as no enemy cones. Still proposed: cones at the current pose, a weapon with no slice at the plane's level drawn dashed as overhead."
     }
   ]
 }

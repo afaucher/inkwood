@@ -110,6 +110,6 @@
   ],
   "palette_check": "No option adds a hue: halo and lift are PAPER (L 0.847, the ground's own colour) at alpha 0.92 / 0.85, rim is INK at 0.95, ring is the unit's own side accent (side_a, side_b: equal OKLCH L 0.551, C 0.100) with an ink hairline at 0.6. The plane's fill (object fill, L 0.925) stays one step lighter than the paper it sits on; the halo's gain is a calm field (the trees' inked edges and shadows erased), not more lightness contrast.",
   "sheet": "board.png (rows A-F: zoom 1 | far play zoom | selected; a palette strip below)",
-  "chosen": null,
-  "chosen_by": null
+  "chosen": "A today's marker (none of the new options was quite there; a later round may revisit)",
+  "chosen_by": "Alex, 2026-10-09"
 }

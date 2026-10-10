@@ -36,6 +36,7 @@ var _modes: Array = []
 var _next := 0
 var _frame := 0
 var _saved_mode := ""
+var _saved_enemy := ""
 var _counts := {}
 
 func setup(_main) -> void:
@@ -44,6 +45,15 @@ func setup(_main) -> void:
 		finish()
 		return
 	_saved_mode = _st.text("planner.cones.mode")
+	_saved_enemy = _st.text("planner.cones.enemy")
+	# Alex 2026-10-09 (decision cone-overlay): the colour wash, for the
+	# selected unit only -- no enemy cones. The rest of this test exercises the
+	# overlay's other rules too, so it sets them explicitly and restores the
+	# data's values at the end.
+	eq(_saved_mode, "wash", "the data holds Alex's choice: the colour wash")
+	eq(_saved_enemy, "none", "the data holds Alex's choice: no enemy cones")
+	eq(_st.text("planner.cones.own"), "selected", "the data holds Alex's choice: the selected unit only")
+	_st.ui["planner"]["cones"]["enemy"] = "in_sight"
 	_modes = _st.lookup("planner.cones.modes")
 	check(_modes.size() >= 4, "the data lists the styles: %s" % str(_modes))
 	_w = World.new()
@@ -215,4 +225,5 @@ func _done() -> void:
 	eq(_ov.failed_draws, 0, "every sub-draw of every style ran to its end (a runtime error would end one early)")
 	eq(_st.errors.size(), 0, "no style error was raised by drawing: %s" % str(_st.errors))
 	_st.ui["planner"]["cones"]["mode"] = _saved_mode
+	_st.ui["planner"]["cones"]["enemy"] = _saved_enemy
 	finish()

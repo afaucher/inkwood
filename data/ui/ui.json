@@ -134,6 +134,8 @@
       "_proposed": true,
       "_reason": "How the players' own units stand out on busy ground (Alex 2026-10-09: 'a comparison board for figuring out how to make your own units stand out visually on the busy background'; the heavy fighter is faint over trees). The board is variants/own-units-stand-out/; EVERY VALUE HERE IS PROPOSED by Track U1 and nothing is chosen until Alex picks. mode names ONE effect, or several joined with '+' (for example 'halo+ring'); 'none' is today's marker and the default, drawn exactly as before. The effects apply to the player-controlled units only (controller 'player': every co-op player's planes), never to the AI's. Colours are palette roles ({base, alpha, toward, t}, as in the roles block): hue stays reserved for paper, ink, shadow and the side accents, so the halo and the lift are PAPER, the rim is INK, the ring is the unit's own side accent. Sizes are screen px at the plane's drawn size.",
       "mode": "none",
+      "decision": "own-units-stand-out",
+      "_decided": "Alex 2026-10-09 on the board: 'not quite there. Today's is the best' -- mode none (today's marker). The problem stays open for a later round.",
       "modes": ["none", "halo", "lift", "rim", "ring", "larger"],
       "halo": {
         "_about": "A paper knock-out round the silhouette, under the plane and its shadow (the map-label halo): the ground's ink is erased in a ring radius_px wide, feathered over soft_px more. Proposed.",
@@ -173,10 +175,12 @@
     "cones": {
       "_proposed": true,
       "_reason": "How the engagement cones are drawn on the map while planning (variants/cone-overlay/ is the board; EVERY VALUE AND RULE IS PROPOSED by Track U1 and nothing is chosen until Alex picks). mode: outline (an inked rim with range ticks, nothing inside), hatch (45 degree strokes in the side colour, more broken where the odds are lower), stipple (dots in the side colour, thinner where the odds are lower) or wash (a light wash in the side colour, in odds steps). The rim and a dot on every hardpoint are common to all four. Shading is the odds model's own centre factor (scripts/sim/combat.gd), so it is peaked for fixed guns and even for turrets and flexible guns. Colours are palette roles (hue only for the side accents); sizes are screen px, ranges true metres on the map.",
-      "mode": "outline",
+      "mode": "wash",
       "modes": ["outline", "hatch", "stipple", "wash"],
       "own": "selected",
-      "enemy": "in_sight",
+      "enemy": "none",
+      "decision": "cone-overlay",
+      "_decided": "Alex 2026-10-09 on the board: 'color wash (selected only)' -- mode wash; cones for the selected unit only, no enemy cones (the lead's reading of 'selected only'). Every other value here is still proposed.",
       "_rules": "own: 'selected' draws the selected player unit's cones, 'all_own' every player unit's. enemy: 'in_sight' draws an enemy unit's cones while that unit is visible through the fog, 'none' draws no enemy's. Proposed: own cones in the selected unit's planning view, enemy cones only while that enemy is in sight. Only while planning.",
       "rim_px": 1.1,
       "rim_role": { "base": "ink", "alpha": 0.8 },
