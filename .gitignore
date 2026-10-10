@@ -34,3 +34,8 @@ Thumbs.db
 # these stay so an engine left at the root by an older checkout is still ignored.
 Godot_v*_linux.x86_64
 *.tar.gz
+
+# Third-party style references (screenshots of other artists' work): kept on this
+# machine for the design work, never committed. docs/proposals/*-reference.md
+# describes each one and credits its author.
+reference/style/
