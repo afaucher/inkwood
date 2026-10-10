@@ -1075,6 +1075,28 @@
       ],
       "status": "chosen by Alex",
       "notes": "Proposed by the lead: 'Flak in the low band: low flying currently wins too easily. I recommend making flak harsher there.' Alex: 'Sounds good, make it more dangerous.' Before: a bomber's straight run over the proposed layout lost 3.7 of 8 pips at low and 4.0 at medium, shot down 1 and 11 percent of the time, and killed the tower in 1.4 drops at low against 2.2 at medium (strike_tuning.gd, tables A and C)."
+    },
+    {
+      "id": "balance-uncalibrated",
+      "date": "2026-10-10",
+      "area": "Balance, Strike",
+      "question": "The strike is too easy (the scripted first pass wins 98% of the time) and cannot be won once the bombs run out: tune it, add an early loss?",
+      "board": "none (said in chat)",
+      "options": [
+        "tune the difficulty and add an early-loss rule now",
+        "ignore balance for now"
+      ],
+      "chosen": "ignore balance for now: the numbers are not calibrated, this is a playtest, and the scenario is defined with the attackers at the advantage",
+      "parameters": {
+        "scenario_advantage": "attackers",
+        "difficulty_tuning": "deferred",
+        "win_conditions": "unchanged for now (no early-loss rule)"
+      },
+      "applied_to": [
+        "the strike scenario and its tuning stay as they are; low-band-flak changes the bands' ORDER (low the riskiest), not the overall difficulty"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'In terms of balance - what we have is not calibrated. This is a playtest. So win conditions and too easy is fine to ignore for now. The scenario is defined where the attackers have the advantage.'"
     }
   ]
 }
