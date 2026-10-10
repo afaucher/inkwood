@@ -1,0 +1,205 @@
+{
+  "id": "bomb-aoe",
+  "date": "2026-10-10",
+  "area": "UI, Specials",
+  "question": "How is the area of effect of a bomb drop drawn? Alex (decision special-targeting): 'For bombs, I expected area of effect as well.'",
+  "source": "scripts/ui/boards/bomb_aoe_board_shot.gd: the running sandbox (scripts/app/sandbox.gd) over the real map and the village Track W lays out, through scripts/ui/boards/strike_scene.gd (the radio tower, two batteries and a player bomber added; the tower is the drop's TARGET, set the way a player does), photographed once per option with ONLY data/ui/ui.json bombs.aoe.mode changed",
+  "seed": 20261009,
+  "held_constant": {
+    "scene": "the player's bomber (Anvil, medium band, 85 m/s, flying east) with two steps planned and its SECOND step's drop aimed at the radio tower in the village's compound: the tower is a unit target (it follows the unit); the cone and the numbers are the simulation's own (World.drop_cone / drop_spread / drop_expected, scripts/sim/bombs.gd, bomb_expect.gd); a player fighter beside the tower so the village is in sight",
+    "shots": {
+      "play": "the planning zoom 0.35, the aim at the ideal release angle",
+      "close": "zoom 1.0 over the same aim",
+      "rim": "zoom 1.0, the aim on the cone's near rim (the worst release angle)"
+    },
+    "accuracy_spread_and_expected_damage": {
+      "play": {
+        "accuracy": 1.0,
+        "spread_across_m": 52.0,
+        "sigma_m": 26.0,
+        "stick_m": 30.7,
+        "expected_pips": 4.68,
+        "tower_health": 8,
+        "p_destroy": 0.08
+      },
+      "close": {
+        "accuracy": 1.0,
+        "spread_across_m": 52.0,
+        "sigma_m": 26.0,
+        "stick_m": 30.7,
+        "expected_pips": 4.68,
+        "tower_health": 8,
+        "p_destroy": 0.08
+      },
+      "rim": {
+        "accuracy": 0.4,
+        "spread_across_m": 130.7,
+        "sigma_m": 65.4,
+        "stick_m": 30.7,
+        "expected_pips": 0.0,
+        "tower_health": 0,
+        "p_destroy": 0.0
+      }
+    },
+    "blast_table": "data/sim/bombs.json blast_pips_by_distance [[12, 3], [25, 2], [45, 1]] (proposed by Track S2)",
+    "decisions_in_force": "special-targeting (a target selection; per step); bomb-aim is still a board (the cone look is the working default, wash); cone-overlay (colour wash); node-hover (grow and fill); shadow strength 0.44; side colours brick red (allies) and slate blue (axis)"
+  },
+  "parameter": "data/ui/ui.json#bombs.aoe.mode (none | rings | footprint | impacts | tiers) and bombs.aoe.<look> for each one's numbers; bombs.aoe.card_line the expected-damage line on the orders card",
+  "also_built_behind_every_option": "the expected-damage line on the orders card (the sim's own number: its dice and its blast table, fixed sample, capped at the unit's health, only for units in sight); the target selection (left-click an enemy, right-click a point, Esc clears it); Drop needs a target inside the step's cone; the unit target follows the unit (the sim resolves the release dynamically)",
+  "options": [
+    {
+      "name": "0",
+      "title": "For reference: no area of effect (the game before this board)",
+      "bombs.aoe.mode": "none",
+      "files": [
+        "o_none_play.png",
+        "o_none_close.png",
+        "o_none_rim.png"
+      ],
+      "proposed": true,
+      "reference": true,
+      "description": "The cone, the aim and the scatter ellipse, nothing about the blast. The blast is only in the sim and the card's line.",
+      "parameters": {
+        "edge_role": {
+          "base": "ink",
+          "alpha": 0.7
+        },
+        "fill_role": {
+          "base": "ink",
+          "alpha": 0.1
+        },
+        "line_px": 1.0,
+        "dash_px": 4.0
+      }
+    },
+    {
+      "name": "A",
+      "title": "Blast rings round the aim",
+      "bombs.aoe.mode": "rings",
+      "files": [
+        "a_rings_play.png",
+        "a_rings_close.png",
+        "a_rings_rim.png"
+      ],
+      "proposed": true,
+      "reference": false,
+      "description": "The sim's blast table as rings round the aim, on top of the scatter: 12 m (3 pips, solid), 25 m (2 pips) and 45 m (1 pip, dashed), each numbered. It says what ONE bomb that lands on the aim does. It does not say where the bombs will land: the scatter ellipse inside it does, and the two have to be read together.",
+      "parameters": {
+        "edge_role": {
+          "base": "ink",
+          "alpha": 0.7
+        },
+        "fill_role": {
+          "base": "ink",
+          "alpha": 0.1
+        },
+        "line_px": 1.0,
+        "dash_px": 4.0,
+        "rings": {
+          "label_px": 10.0,
+          "solid_alpha": 0.9,
+          "dash_alpha": 0.6,
+          "min_label_ring_px": 14.0
+        }
+      }
+    },
+    {
+      "name": "B",
+      "title": "One footprint: the scatter grown by the blast",
+      "bombs.aoe.mode": "footprint",
+      "files": [
+        "b_footprint_play.png",
+        "b_footprint_close.png",
+        "b_footprint_rim.png"
+      ],
+      "proposed": true,
+      "reference": false,
+      "description": "One wash: the scatter's ellipse grown by the blast's whole reach (45 m) -- anything in here can take damage. The simplest to read and the closest to Alex's words, but it is binary: it does not say where a unit takes 3 pips and where it takes 1.",
+      "parameters": {
+        "edge_role": {
+          "base": "ink",
+          "alpha": 0.7
+        },
+        "fill_role": {
+          "base": "ink",
+          "alpha": 0.1
+        },
+        "line_px": 1.0,
+        "dash_px": 4.0,
+        "footprint": {
+          "fill_alpha": 0.12
+        }
+      }
+    },
+    {
+      "name": "C",
+      "title": "The stick's impacts along the track, each with its own blast",
+      "bombs.aoe.mode": "impacts",
+      "files": [
+        "c_impacts_play.png",
+        "c_impacts_close.png",
+        "c_impacts_rim.png"
+      ],
+      "proposed": true,
+      "reference": false,
+      "description": "The four bombs of the stick at their nominal places along the bomber's heading, each with its 12 m direct-hit ring and its 45 m reach. Honest about the stick, but at 10 m between bombs and a 45 m reach the circles overlap into a knot, and the scatter moves every one of them.",
+      "parameters": {
+        "edge_role": {
+          "base": "ink",
+          "alpha": 0.7
+        },
+        "fill_role": {
+          "base": "ink",
+          "alpha": 0.1
+        },
+        "line_px": 1.0,
+        "dash_px": 4.0,
+        "impacts": {
+          "dot_px": 1.8,
+          "reach_alpha": 0.4,
+          "hit_alpha": 0.85
+        }
+      }
+    },
+    {
+      "name": "D",
+      "title": "Tiered footprint (proposed): the scatter grown by each blast tier",
+      "bombs.aoe.mode": "tiers",
+      "files": [
+        "d_tiers_play.png",
+        "d_tiers_close.png",
+        "d_tiers_rim.png"
+      ],
+      "proposed": true,
+      "reference": false,
+      "description": "The scatter's ellipse grown by each tier of the blast table (12, 25 and 45 m) as three nested washes, darker toward more pips -- the footprint of B with the table's depth in it. Lightness is the damage, in ink only; the outer edge is dashed, the 3-pip edge solid.",
+      "parameters": {
+        "edge_role": {
+          "base": "ink",
+          "alpha": 0.7
+        },
+        "fill_role": {
+          "base": "ink",
+          "alpha": 0.1
+        },
+        "line_px": 1.0,
+        "dash_px": 4.0,
+        "tiers": {
+          "alphas": [
+            0.07,
+            0.07,
+            0.08
+          ],
+          "outer_edge_alpha": 0.6,
+          "inner_edge_alpha": 0.85
+        }
+      }
+    }
+  ],
+  "palette_check": "No option adds a hue. The cone's interior is the unit's SIDE ACCENT (side_a, L 0.551, C 0.100); the area of effect is INK (L 0.325) at low alpha on PAPER (L 0.847): lightness is the ramp, darker is more damage, material is linework (dashes, rings, dots). The target marks are ink with a paper pool (alpha 0.92) -- the same pool the node-hover halo and the aim's crosshair use.",
+  "recommendation_proposed": "D, the tiered footprint (bombs.aoe.mode in data is set to it, PROPOSED, so the build gives feedback before Alex picks): it is the only look that draws both halves of the area of effect -- where the bombs can land (the scatter) and what they do there (the blast table, as lightness) -- in one shape that stays legible at the planning zoom, and it spends ink only. B is the simplest and nearly as good at the planning zoom (one shape, 'anything in here takes damage'); A reads best at zoom 1 but says nothing at the planning zoom and leaves the scatter to be read separately; C is the most literal and the least legible (overlapping circles).",
+  "frames": "frames.json (every frame whole, with its caption and the card's line)",
+  "sheet": "board.png (rows 0 and A-D: the planning zoom, the close zoom over the ideal aim, the close zoom over a rim aim, and the orders card's top for each; a palette strip below)",
+  "chosen": null,
+  "chosen_by": null
+}

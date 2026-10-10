@@ -1,0 +1,216 @@
+{
+  "id": "bomb-aoe",
+  "about": "Every frame of the board as its own PNG at native size (1280 x 720), with its caption and the orders card's expected-damage line. board.png is the sheet of 1:1 crops of these; target_marks.png is the frame the palette strip's target marks are cut from.",
+  "frames": [
+    {
+      "file": "o_none_play.png",
+      "option": "0",
+      "look": "none",
+      "title": "0  ·  For reference: no area of effect (the game before this board)  ·  planning zoom",
+      "zoom": 0.35,
+      "aim": "ideal",
+      "card_line": "step 2: radio tower, about 5 of 8  ·  100%",
+      "caption": "For reference: no area of effect (the game before this board): the planning zoom 0.35, the aim at the ideal release angle. The cone, the aim and the scatter ellipse, nothing about the blast. The blast is only in the sim and the card's line.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "a_rings_play.png",
+      "option": "A",
+      "look": "rings",
+      "title": "A  ·  Blast rings round the aim  ·  planning zoom",
+      "zoom": 0.35,
+      "aim": "ideal",
+      "card_line": "step 2: radio tower, about 5 of 8  ·  100%",
+      "caption": "Blast rings round the aim: the planning zoom 0.35, the aim at the ideal release angle. The sim's blast table as rings round the aim, on top of the scatter: 12 m (3 pips, solid), 25 m (2 pips) and 45 m (1 pip, dashed), each numbered. It says what ONE bomb that lands on the aim does. It does not say where the bombs will land: the scatter ellipse inside it does, and the two have to be read together.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "b_footprint_play.png",
+      "option": "B",
+      "look": "footprint",
+      "title": "B  ·  One footprint: the scatter grown by the blast  ·  planning zoom",
+      "zoom": 0.35,
+      "aim": "ideal",
+      "card_line": "step 2: radio tower, about 5 of 8  ·  100%",
+      "caption": "One footprint: the scatter grown by the blast: the planning zoom 0.35, the aim at the ideal release angle. One wash: the scatter's ellipse grown by the blast's whole reach (45 m) -- anything in here can take damage. The simplest to read and the closest to Alex's words, but it is binary: it does not say where a unit takes 3 pips and where it takes 1.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "c_impacts_play.png",
+      "option": "C",
+      "look": "impacts",
+      "title": "C  ·  The stick's impacts along the track, each with its own blast  ·  planning zoom",
+      "zoom": 0.35,
+      "aim": "ideal",
+      "card_line": "step 2: radio tower, about 5 of 8  ·  100%",
+      "caption": "The stick's impacts along the track, each with its own blast: the planning zoom 0.35, the aim at the ideal release angle. The four bombs of the stick at their nominal places along the bomber's heading, each with its 12 m direct-hit ring and its 45 m reach. Honest about the stick, but at 10 m between bombs and a 45 m reach the circles overlap into a knot, and the scatter moves every one of them.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "d_tiers_play.png",
+      "option": "D",
+      "look": "tiers",
+      "title": "D  ·  Tiered footprint (proposed): the scatter grown by each blast tier  ·  planning zoom",
+      "zoom": 0.35,
+      "aim": "ideal",
+      "card_line": "step 2: radio tower, about 5 of 8  ·  100%",
+      "caption": "Tiered footprint (proposed): the scatter grown by each blast tier: the planning zoom 0.35, the aim at the ideal release angle. The scatter's ellipse grown by each tier of the blast table (12, 25 and 45 m) as three nested washes, darker toward more pips -- the footprint of B with the table's depth in it. Lightness is the damage, in ink only; the outer edge is dashed, the 3-pip edge solid.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "o_none_close.png",
+      "option": "0",
+      "look": "none",
+      "title": "0  ·  For reference: no area of effect (the game before this board)  ·  zoom 1, ideal aim",
+      "zoom": 1.0,
+      "aim": "ideal",
+      "card_line": "step 2: radio tower, about 5 of 8  ·  100%",
+      "caption": "For reference: no area of effect (the game before this board): zoom 1.0 over the aim at the ideal release angle (accuracy 100 percent). The cone, the aim and the scatter ellipse, nothing about the blast. The blast is only in the sim and the card's line.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "a_rings_close.png",
+      "option": "A",
+      "look": "rings",
+      "title": "A  ·  Blast rings round the aim  ·  zoom 1, ideal aim",
+      "zoom": 1.0,
+      "aim": "ideal",
+      "card_line": "step 2: radio tower, about 5 of 8  ·  100%",
+      "caption": "Blast rings round the aim: zoom 1.0 over the aim at the ideal release angle (accuracy 100 percent). The sim's blast table as rings round the aim, on top of the scatter: 12 m (3 pips, solid), 25 m (2 pips) and 45 m (1 pip, dashed), each numbered. It says what ONE bomb that lands on the aim does. It does not say where the bombs will land: the scatter ellipse inside it does, and the two have to be read together.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "b_footprint_close.png",
+      "option": "B",
+      "look": "footprint",
+      "title": "B  ·  One footprint: the scatter grown by the blast  ·  zoom 1, ideal aim",
+      "zoom": 1.0,
+      "aim": "ideal",
+      "card_line": "step 2: radio tower, about 5 of 8  ·  100%",
+      "caption": "One footprint: the scatter grown by the blast: zoom 1.0 over the aim at the ideal release angle (accuracy 100 percent). One wash: the scatter's ellipse grown by the blast's whole reach (45 m) -- anything in here can take damage. The simplest to read and the closest to Alex's words, but it is binary: it does not say where a unit takes 3 pips and where it takes 1.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "c_impacts_close.png",
+      "option": "C",
+      "look": "impacts",
+      "title": "C  ·  The stick's impacts along the track, each with its own blast  ·  zoom 1, ideal aim",
+      "zoom": 1.0,
+      "aim": "ideal",
+      "card_line": "step 2: radio tower, about 5 of 8  ·  100%",
+      "caption": "The stick's impacts along the track, each with its own blast: zoom 1.0 over the aim at the ideal release angle (accuracy 100 percent). The four bombs of the stick at their nominal places along the bomber's heading, each with its 12 m direct-hit ring and its 45 m reach. Honest about the stick, but at 10 m between bombs and a 45 m reach the circles overlap into a knot, and the scatter moves every one of them.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "d_tiers_close.png",
+      "option": "D",
+      "look": "tiers",
+      "title": "D  ·  Tiered footprint (proposed): the scatter grown by each blast tier  ·  zoom 1, ideal aim",
+      "zoom": 1.0,
+      "aim": "ideal",
+      "card_line": "step 2: radio tower, about 5 of 8  ·  100%",
+      "caption": "Tiered footprint (proposed): the scatter grown by each blast tier: zoom 1.0 over the aim at the ideal release angle (accuracy 100 percent). The scatter's ellipse grown by each tier of the blast table (12, 25 and 45 m) as three nested washes, darker toward more pips -- the footprint of B with the table's depth in it. Lightness is the damage, in ink only; the outer edge is dashed, the 3-pip edge solid.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "o_none_rim.png",
+      "option": "0",
+      "look": "none",
+      "title": "0  ·  For reference: no area of effect (the game before this board)  ·  zoom 1, aim on the near rim",
+      "zoom": 1.0,
+      "aim": "rim",
+      "card_line": "drop, step 2: spread 131 m, accuracy 40%",
+      "caption": "For reference: no area of effect (the game before this board): zoom 1.0, the aim dragged to the cone's near rim: the worst release angle the cone allows. The cone, the aim and the scatter ellipse, nothing about the blast. The blast is only in the sim and the card's line.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "a_rings_rim.png",
+      "option": "A",
+      "look": "rings",
+      "title": "A  ·  Blast rings round the aim  ·  zoom 1, aim on the near rim",
+      "zoom": 1.0,
+      "aim": "rim",
+      "card_line": "drop, step 2: spread 131 m, accuracy 40%",
+      "caption": "Blast rings round the aim: zoom 1.0, the aim dragged to the cone's near rim: the worst release angle the cone allows. The sim's blast table as rings round the aim, on top of the scatter: 12 m (3 pips, solid), 25 m (2 pips) and 45 m (1 pip, dashed), each numbered. It says what ONE bomb that lands on the aim does. It does not say where the bombs will land: the scatter ellipse inside it does, and the two have to be read together.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "b_footprint_rim.png",
+      "option": "B",
+      "look": "footprint",
+      "title": "B  ·  One footprint: the scatter grown by the blast  ·  zoom 1, aim on the near rim",
+      "zoom": 1.0,
+      "aim": "rim",
+      "card_line": "drop, step 2: spread 131 m, accuracy 40%",
+      "caption": "One footprint: the scatter grown by the blast: zoom 1.0, the aim dragged to the cone's near rim: the worst release angle the cone allows. One wash: the scatter's ellipse grown by the blast's whole reach (45 m) -- anything in here can take damage. The simplest to read and the closest to Alex's words, but it is binary: it does not say where a unit takes 3 pips and where it takes 1.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "c_impacts_rim.png",
+      "option": "C",
+      "look": "impacts",
+      "title": "C  ·  The stick's impacts along the track, each with its own blast  ·  zoom 1, aim on the near rim",
+      "zoom": 1.0,
+      "aim": "rim",
+      "card_line": "drop, step 2: spread 131 m, accuracy 40%",
+      "caption": "The stick's impacts along the track, each with its own blast: zoom 1.0, the aim dragged to the cone's near rim: the worst release angle the cone allows. The four bombs of the stick at their nominal places along the bomber's heading, each with its 12 m direct-hit ring and its 45 m reach. Honest about the stick, but at 10 m between bombs and a 45 m reach the circles overlap into a knot, and the scatter moves every one of them.",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "d_tiers_rim.png",
+      "option": "D",
+      "look": "tiers",
+      "title": "D  ·  Tiered footprint (proposed): the scatter grown by each blast tier  ·  zoom 1, aim on the near rim",
+      "zoom": 1.0,
+      "aim": "rim",
+      "card_line": "drop, step 2: spread 131 m, accuracy 40%",
+      "caption": "Tiered footprint (proposed): the scatter grown by each blast tier: zoom 1.0, the aim dragged to the cone's near rim: the worst release angle the cone allows. The scatter's ellipse grown by each tier of the blast table (12, 25 and 45 m) as three nested washes, darker toward more pips -- the footprint of B with the table's depth in it. Lightness is the damage, in ink only; the outer edge is dashed, the 3-pip edge solid.",
+      "size": [
+        1280,
+        720
+      ]
+    }
+  ]
+}
