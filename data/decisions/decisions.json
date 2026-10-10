@@ -978,6 +978,24 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'We just need it smooth enough to play. Perf is secondary and we can focus on it as we scale up complexity.'"
+    },
+    {
+      "id": "height-speed-labels",
+      "date": "2026-10-10",
+      "area": "UI, Height",
+      "question": "Height is hard to read top-down (bombing, cones in height): what makes it readable?",
+      "board": "none (said in chat)",
+      "options": [
+        "labels on every unit and node",
+        "a side-view indicator (Alex's harder idea, being described)"
+      ],
+      "chosen": "every unit and every plan node gets a height and speed label (the easy part); a side-view indicator is under consideration",
+      "parameters": {},
+      "applied_to": [
+        "Track U3, in progress"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'I'm wondering about height aiming. I think it's going to be challenging. I think the easy thing to do is to make sure that every unit and every node has a height and speed label. The harder thing I'm wondering about is if there makes sense to have a side view indicator that only shows' (message cut off)."
     }
   ]
 }
