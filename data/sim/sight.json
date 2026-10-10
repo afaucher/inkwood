@@ -1,0 +1,19 @@
+{
+  "_about": "What a DOWNED unit still sees (Track S-sight, 2026-10-10). Read by scripts/sim/sight_rules.gd, which both the player's fog (scripts/render/fog_vision.gd) and the enemy AI's knowledge (scripts/sim/ai_sense.gd) ask, so the two sides agree. Alex's words (playtest of the Strike, decision 'playtest-strike-1'): 'A destroyed plane keeps the fog away. Ideally we have this track the pilot. So a destroyed plane should loose the fog. One disabled and falling should keep it but with reduced distance until it hits. (take height into account too).' THE RULE as built: sight follows the PILOT. A unit that explodes or is destroyed (a tower, a battery) stops seeing at the moment it goes down; a unit that has crashed sees nothing; a plane that is disabled and FALLING (fate out_of_control, from the moment it went down until it hits the ground) keeps a REDUCED sight that shrinks with its height above the ground. The rule is: radius = the unit type's sight_range_m (x the fog's sight_range_scale) x falling_factor x min(height / falling_reference_height_m, 1), never below falling_floor_m while it is still in the air, and 0 from the instant it hits the ground. A live unit's sight is untouched. Every value below is PROPOSED; only the shape of the rule is Alex's. Record shape as data/sim/combat.json: {value, _proposed, _reason}.",
+
+  "falling_factor": {
+    "value": 0.5,
+    "_proposed": true,
+    "_reason": "Alex 2026-10-10: a disabled and falling plane 'should keep it but with reduced distance until it hits'. How much is reduced is not said; proposed: half, at or above falling_reference_height_m. So a light fighter (800 m) that goes down out of control at 400 m or more sees 400 m, and a bomber (650 m) 325 m"
+  },
+  "falling_reference_height_m": {
+    "value": 400,
+    "_proposed": true,
+    "_reason": "Alex 2026-10-10: '(take height into account too)' for the falling plane. The radius is in proportion to the plane's height above the ground over this height, never more than 1: at this height or above it a falling plane sees falling_factor x its sight, at half of it half of that, and so on down to falling_floor_m. 400 m is the medium band (data/sim/altitude.json), the demo's fixed band, so a fighter falling from its usual band starts at the full falling radius and loses it over the 8 s of the fall (data/sim/combat.json fall_descent_mps 50). A plane that went down higher keeps the full falling radius until it is down to this height. PROPOSED in place of 'its height over the height it went down from', which is not kept from one turn to the next (Unit has only the current fall height); a unit field for it would make the fall start at exactly falling_factor whatever the band"
+  },
+  "falling_floor_m": {
+    "value": 40,
+    "_proposed": true,
+    "_reason": "Alex 2026-10-10: 'reduced distance until it hits'. A falling plane never sees less than this (or falling_factor x its sight, if that is smaller) while it is still above the ground, so the fog does not blink out a moment before the crash and the spot it falls on is seen; at the crash the radius is 0. About three wingspans of a bomber"
+  }
+}

@@ -18,33 +18,50 @@ extends RefCounted
 #
 # Proposed limit: one AI side. An entry is keyed by the other unit's id, and
 # every AI-controlled unit is an observer for all of them.
+#
+# SIGHT FOLLOWS THE PILOT (Alex, 2026-10-10, for the player's fog; proposed here
+# for the AI so both sides agree): an observer's radius is sight_rules.gd's, the
+# state as it stands at the planning phase. A live unit sees sight_range_m as
+# before; an exploded or destroyed unit (a tower, a battery) and a crashed plane
+# see nothing; a plane that is down out of control and still falling keeps a
+# reduced radius that shrinks with its height (data/sim/sight.json). A unit that
+# was not an observer because it was down is still not one, unless it is falling.
 
 const World = preload("res://scripts/sim/world.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
+const SightRules = preload("res://scripts/sim/sight_rules.gd")
 
 var seen: Dictionary = {}     # unit id -> entry
+var _rules: SightRules = null  # data/sim/sight.json, read on the first update
 
 func clear() -> void:
 	seen.clear()
 
 # Observe the world as it stands now (call once per planning phase).
 func update(world: World, memory_turns: int) -> void:
-	var observers: Array = []
+	if _rules == null:
+		_rules = SightRules.new()
+	var observers: Array = []     # [unit, the radius it sees to now, metres]
 	for id: String in world.units:
 		var o: Unit = world.units[id]
-		if o.controller == World.CONTROLLER_AI and not o.down:
-			observers.append(o)
+		if o.controller != World.CONTROLLER_AI:
+			continue
+		var r := _rules.radius_m(o, o.def.sight_range_m)
+		if o.down and r <= 0.0:
+			continue
+		observers.append([o, r])
 	for id: String in world.units:
 		var t: Unit = world.units[id]
 		if t.controller == World.CONTROLLER_AI:
 			continue
 		var spotted := false
-		for o: Unit in observers:
+		for ob: Array in observers:
+			var o: Unit = ob[0]
 			if o.side == t.side:
 				continue
 			var dx := t.x - o.x
 			var dy := t.y - o.y
-			var r := o.def.sight_range_m
+			var r: float = ob[1]
 			if dx * dx + dy * dy <= r * r:
 				spotted = true
 				break

@@ -18,6 +18,17 @@ extends RefCounted
 # "player_controlled" -- only those units. Radius = the unit type's
 # sight_range_m (data/units/<type>.json, Track S's) x vision.sight_range_scale.
 #
+# SIGHT FOLLOWS THE PILOT (Alex, playtest of the Strike, 2026-10-10: "A destroyed plane keeps
+# the fog away. Ideally we have this track the pilot. So a destroyed plane should loose the
+# fog. One disabled and falling should keep it but with reduced distance until it hits. (take
+# height into account too)"). A unit that is down reveals by scripts/sim/sight_rules.gd
+# (data/sim/sight.json, values proposed), at the playback time t: an exploded plane or a
+# destroyed tower/battery stops revealing at the moment it goes down (down_at; none at all if it
+# went down in an earlier turn); a plane disabled and falling keeps a reduced circle that shrinks
+# with its height above the ground (World.sample's height_m) until it hits; a crashed one reveals
+# nothing. A unit that sees nothing has no circle. The enemy AI's knowledge (ai_sense.gd) asks
+# the same rule. A live unit is untouched.
+#
 # LINE OF SIGHT (Alex: "terrain, trees and buildings block sight"; data
 # vision.line_of_sight, a switch):
 #   "none"           a radius per unit, nothing more (the first option)
@@ -49,6 +60,7 @@ extends RefCounted
 
 const CameraData = preload("res://scripts/world/camera_data.gd")
 const FogViewshed = preload("res://scripts/render/fog_viewshed.gd")
+const SightRules = preload("res://scripts/sim/sight_rules.gd")
 
 const REVEAL_PLAYER_SIDES := "player_sides"
 const REVEAL_PLAYER_CONTROLLED := "player_controlled"
@@ -81,6 +93,7 @@ var recompute_height_m: float
 var budget_ms: float                    # per update_from_world, all units; 0: whole sheds at once
 var errors: Array[String] = []
 
+var sight: SightRules = SightRules.new()   # what a downed unit still sees (data/sim/sight.json)
 var terrain: Object = null              # the height source, set by attach_terrain
 var viewshed: FogViewshed = null        # built the first time line of sight is on
 
@@ -128,7 +141,7 @@ func _init(fog_data: CameraData = null) -> void:
 	budget_ms = data.num("viewshed.budget_ms")
 
 func ok() -> bool:
-	return errors.is_empty() and data.ok() and (viewshed == null or viewshed.ok())
+	return errors.is_empty() and data.ok() and sight.ok() and (viewshed == null or viewshed.ok())
 
 func _err(message: String) -> void:
 	errors.append(message)
@@ -203,6 +216,13 @@ func reveals(u: Object, sides: Dictionary) -> bool:
 func sight_radius_m(u: Object) -> float:
 	return float(u.def.sight_range_m) * sight_scale
 
+# What the unit sees to at `t` (World.sample's clock; < 0: as it stands now), `height_m` its
+# sampled height there: its full radius while it is up, none once it has exploded, been
+# destroyed or crashed, a reduced one that shrinks with height while it falls
+# (sight_rules.gd). Zero means it reveals nothing.
+func revealing_radius_m(u: Object, t: float = -1.0, height_m: float = NAN) -> float:
+	return sight.radius_m(u, sight_radius_m(u), t, height_m)
+
 # --- eye heights ----------------------------------------------------------------------------
 
 # A unit's eye (and own top, as a target) in metres ABOVE THE GROUND at (x, y):
@@ -251,8 +271,13 @@ func update_from_world(world: Object, t: float = -1.0, source: String = "history
 		if not reveals(u, sides):
 			continue
 		var st := _state(world, u, t, source)
+		# The sight of a unit that is down: the plan preview (source "plan") has no down moment
+		# to compare with, so it judges a down unit as it stands now.
+		var r := revealing_radius_m(u, t if source == "history" else -1.0, st.height_m)
+		if r <= 0.0:
+			continue
 		var agl := unit_agl(world, u, st.x, st.y, st.band, st.height_m) if los else float(eye_heights.get(str(u.def.domain), eye_heights["ground"]))
-		circles.append({"id": str(u.id), "x": st.x, "y": st.y, "r": sight_radius_m(u), "eye_agl": agl})
+		circles.append({"id": str(u.id), "x": st.x, "y": st.y, "r": r, "eye_agl": agl})
 	if circles.size() > max_circles:
 		push_warning("FogVision: %d revealing units, the mask draws the first %d (mask.max_circles)" % [circles.size(), max_circles])
 	_attach_sheds()
