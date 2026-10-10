@@ -1028,13 +1028,27 @@
       "date": "2026-10-10",
       "area": "Specials, UI",
       "question": "How does a special (the bomb today) get its target, and how is its area of effect shown?",
-      "board": "none yet (options in chat)",
-      "options": [],
-      "chosen": null,
-      "parameters": {},
-      "applied_to": [],
-      "status": "open",
-      "notes": "Alex: 'For bombs, I expected area of effect as well. This implies each step might have a target which is either a unit or point. But this is only for specials. Let's look at our options here. Maybe a targeting selection is the right call. Specials use the current selection to set their target.' And: 'For selection, does this imply we have both a player unit and enemy unit selection?'"
+      "board": "none (options in chat: A aim on the step, B a target per step, C a target selection, D target first with the step found for you)",
+      "options": [
+        "A aim on the step (as built)",
+        "B a target per step",
+        "C a target selection",
+        "D target first, the step found for you"
+      ],
+      "chosen": "a target selection: with a friendly unit selected, the player can also select an enemy unit or a point on the map as its target. The target does only two things: it shows on the side view, and it is what the unit's special uses when activated. Non-special weapons need no target: they fire on their own",
+      "parameters": {
+        "target": "an enemy unit or a point on the map, selected while a friendly unit is selected",
+        "effects": [
+          "shown on the side view",
+          "the target a special uses when activated"
+        ],
+        "guns": "no target (they autofire, decision fire-by-engagement-parameters)"
+      },
+      "applied_to": [
+        "not built yet"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'For bombs, I expected area of effect as well. This implies each step might have a target which is either a unit or point. But this is only for specials. Let's look at our options here. Maybe a targeting selection is the right call. Specials use the current selection to set their target.' And: 'For selection, does this imply we have both a player unit and enemy unit selection?' Then: 'For targeting what I was actually thinking is when you have a friendly unit selected, you can also select either an enemy unit or a point on the map. The only thing it does is show on the side view and it is the target that the special will use if activated. Non-specials don't need targets because they autofire.' Still open (asked): how the target is set, whether each unit keeps its own, a drop whose target is outside the step's cone, no target set, the aim handle; and how the area of effect is drawn (a board)."
     }
   ]
 }
