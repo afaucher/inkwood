@@ -1206,13 +1206,14 @@
       "chosen": "selecting a step's node selects that step in the plan: the player can set the motion first and come back to step 2 or 3 to drop the bomb there",
       "parameters": {
         "select": "click a step's node",
-        "acts_on": "the card's Dive / Level / Climb / Drop act on the selected step"
+        "acts_on": "the card's Dive / Level / Climb / Drop act on the selected step",
+        "step_lettering": "a step with an active special SAYS the special's name and its action in the step's lettering: 'Bomb Drop' (later 'Radio On', 'Turret Fire'); the words come from data"
       },
       "applied_to": [
         "in progress: the bomb-controls redesign"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'The UI says 3 of 3 steps planned - I can move them but can I replan them? I actually want to be able to set my motion and come back to step 2/3 and tell it to drop the bomb then.' 'Selecting the node should select that step in the plan.' Before: the card acted on the last placed step until a step's handle was GRABBED (U3's proposal), invisible to the player."
+      "notes": "Alex: 'The UI says 3 of 3 steps planned - I can move them but can I replan them? I actually want to be able to set my motion and come back to step 2/3 and tell it to drop the bomb then.' 'Selecting the node should select that step in the plan.' Before: the card acted on the last placed step until a step's handle was GRABBED (U3's proposal), invisible to the player. On the drop's mark: 'Specifically it should SAY in the step metadata the name of the special and the action. So Radio On, Bomb Drop, Turret Fire.'"
     }
   ]
 }
