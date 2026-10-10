@@ -707,6 +707,24 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'The fire is not okay. It looks cartoony on this color palate. Let's do some more research.'"
+    },
+    {
+      "id": "water-stepped-depth",
+      "date": "2026-10-10",
+      "area": "Terrain, Water",
+      "question": "How does water show depth (for the water design, not yet scheduled)?",
+      "board": "none yet (reference: docs/proposals/water-reference.md)",
+      "options": [
+        "a smooth depth gradient (the reference)",
+        "stepped colour washes, the seabed on the same height map as the land"
+      ],
+      "chosen": "Alex leans to stepped colour washes, underwater on the same height map as above; to be shown on the water board",
+      "parameters": {},
+      "applied_to": [
+        "nothing yet: direction for the water board"
+      ],
+      "status": "direction from Alex (to confirm on a board)",
+      "notes": "Alex: 'I might actually like to see like a stepped color washed version so under water is the same height map as above.'"
     }
   ]
 }

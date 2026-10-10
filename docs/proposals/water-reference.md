@@ -31,3 +31,16 @@ scalloped trees on sand-coloured ground.
   palette decision 1); this reference argues for a real water hue with a lightness ramp toward
   the paper, judged beside the shadow tint (blue, oklch 0.513 0.076 242) and the slate-blue side
   accent so the three blues stay distinct.
+
+## Alex's direction (2026-10-10)
+
+"I might actually like to see like a stepped color washed version so under water is the same
+height map as above." So, for the water board when water is designed: water drawn as STEPPED
+colour washes rather than the reference's smooth gradient, with the seabed using the same height
+map as the land -- depth levels below sea level thresholded and drawn the way the land's levels are
+(today: levels at 0 / 12 / 24 m, contour lines, fills stepping in lightness), each depth step one
+flat wash, darker and more saturated with depth. Land and sea then read as one continuous stepped
+relief. The board should lead with this and show the smooth gradient beside it for comparison.
+Open then (proposed questions): how many depth steps and how deep; whether underwater steps carry
+contour lines, and what they mean (there is no passability under water except for ships' draught);
+how the shore band and the pale halo on land meet the first step.
