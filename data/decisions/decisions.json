@@ -1057,6 +1057,24 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'For bombs, I expected area of effect as well. This implies each step might have a target which is either a unit or point. But this is only for specials. Let's look at our options here. Maybe a targeting selection is the right call. Specials use the current selection to set their target.' And: 'For selection, does this imply we have both a player unit and enemy unit selection?' Then: 'For targeting what I was actually thinking is when you have a friendly unit selected, you can also select either an enemy unit or a point on the map. The only thing it does is show on the side view and it is the target that the special will use if activated. Non-specials don't need targets because they autofire.' On no target: 'No target set means you can't activate special.' On the details: 'The special is active and targeted for the step. 1 - fine for now. Right click drag is ackwards so we will change later. 2 - not sure if meaningful across multiple steps. In theory a unit could have two targets for different specials across two steps. 3/4 sounds good.' Still open: how the area of effect is drawn (a board); On moving targets: 'Targeting a moving unit like a tank should follow the unit. We need to pick the release point for bombs and things dynamically.' Then: 'That means it might leave the cone and completely not fire.' Then: 'Or just be a bad shot.'"
+    },
+    {
+      "id": "low-band-flak",
+      "date": "2026-10-10",
+      "area": "Combat, Strike",
+      "question": "Low flying wins the strike too easily (the best bombing and no more flak than the medium band): make flak harsher there?",
+      "board": "none (said in chat; the tuning tables in scripts/test_support/strike_tuning.gd)",
+      "options": [
+        "make flak harsher in the low band",
+        "keep"
+      ],
+      "chosen": "make flak more dangerous in the low band",
+      "parameters": {},
+      "applied_to": [
+        "in progress"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Proposed by the lead: 'Flak in the low band: low flying currently wins too easily. I recommend making flak harsher there.' Alex: 'Sounds good, make it more dangerous.' Before: a bomber's straight run over the proposed layout lost 3.7 of 8 pips at low and 4.0 at medium, shot down 1 and 11 percent of the time, and killed the tower in 1.4 drops at low against 2.2 at medium (strike_tuning.gd, tables A and C)."
     }
   ]
 }
