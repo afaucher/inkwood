@@ -55,6 +55,7 @@ func setup(w: World, motion_planner: MotionPlanner, sel: RefCounted, player: Str
 		world.phase_changed.connect(_redraw)
 		world.ready_changed.connect(func(_p: String, _r: bool) -> void: queue_redraw())
 		selection.changed.connect(_redraw)
+		planner.target.changed.connect(_redraw)   # (Track T: the card's line names the target's state)
 	queue_redraw()
 
 func _process(_delta: float) -> void:
@@ -275,8 +276,18 @@ func bomb_caption() -> String:
 		var info: Dictionary = planner.drop_info(k)
 		if info.is_empty():
 			return ""
+		# Track T: a drop whose target the step's cone no longer holds says so in the sim's own words for the case
+		# (data/sim/bombs.json outside_cone_mode: it will not release, or it is a poor shot).
+		if bool(info["blocked"]):
+			return style.text("bombs.text.wont_release")
+		if bool(info["poor_shot"]):
+			return style.text("bombs.text.poor_shot")
 		var sp: Dictionary = info["spread"]
 		var radius := float(sp["across_m"])   # the drawn ellipse's across radius (2 sigma)
+		# The expected damage to the most affected unit in sight, from the sim's own rules (data bombs.aoe.card_line).
+		var dmg: Dictionary = planner.expected_damage(k) if style.flag("bombs.aoe.card_line") else {}
+		if not dmg.is_empty():
+			return style.text("bombs.text.expected_on") % [k + 1, str(dmg["name"]), str(roundi(float(dmg["mean"]))), int(dmg["health"]), roundi(float(info["quality"]) * 100.0)]
 		return style.text("bombs.text.on") % [k + 1, roundi(radius), roundi(float(info["quality"]) * 100.0)]
 	if not bool(opt["available"]):
 		return str(opt["why"])

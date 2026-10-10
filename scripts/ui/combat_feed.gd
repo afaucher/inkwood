@@ -196,7 +196,7 @@ func _flak(ev: Dictionary, game_t: float) -> void:
 	var s: Dictionary = world.sample(tid, float(ev.get("t", 0.0)), "history")
 	var h: float = marker_layer.height_above_ground(s) if not s.is_empty() else float(ev.get("theight_m", 0.0))
 	fx.flak_burst(Vector2(float(ev.get("tx", 0.0)), float(ev.get("ty", 0.0))), h, game_t, bool(ev.get("hit", false)),
-		"%s/%d" % [sid, int(ev.get("tick", 0))], 0.0)
+		"%s/%s/%d" % [sid, str(ev.get("weapon", "")), int(ev.get("tick", 0))], 0.0)   # the weapon too: a battery's two guns roll on one tick
 
 static func _bomb_key(drop_index: int, bomb: int) -> int:
 	return drop_index * 1000 + bomb

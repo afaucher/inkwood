@@ -1018,7 +1018,8 @@
       },
       "applied_to": [
         "data/ui/ui.json planner.cones.label = false (the top-down cones)",
-        "the side view: not built yet"
+        "scripts/ui/side_view.gd, side_view_art.gd (the panel, at the bottom of the orders card, proposed; data/ui/ui.json side_view)",
+        "tested by test_side_view"
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'For the side view I like the color wash. Keep the style identical to the top down. Reduce the icons (plane, tower, etc) to just indicators. I don't want side view assets.' What the panel shows as its target depends on special-targeting (open). Later: 'The side view, let's remove the weapon labels on the graph. It just adds noise for now. We can revisit when we add lots more hardpoints. We might need a drop-down.' Then: 'Remove the labels from top down too.'"
@@ -1048,12 +1049,15 @@
         "outside_cone": "the special cannot be activated on that step; the card says why (Alex: sounds good)",
         "aim_marker": "dragging a step's aim marker moves that step's target (Alex: sounds good)",
         "guns": "no target (they autofire, decision fire-by-engagement-parameters)",
-        "moving_target": "a unit target FOLLOWS the unit; the release point (bombs and other specials) is picked dynamically at resolve",
+        "moving_target": "a unit target FOLLOWS the unit; the release point is picked at resolve (record target-follows-unit)",
         "lead": "proposed: lead the followed unit by its velocity at the release x the fall time",
-        "target_leaves_cone": "OPEN (Alex weighing): the special does not fire on that step ('hold'), or it fires as a bad shot ('poor_shot'); a data switch in data/sim/bombs.json until he picks"
+        "target_leaves_cone": "OPEN (record outside-cone-release): hold or poor_shot, data/sim/bombs.json outside_cone_mode"
       },
       "applied_to": [
-        "not built yet"
+        "scripts/ui/ui_target.gd, target_marks.gd, target_art.gd (the selection and its marks)",
+        "scripts/ui/motion_planner.gd, motion_planner_panel.gd (Drop takes the target onto the step)",
+        "scripts/sim/envelope.gd, world.gd, bombs.gd (the step's target, followed at resolve)",
+        "tested by test_ui_target, test_bomb_target, test_net_target"
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'For bombs, I expected area of effect as well. This implies each step might have a target which is either a unit or point. But this is only for specials. Let's look at our options here. Maybe a targeting selection is the right call. Specials use the current selection to set their target.' And: 'For selection, does this imply we have both a player unit and enemy unit selection?' Then: 'For targeting what I was actually thinking is when you have a friendly unit selected, you can also select either an enemy unit or a point on the map. The only thing it does is show on the side view and it is the target that the special will use if activated. Non-specials don't need targets because they autofire.' On no target: 'No target set means you can't activate special.' On the details: 'The special is active and targeted for the step. 1 - fine for now. Right click drag is ackwards so we will change later. 2 - not sure if meaningful across multiple steps. In theory a unit could have two targets for different specials across two steps. 3/4 sounds good.' Still open: how the area of effect is drawn (a board); On moving targets: 'Targeting a moving unit like a tank should follow the unit. We need to pick the release point for bombs and things dynamically.' Then: 'That means it might leave the cone and completely not fire.' Then: 'Or just be a bad shot.'"
@@ -1069,12 +1073,21 @@
         "keep"
       ],
       "chosen": "make flak more dangerous in the low band",
-      "parameters": {},
+      "parameters": {
+        "lever": "PROPOSED by Track F: a second weapon on the battery, light_flak (data only), short and fast, so it covers the low band near the battery and never reaches the medium band",
+        "light_flak": "PROPOSED: effective_range_m 320 (reach 384 m, under the 397 m of a plane right over the guns at medium), base_hit_chance 0.07, rolls_per_second 4, tracking_dps 60, damage_pips 1; the cone is the heavy flak's (all around, 2 degrees to straight up)",
+        "size_of_the_step": "PROPOSED modest (Alex, balance-uncalibrated: the scenario favours the attackers): the order low worse than medium worse than high. One battery, bomber straight over at low: 2.80 -> 4.76 expected pips (medium 2.68, high 0.35, unchanged); two batteries on the straight run, aligned, 300 seeds: 3.10 -> 3.93 pips lost, shot down 0% -> 5% (medium 3.53, 8%); the real Strike scenario, scripted bomber low, 40 seeds: 2.33 -> 4.38 pips lost (medium 2.15), still won 40 of 40",
+        "dial": "light_flak base_hit_chance (data/units/anti_aircraft_battery.json); 0.14 would be a death zone in the real scenario (6.35 of 8 pips lost)",
+        "not_the_lever": "raising the heavy flak's tracking_dps alone lifts low and medium together (20 -> 60: bomber over the battery low 2.80 -> 3.12, medium 2.68 -> 2.95)"
+      },
       "applied_to": [
-        "in progress"
+        "data/units/anti_aircraft_battery.json (the light_flak weapon, every number a proposed record with its before and after figures)",
+        "scripts/test_support/strike_tuning.gd (table A counts the battery's rolls only and splits the light guns' part; 'heavy_only' plays the old battery; table C 300 seeds)",
+        "scripts/tests/test_ground_units.gd (the order low > medium, the light guns out of the medium and high bands), scripts/tests/test_unit_defs.gd (two weapons)",
+        "committed c7d203f"
       ],
       "status": "chosen by Alex",
-      "notes": "Proposed by the lead: 'Flak in the low band: low flying currently wins too easily. I recommend making flak harsher there.' Alex: 'Sounds good, make it more dangerous.' Before: a bomber's straight run over the proposed layout lost 3.7 of 8 pips at low and 4.0 at medium, shot down 1 and 11 percent of the time, and killed the tower in 1.4 drops at low against 2.2 at medium (strike_tuning.gd, tables A and C)."
+      "notes": "Proposed by the lead: 'Flak in the low band: low flying currently wins too easily. I recommend making flak harsher there.' Alex: 'Sounds good, make it more dangerous.' Before: a bomber's straight run over the proposed layout lost 3.7 of 8 pips at low and 4.0 at medium, shot down 1 and 11 percent of the time, and killed the tower in 1.4 drops at low against 2.2 at medium (strike_tuning.gd, tables A and C). Correction by Track F: table A's 'bomber low 3.4' also counted the bomber's own turret fire at the battery (0.6 pips); the battery's flak alone gave 2.80 at low against 2.68 at medium, level, not 3.4 against 2.7. Table C's pips lost were the bomber's real losses. With 300 seeds instead of 100 the heavy-flak-only table C reads: low 3.10 pips lost, 0% shot down; medium 3.53, 8%."
     },
     {
       "id": "balance-uncalibrated",
@@ -1097,6 +1110,56 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'In terms of balance - what we have is not calibrated. This is a playtest. So win conditions and too easy is fine to ignore for now. The scenario is defined where the attackers have the advantage.'"
+    },
+    {
+      "id": "target-follows-unit",
+      "date": "2026-10-10",
+      "area": "Specials, Sim",
+      "question": "What does a special's target mean when the target is a unit that moves?",
+      "board": "none (said in chat, after the targeting pass)",
+      "options": [
+        "the aim is where the unit was when the special was activated (fixed)",
+        "a unit target follows the unit, the release picked dynamically"
+      ],
+      "chosen": "a unit target follows the unit: the sim resolves the release against where the unit goes, and the release point is picked dynamically; a point target is fixed",
+      "parameters": {
+        "unit_target": "stored on the step as {unit: id}; at resolve the aim is a function of the release moment (World._resolve_followed_drops, Bombs.plan_drop_moving)",
+        "point_target": "fixed",
+        "preview": "the planning aim of a unit target sits on the unit's SHOWN position; no projection of an enemy's motion is drawn or read (PROPOSED)",
+        "lead": "PROPOSED by Track T, not Alex's: the unit's position at the release moment led by its velocity then times the fall time of a bomb released then (Bombs.followed_aim), so the stick lands where the unit is projected to be",
+        "release_moment": "the moment of the step with the smallest release error for that moving aim (Bombs.best_release_moving)",
+        "unseen": "PROPOSED: a followed unit that is out of the player side's sight at the release is still followed (the sim has no fog rule); a question for Alex"
+      },
+      "applied_to": [
+        "scripts/sim/bombs.gd, scripts/sim/world.gd (_resolve_followed_drops), scripts/sim/envelope.gd (the request's target)",
+        "tested in scripts/tests/test_bomb_target.gd with a test-only moving ground unit"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Targeting a moving unit like a tank should follow the unit. We need to pick the release point for bombs and things dynamically.'"
+    },
+    {
+      "id": "outside-cone-release",
+      "date": "2026-10-10",
+      "area": "Specials, Sim",
+      "question": "What happens when a drop's target is outside its step's cone at release (a followed unit that leaves the cone during the resolve, or a step moved after the drop was set)?",
+      "board": "none (said in chat)",
+      "options": [
+        "hold: nothing is released and no bombs are spent",
+        "poor_shot: the stick is released at the cone's nearest point to the target, with the rim's accuracy or worse, and the bombs are spent"
+      ],
+      "chosen": null,
+      "parameters": {
+        "switch": "data/sim/bombs.json outside_cone_mode (hold | poor_shot), working default hold (PROPOSED)",
+        "poor_shot_floor": "0.15, PROPOSED: the least accuracy of a poor shot (rim accuracy / how far outside the cone, never below this)",
+        "planning_rule": "stands either way (Alex): a special cannot be activated on a step whose cone does not hold the target; the card says why",
+        "wording": "PROPOSED: the card and the map say 'will not release: target outside the cone' under hold and 'poor shot: target outside the cone' under poor_shot (data/ui/ui.json bombs.text)"
+      },
+      "applied_to": [
+        "scripts/sim/bombs.gd (release_rule, poor_shot_accuracy), scripts/sim/world.gd, scripts/ui/motion_planner.gd (drop_blocked)",
+        "both settings are tested in scripts/tests/test_bomb_target.gd and scripts/tests/test_ui_target.gd"
+      ],
+      "status": "open: Alex is weighing two answers, not decided",
+      "notes": "Alex: 'That means it might leave the cone and completely not fire' and then 'Or just be a bad shot'."
     }
   ]
 }

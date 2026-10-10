@@ -10,7 +10,10 @@ extends "res://scripts/test_support/test_case.gd"
 #     ideal curve too; it follows a turning bomber and a later step
 #   - accuracy (World.drop_spread): 1 and the smallest scatter at the ideal release angle, falling smoothly
 #     with the release error, the rim factor on the rim, more scatter at height, an aim outside the cone
-#     clamped to it
+#     ANALYSED at the nearest point inside it (Track T, 2026-10-10: that is what drop_spread reports for the
+#     interface; whether the World then releases at all is data/sim/bombs.json outside_cone_mode -- Alex: a drop
+#     with its target outside the cone "might leave the cone and completely not fire" or "just be a bad shot" --
+#     and is tested in test_bomb_target.gd, in both settings)
 #   - a perfect release at a stationary target lands within the spread (statistics over many sticks, and
 #     through the World)
 #   - a stick scatters: its bombs are spread along the track, differ from each other and from the aim, and
@@ -285,7 +288,8 @@ func _accuracy() -> void:
 	var left := w.drop_spread("b", 0, ideal + Vector2(0.0, -60.0))
 	var right := w.drop_spread("b", 0, ideal + Vector2(0.0, 60.0))
 	near(float(left["accuracy"]), float(right["accuracy"]), 1e-6, "left and right are the same")
-	# Outside the cone: moved to its edge, where the accuracy is the rim's.
+	# Outside the cone: ANALYSED at its edge (drop_spread says where the nearest aim inside the cone is; whether the World releases at all is
+	# outside_cone_mode's, Track T, test_bomb_target.gd), where the accuracy is the rim's.
 	var out := w.drop_spread("b", 0, ideal + Vector2(0.0, 600.0))
 	check(out["clamped"], "an aim 600 m off the track is moved")
 	near(float(out["r"]), 1.0, 0.002, "to the rim of the cone")

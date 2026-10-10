@@ -351,6 +351,21 @@
     "halo_px": 3.0
   },
 
+  "target": {
+    "_proposed": true,
+    "_reason": "THE TARGET SELECTION ON THE MAP (Track T, 2026-10-10). In force (Alex, decision special-targeting): 'when you have a friendly unit selected, you can also select either an enemy unit or a point on the map'; set by 'left-click an enemy unit, right-click a point on the map -- fine for now. Right click drag is awkward so we will change later' (right-drag still pans: a right press and release without movement is the click). EVERYTHING HERE IS PROPOSED by Track T: the marks (ink, with a paper pool under them, on the map's own palette roles -- hue stays reserved for paper, ink, shadow and the side accents), their sizes (screen px, so they read at the planning zoom 0.35 and at zoom 1), and the two slops.",
+    "_slops": "right_click.slop_px: a right press and release that moves no farther than this (screen px) is a click and sets a point target; farther it was a pan, which the camera has already taken. aim_drag_slop_px: dragging a step's aim handle moves the step's target (it becomes a point) only once the pointer has moved this far (screen px) from where the handle was grabbed, so a plain click on an aim that sits on a unit does not nudge it.",
+    "right_click": { "slop_px": 4 },
+    "aim_drag_slop_px": 3,
+    "role": { "base": "ink" },
+    "halo_role": { "base": "paper", "alpha": 0.92 },
+    "unit": { "_about": "A unit target: four corner brackets round the unit's marker, half a side = the marker's radius + pad_px, never less than min_half_px.", "pad_px": 6.0, "min_half_px": 13.0, "arm_px": 6.0, "line_px": 1.5, "halo_px": 3.2 },
+    "point": { "_about": "A point target: a diamond with a dot, r_px from the centre to a corner.", "r_px": 7.5, "line_px": 1.5, "dot_px": 2.2, "halo_px": 2.4 },
+    "unseen_alpha": 0.55,
+    "quiet": { "_about": "The target of another step, or of another player's drop: the same marks, smaller and fainter.", "k": 0.7, "alpha": 0.75 },
+    "blocked": { "_about": "A drop whose target is outside its cone (it will not release, or is a poor shot): a slash across the aim's mark, and the word beside it.", "slash_px": 9.0, "line_px": 1.6, "label_px": 11 }
+  },
+
   "bombs": {
     "_proposed": true,
     "_reason": "THE BOMB DROP IN THE INTERFACE (Track U3, the strike, 2026-10-10). In force (Alex 2026-10-10, decisions bomb-release and bomb-load): a drop is 'per step, just like diving. You set the intent in the cone. The accuracy is based on how close you are to the ideal release angle', height is a factor, and a bomber makes several drops ('multiple passes make sense'; smaller bombers carry fewer, per drop and in drops). So: the orders card's Drop control turns a drop on for the step it acts on (the last placed step, or the step whose handle was grabbed last); with it on, the map shows that step's BOMB CONE (World.drop_cone: where this step's release can put the bombs) and the player places the AIM POINT in it, a handle like a step's with the same grow-and-fill hover (Alex's node-hover pick); the planner shows the expected spread at the aim and how close the release is to ideal. EVERY VALUE HERE IS PROPOSED by Track U3; nothing is chosen. The enemy's drops are never shown (the one rule is motion_planner.gd plan_shown).",
@@ -362,13 +377,24 @@
       "none_left": "drop: no drops left to plan",
       "free": "drops free: %d of %d, %d bombs a drop",
       "on": "drop, step %d: spread %d m, accuracy %d%%",
-      "step_tag": "drop"
+      "step_tag": "drop",
+      "_target": "Track T, 2026-10-10, PROPOSED wording (Alex, special-targeting: no target, no activation; a target outside the step's cone, the special cannot be activated on that step and the card says why). The lines are kept under ~40 characters: the card's line is 258 px of 12 px italic. wont_release / poor_shot are the two ways a drop already set can have its target outside the cone (a step moved after it was set; a followed unit leaving the cone): data/sim/bombs.json outside_cone_mode picks which one the card and the map word.",
+      "no_target": "no target: click an enemy, or right-click",
+      "target_outside": "target is outside step %d's cone",
+      "wont_release": "will not release: target outside the cone",
+      "poor_shot": "poor shot: target outside the cone",
+      "step_tag_blocked": "will not release",
+      "step_tag_poor": "poor shot",
+      "_expected": "The expected-damage line (bombs.aoe.card_line): the most affected ground unit in sight, from the sim's own rules (World.drop_expected). %s the unit, %s its expected pips (one decimal when under 10, else whole), %d its health, %d the accuracy percent.",
+      "expected_on": "step %d: %s, about %s of %d  ·  %d%%"
     },
     "aim": {
       "_proposed": true,
       "_reason": "How the bomb cone and the aim mark with its spread are drawn (variants/bomb-aim/ is the board; EVERY VALUE AND RULE IS PROPOSED by Track U3 and nothing is chosen until Alex picks). mode: outline (an inked rim, a dotted fall line and a dashed spread ellipse), wash (the cone as a wash in the side colour, deeper toward the ideal aim, a crosshair and a faint inked spread ellipse: the cone wash Alex chose for guns, used for bombs), stipple (the cone in dots, thinner away from the ideal aim, and the spread as a scatter of dots: where bombs may land) or rings (range rings from the release point through the cone, the aim ring solid). The rim, the crosshair and the ideal mark are common to all four. Colours are palette roles (hue only for the side accent): the interior is the unit's side accent, everything else is ink or paper. Sizes are screen px; distances true metres on the map.",
       "mode": "wash",
       "modes": ["outline", "wash", "stipple", "rings"],
+      "preview_cone": true,
+      "preview": { "_about": "Track T, PROPOSED: while a target is set and the step the card is about has no drop yet, the step's bomb cone is drawn faintly (a wash at this alpha of the side colour and a dashed rim) so the player sees where the target has to be -- the card says why Drop is off, the map says where the cone is. Switched off by preview_cone false.", "alpha": 0.1 },
       "decision": "bomb-aim",
       "_decided": "not yet: variants/bomb-aim/board.json has chosen: null. The mode above is the lead-in recommendation of the board, PROPOSED, so the build gives feedback before Alex picks.",
       "rim_px": 1.1,
@@ -383,6 +409,115 @@
       "wash": { "_about": "The side colour in `steps` nested copies of the cone, each shrunk toward the ideal aim (to shrink_to of its size at the last), alpha_rim at the edge to alpha_centre at the ideal aim: the more of it, the closer the release is to ideal.", "steps": 5, "alpha_rim": 0.07, "alpha_centre": 0.30, "shrink_to": 0.15 },
       "stipple": { "_about": "Dots on a jittered grid cell_px square in the cone, kept with the probability of closeness to the ideal aim to the power gamma; the spread is scatter_dots impacts scattered as the expected spread says (a fixed pattern, seeded from the unit and the step, so it does not shimmer).", "cell_px": 6.0, "dot_px": 1.05, "alpha": 0.85, "gamma": 1.7, "scatter_dots": 70, "scatter_dot_px": 1.7 },
       "rings": { "_about": "Arcs about the release point at every ring_every_m of range inside the cone, dashed and faint, and the aim's own ring solid.", "ring_every_m": 100, "dash_px": 5.0, "gap_px": 4.0, "line_px": 0.9, "alpha": 0.55, "fill_alpha": 0.05 }
+    },
+    "aoe": {
+      "_proposed": true,
+      "_reason": "THE AREA OF EFFECT of a bomb drop on the map (Track T, 2026-10-10; variants/bomb-aoe/ is the board). Alex: 'For bombs, I expected area of effect as well.' How it is drawn is a BOARD decision and nothing is chosen: the mode below is a WORKING DEFAULT, PROPOSED so the build gives feedback before Alex picks. none: nothing. rings: the blast table's rings (12, 25 and 45 m: 3, 2 and 1 pips) round the aim, on top of the scatter. footprint: ONE wash, the scatter grown by the blast's reach ('anything in here takes damage'). impacts: the stick's bombs along the track, each with its own blast circle. tiers (proposed by Track T as a fourth option): the scatter grown by each blast tier, three nested washes, darker toward more pips. Every mode is drawn from the sim's own numbers (the blast table in data/sim/bombs.json, the scatter and the stick the aim gets); the lines are ink on the map's paper (hue stays reserved for paper, ink, shadow and the side accents -- the cone beside it is the side accent, the area of effect is not a second hue), so lightness is the ramp: darker is more damage. card_line: the orders card's line names the unit in sight that is expected to lose the most pips ('radio tower: about 5 of 8'), computed from the sim's own rules (World.drop_expected).",
+      "mode": "tiers",
+      "modes": ["none", "rings", "footprint", "impacts", "tiers"],
+      "decision": "bomb-aoe",
+      "_decided": "not yet: variants/bomb-aoe/board.json has chosen: null",
+      "card_line": true,
+      "card_min_pips": 0.5,
+      "_card_min_pips": "The orders card's line names a unit that is NOT the step's unit target only when it is expected to lose at least this many pips (a battery that loses 0.04 pips is not worth a line); the unit target itself is always named.",
+      "edge_role": { "base": "ink", "alpha": 0.7 },
+      "fill_role": { "base": "ink", "alpha": 0.1 },
+      "line_px": 1.0,
+      "dash_px": 4.0,
+      "rings": { "_about": "The blast table's rings round the lands point: the 3-pip ring solid, the others dashed, each numbered with its pips when label_px is above 0 and the ring is wide enough to read.", "label_px": 10, "solid_alpha": 0.9, "dash_alpha": 0.6, "min_label_ring_px": 14 },
+      "footprint": { "_about": "One wash, the scatter's ellipse grown by the farthest blast tier, with an inked edge.", "fill_alpha": 0.12 },
+      "impacts": { "_about": "The stick's bombs at their nominal places along the bomber's heading, centred on the aim: a dot, the direct-hit ring solid and the farthest reach faint.", "dot_px": 1.8, "reach_alpha": 0.4, "hit_alpha": 0.85 },
+      "tiers": { "_about": "The scatter grown by each blast tier, outermost first: each wash adds its alpha, so the nearest tier (the most pips) is the darkest. The outer edge is dashed, the 3-pip edge solid.", "alphas": [0.07, 0.07, 0.08], "outer_edge_alpha": 0.6, "inner_edge_alpha": 0.85 }
+    }
+  },
+
+  "side_view": {
+    "_proposed": true,
+    "_reason": "THE SIDE VIEW (Track V, 2026-10-10; scripts/ui/side_view.gd and side_view_art.gd). In force (Alex, decisions height-speed-labels and side-view-look): 'a side view indicator that only shows the firing cone and the relative straight line position of the targeted enemy'; 'for the side view I like the color wash. Keep the style identical to the top down. Reduce the icons (plane, tower, etc) to just indicators. I don't want side view assets'; 'remove the weapon labels on the graph'. And (special-targeting): the target is an enemy unit or a map point, shown here, and a special's own step keeps its target. And (2026-10-10, his word on moving targets): a unit target follows the unit, drawn at its SHOWN position, and the bombs' release point is picked dynamically. EVERYTHING ELSE HERE IS PROPOSED by Track V: where it sits (the bottom of the orders card, the mock-up's place; the card grows by the section while the panel shows), its size and the scale rule (one scale on both axes, so every angle is true; the span from the weapons' reach, a target beyond it an arrow on the edge), the marks (a dot, a cross, a tick), and the one quiet line of text. The cones are drawn by cone_overlay.gd's own functions from the weapons' own data, so the wash, its odds shading toward the centre for fixed guns and its fade past the effective range are the map's. Colours are palette roles (hue only for the side accents). Sizes in px unless named _m.",
+    "enabled": true,
+    "cone_mode": "wash",
+    "_cone_mode": "Alex chose the colour wash for the side view (decision side-view-look); the map's own mode (planner.cones.mode) is a separate switch, so the two can differ.",
+    "live_during_playback": true,
+    "_live": "PROPOSED: while a turn plays back the panel stays up for the selected friendly unit at its SHOWN pose, with the selection's target drawn at ITS shown position, so a moving target is followed (Alex: 'Targeting a moving unit like a tank should follow the unit'). The picture is the shown positions, never a prediction: nothing of an enemy's plan is read. false hides the panel from the moment the turn resolves.",
+    "section": {
+      "_about": "The section at the bottom of the orders card: a faint rule, a line saying which step, the picture, the quiet line. gap_px is the room under the card's own content. The picture shrinks to fit the window (the card must stay on screen) and the whole section is left out under min_picture_h_px.",
+      "gap_px": 10,
+      "head_px": 18,
+      "picture_h_px": 150,
+      "min_picture_h_px": 60,
+      "caption_h_px": 18,
+      "bottom_px": 8,
+      "pad_px": 9
+    },
+    "frame": {
+      "_about": "The metres-to-px rule. ONE scale for both axes. Guns view: the horizontal span is the longest reach (effective range plus the fade) of the weapons that face forward, times span_margin, and of those that face rearward on the left (the room behind a unit with none is rear_room_fraction of the forward span); at least span_min_m. The unit sits down the page where its cones need room (their extents above and below it, the ground when near; unit_y_frac when they need none), between unit_y_min_frac and unit_y_max_frac of the height, and moved as far as the page allows to give a target on the page the room it needs. A target the picture does not hold is an arrow on the edge, edge_inset_px in.",
+      "span_margin": 1.1,
+      "span_min_m": 300,
+      "rear_room_fraction": 0.08,
+      "unit_y_frac": 0.5,
+      "unit_y_min_frac": 0.2,
+      "unit_y_max_frac": 0.8,
+      "edge_inset_px": 9
+    },
+    "paper_role": { "base": "paper" },
+    "frame_role": { "base": "ink", "alpha": 0.55 },
+    "frame_px": 1.0,
+    "ground": { "role": { "base": "ink", "alpha": 0.85 }, "px": 1.2 },
+    "line": { "role": { "base": "ink", "alpha": 0.7 }, "px": 0.9, "dash_px": 2.0, "gap_px": 3.0 },
+    "mark": {
+      "_about": "The selected plane: a small mark in its side's accent (the roundel's colour) with an ink rim, and a pitch tick, a short ink stroke along the nose, tilted by the step's pitch (combat.json max_pitch_deg, the same tilt the cones take).",
+      "r_px": 3.4,
+      "rim_px": 1.0,
+      "pitch_tick_px": 10.0,
+      "pitch_tick_line_px": 1.5,
+      "rim_role": { "base": "ink" }
+    },
+    "target": {
+      "_about": "The target: an enemy plane a dot in its side's accent with an ink rim; a ground unit (the tower, a battery) a tick standing on the ground line; a map point a small ink cross; beyond the picture an arrow on the edge pointing at it. off_axis_hollow (PROPOSED): the picture is the vertical plane along the unit's nose and cannot show a bearing, so a plane dot whose bearing is wider than every gun's arc that faces its way is drawn as a ring instead of a dot (it is in the picture, not in a gun's arc).",
+      "r_px": 3.8,
+      "rim_px": 1.0,
+      "hollow_ring_px": 1.7,
+      "cross_px": 4.5,
+      "cross_line_px": 1.6,
+      "tick_px": 9.0,
+      "tick_line_px": 1.8,
+      "tick_under_px": 3.4,
+      "arrow_px": 7.0,
+      "off_axis_hollow": true,
+      "rim_role": { "base": "ink" }
+    },
+    "drop": {
+      "_about": "A step with a drop shows the bombs' fall instead of the cones: the bomber at its release, the arc the stick falls (bombs.gd's own bomb_position: level across, height 1 - f^2), where it lands (the aim, as drop_spread clamps it into the cone) with the expected spread on the ground, and the target on the ground line. The scale fits the fall: the width to the landing and the spread (and the target), the height from the release to the ground, margins top_px / bottom_px / left_px / right_px.",
+      "arc_px": 2.2,
+      "arc_alpha": 0.75,
+      "fit_target_max_factor": 1.6,
+      "_fit": "PROPOSED: the scale makes room for the target as well as the fall, up to this many times the fall's own span (the landing and its spread); a target farther than that is an arrow on the edge, so a stray target cannot shrink the fall to nothing.",
+      "unreleased_alpha_k": 0.35,
+      "_unreleased": "PROPOSED: a drop the sim would NOT release (its target is outside the step's cone and data/sim/bombs.json outside_cone_mode is 'hold'; the orders card says why) is drawn at this fraction of the arc's and the spread's alpha, the arc still going to the cone's nearest point (what drop_spread reports as the aim).",
+      "spread_h_px": 5.0,
+      "spread_alpha": 0.35,
+      "land_r_px": 2.6,
+      "samples": 24,
+      "top_px": 24.0,
+      "bottom_px": 14.0,
+      "left_px": 18.0,
+      "right_px": 12.0
+    },
+    "text": {
+      "_about": "The words. enabled false drops the quiet line under the picture (the weapon labels are not here: Alex took them off the graph as noise). PROPOSED default: on, because the picture shows the angle and the line gives the two numbers that make it exact (the slant distance and the height difference), a single line of soft italic.",
+      "enabled": true,
+      "head_step": "side view, step %d",
+      "head_now": "side view, now",
+      "head_live": "side view, live",
+      "unit_line": "%s · %d m · %s",
+      "above": "%d m above",
+      "below": "%d m below",
+      "level": "level",
+      "level_within_m": 5,
+      "drop_line": "%s · %d m · falls %d s",
+      "drop_line_free": "lands %d m on · falls %d s",
+      "point": "point",
+      "unseen": "target out of sight"
     }
   },
 
@@ -512,6 +647,8 @@
     "climb": "PageUp",
     "dive": "PageDown",
     "drop": "B",
+    "clear_target": "Escape",
+    "_clear_target": "Track T, PROPOSED: Esc clears the target selection before it clears anything else (and before it leaves to the menu).",
     "next_unit": "Tab"
   },
 

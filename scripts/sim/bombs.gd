@@ -13,12 +13,42 @@ extends RefCounted
 # THE REQUEST. A step's request may carry a drop:
 #
 #     {"turn": ..., "speed": ..., "drop": {"aim": [x, y]}}        (aim: [x, y] or a Vector2)
+#     {"turn": ..., "drop": {"aim": [x, y], "target": {"unit": "radio_tower_1"}}}   or   {"point": [x, y]}
 #
 # The step is flown as usual (envelope.gd); the drop is a SPECIAL taken in that step,
 # the way a dive is a band change in it. At most one drop a step, at most as many
 # drops in a turn as the bomber has left (World.bombs_left); a drop with none left is
 # refused by plan_step.
 #
+# THE TARGET (Track T, 2026-10-10; Alex, decision special-targeting: "The special is active and targeted for the
+# step" -- a unit "could have two targets for different specials across two steps"): a drop may carry the target
+# it was activated with, an enemy unit ({"unit": id}) or a point ({"point": [x, y]}). It is part of the step's
+# request, so it crosses the wire with the plan, reaches the co-op partners and survives the snapshot, and the
+# step's analysis (the "drop" of the step state, and the bomb_release event) carries it. The "aim" is where the stick
+# is centred; for a POINT target and for a drop with no target it is the aim the request names. A POINT target is fixed.
+#
+# A UNIT TARGET FOLLOWS THE UNIT (Alex: "Targeting a moving unit like a tank should follow the unit. We need to pick
+# the release point for bombs and things dynamically."). The request's aim is then only the planning preview: the unit's
+# position as the planning player saw it (so the card and the map show a fixed aim, and the enemy's motion is never
+# projected there). When the turn is RESOLVED the World knows where the unit goes (World._resolve_followed_drops) and
+# the aim becomes a function of the release moment t: the unit's position at t led by its velocity at t times the
+# fall time of a bomb released at t (aim_at: PROPOSED, a constant-velocity projection, so the stick lands where the unit
+# is expected to be; a unit that turns or stops after the release is missed by that much). The release is then the
+# moment of the step with the smallest release error for THAT moving aim (best_release_moving / plan_drop_moving), the
+# way best_release picks it for a fixed one. A followed unit that is out of the player side's sight at the release is
+# still followed (PROPOSED: the sim has no fog rule).
+#
+# WHEN THE TARGET IS OUTSIDE THE CONE (Track T; Alex: "That means it might leave the cone and completely not fire" and
+# then "Or just be a bad shot" -- he has not picked, so data/sim/bombs.json outside_cone_mode is a switch; the planning
+# rule stands either way: a special cannot be activated on a step whose cone does not hold the target). It covers a
+# followed unit that leaves the cone during the resolve and a step moved after its drop was set:
+#     "hold"       the drop does not release: {"ok": false, "reason": "outside_cone"} and no bomb is spent (PROPOSED default)
+#     "poor_shot"  the stick IS released and the bombs ARE spent, at the moment the target is closest to the cone, aimed at the
+#                  cone's nearest point to the target (the old clamp, clamp_aim), with the rim's accuracy scaled down by how far
+#                  outside the cone the target is, never below poor_shot_floor (release_rule, poor_shot_accuracy)
+# "Outside" is a release error r above 1 plus inside_tolerance. plan_drop() itself still only ANALYSES: it reports the
+# nearest aim inside the cone ("aim", "clamped") and "outside"; release_rule() applies the switch to that analysis.
+
 # THE PHYSICS (proposed). A bomb released at height h (metres above the ground, the
 # sim's 0 m: Terrain height is not in the sim; a bomber's h is its altitude band's
 # height, or between two during a band change) carries the bomber's HORIZONTAL
@@ -60,9 +90,9 @@ extends RefCounted
 # metres: HEIGHT is a factor (more height, more spread; Alex) and the release angle
 # is the other (further from the ideal, more spread; Alex). A fraction of sigma
 # (stick_error_fraction) is the STICK's, shared by every bomb of the drop; the rest
-# is each bomb's own. An aim point outside the cone is moved to the nearest point
-# inside it (along the line from the ideal point), the way the envelope clamps a
-# request: plan_step reports the clamped aim.
+# is each bomb's own. An aim point outside the cone is ANALYSED at the nearest point
+# inside it (along the line from the ideal point, clamp_aim) -- what the interface shows;
+# whether the World then releases at all is outside_cone_mode (see THE TARGET above).
 #
 # THE STICK. A drop of n bombs releases them release_interval_s apart, centred on the
 # release moment: bomb i leaves at t_i = t_release + (i - (n-1)/2) x interval, lands
@@ -214,13 +244,21 @@ static func spread_m(height_m: float, accuracy_factor: float, rules: BombRules) 
 	return (rules.spread_base_m + rules.spread_per_height * maxf(height_m, 0.0)) / maxf(accuracy_factor, 1e-6)
 
 # The release moment in the step with the smallest release error for (ax, ay):
-# {t, r, ev (evaluate()'s result), sample}. The step is `samples` (make_samples).
+# {t, r, ev (evaluate()'s result), sample, aim}. The step is `samples` (make_samples).
 static func best_release(samples: Array, ax: float, ay: float, rules: BombRules) -> Dictionary:
+	var fixed := Vector2(ax, ay)
+	return best_release_moving(samples, func(_t: float) -> Vector2: return fixed, rules)
+
+# The same for an aim that moves: `aim_at` is a Callable (t seconds into the turn) -> Vector2, where the stick's
+# centre would be if it were released at t (Alex: "pick the release point for bombs ... dynamically"). The release
+# moment is the one with the smallest release error between each moment's bomber and that moment's aim.
+static func best_release_moving(samples: Array, aim_at: Callable, rules: BombRules) -> Dictionary:
 	var n := samples.size() - 1
 	var best_i := 0
 	var best_r := INF
 	for i in n + 1:
-		var ev := evaluate(samples[i], ax, ay, rules)
+		var a: Vector2 = aim_at.call(float((samples[i] as Dictionary)["t"]))
+		var ev := evaluate(samples[i], a.x, a.y, rules)
 		if float(ev["r"]) < best_r - 1e-12:
 			best_r = float(ev["r"])
 			best_i = i
@@ -233,21 +271,26 @@ static func best_release(samples: Array, ax: float, ay: float, rules: BombRules)
 	for _k in 14:
 		var m1 := lo + (hi - lo) / 3.0
 		var m2 := hi - (hi - lo) / 3.0
-		if float(evaluate(sample_at(samples, m1), ax, ay, rules)["r"]) <= float(evaluate(sample_at(samples, m2), ax, ay, rules)["r"]):
+		var a1: Vector2 = aim_at.call(m1)
+		var a2: Vector2 = aim_at.call(m2)
+		if float(evaluate(sample_at(samples, m1), a1.x, a1.y, rules)["r"]) <= float(evaluate(sample_at(samples, m2), a2.x, a2.y, rules)["r"]):
 			hi = m2
 		else:
 			lo = m1
 	var tm := clampf(0.5 * (lo + hi), t0, t1)
 	var sm := sample_at(samples, tm)
-	var evm := evaluate(sm, ax, ay, rules)
+	var am: Vector2 = aim_at.call(tm)
+	var evm := evaluate(sm, am.x, am.y, rules)
 	var t_best := tm
 	var s_best := sm
 	var ev_best := evm
+	var aim_best := am
 	if float(evm["r"]) > best_r:
 		t_best = float((samples[best_i] as Dictionary)["t"])
 		s_best = (samples[best_i] as Dictionary).duplicate()
-		ev_best = evaluate(s_best, ax, ay, rules)
-	return {"t": t_best, "r": float(ev_best["r"]), "ev": ev_best, "sample": s_best}
+		aim_best = aim_at.call(t_best)
+		ev_best = evaluate(s_best, aim_best.x, aim_best.y, rules)
+	return {"t": t_best, "r": float(ev_best["r"]), "ev": ev_best, "sample": s_best, "aim": aim_best}
 
 # The IDEAL aim point of a step: where a bomb released at the middle of the step lands,
 # release error 0 there. (Every point of impact_curve() is ideal for some moment.)
@@ -320,7 +363,7 @@ static func _area(poly: PackedVector2Array) -> float:
 # ideal point: {x, y, clamped, r}.
 static func clamp_aim(samples: Array, ax: float, ay: float, rules: BombRules) -> Dictionary:
 	var first := best_release(samples, ax, ay, rules)
-	if float(first["r"]) <= 1.0:
+	if float(first["r"]) <= 1.0 + rules.inside_tolerance:
 		return {"x": ax, "y": ay, "clamped": false, "r": float(first["r"])}
 	var c0 := ideal_point(samples, rules)
 	var lo := 0.0
@@ -335,27 +378,43 @@ static func clamp_aim(samples: Array, ax: float, ay: float, rules: BombRules) ->
 			hi = mid
 	var x := c0.x + (ax - c0.x) * lo
 	var y := c0.y + (ay - c0.y) * lo
-	return {"x": x, "y": y, "clamped": true, "r": float(best_release(samples, x, y, rules)["r"])}
+	return {"x": x, "y": y, "clamped": true, "r": float(best_release(samples, x, y, rules)["r"]), "requested_r": float(first["r"])}
 
 # The whole analysis of a drop in a step, for an aim point: what plan_step reports and what the
 # resolver releases from. `samples` as make_samples. Plain values only (arrays, numbers, bools):
 #
-#   {"ok": true, "requested": [x, y], "aim": [x, y] (clamped), "clamped": bool,
-#    "release_t" (seconds into the turn), "release": {x, y, heading, speed, height_m},
+#   {"ok": true, "requested": [x, y], "aim": [x, y] (clamped), "clamped": bool, "outside": bool (the requested
+#    aim is outside the cone: release_rule() decides what the World does with such a drop), "requested_r" (its
+#    release error), "release_t" (seconds into the turn), "release": {x, y, heading, speed, height_m},
 #    "r", "accuracy", "spread_m", "across_deg", "depression_deg", "ideal_deg", "error_deg"
 #    (depression - ideal), "fall_s", "range_m", "impact_t" (release_t + fall_s, may pass the turn)}
 static func plan_drop(samples: Array, ax: float, ay: float, rules: BombRules) -> Dictionary:
 	var c := clamp_aim(samples, ax, ay, rules)
 	var best := best_release(samples, float(c["x"]), float(c["y"]), rules)
+	return _drop_record(best, [ax, ay], [float(c["x"]), float(c["y"])], bool(c["clamped"]), float(c.get("requested_r", c["r"])), rules)
+
+# plan_drop for an aim that moves (a followed unit): the release at the moment best_release_moving finds. Inside the
+# cone at that moment the record is released from there with the aim at that moment; outside it is plan_drop's for the
+# aim at the moment the target is closest to the cone (the nearest aim inside the cone, "outside" true).
+static func plan_drop_moving(samples: Array, aim_at: Callable, rules: BombRules) -> Dictionary:
+	var best := best_release_moving(samples, aim_at, rules)
+	var aim: Vector2 = best["aim"]
+	if float(best["r"]) <= 1.0 + rules.inside_tolerance:
+		return _drop_record(best, [aim.x, aim.y], [aim.x, aim.y], false, float(best["r"]), rules)
+	return plan_drop(samples, aim.x, aim.y, rules)
+
+static func _drop_record(best: Dictionary, requested: Array, aim: Array, clamped: bool, requested_r: float, rules: BombRules) -> Dictionary:
 	var ev: Dictionary = best["ev"]
 	var s: Dictionary = best["sample"]
 	var acc := float(ev["accuracy"])
 	var fall := fall_time(float(s["height_m"]), rules.gravity)
 	return {
 		"ok": true,
-		"requested": [ax, ay],
-		"aim": [float(c["x"]), float(c["y"])],
-		"clamped": bool(c["clamped"]),
+		"requested": requested,
+		"aim": aim,
+		"clamped": clamped,
+		"outside": clamped,
+		"requested_r": requested_r,
 		"release_t": float(best["t"]),
 		"release": {"x": float(s["x"]), "y": float(s["y"]), "heading": float(s["heading"]), "speed": float(s["speed"]), "height_m": float(s["height_m"])},
 		"r": float(ev["r"]),
@@ -369,6 +428,35 @@ static func plan_drop(samples: Array, ax: float, ay: float, rules: BombRules) ->
 		"range_m": float(ev["range"]),
 		"impact_t": float(best["t"]) + fall,
 	}
+
+# The accuracy of a poor shot (outside_cone_mode "poor_shot"): the rim's accuracy scaled down by how far outside the
+# cone the target is (`requested_r`, 1 is the rim), never below poor_shot_floor.
+static func poor_shot_accuracy(requested_r: float, rules: BombRules) -> float:
+	return maxf(rules.poor_shot_floor, rules.rim_accuracy_factor / maxf(requested_r, 1.0))
+
+# What the World does with an analysis (plan_drop / plan_drop_moving): a drop inside its cone stands as it is; one
+# OUTSIDE it follows data/sim/bombs.json outside_cone_mode -- "hold": {"ok": false, "reason": "outside_cone", ...} and
+# nothing is released or spent; "poor_shot": the stick is released from the analysis's moment at its clamped aim, with
+# the poor shot's accuracy and the scatter that goes with it, "poor_shot": true.
+static func release_rule(d: Dictionary, rules: BombRules) -> Dictionary:
+	if d.get("ok", false) != true or not bool(d.get("outside", false)):
+		return d
+	if rules.outside_cone_mode == "poor_shot":
+		var out := d.duplicate(true)
+		var acc := minf(float(d["accuracy"]), poor_shot_accuracy(float(d["requested_r"]), rules))
+		out["accuracy"] = acc
+		out["spread_m"] = spread_m(float((d["release"] as Dictionary)["height_m"]), acc, rules)
+		out["poor_shot"] = true
+		return out
+	return {"ok": false, "reason": "outside_cone", "requested": d["requested"], "requested_r": d["requested_r"], "nearest": d["aim"]}
+
+# The aim of a FOLLOWED unit for a release at `t`: its position at t led by its velocity at t times the fall time of a
+# bomb released at t from `bomber_height_m` (PROPOSED: a constant-velocity projection). `pose` is the unit's sample at t
+# ({x, y, heading, speed}).
+static func followed_aim(pose: Dictionary, bomber_height_m: float, rules: BombRules) -> Vector2:
+	var lead := float(pose["speed"]) * fall_time(bomber_height_m, rules.gravity)
+	var h := float(pose["heading"])
+	return Vector2(float(pose["x"]) + cos(h) * lead, float(pose["y"]) + sin(h) * lead)
 
 # --- The stick ----------------------------------------------------------------------
 

@@ -19,6 +19,18 @@ extends RefCounted
 #   seed      int                  a stable seed (the stipple and the scatter do not shimmer)
 #   quiet     bool                 only a small mark: a step that is not the card's, another player's drop
 #   label     String               lettering at the aim ("" none)
+#   --- Track T (the target, 2026-10-10; all optional, the older records have none of them) ---
+#   target    {kind: "unit"|"point", unit, radius_px}   the target the drop was activated with (the aim is on it): drawn with
+#                                      target_art.gd over the planes, small for a quiet mark
+#   lands     Vector2              where the stick is centred: the aim, or for a drop whose target is outside the cone the
+#                                      cone's nearest point to it; INF when nothing will be released
+#   blocked   bool                 the target is outside the cone and the sim holds ("will not release"): a slash across the
+#                                      aim, no spread, no fall line, no area of effect
+#   poor      bool                 the target is outside the cone and the sim lets the stick go as a poor shot: a slash, and the
+#                                      spread, the fall line and the area of effect at `lands`
+#   aoe       {tiers, count, stick_px, sigma_px, angle, k_sigma}   what bomb_aoe_art.gd needs for the area of effect
+#   preview   bool                 only the cone (a faint wash and a dashed rim): the step the card is about has no drop yet and a
+#                                      target is set, so the player sees where the target must be (bombs.aim.preview_cone)
 #
 # THE LOOKS (bombs.aim.mode in data/ui/ui.json):
 #   outline   an inked rim, a dotted fall line from the release to the aim, a dashed spread
@@ -38,6 +50,8 @@ extends RefCounted
 
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
 const UiRoles = preload("res://scripts/ui/ui_roles.gd")
+const TargetArt = preload("res://scripts/ui/target_art.gd")
+const BombAoeArt = preload("res://scripts/ui/bomb_aoe_art.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 
 const MODES := ["outline", "wash", "stipple", "rings"]
@@ -50,11 +64,17 @@ static func draw(ci: CanvasItem, rec: Dictionary, st: UiStyle, mode: String = ""
 	var failed := 0
 	var under := layer == "all" or layer == "under"
 	var over := layer == "all" or layer == "marks"
+	if bool(rec.get("preview", false)):
+		if under:
+			failed += 0 if _preview(ci, rec, st) else 1
+		return failed
 	if bool(rec.get("quiet", false)):
 		if under:
 			failed += 0 if _quiet_under(ci, rec, st) else 1
 		if over:
+			failed += 0 if _target_mark(ci, rec, st, st.num("target.quiet.k"), st.num("target.quiet.alpha")) else 1
 			failed += 0 if _crosshair(ci, rec["aim"], st, st.num("bombs.aim.quiet.mark_k"), st.num("bombs.aim.quiet.alpha")) else 1
+			failed += 0 if _flagged(ci, rec, st, st.num("bombs.aim.quiet.mark_k")) else 1
 		return failed
 	if under:
 		var cone: PackedVector2Array = rec["cone"]
@@ -68,11 +88,15 @@ static func draw(ci: CanvasItem, rec: Dictionary, st: UiStyle, mode: String = ""
 				"rings":
 					failed += 0 if _rings(ci, rec, accent, st) else 1
 			failed += 0 if _rim(ci, rec, st) else 1
-		failed += 0 if _fall_line(ci, rec, st) else 1
-		failed += 0 if _spread(ci, rec, m, st) else 1
+		if not bool(rec.get("blocked", false)):
+			failed += BombAoeArt.draw(ci, rec, st)   # the area of effect (bombs.aoe.mode), over the cone, under the scatter
+			failed += 0 if _fall_line(ci, rec, st) else 1
+			failed += 0 if _spread(ci, rec, m, st) else 1
 		failed += 0 if _ideal(ci, rec, st) else 1
 	if over:
+		failed += 0 if _target_mark(ci, rec, st, 1.0, 1.0) else 1
 		failed += 0 if _crosshair(ci, rec["aim"], st, 1.0, 1.0) else 1
+		failed += 0 if _flagged(ci, rec, st, 1.0) else 1
 		failed += 0 if _label(ci, rec, st) else 1
 	return failed
 
@@ -100,6 +124,43 @@ static func draw_hover(ci: CanvasItem, c: Vector2, state: String, approach: floa
 		if state == "drag":
 			ci.draw_circle(c, r * 0.36, st.side_color(side), true, -1.0, true)
 	return true
+
+# --- Track T: the target, and a drop whose target is outside its cone ----------------------------------------------------
+
+# Where the stick is centred on the map: the record's `lands`, else the aim. INF: nothing is released (blocked).
+static func lands_of(rec: Dictionary) -> Vector2:
+	if bool(rec.get("blocked", false)):
+		return Vector2.INF
+	var v: Variant = rec.get("lands")
+	return v if (v is Vector2 and (v as Vector2).is_finite()) else rec["aim"]
+
+# The step's target (a unit's brackets or a point's diamond) at the aim, when the record has one.
+static func _target_mark(ci: CanvasItem, rec: Dictionary, st: UiStyle, k: float, alpha: float) -> bool:
+	var t: Variant = rec.get("target")
+	if not (t is Dictionary):
+		return true
+	return TargetArt.draw(ci, str((t as Dictionary).get("kind", "point")), rec["aim"], st, float((t as Dictionary).get("radius_px", 0.0)), k, alpha)
+
+# The cone of the step the card is about, before Drop is on (a target is set): a faint wash and a dashed rim, nothing else.
+static func _preview(ci: CanvasItem, rec: Dictionary, st: UiStyle) -> bool:
+	var cone: PackedVector2Array = rec["cone"]
+	if cone.size() < 3:
+		return true
+	var accent: Color = st.side_color(str(rec.get("side", "allies")))
+	if _ok(cone):
+		ci.draw_colored_polygon(cone, Color(accent.r, accent.g, accent.b, accent.a * st.num("bombs.aim.preview.alpha")))
+	UiInk.dashed(ci, UiInk.closed(cone), _role(st, "bombs.aim.rim_role"), st.num("bombs.aim.rim_px"), 5.0, 4.0)
+	return true
+
+# A slash across the crosshair of a drop whose target is outside its cone, and a dashed tie to where a poor shot lands.
+static func _flagged(ci: CanvasItem, rec: Dictionary, st: UiStyle, k: float) -> bool:
+	if not bool(rec.get("blocked", false)) and not bool(rec.get("poor", false)):
+		return true
+	if bool(rec.get("poor", false)):
+		var lands := lands_of(rec)
+		if lands.is_finite() and lands.distance_to(rec["aim"]) > 3.0:
+			UiInk.dashed(ci, PackedVector2Array([rec["aim"], lands]), _role(st, "bombs.aim.release.role"), st.num("bombs.aim.release.tie_px"), st.num("bombs.aim.release.tie_dash_px"), st.num("bombs.aim.release.tie_gap_px"))
+	return TargetArt.slash(ci, rec["aim"], st, k)
 
 # --- Pieces ----------------------------------------------------------------------------------------
 
@@ -227,7 +288,7 @@ static func _fall_line(ci: CanvasItem, rec: Dictionary, st: UiStyle) -> bool:
 	var rel: Vector2 = rec["release"]
 	if not rel.is_finite():
 		return true
-	var aim: Vector2 = rec["aim"]
+	var aim: Vector2 = lands_of(rec)
 	var col := _role(st, "bombs.aim.release.role")
 	UiInk.dashed(ci, PackedVector2Array([rel, aim]), col, st.num("bombs.aim.release.tie_px"), st.num("bombs.aim.release.tie_dash_px"), st.num("bombs.aim.release.tie_gap_px"))
 	ci.draw_circle(rel, st.num("bombs.aim.release.dot_px") + 1.2, _role(st, "bombs.aim.halo_role"), true, -1.0, true)
@@ -250,7 +311,7 @@ static func _spread(ci: CanvasItem, rec: Dictionary, mode: String, st: UiStyle) 
 	var a := maxf(float(sp.get("a", 0.0)), 0.8)
 	var b := maxf(float(sp.get("b", 0.0)), 0.8)
 	var ang := float(sp.get("angle", 0.0))
-	var aim: Vector2 = rec["aim"]
+	var aim: Vector2 = lands_of(rec)
 	var pts := ellipse_pts(aim, a, b, ang)
 	var edge := _role(st, "bombs.aim.spread.edge_role")
 	var fill := _role(st, "bombs.aim.spread.fill_role")
@@ -314,10 +375,10 @@ static func _crosshair(ci: CanvasItem, aim: Vector2, st: UiStyle, k: float, alph
 static func _quiet_under(ci: CanvasItem, rec: Dictionary, st: UiStyle) -> bool:
 	var al: float = st.num("bombs.aim.quiet.alpha")
 	var sp: Dictionary = rec.get("spread", {})
-	if float(sp.get("a", 0.0)) > 1.0:
+	if float(sp.get("a", 0.0)) > 1.0 and not bool(rec.get("blocked", false)):
 		var edge := _role(st, "bombs.aim.spread.edge_role")
 		edge.a *= al * 0.7
-		var pts := ellipse_pts(rec["aim"], float(sp["a"]), float(sp.get("b", sp["a"])), float(sp.get("angle", 0.0)), 28)
+		var pts := ellipse_pts(lands_of(rec), float(sp["a"]), float(sp.get("b", sp["a"])), float(sp.get("angle", 0.0)), 28)
 		UiInk.dashed(ci, UiInk.closed(pts), edge, st.num("bombs.aim.spread.line_px") * 0.8, 3.0, 3.0)
 	return true
 

@@ -26,6 +26,11 @@ var cone_max_range_factor: float = NAN   # the cone reaches no farther than this
 var rim_accuracy_factor: float = NAN
 var falloff_exponent: float = NAN
 var release_samples: int = 0
+var outside_cone_mode: String = ""       # "hold" | "poor_shot": what a drop whose target is outside its cone does (Track T)
+var poor_shot_floor: float = NAN         # the least accuracy of a poor shot
+var inside_tolerance: float = NAN        # an aim is inside the cone up to r = 1 + this (Track T: the strict rule)
+var expect_sticks: int = 0               # sticks sampled for the expected-damage line (bomb_expect.gd)
+var expect_seed: int = 0                 # their fixed seed
 var spread_base_m: float = NAN
 var spread_per_height: float = NAN
 var stick_error_fraction: float = NAN
@@ -61,6 +66,11 @@ func _init(source: Variant = PATH, quiet: bool = false) -> void:
 		rim_accuracy_factor = r.number(d, "rim_accuracy_factor", "rim_accuracy_factor", 0.01, 1.0)
 		falloff_exponent = r.number(d, "falloff_exponent", "falloff_exponent", 0.1, 10.0)
 		release_samples = r.integer(d, "release_samples", "release_samples", 2)
+		outside_cone_mode = r.id_value(d, "outside_cone_mode", "outside_cone_mode", OUTSIDE_MODES)
+		poor_shot_floor = r.number(d, "poor_shot_floor", "poor_shot_floor", 0.01, 1.0)
+		inside_tolerance = r.number(d, "inside_tolerance", "inside_tolerance", 0.0, 0.1)
+		expect_sticks = r.integer(d, "expect_sticks", "expect_sticks", 1)
+		expect_seed = r.integer(d, "expect_seed", "expect_seed", 0)
 		spread_base_m = r.number(d, "spread_base_m", "spread_base_m", 0.0)
 		spread_per_height = r.number(d, "spread_per_height", "spread_per_height", 0.0)
 		stick_error_fraction = r.number(d, "stick_error_fraction", "stick_error_fraction", 0.0, 1.0)
@@ -80,8 +90,9 @@ func _init(source: Variant = PATH, quiet: bool = false) -> void:
 		"falloff_exponent": falloff_exponent if is_finite(falloff_exponent) else 1.0,
 	})
 
+const OUTSIDE_MODES := ["hold", "poor_shot"]
 const KEYS := ["gravity_mps2", "cone_half_across_deg", "cone_half_height_deg", "cone_max_range_factor", "rim_accuracy_factor", "falloff_exponent",
-	"release_samples", "spread_base_m", "spread_per_height", "stick_error_fraction", "release_interval_s",
+	"release_samples", "outside_cone_mode", "poor_shot_floor", "inside_tolerance", "expect_sticks", "expect_seed", "spread_base_m", "spread_per_height", "stick_error_fraction", "release_interval_s",
 	"blast_pips_by_distance", "blast_height_m", "blast_hits_own_side"]
 
 func ok() -> bool:

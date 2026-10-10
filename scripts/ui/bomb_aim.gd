@@ -64,7 +64,7 @@ func refresh() -> void:
 			_marks.queue_redraw()
 
 func _signature(list: Array) -> String:
-	var parts := PackedStringArray([mode_override if mode_override != "" else style.text("bombs.aim.mode")])
+	var parts := PackedStringArray([mode_override if mode_override != "" else style.text("bombs.aim.mode"), style.text("bombs.aoe.mode")])
 	var h: Dictionary = planner.hover()
 	parts.append("%s.%s.%d.%d" % [h["state"], h.get("kind", ""), int(h["step"]), roundi(float(h["approach"]) * 20.0)])
 	for m: Dictionary in list:
@@ -72,6 +72,11 @@ func _signature(list: Array) -> String:
 		var sp: Dictionary = m["spread"]
 		parts.append("%s.%d:%s:%.1f,%.1f:%.1f,%.1f:%.2f:%d" % [m["unit"], m["step"], str(m["quiet"]), a.x, a.y,
 			float(sp["a"]), float(sp["b"]), float(m["quality"]), (m["cone"] as PackedVector2Array).size()])
+		# (Track T) the target, whether the drop is blocked or a poor shot, where the stick lands, the area of effect's size
+		var lands: Vector2 = m.get("lands", a)
+		var tg: Dictionary = m.get("target", {})
+		parts.append("%s.%s.%s.%s.%s:%.1f,%.1f:%.1f" % [str(m.get("preview", false)), str(m.get("blocked", false)), str(m.get("poor", false)), str(tg.get("kind", "")), str(tg.get("unit", "")),
+			lands.x if lands.is_finite() else -1.0, lands.y if lands.is_finite() else -1.0, float((m.get("aoe", {}) as Dictionary).get("sigma_px", 0.0))])
 		var cone: PackedVector2Array = m["cone"]
 		if cone.size() > 0:
 			parts.append("%.1f,%.1f,%.1f,%.1f" % [cone[0].x, cone[0].y, cone[cone.size() / 2].x, cone[cone.size() / 2].y])

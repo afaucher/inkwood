@@ -25,6 +25,11 @@ extends "res://scripts/test_support/test_case.gd"
 #      released, not before
 #  10. the ground units on the map: markers for the tower and the batteries, the tower's shadow reaches
 #      its height x the sun's length, and a destroyed tower's marker goes at the down event
+#
+# TRACK T (2026-10-10, Alex's decision special-targeting): Drop needs a TARGET (the selection, ui_target.gd) inside the step's
+# cone, and stores it on the step; a step moved keeps its drop AND its aim (it is marked, not fitted); dragging the aim moves
+# the step's target (it becomes a point); a left-click on an enemy marker targets it instead of moving the aim. The click
+# rules, the enable rules and the per-step targets are test_ui_target.gd's; here every section arms Drop through _arm().
 
 const World = preload("res://scripts/sim/world.gd")
 const UnitUI = preload("res://scripts/ui/unit_ui.gd")
@@ -109,6 +114,15 @@ func _check_data(st: UiStyle) -> void:
 
 # --- 2 -------------------------------------------------------------------------
 
+# Track T: Drop is armed with a target. The target selection is cleared when the friendly selection changes, so it is set
+# AFTER the selecting; by default at the step's ideal aim (a point), where the cone holds it.
+func _arm(k: int, at: Variant = null) -> Dictionary:
+	var id: String = _ui.selection.unit_id
+	var cone: Dictionary = _pl.bombs.cone(id, k)
+	var p: Vector2 = at if at != null else cone["ideal_aim"]
+	_ui.target.set_point(p)
+	return _pl.set_step_drop(k, true)
+
 func _btn(name: String) -> Dictionary:
 	return _ui.orders.buttons()[name]
 
@@ -126,7 +140,10 @@ func _check_control() -> void:
 	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.place_first"), "2. and the card says to place a step first")
 	var s0 := _pl.place_point(Vector2(1650.0, 2400.0))
 	check(not s0.is_empty(), "2. a first step is placed")
-	eq(_btn("drop")["enabled"], true, "2. with a step placed the Drop control is on offer")
+	eq(_btn("drop")["enabled"], false, "2. with a step placed but NO TARGET the Drop control is off (Alex: no target, no activation)")
+	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.no_target"), "2. and the card says to set a target")
+	_ui.target.set_point(_pl.bombs.cone("b1", 0)["ideal_aim"])
+	eq(_btn("drop")["enabled"], true, "2. with a target in the step's cone it is on offer")
 	eq(_btn("drop")["on"], false, "2. and not yet on")
 	var carried := _pl.bombs.bombs_left("b1")
 	eq([carried["drops_left"], carried["drops_max"], carried["per_drop"]], [3, 3, 4], "2. the bomber carries 3 drops of 4 (data/units/bomber.json)")
@@ -157,6 +174,7 @@ func _check_control() -> void:
 	key.pressed = true
 	check(_ui._key(key), "2. the B key")
 	check(_pl.step_has_drop(0), "2. puts the drop on")
+	eq(_pl.step_target(0)["unit"], "", "2. (a point target)")
 	check(_ui._key(key), "2. and again")
 	check(not _pl.step_has_drop(0), "2. takes it off")
 	# No drops left.
@@ -164,6 +182,7 @@ func _check_control() -> void:
 	_pl.place_point(Vector2(1800.0, 2400.0))
 	_pl.set_focus_step(0)
 	check(_pl.toggle_drop().size() > 0, "2. with one drop left, step 1 takes it")
+	_ui.target.set_point(_pl.bombs.cone("b1", 1)["ideal_aim"])
 	_pl.set_focus_step(1)
 	eq(_btn("drop")["enabled"], false, "2. the one drop is planned: Drop is off for step 2")
 	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.none_left"), "2. and the card says none is left")
@@ -183,7 +202,7 @@ func _check_aim() -> void:
 	_ui.select("b1")
 	_pl.clear()
 	_pl.place_point(Vector2(1650.0, 2400.0))
-	_pl.set_step_drop(0, true)
+	_arm(0)
 	var poly := _poly(0)
 	var c := BombSource._centroid(poly)
 	# Inside the cone: taken.
@@ -192,6 +211,8 @@ func _check_aim() -> void:
 	var r := _pl.place_aim(0, inside_pt)
 	check(not r.is_empty(), "3. an aim inside the cone is taken")
 	check(_pl.step_aim(0).distance_to(inside_pt) < 1e-3, "3. and stored as asked (%s)" % str(_pl.step_aim(0)))
+	eq(_pl.step_target(0)["unit"], "", "3. the step's target is now that point (Alex: the aim marker moves the step's target)")
+	check((_pl.step_target(0)["point"] as Vector2).distance_to(inside_pt) < 1e-3, "3. which is where the aim is")
 	var info: Dictionary = (_w.planned_states("b1")[0]["drop"] as Dictionary)
 	check(bool(info.get("ok", false)) and not bool(info.get("clamped", true)), "3. the sim does not clamp it")
 	# Outside: refused, the plan as it was.
@@ -238,7 +259,7 @@ func _check_handle() -> void:
 	_ui.select("b1")
 	_pl.clear()
 	_pl.place_point(Vector2(1650.0, 2400.0))
-	_pl.set_step_drop(0, true)
+	_arm(0)
 	var r: float = _st.num("planner.handle_px")
 	var near: float = r * _st.num("planner.hover.near_factor")
 	var a := _aim_screen(0)
@@ -259,6 +280,7 @@ func _check_handle() -> void:
 	# A press grabs it and a drag moves it (through UnitUI, as the mouse does).
 	check(_ui.map_press(a), "4. a press on the aim handle is taken")
 	check(_pl.is_aiming(), "4. and starts an aim drag")
+	check(_pl.step_aim(0).distance_to(_xf.affine_inverse() * a) < 1e-3, "4. which holds the handle where it is (nothing moves until the pointer leaves the slop)")
 	eq(_pl.hover()["state"], "drag", "4. the handle is lit while dragged")
 	eq(_pl.cursor_shape, Input.CURSOR_DRAG, "4. the cursor is the grabbing hand")
 	var poly_px := PackedVector2Array()
@@ -294,7 +316,7 @@ func _check_focus() -> void:
 	_pl.place_point(Vector2(1650.0, 2400.0))
 	_pl.place_point(Vector2(1800.0, 2400.0))
 	eq(_pl.focus_step(), 1, "5. the card is about the last placed step")
-	_pl.set_step_drop(0, true)
+	_arm(0)
 	eq(_pl.focus_step(), 0, "5. a drop set on step 1 puts the card on step 1")
 	check(_ui.orders.bomb_caption().begins_with("drop, step 1:"), "5. the card says step 1")
 	eq(_btn("drop")["on"], true, "5. Drop is on for the step the card is about")
@@ -321,30 +343,34 @@ func _check_edit_keeps() -> void:
 	_ui.select("b1")
 	_pl.clear()
 	_pl.place_point(Vector2(1650.0, 2400.0))
-	_pl.set_step_drop(0, true)
+	_arm(0)
 	_pl.place_point(Vector2(1800.0, 2400.0))
-	_pl.set_step_drop(1, true)
+	_arm(1)
 	check(_pl.step_has_drop(0) and _pl.step_has_drop(1), "6. two steps carry a drop")
-	# Move step 1 hard to one side: its cone moves; its drop stays and its aim is inside the new cone.
+	check(_pl.step_target(0)["point"] != _pl.step_target(1)["point"], "6. each with a target of its own (Alex: two targets across two steps)")
+	# Move step 1 hard to one side: its cone moves. Its drop and its TARGET stay and its aim stays where it was (Track T: a step
+	# moved is MARKED when its cone leaves the target, never fitted behind the player's back).
 	var old_aim := _pl.step_aim(0)
+	var old_target: Dictionary = _pl.step_target(0)
 	_pl.begin_edit(0, Vector2(1660.0, 2330.0))
 	_pl.end_step()
 	check(_pl.step_has_drop(0), "6. a step moved keeps its drop")
-	check(BombSource.inside(_poly(0), _pl.step_aim(0)), "6. and the aim is inside the new cone")
-	# An aim still inside the new cone stays where it was; one the cone left is moved to the nearest point inside.
-	if BombSource.inside(_poly(0), old_aim):
-		check(_pl.step_aim(0).distance_to(old_aim) < 1e-3, "6. the old aim is still inside the moved cone: kept")
-	else:
-		check(_pl.step_aim(0).distance_to(old_aim) > 1.0, "6. the cone left the aim behind: it moved (%.0f m)" % _pl.step_aim(0).distance_to(old_aim))
-	check(BombSource.inside(_poly(1), _pl.step_aim(1)), "6. and step 2's aim is still inside its cone, which moved with the path")
-	# A band change moves the cone (the height is the throw): the aim follows.
+	check(_pl.step_aim(0).distance_to(old_aim) < 1e-3, "6. and its aim, which is not moved into the new cone")
+	eq(_pl.step_target(0), old_target, "6. and its target")
+	eq(_pl.drop_blocked(0), not BombSource.inside(_poly(0), old_aim), "6. the step is marked exactly when the new cone does not hold the target (%s)" % str(_pl.drop_blocked(0)))
+	check(_pl.step_has_drop(1), "6. step 2 keeps its drop too")
+	# A band change moves the cone (the height is the throw): the drop and the target stay, and it is marked if the cone left them.
 	_pl.set_focus_step(1)
 	var cone_before := PackedVector2Array(_poly(1))
+	var aim_before := _pl.step_aim(1)
 	var lowered := _pl.change_band(-1)
 	check(not lowered.is_empty(), "6. step 2 dives a band")
-	check(_pl.step_has_drop(1) and BombSource.inside(_poly(1), _pl.step_aim(1)), "6. the drop stays and its aim is inside the cone at the new height")
+	check(_pl.step_has_drop(1) and _pl.step_aim(1).distance_to(aim_before) < 1e-3, "6. the drop stays and so does its aim")
 	check(_poly(1) != cone_before, "6. a dive changes the cone (the throw shortens as the bomber comes down)")
-	eq(_pl.step_labels()[1].has(_st.text("bombs.text.step_tag")), true, "6. the step's lettering says 'drop'")
+	eq(_pl.drop_blocked(1), not BombSource.inside(_poly(1), _pl.step_aim(1)), "6. and the step is marked exactly when the cone left the aim")
+	var tag: String = _st.text("bombs.text.step_tag")
+	eq(_pl.step_labels()[1].has(tag), true, "6. the step's lettering says 'drop'")
+	eq(_pl.step_labels()[1].has(_st.text("bombs.text.step_tag_blocked")), _pl.drop_blocked(1) and _pl.bombs.outside_mode() == "hold", "6. and 'will not release' when it is marked (hold)")
 	_pl.clear()
 
 # --- 7 -------------------------------------------------------------------------
@@ -353,7 +379,7 @@ func _check_marks() -> void:
 	_ui.select("b1")
 	_pl.clear()
 	_pl.place_point(Vector2(1650.0, 2400.0))
-	_pl.set_step_drop(0, true)
+	_arm(0)
 	_pl.place_aim(0, BombSource._centroid(_poly(0)) + Vector2(25.0, -10.0))
 	var marks: Array = _pl.bomb_marks()
 	eq(marks.size(), 1, "7. one mark: the selected bomber's drop")
@@ -403,7 +429,7 @@ func _check_marks() -> void:
 	# A second mark: another player's bomber with a drop shows as a small mark, no cone.
 	_ui.select("b2")
 	_pl.place_point(Vector2(1650.0, 2900.0))
-	_pl.set_step_drop(0, true)
+	_arm(0)
 	_ui.select("b1")
 	var two: Array = _pl.bomb_marks()
 	eq(two.size(), 2, "7. another player's drop is a second mark (the co-op preview)")
@@ -413,6 +439,7 @@ func _check_marks() -> void:
 			quiet += 1
 			eq((t["cone"] as PackedVector2Array).size(), 0, "7. with no cone")
 			eq(t["unit"], "b2", "7. it is b2's")
+			eq(t["target"]["kind"], "point", "7. and carries b2's target (a small mark, as the aim's crosshair is)")
 	eq(quiet, 1, "7. one of them quiet")
 	var drawn2 := node.draw_count
 	await get_tree().process_frame
@@ -437,7 +464,7 @@ func _check_enemy_never() -> void:
 	var cone: Dictionary = _w.drop_cone("eb", 0)
 	check(bool(cone.get("ok", false)), "8. and a cone")
 	var ideal: Vector2 = cone["ideal_aim"]
-	_w.plan_step("eb", 0, {"turn": 0.0, "speed": 85.0, "drop": {"aim": [ideal.x, ideal.y]}})
+	_w.plan_step("eb", 0, {"turn": 0.0, "speed": 85.0, "drop": {"aim": [ideal.x, ideal.y], "target": {"point": [ideal.x, ideal.y]}}})
 	check((eb.plan[0] as Dictionary).has("drop"), "8. a drop is in the enemy's plan")
 	_ui.select("eb")
 	eq(_pl.plan_shown("eb"), false, "8. the enemy's plan may not be shown")
@@ -447,6 +474,7 @@ func _check_enemy_never() -> void:
 	for m: Dictionary in _pl.bomb_marks():
 		check(m["unit"] != "eb", "8. no mark is the enemy's (not selected)")
 	eq(_pl.step_labels("eb"), [], "8. no lettering for it")
+	eq(_pl.step_target(0, "eb"), {}, "8. and no target to read (Track T: the enemy's targets are never shown)")
 	_ui.select("eb")
 	eq(_pl.drop_info(0), {}, "8. nothing for the card (the enemy is selected: its plan may not be shown)")
 	eq(_pl.drop_options()["available"], false, "8. the Drop control does nothing for an enemy unit")
@@ -612,27 +640,34 @@ func _check_playback() -> void:
 	ui.playback_event.connect(func(ev: Dictionary) -> void: events.append(ev))
 	ui.select("b1")
 	pl.place_point(Vector2(2650.0, 2400.0))
-	pl.set_step_drop(0, true)
 	var ideal: Vector2 = pl.bombs.cone("b1", 0)["ideal_aim"]
 	w.units["tower"].x = ideal.x
 	w.units["tower"].y = ideal.y
 	w.units["tower"].health = 1
-	check(pl.place_aim(0, ideal).size() > 0, "11. the drop is aimed at the tower")
 	var m_tower = ui.marker_layer.marker("tower")
 	check(m_tower.visible, "11. the tower's marker is up before the strike")
-	# Aiming at the tower is clicking on it: inside the cone, off the aim handle but on the tower's marker, a press
-	# moves the aim and does not select the enemy's tower.
+	# TRACK T (Alex: "left-click an enemy unit" sets the target): a left-click on the tower's marker makes it the TARGET; the
+	# bomber stays selected and nothing is aimed or planned by it. (It used to move the aim, as aiming at the tower was clicking
+	# the tower; now the click is the target and Drop takes it.)
 	ui.marker_layer.update_poses()
-	var gap_px := (_st.num("planner.handle_px") + maxf(_st.num("marker.hit_min_px"), m_tower.radius_px())) * 0.5
-	var press_pt: Vector2 = m_tower.position + Vector2(gap_px, 0.0)
+	var press_pt: Vector2 = m_tower.position + Vector2(m_tower.radius_px() * 0.5, 0.0)
 	eq(ui.marker_layer.unit_at(press_pt), "tower", "11. the point is on the tower's marker")
-	eq(pl.grab_at(press_pt), {}, "11. and off the aim handle")
-	check(pl.in_bomb_cone(press_pt), "11. and inside the bomb cone")
-	check(ui.map_press(press_pt), "11. a press there is taken")
-	check(pl.is_aiming(), "11. as an aim drag")
+	eq(pl.grab_at(press_pt), {}, "11. off every handle")
+	check(ui.map_press(press_pt), "11. a left press there is taken")
+	check(not pl.is_aiming(), "11. it is not an aim drag")
 	eq(ui.selection.unit_id, "b1", "11. the bomber stays selected: the tower is not")
+	eq(ui.target.unit_id, "tower", "11. the tower is the TARGET")
 	ui.map_release(press_pt)
-	pl.place_aim(0, ideal)
+	check(pl.set_step_drop(0, true).size() > 0, "11. Drop takes the tower as the step's target")
+	eq(pl.step_target(0)["unit"], "tower", "11. a UNIT target (it follows the unit)")
+	check(pl.step_aim(0).distance_to(ideal) < 1e-3, "11. aimed at where the tower is shown")
+	# The aim handle sits on the tower: a plain click on it keeps the unit target, and does not nudge the aim.
+	var handle_pt: Vector2 = _xf * pl.step_aim(0)
+	check(ui.map_press(handle_pt), "11. a press on the aim handle (on the tower) is taken")
+	check(pl.is_aiming(), "11. as an aim drag")
+	ui.map_release(handle_pt)
+	eq(pl.step_target(0)["unit"], "tower", "11. a click, not a drag: the step's target is still the unit")
+	check(pl.step_aim(0).distance_to(ideal) < 1e-3, "11. and the aim has not moved")
 	eq(ui.roster.rows()[0]["bombs"]["drops_left"], 3, "11. the roster shows three drops")
 	var sp: Dictionary = pl.bomb_marks()[0]["spread"]
 	check(float(sp["b"]) > 0.0, "11. and the aim's spread")
@@ -716,7 +751,8 @@ func _check_playback() -> void:
 	if fl.size() == 1:
 		eq(fl[0]["pos"], Vector2(2600.0, 2400.0), "12. at the target")
 		eq(fl[0]["hit"], true, "12. a hit")
-		eq(fl[0]["shot"], "aa1/3", "12. named by the shooter and the tick")
+		# (The weapon is in the name since the battery got its light flak: two guns can roll on one tick.)
+		eq(fl[0]["shot"], "aa1/flak/3", "12. named by the shooter, the weapon and the tick")
 	fake.calls.clear()
 	ui.feed.on_event({"type": "fire", "turn": w.turn, "tick": 4, "unit": "b1", "target": "aa1", "t": 1.0, "hit": false,
 		"tx": 4700.0, "ty": 4700.0, "theight_m": 0.0, "weapon": "nose_gun", "hardpoint": 0})

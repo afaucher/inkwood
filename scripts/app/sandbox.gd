@@ -382,7 +382,7 @@ func _hint_line() -> String:
 	for id: String in ids:
 		var u = world.units[id]
 		if u.controller == World.CONTROLLER_PLAYER and u.def.carries_bombs():
-			line += "   ·   %s drops the bombs on the step you are planning" % _style.text("keys.drop")
+			line += "   ·   click an enemy or right-click the map to set a target   ·   %s drops the bombs on it, on the step you are planning" % _style.text("keys.drop")
 			break
 	return line
 

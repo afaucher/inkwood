@@ -74,6 +74,20 @@ extends Node
 #   and the flak, when the layer has the calls)
 #   NEVER THE ENEMY'S DROP: every bomb mark goes through planner.plan_shown (see motion_planner.gd).
 #
+# THE TARGET (Track T, 2026-10-10; Alex, decision special-targeting: "when you have a friendly unit selected, you can also select
+# either an enemy unit or a point on the map. The only thing it does is show on the side view and it is the target that the special
+# will use if activated"; "No target set means you can't activate special"; set by "left-click an enemy unit, right-click a point on the
+# map -- fine for now. Right click drag is awkward so we will change later"). `target` (ui_target.gd) is that selection, shared with the
+# planner (Drop needs it, inside the step's cone), the marks (target_marks.gd) and Track V's side view:
+#   left-click an enemy marker   the target, the friendly stays selected (no friendly selected: the enemy is selected, as before)
+#   right press and release      the enemy under the pointer, else the map point; a right DRAG is the camera's pan and is never
+#                                taken (this node watches the button in _input and marks nothing handled: set_target_unit,
+#                                set_target_point and right_click are the calls a test makes)
+#   Esc                          clears the target (before anything else, so before it leaves for the menu); so does a change of the
+#                                friendly selection (PROPOSED: Alex, "not sure [a target] is meaningful across multiple steps")
+# A unit target FOLLOWS the unit: the sim resolves the release against where it goes (Alex: "Targeting a moving unit like a tank should
+# follow the unit"); the UI only ever shows the unit where it is shown, and never an enemy's plan or target (plan_shown).
+#
 # ---------------------------------------------------------------------------
 # HOOKS FOR PART 2 (the combat overlay and the effects layer mount on these
 # without editing this file). All PROPOSED by Track U2, 2026-10-09.
@@ -199,6 +213,8 @@ const WingtipTrails = preload("res://scripts/ui/wingtip_trails.gd")
 const HitMarks = preload("res://scripts/ui/hit_marks.gd")
 const BombSource = preload("res://scripts/ui/bomb_source.gd")
 const BombAim = preload("res://scripts/ui/bomb_aim.gd")
+const UiTarget = preload("res://scripts/ui/ui_target.gd")
+const TargetMarks = preload("res://scripts/ui/target_marks.gd")
 const CombatFeed = preload("res://scripts/ui/combat_feed.gd")
 const ResultCard = preload("res://scripts/ui/result_card.gd")
 const FxLayer = preload("res://scripts/fx/fx_layer.gd")
@@ -229,6 +245,11 @@ var hit_marks: HitMarks = null
 # and the roster) and the node that draws the selected bomber's cone and aim, just under the planner.
 var bombs: BombSource = null
 var bomb_aim: BombAim = null
+# THE TARGET SELECTION (Track T; ui_target.gd, the seam Track V reads): with a friendly unit selected, an enemy unit or a
+# point on the map, set by a left-click on an enemy marker or a right-click on the map; cleared by Esc and when the friendly
+# selection changes. target_marks draws it (and the targets of the planned drops' steps are the planner's: step_target(k)).
+var target: UiTarget = null
+var target_marks: TargetMarks = null
 var feed: CombatFeed = null
 var result_card: ResultCard = null
 # Player id -> display name (Track A: WorldSync.name_of). The default returns the id.
@@ -265,9 +286,15 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 		add_child(cl2)
 		hud_parent = cl2
 	bombs = BombSource.new()
+	target = UiTarget.new()
+	target.sight = _unit_in_sight
+	target.shown = _target_shown_position
+	selection.changed.connect(_on_selection_changed)
 	planner = MotionPlanner.new()
 	planner.name = "MotionPlanner"
 	planner.bombs = bombs
+	planner.target = target
+	planner.unit_visible = _unit_in_sight
 	map_parent.add_child(planner)
 	planner.setup(world, host_mapping, selection, local_player, style)
 	bomb_aim = BombAim.new()   # the bomb cone and the aim: just under the planner, so its hover draws over it
@@ -311,6 +338,9 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	hit_marks = HitMarks.new()
 	overlay.add_child(hit_marks)
 	hit_marks.setup(world, marker_layer, style)
+	target_marks = TargetMarks.new()   # the target selection, over the planes and the fog (the map layers sit above the map)
+	overlay.add_child(target_marks)
+	target_marks.setup(world, planner, target, marker_layer, style)
 	feed = CombatFeed.new()
 	feed.setup(world, fx, marker_layer, health, style)
 	feed.marks = hit_marks
@@ -324,6 +354,27 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	orders.ready_action = press_ready
 	orders.playback = marker_layer
 	orders.player_name = func(id: String) -> String: return str(player_name.call(id))
+	# --- side view (Track V) ---
+	# The side view (scripts/ui/side_view.gd): a section at the bottom of the orders card for the selected
+	# friendly unit -- its weapon cones in elevation and the target's straight-line position -- and the card
+	# grows by it while it shows. Reach it as orders.get_node("SideView") or get_meta("side_view"). Track T's
+	# target selection (UnitUI.target) is taken through target_source whenever it exists.
+	var side_view_script: GDScript = load("res://scripts/ui/side_view.gd")
+	if side_view_script != null and side_view_script.can_instantiate():
+		var side_view = side_view_script.new()
+		orders.add_child(side_view)
+		side_view.setup(world, planner, selection, style)
+		side_view.attach(orders)
+		# (UnitUI.target when Track T has wired it, else the planner's own selection -- the same object once shared.)
+		side_view.target_source = func() -> Object:
+			var shared: Variant = get("target")
+			return (shared if shared != null else planner.get("target")) as Object
+		side_view.unit_visible = func(id: String) -> bool: return _unit_in_sight(id) and marker_layer.unit_on_map(id)
+		side_view.shown_pose = marker_layer.pose_of
+		side_view.range_factor = _range_factor
+		side_view.playback = marker_layer
+		set_meta("side_view", side_view)
+	# --- end side view ---
 	result_card = ResultCard.new()
 	hud.add_child(result_card)   # last: over the roster and the orders card
 	result_card.setup(style, world)
@@ -497,6 +548,7 @@ func _turn_events() -> Array:
 func _on_phase_changed(phase: String) -> void:
 	if phase == World.PHASE_PLANNING:
 		selection.prune()   # a unit that went down while selected
+		target.prune(world)   # and an enemy that was destroyed while it was the target
 
 # Whom the selection may take: not a unit shown as down (the shown state, so a
 # unit about to fall is still selectable until the playback says it has).
@@ -661,10 +713,20 @@ func map_press(p: Vector2) -> bool:
 	var hit := marker_layer.unit_at(p)
 	if hit != "" and not selection.can_select(hit):
 		hit = ""   # a down unit's marker is not a way to plan it
-	# (The strike: inside the selected bomber's bomb cone a press moves the aim, even over an ENEMY's marker
-	# -- aiming at the tower is clicking the tower -- so it must not select that unit instead.)
-	var aiming_at_enemy: bool = hit != "" and world.units.has(hit) and world.units[hit].controller != World.CONTROLLER_PLAYER and planner.in_bomb_cone(p)
-	if hit != "" and hit != selection.unit_id and planner.grab_at(p).is_empty() and not aiming_at_enemy:
+	var grab := planner.grab_at(p)
+	# THE TARGET (Track T; Alex, special-targeting: "when you have a friendly unit selected, you can also select either an
+	# enemy unit or a point on the map"; set by "left-click an enemy unit"): with a friendly unit selected, a left-click on
+	# an ENEMY's marker makes it the target and the friendly stays selected. (It was the click that aimed the bomber's
+	# drop at the tower; the target is the aim now.) With no friendly selected an enemy is selected, as before.
+	if hit != "" and is_enemy(hit) and friendly_selected():
+		if grab.is_empty():
+			set_target_unit(hit)
+			return true
+		if str(grab["kind"]) == "aim":
+			# The aim handle sits on this enemy (its target is the enemy): a plain click targets it, a drag moves the aim.
+			_click_enemy = hit
+			return planner.press(p)
+	if hit != "" and hit != selection.unit_id and grab.is_empty():
 		selection.select(hit)
 		return true
 	if planner.press(p):
@@ -678,7 +740,94 @@ func map_drag(p: Vector2) -> bool:
 	return not input_locked() and planner.drag(p)
 
 func map_release(p: Vector2) -> bool:
-	return not input_locked() and planner.release(p)
+	if input_locked():
+		return false
+	var used := planner.release(p)
+	if _click_enemy != "":
+		var enemy := _click_enemy
+		_click_enemy = ""
+		if used and not planner.aim_was_moved():
+			set_target_unit(enemy)   # a click on the handle, not a drag
+	return used
+
+# --- The target selection (Track T) ------------------------------------------------------------------------------------
+
+var _click_enemy: String = ""       # an enemy under the aim handle that was pressed: a click on it targets it
+var _rc_down: bool = false          # the right button is down (a click, or the start of a pan)
+var _rc_pos := Vector2.ZERO         # where it went down (viewport px)
+var _rc_ok: bool = false            # it went down on the map, not on a card
+var _rc_moved: bool = false         # it has moved farther than the slop: a pan
+
+# Whether `id` is an enemy unit: a unit that is not under the players' orders.
+func is_enemy(id: String) -> bool:
+	return world != null and world.units.has(id) and world.units[id].controller != World.CONTROLLER_PLAYER
+
+# Whether a friendly unit is selected and may be given orders: the planning phase, a player's unit, not down.
+func friendly_selected() -> bool:
+	return planner != null and planner.can_plan()
+
+# Makes `id` (an enemy unit that is up) the target, where the player sees it now. False when it may not be.
+func set_target_unit(id: String) -> bool:
+	if input_locked() or not friendly_selected() or not is_enemy(id) or bool(world.units[id].down):
+		return false
+	var at := _target_shown_position(id)
+	target.set_unit(id, at)
+	return true
+
+# Makes the map point `world_pt` (metres) the target. False when it may not be.
+func set_target_point(world_pt: Vector2) -> bool:
+	if input_locked() or not friendly_selected() or not world.in_bounds(world_pt.x, world_pt.y):
+		return false
+	target.set_point(world_pt)
+	return true
+
+# A right click at map screen point `p` (a press and release that moved no farther than target.right_click.slop_px; a
+# right DRAG is the camera's pan and never gets here): the enemy under the pointer, else the point on the map.
+func right_click(p: Vector2) -> bool:
+	if input_locked() or not friendly_selected():
+		return false
+	var hit := marker_layer.unit_at(p)
+	if hit != "" and is_enemy(hit):
+		return set_target_unit(hit)
+	return set_target_point(mapping.screen_to_world(p))
+
+# Esc: clears the target before it clears anything else. True when there was one.
+func clear_target() -> bool:
+	if target == null or not target.is_set():
+		return false
+	target.clear()
+	return true
+
+# Where a unit is shown now, in metres: its animated pose while a turn plays back, else where it stands.
+func _target_shown_position(id: String) -> Vector2:
+	if not world.units.has(id):
+		return Vector2.INF
+	if is_playing():
+		return world_pos_at(id, playback_time())
+	var u = world.units[id]
+	return Vector2(float(u.x), float(u.y))
+
+func _on_selection_changed(_id: String) -> void:
+	target.clear()   # PROPOSED (Alex: a target is not meaningful per unit): the friendly selection changed
+
+# The right button, watched in _input so that it sees the press and the release the camera takes for a pan (it marks them
+# handled in its own _unhandled_input / _input): this node never marks a right-button event handled, so the camera pans
+# exactly as before and a click is a press and release that did not move.
+func _right_button(event: InputEvent) -> void:
+	if event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT:
+		var mb := event as InputEventMouseButton
+		if mb.pressed:
+			_rc_down = true
+			_rc_pos = mb.position
+			_rc_moved = false
+			_rc_ok = not over_card(mb.position)
+		elif _rc_down:
+			_rc_down = false
+			if _rc_ok and not _rc_moved and mb.position.distance_to(_rc_pos) <= style.num("target.right_click.slop_px"):
+				right_click(_to_map(mb.position))
+	elif event is InputEventMouseMotion and _rc_down:
+		if (event as InputEventMouseMotion).position.distance_to(_rc_pos) > style.num("target.right_click.slop_px"):
+			_rc_moved = true
 
 func _to_map(viewport_pt: Vector2) -> Vector2:
 	return marker_layer.get_global_transform_with_canvas().affine_inverse() * viewport_pt
@@ -694,7 +843,9 @@ func _input(event: InputEvent) -> void:
 		return
 	if input_locked():
 		planner.clear_pointer()
+		_rc_down = false
 		return
+	_right_button(event)
 	if not planner.is_dragging():
 		# The planner's hover: where the pointer is, unless a card is under it (a card is
 		# clicked, not planned through) -- every motion is seen here, GUI or not.
@@ -746,6 +897,8 @@ func _key(k: InputEventKey) -> bool:
 	if input_locked():
 		return false
 	var name := OS.get_keycode_string(k.keycode)
+	if name == style.text("keys.clear_target"):
+		return clear_target()   # PROPOSED: Esc clears the target before anything else (and so before it leaves for the menu)
 	if name == style.text("keys.undo"):
 		return planner.undo()
 	if name == style.text("keys.clear"):

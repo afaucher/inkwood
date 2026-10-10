@@ -21,8 +21,9 @@ extends RefCounted
 #            no band = stay; an empty request is "carry on" (inertia, not a stop)
 #        or  {to: Vector2 | [x, y], altitude_band}    steer for a point
 #        or  a bare Vector2                           the same as {to: point}
-#   any of them may also carry  drop: {aim: [x, y]}   a bomb drop in this step (a special, not
-#            a manoeuvre: clamp_step ignores it; scripts/sim/bombs.gd and the World use it)
+#   any of them may also carry  drop: {aim: [x, y], target?: {unit: id} | {point: [x, y]}}   a bomb drop
+#            in this step (a special, not a manoeuvre: clamp_step ignores it; scripts/sim/bombs.gd and the
+#            World use it; the target is the one the special was activated with, Track T)
 #   result:  the state after the step, plus turn (the heading change applied),
 #            clamped (bool) and limits (which limits bit: turn, speed, band,
 #            climb). Feeding a result back in as a request returns the same
@@ -371,7 +372,48 @@ static func request_error(request: Variant) -> String:
 		var aim := _point((dr as Dictionary)["aim"])
 		if not (is_finite(aim[0]) and is_finite(aim[1])):
 			return "'drop.aim' must be a Vector2 or [x, y] of finite numbers, got %s" % str((dr as Dictionary)["aim"])
+		if (dr as Dictionary).has("target"):
+			var te := target_error((dr as Dictionary)["target"])
+			if te != "":
+				return te
 	return ""
+
+# "" if `t` is a drop's target ({"unit": id} or {"point": [x, y]}, one of them), else what is wrong with it.
+static func target_error(t: Variant) -> String:
+	if not (t is Dictionary):
+		return "'drop.target' must be {\"unit\": id} or {\"point\": [x, y]}, got %s" % str(t)
+	var d: Dictionary = t
+	var has_unit := d.has("unit")
+	var has_point := d.has("point")
+	if has_unit == has_point:
+		return "'drop.target' has exactly one of 'unit' and 'point', got %s" % str(t)
+	if has_unit:
+		if not (d["unit"] is String) or str(d["unit"]) == "":
+			return "'drop.target.unit' must be a unit id, got %s" % str(d["unit"])
+	else:
+		var p := _point(d["point"])
+		if not (is_finite(p[0]) and is_finite(p[1])):
+			return "'drop.target.point' must be a Vector2 or [x, y] of finite numbers, got %s" % str(d["point"])
+	for k: Variant in d:
+		if k != "unit" and k != "point":
+			return "'drop.target' has an unknown field '%s'" % str(k)
+	return ""
+
+# The target of a request's bomb drop, normalised: {"unit": id} or {"point": [x, y]} (floats), or {} if
+# the request carries none (or a malformed one: request_error says so).
+static func drop_target(request: Variant) -> Dictionary:
+	if not (request is Dictionary) or not (request as Dictionary).has("drop"):
+		return {}
+	var dr: Variant = (request as Dictionary)["drop"]
+	if not (dr is Dictionary) or not (dr as Dictionary).has("target"):
+		return {}
+	var t: Variant = (dr as Dictionary)["target"]
+	if target_error(t) != "":
+		return {}
+	if (t as Dictionary).has("unit"):
+		return {"unit": str((t as Dictionary)["unit"])}
+	var p := _point((t as Dictionary)["point"])
+	return {"point": [p[0], p[1]]}
 
 # The aim point of a request's bomb drop as [x, y] floats, or [] if the request carries none
 # (Track S2, 2026-10-10; scripts/sim/bombs.gd). The envelope itself ignores a drop: it is a

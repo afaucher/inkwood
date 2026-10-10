@@ -59,6 +59,32 @@
     "_reason": "the bombs of one drop leave in order, this long apart: at a bomber's cruise (85 m/s) the stick's bombs land 10 m apart along the track, a stick of four 31 m long, centred on the aim point"
   },
 
+  "outside_cone_mode": {
+    "value": "hold",
+    "_proposed": true,
+    "_reason": "Track T, 2026-10-10. WHAT HAPPENS WHEN A DROP'S TARGET IS OUTSIDE ITS STEP'S CONE AT RELEASE -- Alex has not picked, so it is a switch. It covers both ways it can happen: a followed unit that leaves the cone during the resolve, and a step moved after its drop was set (the planning rule stands either way: a special cannot be activated on a step whose cone does not hold the target). Alex: 'That means it might leave the cone and completely not fire' and then 'Or just be a bad shot'. 'hold': nothing is released and no bombs are spent (the strict rule). 'poor_shot': the stick IS released and the bombs are spent, at the moment the target is closest to the cone, aimed at the cone's nearest point to the target (the old clamp, bombs.gd clamp_aim), with the rim's accuracy scaled down by how far outside the cone the target is (poor_shot_floor is the least). 'hold' is the working default (PROPOSED) -- the strict reading of Alex's first line"
+  },
+  "poor_shot_floor": {
+    "value": 0.15,
+    "_proposed": true,
+    "_reason": "Track T, 2026-10-10. Only for outside_cone_mode 'poor_shot': the least accuracy a stick released outside the cone can have. The accuracy of a poor shot is rim_accuracy_factor / r, r the target's release error as a fraction of the cone (1 is the rim, 2 is a cone's width beyond it), never below this: 0.35 on the rim, 0.175 at r 2, then the floor 0.15. A floor of 0.15 is a scatter 6.7 times the ideal one (about 90 m at medium height): a stick that can still land in a village, not a fair shot"
+  },
+  "inside_tolerance": {
+    "value": 0.005,
+    "_proposed": true,
+    "_reason": "Track T, 2026-10-10. Alex (decision special-targeting): a special cannot be activated on a step whose cone does not hold the target, and the card says why. The sim's side of it is STRICT: a drop whose aim is outside its step's cone does not release (no bombs spent) instead of being clamped into the cone. 'Outside' is a release error r (a fraction of the cone, 1 is the rim) above 1 plus this tolerance: the interface tests a point against the cone's polygon (a union of 13 footprints of 24 points each), the sim against the exact ellipses, and a target a hair inside one is a hair outside the other. 0.005 of a cone about 110 m wide is half a metre"
+  },
+  "expect_sticks": {
+    "value": 400,
+    "_proposed": true,
+    "_reason": "Track T, 2026-10-10: how many sticks the expected-damage line on the orders card samples ('radio tower: about 5 of 8'). The sim's own dice (Bombs.make_stick, one stick per sample, a fixed seed) and its own blast table, so the number is the model's and not a second model; 400 sticks put the mean of a 8-pip tower within about 0.1 pip"
+  },
+  "expect_seed": {
+    "value": 20261010,
+    "_proposed": true,
+    "_reason": "Track T, 2026-10-10: the fixed seed of the expected-damage sample, so the line on the card does not flicker as the interface redraws and two peers show the same number. It is not the game's seed: the line is an estimate, never a roll"
+  },
+
   "blast_pips_by_distance": {
     "value": [[12, 3], [25, 2], [45, 1]],
     "_proposed": true,

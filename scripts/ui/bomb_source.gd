@@ -24,6 +24,9 @@ extends RefCounted
 #   aim_info(id, k, aim) -> {quality (0..1: the accuracy factor, 1 at the ideal release angle),
 #                      spread {along_m, across_m, heading, sigma_m, stick_m}, release: Vector2 (INF: none)}
 #   inside(poly, p) / nearest_inside(poly, p)   the aim must lie inside the cone
+#   outside_mode() -> "hold" | "poor_shot"   what the sim does with a drop whose target is outside its cone (Track T)
+#   blast_tiers() -> [[distance_m, pips], ...]   the blast table, for the area of effect
+#   expected(id, k, aim) -> [{unit, mean, mean_raw, p_destroy, health, distance_m}, ...]   World.drop_expected, cached
 #
 # THE SPREAD THAT IS DRAWN. The sim's spread is one bomb's scatter, a standard deviation (sigma) in each
 # ground axis; the stick of a drop (its bombs fall a few metres apart along the bomber's heading) adds its
@@ -46,6 +49,7 @@ var _shown: Dictionary = {}     # unit id -> drops left to show during the playb
 var _max: Dictionary = {}       # unit id -> the most drops seen (when the sim sends no max)
 var _cone_cache: Dictionary = {}   # "id|k" -> normalized cone
 var _info_cache: Dictionary = {}   # "id|k|ax|ay" -> normalized aim info
+var _expect_cache: Dictionary = {} # "id|k|ax|ay" -> World.drop_expected's list
 
 func setup(w: Object, st: RefCounted) -> void:
 	world = w
@@ -58,12 +62,13 @@ func setup(w: Object, st: RefCounted) -> void:
 func _on_phase(phase: String) -> void:
 	_cone_cache.clear()
 	_info_cache.clear()
+	_expect_cache.clear()
 	if phase == World.PHASE_PLANNING:
 		_shown.clear()
 		snapshot()
 
 func _on_plan_changed(id: String) -> void:
-	for cache: Dictionary in [_cone_cache, _info_cache]:
+	for cache: Dictionary in [_cone_cache, _info_cache, _expect_cache]:
 		for key: String in cache.keys():
 			if key.begins_with(id + "|"):
 				cache.erase(key)
@@ -169,7 +174,7 @@ func cone(id: String, k: int) -> Dictionary:
 # What an aim point gets in the step: the accuracy (quality), the spread to draw, and where the bomber
 # releases. Zeros for a step without a cone.
 func aim_info(id: String, k: int, aim: Vector2) -> Dictionary:
-	var info := {"quality": 0.0, "release": Vector2.INF,
+	var info := {"quality": 0.0, "release": Vector2.INF, "lands": Vector2.INF, "outside": false, "releases": true, "poor_shot": false,
 		"spread": {"along_m": 0.0, "across_m": 0.0, "heading": 0.0, "sigma_m": 0.0, "stick_m": 0.0}}
 	if not aim.is_finite() or not bool(cone(id, k)["ok"]):
 		return info
@@ -196,8 +201,44 @@ func aim_info(id: String, k: int, aim: Vector2) -> Dictionary:
 		var rel := _v2(_first(r, ["release", "release_pos"], null))
 		if rel.is_finite():
 			info["release"] = rel
+		# Track T: where the stick is centred (the sim's aim: the nearest point inside the cone for a target outside
+		# it), whether the aim is outside the cone, whether a drop there would release at all (outside_cone_mode) and
+		# whether it would be a poor shot.
+		info["lands"] = _v2(_first(r, ["aim"], null))
+		info["outside"] = bool(r.get("outside", false))
+		info["releases"] = bool(r.get("releases", true))
+		info["poor_shot"] = bool(r.get("poor_shot", false))
 	_info_cache[key] = info
 	return info
+
+# --- Track T: the target, the blast, the expected damage -----------------------------------------------------
+
+# What the sim does with a drop whose target is outside its step's cone (data/sim/bombs.json outside_cone_mode).
+func outside_mode() -> String:
+	if world != null and "bombs" in world and world.bombs != null and "outside_cone_mode" in world.bombs:
+		return str(world.bombs.outside_cone_mode)
+	return "hold"
+
+# The blast table: [[distance_m, pips], ...] smallest distance first (World.bombs.blast_pips_by_distance).
+func blast_tiers() -> Array:
+	var out: Array = []
+	if world != null and "bombs" in world and world.bombs != null and "blast_distances" in world.bombs:
+		for i in world.bombs.blast_distances.size():
+			out.append([float(world.bombs.blast_distances[i]), float(world.bombs.blast_pips[i])])
+	return out
+
+# The sim's expected damage of a drop at `aim` on step k (World.drop_expected): the ground units the stick can reach,
+# the most hurt first. Every unit is listed whatever the fog says: the caller filters what the player may see.
+func expected(id: String, k: int, aim: Vector2) -> Array:
+	if not aim.is_finite() or not bool(cone(id, k)["ok"]) or not world.has_method("drop_expected"):
+		return []
+	var key := "%s|%d|%.2f|%.2f" % [id, k, aim.x, aim.y]
+	if _expect_cache.has(key):
+		return _expect_cache[key]
+	var raw: Variant = world.drop_expected(id, k, aim)
+	var out: Array = raw if raw is Array else []
+	_expect_cache[key] = out
+	return out
 
 # --- Geometry helpers -------------------------------------------------------------------------------------------
 

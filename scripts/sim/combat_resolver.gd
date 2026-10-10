@@ -263,12 +263,21 @@ func _release(uid: String, drop: Dictionary, step: int) -> void:
 	_released[uid] = int(_released.get(uid, 0)) + 1
 	var stick := Bombs.make_stick(drop, u.def.bomb_per_drop, bomb_rules, _seed, _turn, uid, int(_index[uid]), drop_index)
 	var rel: Dictionary = drop["release"]
-	_events.append({
+	var ev := {
 		"type": "bomb_release", "turn": _turn, "unit": uid, "t": float(drop["release_t"]),
 		"x": rel["x"], "y": rel["y"], "height_m": rel["height_m"], "heading": rel["heading"], "speed": rel["speed"],
 		"aim": (drop["aim"] as Array).duplicate(), "bombs": stick.size(), "drop_index": drop_index, "step": step,
 		"accuracy": drop["accuracy"], "spread_m": drop["spread_m"], "fall_s": drop["fall_s"], "impact_t": drop["impact_t"],
-	})
+	}
+	# Track T: the target the drop was activated with, whether it followed a unit, and whether it was a poor shot
+	# (the target outside the cone with outside_cone_mode "poor_shot"); only when there is something to say.
+	if drop.has("target"):
+		ev["target"] = (drop["target"] as Dictionary).duplicate(true)
+	if bool(drop.get("followed", false)):
+		ev["followed"] = true
+	if bool(drop.get("poor_shot", false)):
+		ev["poor_shot"] = true
+	_events.append(ev)
 	for b: Dictionary in stick:
 		_land_or_carry(Bombs.schedule(b, _turn_seconds))
 

@@ -101,10 +101,28 @@ extends Node2D
 # Drop control needs a way to reach the earlier steps of a bomber that makes more than one
 # drop, and the band buttons share it so the card is about one step at a time.
 #
-# Editing a step keeps its drop; if the new path moves the cone off the aim, the aim is moved to
-# the nearest point still inside it (a cone the step no longer has takes the drop off). The aim
-# is part of the plan: editing it, undoing, clearing, Ready and last-edit-wins are the plan's.
+# Editing a step keeps its drop AND its target (Track T): a step moved or re-banded whose cone no longer holds the
+# target is MARKED (drop_blocked, the map's slash, the card's line) and what the sim then does is its switch
+# (data/sim/bombs.json outside_cone_mode: "hold" releases nothing, "poor_shot" releases a poor stick); the aim is no
+# longer moved into the cone behind the player's back. The aim is part of the plan: editing it, undoing, clearing,
+# Ready and last-edit-wins are the plan's.
 # EVERYTHING DRAWN FOR A DROP goes through plan_shown, so an AI unit's drop is never shown.
+#
+# THE TARGET (Track T, 2026-10-10; Alex, decision special-targeting: "when you have a friendly unit selected, you can also
+# select either an enemy unit or a point on the map. The only thing it does is show on the side view and it is the target
+# that the special will use if activated." "No target set means you can't activate special." "The special is active and
+# targeted for the step."): the player's target SELECTION is `target` (ui_target.gd, one object UnitUI shares). Drop (a step's
+# special) is on offer only with a target set and inside THAT step's cone; switching it on stores the target ON THE STEP --
+# {"drop": {"aim": [x, y], "target": {"unit": id} | {"point": [x, y]}}} -- and puts the aim on it, so one unit can carry
+# different targets on different steps and nothing is remembered per unit. A unit target FOLLOWS the unit (Alex: "Targeting a
+# moving unit like a tank should follow the unit"): the aim stored is where the unit is SHOWN (no projection of an enemy's
+# motion here; the sim resolves the release against where the unit goes). Dragging a step's aim handle moves that step's
+# target: it becomes a point, held inside the cone. The calls:
+#
+#   step_target(k)              {} or {"unit": id or "", "point": Vector2}: the target stored with step k's special (the seam
+#                               Track V reads; nothing for a unit whose plan may not be shown)
+#   target_in_cone(k)           whether the target selection lies inside step k's bomb cone
+#   drop_blocked(k)             step k carries a drop whose aim lies OUTSIDE its cone (it will not release, or is a poor shot)
 
 signal plan_edited(unit_id: String)
 signal ready_refused(unit_id: String)   # Ready was refused for this unit (or "": the notice was cleared)
@@ -117,6 +135,7 @@ const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const Roster = preload("res://scripts/ui/roster.gd")
 const BombSource = preload("res://scripts/ui/bomb_source.gd")
 const UiLabels = preload("res://scripts/ui/ui_labels.gd")
+const UiTarget = preload("res://scripts/ui/ui_target.gd")
 
 var world: World = null
 var mapping: UiMapping = null
@@ -125,6 +144,11 @@ var style: UiStyle = null
 var local_player: String = "local"
 # The bombs the simulation (or its stand-in) answers with; UnitUI shares one with the roster and the card.
 var bombs: BombSource = null
+# The target selection (Track T, ui_target.gd): UnitUI shares one with the map marks and the side view; a planner alone
+# makes its own.
+var target: UiTarget = null
+# unit_id -> bool: whether the player can see that unit (the fog's say); UnitUI points it at its own. Unset: all are in sight.
+var unit_visible: Callable = Callable()
 # The unit marker layer, when the planner sits beside one (UnitUI sets it): the
 # ghosts use the art the selected unit's own marker already holds, so a zoom
 # never makes the planner bake art of its own.
@@ -141,6 +165,8 @@ const REFUSED_SHOW_MS := 1600
 
 var _drag_index: int = -1
 var _drag_aim: int = -1             # the step whose aim handle is being dragged (-1: none)
+var _aim_grab := Vector2.INF        # where the aim handle was grabbed (metres): the drag moves nothing until it leaves the slop
+var _aim_moved: bool = false        # whether the aim drag has left the slop (and so the target has become a point)
 var _focus: int = -1                # the step the card is about; -1: the last placed (see focus_step)
 # The last aim refused for lying outside its cone (metres) and when: drawn for a moment, like the
 # map rule's cross.
@@ -168,6 +194,10 @@ func setup(w: World, host_mapping: Variant, sel: RefCounted, player: String = "l
 	if bombs == null:
 		bombs = BombSource.new()
 	bombs.setup(world, style)
+	if target == null:
+		target = UiTarget.new()
+	if not target.changed.is_connected(_on_target_changed):
+		target.changed.connect(_on_target_changed)
 	if not world.plan_changed.is_connected(_on_plan_changed):
 		world.plan_changed.connect(_on_plan_changed)
 		world.phase_changed.connect(_on_phase_changed)
@@ -352,7 +382,6 @@ func _commit_step(id: String, k: int, req: Dictionary, asked: Vector2) -> Dictio
 				refused_world = asked
 				refused_ms = Time.get_ticks_msec()
 				return {}
-	_fit_drops(id)
 	_reopen()
 	plan_edited.emit(id)
 	return s
@@ -445,7 +474,9 @@ func step_has_drop(k: int, id: String = "") -> bool:
 
 # What the Drop control may do for step k (-1: the step the card is about): {step, available (it
 # may be switched on, or off if it is on), on, why ("" when available, else the reason in words
-# from data bombs.text)}.
+# from data bombs.text)}. TRACK T (Alex: "No target set means you can't activate special"; a target outside
+# the step's cone: "the special cannot be activated on that step and the card says why"): on offer only with a
+# target set that lies inside THAT step's cone.
 func drop_options(k: int = -2) -> Dictionary:
 	var id := unit_id()
 	var out := {"step": -1, "available": false, "on": false, "why": ""}
@@ -471,8 +502,57 @@ func drop_options(k: int = -2) -> Dictionary:
 	if not bool(bombs.cone(id, k)["ok"]):
 		out["why"] = style.text("bombs.text.none_left")
 		return out
+	if not target.is_set():
+		out["why"] = style.text("bombs.text.no_target")
+		return out
+	if not target_in_cone(k):
+		out["why"] = style.text("bombs.text.target_outside") % (k + 1)
+		return out
 	out["available"] = true
 	return out
+
+# Whether the target selection lies inside step k's bomb cone (false with no target or no cone).
+func target_in_cone(k: int) -> bool:
+	var id := unit_id()
+	if target == null or not target.is_set() or k < 0 or not bombs.has_bombs(id):
+		return false
+	var cone: Dictionary = bombs.cone(id, k)
+	var at := target.position_m(world)
+	return bool(cone["ok"]) and at.is_finite() and BombSource.inside(cone["polygon"], at)
+
+# The target stored with step k's special: {} when the step has none (or the plan may not be shown), else
+# {"unit": id or "", "point": Vector2}. A unit target's point is the aim stored with it: where the unit was shown
+# when the special was activated. This is the seam Track V reads (see ui_target.gd).
+func step_target(k: int, id: String = "") -> Dictionary:
+	if id == "":
+		id = unit_id()
+	if not plan_shown(id):
+		return {}
+	var d := step_drop(k, id)
+	if d.is_empty():
+		return {}
+	var aim := BombSource._v2(d.get("aim"))
+	var t: Variant = d.get("target")
+	if t is Dictionary:
+		var td: Dictionary = t
+		if td.has("unit"):
+			return {"unit": str(td["unit"]), "point": aim}
+		if td.has("point"):
+			return {"unit": "", "point": BombSource._v2(td["point"])}
+	return {"unit": "", "point": aim}   # a drop with no target of its own: its aim is a point
+
+# Whether step k carries a drop whose aim lies OUTSIDE the step's bomb cone: with the sim's outside_cone_mode "hold"
+# it will not release, with "poor_shot" it releases a poor stick (bombs.outside_mode()). False for a step with no drop.
+func drop_blocked(k: int, id: String = "") -> bool:
+	if id == "":
+		id = unit_id()
+	if not plan_shown(id) or not step_has_drop(k, id):
+		return false
+	var cone: Dictionary = bombs.cone(id, k)
+	var aim := step_aim(k, id)
+	if not bool(cone["ok"]) or not aim.is_finite():
+		return false
+	return not BombSource.inside(cone["polygon"], aim)
 
 # The Drop button: the drop of the step the card is about, on or off. {} when it may not.
 func toggle_drop() -> Dictionary:
@@ -481,8 +561,8 @@ func toggle_drop() -> Dictionary:
 		return {}
 	return set_step_drop(k, not step_has_drop(k))
 
-# Turn step k's drop on (aimed at the cone's ideal aim, or its middle) or off. The step must be
-# a placed step of the selected unit's plan, the unit must have a drop free (and a cone for the step).
+# Turn step k's drop on (aimed at the TARGET, which it stores on the step) or off. The step must be a placed step of
+# the selected unit's plan, the unit must have a drop free, a target must be set and lie inside the step's cone.
 # Returns the step's state, or {} when refused.
 func set_step_drop(k: int, on: bool) -> Dictionary:
 	var id := unit_id()
@@ -500,22 +580,19 @@ func set_step_drop(k: int, on: bool) -> Dictionary:
 		if not bombs.has_bombs(id) or bombs.drops_free(id, k) <= 0:
 			return {}
 		var cone: Dictionary = bombs.cone(id, k)
-		if not bool(cone["ok"]):
+		if not bool(cone["ok"]) or not target.is_set() or not target_in_cone(k):
 			return {}
-		var aim: Vector2 = cone["ideal_aim"]
-		if not BombSource.inside(cone["polygon"], aim):
-			aim = BombSource._centroid(cone["polygon"])
-			if not BombSource.inside(cone["polygon"], aim):
-				aim = BombSource.nearest_inside(cone["polygon"], aim)
-		req["drop"] = {"aim": [aim.x, aim.y]}
+		var aim := target.position_m(world)
+		var stored: Dictionary = {"unit": target.unit_id} if target.is_unit() else {"point": [aim.x, aim.y]}
+		req["drop"] = {"aim": [aim.x, aim.y], "target": stored}
 	_focus = k
 	var u = world.units[id]
 	var s := _commit_step(id, k, req, Vector2(float(u.x), float(u.y)))
 	queue_redraw()
 	return s
 
-# Aim step k's drop at `world_pt`. REFUSED -- {} and the plan as it was, the point marked for a
-# moment -- when the point lies outside the step's bomb cone, when the step has no drop or none can
+# Aim step k's drop at `world_pt`: the step's target becomes that point. REFUSED -- {} and the plan as it was, the
+# point marked for a moment -- when the point lies outside the step's bomb cone, when the step has no drop or none can
 # be planned. Returns the step's state when taken.
 func place_aim(k: int, world_pt: Vector2) -> Dictionary:
 	var id := unit_id()
@@ -529,28 +606,39 @@ func place_aim(k: int, world_pt: Vector2) -> Dictionary:
 		return {}
 	return _write_aim(id, k, world_pt)
 
+# (Alex: "Dragging a step's aim marker moves that step's target (it becomes a point)".)
 func _write_aim(id: String, k: int, world_pt: Vector2) -> Dictionary:
 	var plan: Array = world.units[id].plan
 	var req: Dictionary = (plan[k] as Dictionary).duplicate(true)
-	req["drop"] = {"aim": [world_pt.x, world_pt.y]}
+	req["drop"] = {"aim": [world_pt.x, world_pt.y], "target": {"point": [world_pt.x, world_pt.y]}}
 	var u = world.units[id]
 	_focus = k
 	return _commit_step(id, k, req, Vector2(float(u.x), float(u.y)))
 
-# The aim handle dragged: begin_aim takes hold of step k's aim and moves it to `world_pt` (held
-# inside the cone, as a dragged step is held in its envelope), drag_aim follows, end_aim lets go.
-func begin_aim(k: int, world_pt: Vector2) -> Dictionary:
+# The aim handle dragged: begin_aim takes hold of step k's aim (grab: the handle itself was pressed, so nothing moves
+# until the pointer has left aim_drag_slop_px; otherwise the aim jumps to world_pt, as a press in the cone does),
+# drag_aim follows the pointer, held inside the cone (as a dragged step is held in its envelope), end_aim lets go.
+func begin_aim(k: int, world_pt: Vector2, grab: bool = false) -> Dictionary:
 	var id := unit_id()
 	if not can_plan(id) or not step_has_drop(k, id):
 		return {}
 	_focus = k
 	_set_drag_aim(k)
+	_aim_grab = world_pt
+	_aim_moved = not grab
+	if grab:
+		return world.planned_states(id)[k]
 	return drag_aim(world_pt)
 
 func drag_aim(world_pt: Vector2) -> Dictionary:
 	var id := unit_id()
 	if _drag_aim < 0 or not can_plan(id) or not step_has_drop(_drag_aim, id):
 		return {}
+	if not _aim_moved:
+		var slop: float = style.num("target.aim_drag_slop_px") / maxf(mapping.px_per_m(world_pt), 1e-6)
+		if world_pt.distance_to(_aim_grab) <= slop:
+			return world.planned_states(id)[_drag_aim]
+		_aim_moved = true
 	var cone: Dictionary = bombs.cone(id, _drag_aim)
 	if not bool(cone["ok"]):
 		return {}
@@ -568,35 +656,23 @@ func end_aim() -> Dictionary:
 func is_aiming() -> bool:
 	return _drag_aim >= 0
 
+# Whether the aim drag last begun moved the aim (left the slop): false for a plain click on the handle.
+func aim_was_moved() -> bool:
+	return _aim_moved
+
 func _set_drag_aim(k: int) -> void:
 	_drag_aim = k
 	if k >= 0:
 		_drag_index = -1
 	_update_hover()
 
-# After a step is edited the cones of the unit's steps are not the same: an aim that lies outside
-# its (new) cone moves to the nearest point inside it, a drop whose step has no cone any more comes
-# off. (The aim is part of the plan, so this is part of the edit.)
-func _fit_drops(id: String) -> void:
-	if bombs == null:
-		return
-	for k in bombs.drop_steps(id):
-		var cone: Dictionary = bombs.cone(id, k)
-		var plan: Array = world.units[id].plan
-		var req: Dictionary = (plan[k] as Dictionary).duplicate(true)
-		if not bool(cone["ok"]):
-			req.erase("drop")
-			world.plan_step(id, k, req)
-			continue
-		var aim := BombSource._v2((req["drop"] as Dictionary).get("aim"))
-		if not aim.is_finite() or not BombSource.inside(cone["polygon"], aim):
-			var fixed := BombSource.nearest_inside(cone["polygon"], aim if aim.is_finite() else cone["ideal_aim"])
-			req["drop"] = {"aim": [fixed.x, fixed.y]}
-			world.plan_step(id, k, req)
+# (A step edited keeps its drop and its target as they are -- Track T. Where the cone leaves the aim behind, the step is
+# MARKED by drop_blocked, and the sim's outside_cone_mode decides what happens; the aim is not moved behind the player's back.)
 
 # What the card and the map say about step k's drop: {cone (metres), aim, ideal_aim, spread
 # {along_m, across_m, heading}, quality 0..1, release (metres), free (drops still free to plan),
-# source}. {} when step k has no drop.
+# path, target (step_target), blocked (the aim is outside the cone), poor_shot (it would be released as one),
+# lands (where the stick is centred: the aim, or the cone's nearest point to it)}. {} when step k has no drop.
 func drop_info(k: int = -2) -> Dictionary:
 	var id := unit_id()
 	if k == -2:
@@ -608,9 +684,39 @@ func drop_info(k: int = -2) -> Dictionary:
 	if not bool(cone["ok"]) or not aim.is_finite():
 		return {}
 	var info: Dictionary = bombs.aim_info(id, k, aim)
+	var outside := drop_blocked(k, id)
 	return {"step": k, "cone": cone["polygon"], "aim": aim, "ideal_aim": cone["ideal_aim"], "spread": info["spread"],
 		"quality": float(info["quality"]), "release": info["release"], "free": bombs.drops_free(id),
-		"path": cone["path"]}
+		"path": cone["path"], "target": step_target(k, id), "blocked": outside and not bool(info["releases"]),
+		"poor_shot": outside and bool(info["releases"]), "lands": info["lands"]}
+
+# THE EXPECTED-DAMAGE LINE (Track T; "radio tower: about 5 of 8"): for step k's drop, the ground unit IN SIGHT that is expected
+# to lose the most pips, from the sim's own rules (World.drop_expected through BombSource; a unit the fog hides is never
+# named): {unit, name (lowercase), mean (pips, capped at its health), health, p_destroy}, or {} when there is none (no drop, the
+# drop will not release, nothing in reach). Behind plan_shown like every read of a drop.
+func expected_damage(k: int = -2) -> Dictionary:
+	var id := unit_id()
+	if k == -2:
+		k = focus_step()
+	if not plan_shown(id) or not step_has_drop(k, id):
+		return {}
+	var aim := step_aim(k, id)
+	if not aim.is_finite():
+		return {}
+	var target_unit := str(step_target(k, id).get("unit", ""))
+	for rec: Dictionary in bombs.expected(id, k, aim):
+		var uid := str(rec["unit"])
+		if unit_visible.is_valid() and not bool(unit_visible.call(uid)):
+			continue
+		if uid == target_unit or float(rec["mean"]) >= style.num("bombs.aoe.card_min_pips"):
+			return {"unit": uid, "name": str(world.units[uid].def.name).to_lower(), "mean": float(rec["mean"]), "health": int(rec["health"]), "p_destroy": float(rec["p_destroy"])}
+	# The step's own unit target, on the ground and in sight, that the stick is not expected to hurt at all: the line says so
+	# ("radio tower: about 0 of 8"), which is what a player aiming at it needs to be told. A plane in the air takes nothing from bombs.
+	if target_unit != "" and world.units.has(target_unit) and (not unit_visible.is_valid() or bool(unit_visible.call(target_unit))):
+		var t = world.units[target_unit]
+		if not bool(t.down) and world.band_height(str(t.altitude_band)) <= world.bombs.blast_height_m:
+			return {"unit": target_unit, "name": str(t.def.name).to_lower(), "mean": 0.0, "health": int(t.health), "p_destroy": 0.0}
+	return {}
 
 # The marks for the bomb node, in screen px (the record bomb_aim_art.gd documents): the full
 # cone and aim of the step the card is about (while its drop is on), a small mark for every
@@ -629,6 +735,18 @@ func bomb_marks() -> Array:
 			var rec := _bomb_mark(id, k, k == focus_k)
 			if not rec.is_empty():
 				out.append(rec)
+	# Track T (PROPOSED, bombs.aim.preview_cone): a target is set and the step the card is about has no drop yet -- its cone, faintly.
+	if sel != "" and target != null and target.is_set() and plan_shown(sel) and bombs.has_bombs(sel) and style.flag("bombs.aim.preview_cone"):
+		var pk := focus_step(sel)
+		if pk >= 0 and not step_has_drop(pk, sel) and bombs.drops_free(sel, pk) > 0:
+			var cone: Dictionary = bombs.cone(sel, pk)
+			if bool(cone["ok"]):
+				var poly := PackedVector2Array()
+				for q: Vector2 in cone["polygon"]:
+					poly.append(mapping.world_to_screen(q))
+				out.append({"unit": sel, "step": pk, "quiet": false, "preview": true, "side": str(world.units[sel].side), "cone": poly,
+					"aim": mapping.world_to_screen(target.position_m(world)), "spread": {"a": 0.0, "b": 0.0, "angle": 0.0}, "quality": 0.0,
+					"seed": pk, "ppm": mapping.px_per_m(target.position_m(world)), "label": ""})
 	return out
 
 func _bomb_mark(id: String, k: int, full: bool) -> Dictionary:
@@ -647,15 +765,46 @@ func _bomb_mark(id: String, k: int, full: bool) -> Dictionary:
 	var rel: Vector2 = info["release"]
 	var u = world.units[id]
 	var quality := float(info["quality"])
+	# TRACK T: a drop whose aim lies outside its cone is MARKED. The outside_cone_mode decides how: "hold" (it releases
+	# nothing: `blocked`, no spread or fall line, a slash across the aim) or "poor_shot" (it releases a poor stick at the
+	# cone's nearest point to the aim: `poor`, the stick's spread and fall line there, a slash, "poor shot").
+	var outside := drop_blocked(k, id)
+	var blocked: bool = outside and not bool(info["releases"])
+	var poor: bool = outside and bool(info["releases"])
+	var lands: Vector2 = info["lands"] if (info["lands"] as Vector2).is_finite() else aim
+	if blocked:
+		lands = Vector2.INF
+	var tgt := step_target(k, id)
+	var label := ("%d%%" % roundi(quality * 100.0)) if full else ""
+	if full and blocked:
+		label = style.text("bombs.text.step_tag_blocked")
+	elif full and poor:
+		label = style.text("bombs.text.step_tag_poor")
+	var per_drop := int(bombs.bombs_left(id)["per_drop"])
+	var tiers: Array = []
+	for t: Array in bombs.blast_tiers():
+		tiers.append([float(t[0]) * ppm, float(t[1])])
 	return {
 		"unit": id, "step": k, "quiet": not full, "side": str(u.side),
 		"cone": poly, "aim": mapping.world_to_screen(aim),
+		"lands": mapping.world_to_screen(lands) if lands.is_finite() else Vector2.INF,
 		"ideal": mapping.world_to_screen(cone["ideal_aim"]) if (cone["ideal_aim"] as Vector2).is_finite() else Vector2.INF,
 		"release": mapping.world_to_screen(rel) if rel.is_finite() else Vector2.INF,
 		"spread": {"a": float(sp["along_m"]) * ppm, "b": float(sp["across_m"]) * ppm, "angle": mapping.screen_angle(aim, float(sp["heading"]))},
 		"quality": quality, "ppm": ppm, "seed": (hash(id) & 0xFFFF) * 31 + k,
-		"label": ("%d%%" % roundi(quality * 100.0)) if full else "",
+		"label": label, "blocked": blocked, "poor": poor,
+		"target": {"kind": "unit" if str(tgt.get("unit", "")) != "" else "point", "unit": str(tgt.get("unit", "")), "radius_px": _marker_radius(str(tgt.get("unit", "")))},
+		# the area of effect (bomb_aoe_art.gd): the blast table in px, the stick, the scatter's sigma, all along the bomber's heading
+		"aoe": {"tiers": tiers, "count": per_drop, "stick_px": float(sp["stick_m"]) * ppm, "sigma_px": float(sp["sigma_m"]) * ppm,
+			"angle": mapping.screen_angle(aim, float(sp["heading"])), "k_sigma": style.num("bombs.aim.spread.sigma_k")},
 	}
+
+# The screen radius of a unit's marker (0 for none): the unit-target mark's brackets stand clear of it.
+func _marker_radius(unit: String) -> float:
+	if unit == "" or marker_layer == null:
+		return 0.0
+	var m: Object = marker_layer.marker(unit)
+	return float(m.radius_px()) if m != null else 0.0
 
 # The Ready button: commit for the local player. True when everyone is ready
 # (the World does not resolve by itself; the owner -- UnitUI -- decides when).
@@ -777,7 +926,7 @@ func press(screen_pt: Vector2) -> bool:
 	var wp: Vector2 = mapping.screen_to_world(screen_pt)
 	if not g.is_empty():
 		if str(g["kind"]) == "aim":
-			begin_aim(int(g["step"]), wp)
+			begin_aim(int(g["step"]), wp, true)   # the handle itself: nothing moves until the pointer leaves the slop
 		else:
 			begin_edit(int(g["step"]), wp)
 		return true
@@ -932,6 +1081,9 @@ func _hover_effects() -> PackedStringArray:
 	return style.text("planner.hover.mode").split("+", false)
 
 # --- Drawing ---------------------------------------------------------------------------
+
+func _on_target_changed() -> void:
+	queue_redraw()
 
 func _on_plan_changed(id: String) -> void:
 	_paths.erase(id)
@@ -1095,6 +1247,8 @@ func step_labels(id: String = "") -> Array:
 			lines.append(UiLabels.carry_text(style, float(s["speed"]), node_height_m(s)))   # a carry-on node: speed and height
 		if step_has_drop(k, id):
 			lines.append(style.text("bombs.text.step_tag"))   # a drop on this step (Track U3)
+			if drop_blocked(k, id):   # its target outside its cone (Track T): "will not release" / "poor shot", by the sim's switch
+				lines.append(style.text("bombs.text.step_tag_blocked" if bombs.outside_mode() == "hold" else "bombs.text.step_tag_poor"))
 		var band := str(s["altitude_band"])
 		if band != prev_band:
 			var up: bool = u.def.envelope.bands.find(band) > u.def.envelope.bands.find(prev_band)

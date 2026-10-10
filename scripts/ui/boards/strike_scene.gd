@@ -116,14 +116,18 @@ func set_up(band: String = "medium") -> void:
 	await scene.place({"b1": {"x": start_m.x + delta.x, "y": start_m.y + delta.y, "heading": heading}})
 	start_m += delta
 	_plan()
-	pl.place_aim(DROP_STEP, tower_m)
 	await scene.frames(3)
 
+# The bomber's two steps, and the drop of the second AIMED AT THE TOWER the way a player does since the target selection
+# (Track T, Alex: left-click an enemy unit, then Drop): the tower is the target (a unit target: it follows the unit) and the
+# step stores it, the aim on it.
 func _plan() -> void:
 	pl.clear()
 	var dir := Vector2.from_angle(heading)
 	pl.place_point(start_m + dir * 142.0)
 	pl.place_point(start_m + dir * 284.0)
+	ui.select("b1")
+	ui.set_target_unit("tower")
 	pl.set_step_drop(DROP_STEP, true)
 
 func midpoint() -> Vector2:

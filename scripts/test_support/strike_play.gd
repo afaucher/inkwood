@@ -250,7 +250,7 @@ func _plan_drops(b: Unit, tp: Vector2) -> void:
 		if k >= b.plan.size():
 			continue
 		var req: Dictionary = (b.plan[k] as Dictionary).duplicate(true)
-		req["drop"] = {"aim": [tp.x, tp.y]}
+		req["drop"] = {"aim": [tp.x, tp.y], "target": {"unit": TOWER}}   # Track T: the tower is the step's target (a unit target follows the unit)
 		if not world.plan_step(b.id, k, req).is_empty():
 			planned += 1
 

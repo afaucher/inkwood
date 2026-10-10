@@ -113,6 +113,13 @@ a patrolling fighter, by a turn limit.
   `test_ui_labels`); the scripted run is `scripts/test_support/strike_play.gd`
   (`test_strike`; shots: `scripts/app/strike_shot.gd`; two windows:
   `tmp/net/run_check.ps1 -Scenario strike [-Play] [-Exe ...]`).
+- Targeting (decision special-targeting): with a friendly unit selected, a
+  left-click on an enemy or a right-click on the map sets `UnitUI.target`
+  (`scripts/ui/ui_target.gd`); Drop takes it onto the step. A unit target is
+  followed and the release picked at resolve; outside the cone is
+  `data/sim/bombs.json` outside_cone_mode (`test_ui_target`,
+  `test_bomb_target`, `test_net_target`). The side view sits in the orders
+  card (`scripts/ui/side_view*.gd`, `test_side_view`).
 Work on a track stays inside the folders it owns and reads other tracks' data
 and public APIs, not their code.
 
@@ -411,7 +418,7 @@ is made in BOTH twins; `tar_pack.ps1` is the one Windows-only helper, because
   networking bug. Allocated: `test_enet_loopback` 28777,
   `test_network_session` 28778, `test_world_sync` 28779, `test_net_sandbox`
   28780; the manual two-window check (`tmp/net/run_check.ps1`, not in the
-  gate) uses 28790. `test_net_join_ready` 28781, `test_intercept` 28782, `test_strike` 28783. Pick
+  gate) uses 28790. `test_net_join_ready` 28781, `test_intercept` 28782, `test_strike` 28783, `test_net_target` 28784. Pick
   the next free one and add it here.
 - **Only `scripts/net/steam_manager.gd` calls `Steam.*`.** Everything else asks
   `NetworkManager`, because the gate may have no Steam client and anything that

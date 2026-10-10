@@ -53,12 +53,20 @@ extends RefCounted
 #              they do not hold up the ready-up (an AI side made only of static units has no one
 #              to wait for; participants() leaves the AI out). They fire (flak, aimed up: combat.gd)
 #              and are fired at and bombed; at 0 health they are DOWN with the fate "destroyed".
-#   BOMBS      a step request may carry {"drop": {"aim": [x, y]}} (envelope.gd; the physics, the
-#              cone and the events are in bombs.gd). drop_cone() / drop_spread() answer the
+#   BOMBS      a step request may carry {"drop": {"aim": [x, y], "target": {...}}} (envelope.gd; the
+#              physics, the cone and the events are in bombs.gd). drop_cone() / drop_spread() answer the
 #              interface, bombs_left() the load, plan_step() reports the drop in the returned
 #              state's "drop". A bomb falls for seconds and may land in a LATER turn: the bombs
 #              still falling are `bombs_in_flight`, carried by resolve() and handed to a client
-#              by apply_resolution (the result's "bombs").
+#              by apply_resolution (the result's "bombs"). THE TARGET (Track T): the drop may carry the
+#              target it was activated with, a unit or a point; it is the step's, it travels with the plan
+#              and shows in the step's "drop" and the bomb_release event. A UNIT target FOLLOWS the unit
+#              (Alex: "Targeting a moving unit like a tank should follow the unit. We need to pick the release
+#              point for bombs and things dynamically."): at resolve the aim is the unit's position at the
+#              release, led by its velocity (_resolve_followed_drops); a point target is fixed. A drop whose
+#              target is outside its step's cone does what data/sim/bombs.json outside_cone_mode says: "hold"
+#              releases nothing and spends no bombs, "poor_shot" releases a poor stick (bombs.gd).
+#              drop_expected() answers the expected-damage line.
 #
 # LEAVING THE MAP is an event, not an error: the step state carries
 # out_of_bounds, a "left_bounds" / "returned_to_bounds" event goes into the
@@ -82,6 +90,7 @@ const CombatRules = preload("res://scripts/sim/combat_rules.gd")
 const CombatResolver = preload("res://scripts/sim/combat_resolver.gd")
 const BombRules = preload("res://scripts/sim/bomb_rules.gd")
 const Bombs = preload("res://scripts/sim/bombs.gd")
+const BombExpect = preload("res://scripts/sim/bomb_expect.gd")
 
 const PHASE_PLANNING := "planning"
 const PHASE_RESOLVING := "resolving"
@@ -254,6 +263,9 @@ func plan_step(unit_id: String, step_index: int, request: Variant) -> Dictionary
 				used += 1
 		if used + 1 > u.drops_left:
 			return _fail_d("plan_step: unit '%s' has %d drop(s) left and %d already planned this turn" % [unit_id, u.drops_left, used])
+		var tgt := Envelope.drop_target(req)
+		if tgt.has("unit") and not units.has(str(tgt["unit"])):
+			return _fail_d("plan_step: the drop's target unit '%s' does not exist" % str(tgt["unit"]))
 	while u.plan.size() < step_index:
 		u.plan.append({})
 	if step_index < u.plan.size():
@@ -371,8 +383,12 @@ func drop_cone(unit_id: String, step_index: int, aim: Variant = null) -> Diction
 	return out
 
 # WHAT AN AIM POINT GETS in a step (Bombs.plan_drop): {} on the errors drop_cone() has, or
-#   ok, aim (Vector2: the point moved inside the cone if it was outside), requested (Vector2),
-#   clamped (bool), spread {radius_m, along_m, across_m, heading} (one bomb's scatter, sigma, metres;
+#   ok, aim (Vector2: the point moved inside the cone if it was outside -- what the interface shows; the
+#   World does NOT bomb there, see "outside"), requested (Vector2),
+#   clamped (bool), outside (bool: the requested aim is outside the cone: what happens is outside_cone_mode,
+#   Track T), releases (bool: a drop planned there would release -- inside the cone, or outside with "poor_shot"),
+#   poor_shot (bool: it would be a poor shot, accuracy and spread as such), requested_r (its release error, 1 is the rim),
+#   spread {radius_m, along_m, across_m, heading} (one bomb's scatter, sigma, metres;
 #   heading the bomber's at the release), spread_m, quality (also "accuracy": 0..1, the weapons' centre
 #   factor of the release error; 1 at the ideal release angle), r (the release error as a fraction of
 #   the cone: 1 is the rim), release (Vector2, where the bomber is when the stick goes), release_t
@@ -390,6 +406,10 @@ func drop_spread(unit_id: String, step_index: int, aim: Variant) -> Dictionary:
 		return {}
 	var u: Unit = ctx["unit"]
 	var d := Bombs.plan_drop(ctx["samples"], float(a[0]), float(a[1]), bombs)
+	var rd := Bombs.release_rule(d, bombs)
+	var releases: bool = rd.get("ok", false) == true
+	if releases:
+		d = rd   # a poor shot's accuracy and scatter (outside_cone_mode); inside the cone it is plan_drop's own
 	var rel: Dictionary = d["release"]
 	var sigma := float(d["spread_m"])
 	var impact_t := float(d["impact_t"])
@@ -397,7 +417,8 @@ func drop_spread(unit_id: String, step_index: int, aim: Variant) -> Dictionary:
 		"ok": true,
 		"aim": Vector2(float((d["aim"] as Array)[0]), float((d["aim"] as Array)[1])),
 		"requested": Vector2(float(a[0]), float(a[1])),
-		"clamped": d["clamped"],
+		"clamped": d["clamped"], "outside": d["outside"], "requested_r": d["requested_r"], "releases": releases,
+		"poor_shot": bool(d.get("poor_shot", false)),
 		"spread": {"radius_m": sigma, "along_m": sigma, "across_m": sigma, "heading": float(rel["heading"])},
 		"spread_m": sigma, "quality": d["accuracy"], "accuracy": d["accuracy"], "r": d["r"],
 		"release": Vector2(float(rel["x"]), float(rel["y"])), "release_t": d["release_t"], "release_height_m": rel["height_m"],
@@ -407,6 +428,47 @@ func drop_spread(unit_id: String, step_index: int, aim: Variant) -> Dictionary:
 		"stick_length_m": float(maxi(u.def.bomb_per_drop - 1, 0)) * float(rel["speed"]) * bombs.release_interval_s,
 		"per_drop": u.def.bomb_per_drop,
 	}
+
+# THE EXPECTED DAMAGE of a drop at `aim` on step `step_index` of the unit's current plan (Track T; bomb_expect.gd):
+# the ground units (blast_height_m or lower) the stick can reach, each with the pips it is expected to lose and the
+# chance it is destroyed, the most affected first. Every unit is listed whatever its side and whatever the fog: the
+# interface filters what the player may see. [] for an aim outside the cone (nothing releases) or a unit that cannot
+# drop. Each record: {unit, mean (pips, capped at its health), mean_raw, p_destroy, health, distance_m (from the aim)}.
+func drop_expected(unit_id: String, step_index: int, aim: Variant) -> Array:
+	var a := _aim_point(aim)
+	if a.is_empty():
+		_fail("drop_expected: the aim is a Vector2 or [x, y] of finite numbers, got %s" % str(aim))
+		return []
+	var ctx := _drop_context("drop_expected", unit_id, step_index)
+	if ctx.is_empty():
+		return []
+	var u: Unit = ctx["unit"]
+	var d := Bombs.release_rule(Bombs.plan_drop(ctx["samples"], float(a[0]), float(a[1]), bombs), bombs)
+	if d.get("ok", false) != true:
+		return []   # outside the cone and "hold": nothing is released, so nothing is hurt
+	var centre := Vector2(float((d["aim"] as Array)[0]), float((d["aim"] as Array)[1]))
+	var reach := BombExpect.reach_m(d, u.def.bomb_per_drop, bombs)
+	var out: Array = []
+	for id: String in units:
+		var t: Unit = units[id]
+		if t.down or id == unit_id:
+			continue
+		var h := _state_height(_start_state(t))
+		if h > bombs.blast_height_m:
+			continue
+		var at := Vector2(t.x, t.y)
+		var dist := at.distance_to(centre)
+		if dist > reach:
+			continue
+		var e := BombExpect.damage(d, u.def.bomb_per_drop, bombs, at, t.health, h)
+		if float(e["mean_raw"]) <= 0.0:
+			continue
+		out.append({"unit": id, "mean": e["mean"], "mean_raw": e["mean_raw"], "p_destroy": e["p_destroy"], "health": t.health, "distance_m": dist})
+	out.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
+		if float(x["mean"]) != float(y["mean"]):
+			return float(x["mean"]) > float(y["mean"])
+		return str(x["unit"]) < str(y["unit"]))
+	return out
 
 # The bombs still falling, for a joining client (WorldSync's snapshot should carry them) and its twin.
 func net_bombs() -> Array:
@@ -527,9 +589,10 @@ func resolve() -> Dictionary:
 	# bombers' drops are counted against their loads first (bombs.gd), and the
 	# resolver releases and lands the bombs on its ticks.
 	for id: String in units:
-		var u: Unit = units[id]
-		_apply_drop_limits(u, histories[id], 1)
-		u.history = histories[id]
+		(units[id] as Unit).history = histories[id]
+	_resolve_followed_drops(histories)
+	for id: String in units:
+		_apply_drop_limits(units[id], histories[id], 1)
 	var fight := _combat_resolver.run(units, histories, turn, rng_seed, rules.turn_seconds,
 		func(uid: String, t: float) -> Dictionary: return sample(uid, t, "history"),
 		func(band: String) -> float: return band_height(band), bombs_in_flight)
@@ -777,7 +840,44 @@ func _drop_state(u: Unit, k: int, prev: Dictionary, cur: Dictionary, req: Varian
 		return {"ok": false, "reason": "no_aim"}
 	if not u.def.carries_bombs():
 		return {"ok": false, "reason": "no_bombs", "requested": aim}
-	return Bombs.plan_drop(_drop_samples(u, k, prev, cur), float(aim[0]), float(aim[1]), bombs)
+	var d := Bombs.release_rule(Bombs.plan_drop(_drop_samples(u, k, prev, cur), float(aim[0]), float(aim[1]), bombs), bombs)
+	var target := Envelope.drop_target(req)
+	if not target.is_empty():
+		d["target"] = target
+	return d
+
+# THE FOLLOWED UNITS (Track T; Alex: "Targeting a moving unit like a tank should follow the unit. We need to pick the
+# release point for bombs and things dynamically."). A step's drop whose target is a UNIT was analysed by _step for the
+# aim the request names (the unit where the planning player saw it: the preview, no projection of the enemy's motion).
+# Now that every unit's history of the turn exists, that drop is analysed again with the aim as a function of the release
+# moment: the target's position at t, led by its velocity at t times the fall time of a bomb released at t (bombs.gd,
+# followed_aim -- PROPOSED), the release at the moment of the step with the smallest release error for that aim. The
+# outside-the-cone switch applies as for any drop (release_rule). A point target and a drop with no target are untouched.
+# `histories` is the turn just built and is on the units (sample() reads it).
+func _resolve_followed_drops(histories: Dictionary) -> void:
+	for id: String in units:
+		var u: Unit = units[id]
+		if not u.def.carries_bombs():
+			continue
+		var h: Array = histories[id]
+		for i in range(1, h.size()):
+			var st: Dictionary = h[i]
+			var d: Variant = st.get("drop")
+			if not (d is Dictionary) or not (d as Dictionary).has("target"):
+				continue
+			var target: Dictionary = (d as Dictionary)["target"]
+			var reason := str((d as Dictionary).get("reason", ""))
+			if not target.has("unit") or not units.has(str(target["unit"])) or reason == "no_aim" or reason == "no_bombs":
+				continue
+			var samples := _drop_samples(u, int(st["step"]), h[i - 1], st)
+			var followed_id := str(target["unit"])
+			var aim_at := func(t: float) -> Vector2:
+				var bomber := Bombs.sample_at(samples, t)
+				return Bombs.followed_aim(sample(followed_id, t, "history"), float(bomber["height_m"]), bombs)
+			var rec := Bombs.release_rule(Bombs.plan_drop_moving(samples, aim_at, bombs), bombs)
+			rec["target"] = target
+			rec["followed"] = true
+			st["drop"] = rec
 
 # The unit and the bomber through step `step_index` of its current plan, for drop_cone and
 # drop_spread: {unit, samples}, or {} with last_error for a unit with no bombs, a down unit or a
@@ -815,6 +915,8 @@ func _apply_drop_limits(u: Unit, states: Array, first: int) -> void:
 			continue
 		if used >= u.drops_left:
 			var refused: Dictionary = {"ok": false, "reason": "no_drops", "requested": (d as Dictionary).get("requested", [])}
+			if (d as Dictionary).has("target"):
+				refused["target"] = (d as Dictionary)["target"]
 			(states[i] as Dictionary)["drop"] = refused
 		else:
 			used += 1
