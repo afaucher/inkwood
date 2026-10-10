@@ -618,6 +618,27 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'A explosion then smoking - show me the panel.'"
+    },
+    {
+      "id": "standoff-reward",
+      "date": "2026-10-09",
+      "area": "Combat",
+      "question": "With odds falling off past effective range, a light fighter about 470 m behind a bomber still wins 98% (wing guns effective to 450 m, the tail turret to 400 m). Match the ranges, or keep the gap?",
+      "board": "none (Track C's tuning table)",
+      "options": [
+        "match the tail turret's effective range to the wing guns",
+        "keep the gap"
+      ],
+      "chosen": "keep the gap: a reward for good positioning",
+      "parameters": {
+        "tail_turret_effective_range_m": 400,
+        "wing_guns_effective_range_m": 450
+      },
+      "applied_to": [
+        "data/units/*.json (as built)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Reward'."
     }
   ]
 }
