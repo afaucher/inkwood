@@ -725,6 +725,26 @@
       ],
       "status": "direction from Alex (to confirm on a board)",
       "notes": "Alex: 'I might actually like to see like a stepped color washed version so under water is the same height map as above.'"
+    },
+    {
+      "id": "smoke-shadow",
+      "date": "2026-10-10",
+      "area": "Effects, Shadows",
+      "question": "Does smoke cast a shadow on the ground? (smoke options A and D do, B and C do not)",
+      "board": "variants/damage-smoke/ (with and without frames on each sheet)",
+      "options": [
+        "no smoke shadows",
+        "smoke casts a shadow"
+      ],
+      "chosen": "thick smoke casts a shadow",
+      "parameters": {
+        "rule": "the shadow follows the smoke's density: thick smoke (heavy damage trails, the smoking wreck's column, the mid-air explosion's cloud) casts one by the same altitude rule as planes; how thin smoke behaves is proposed when the smoke option is chosen (proposed: fading with density to none)"
+      },
+      "applied_to": [
+        "not yet: the effects are wired after the fire research and Alex's crash/smoke choice"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Also note I expect thick smoke to cast a shadow.'"
     }
   ]
 }
