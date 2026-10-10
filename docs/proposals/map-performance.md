@@ -58,7 +58,10 @@ Per chunk at 2 px/m (1024 px chunks, 4096 px supersampled targets), cold; mean o
    Medium cost and risk (thread safety; `test_terrain` covers determinism).
 5. **One render round trip per chunk instead of six** (chain the mask viewports in a frame):
    at most ~30% judging by a vsync-off run. Medium cost and risk.
-6. **GDScript thread contention** (3.15 ms per sprite alone vs 5.6 ms on 8 threads; suspected
+6. **GDScript thread contention** (Alex, 2026-10-10: "we have more than 8 cores for the thread
+   pool" -- this machine has 32 logical cores; the cap of 8 comes from the measured slowdown,
+   not from the hardware. First step proposed: per-thread copies of the shared objects, then
+   time 1/2/4/8/16/32 threads.) (3.15 ms per sprite alone vs 5.6 ms on 8 threads; suspected
    shared refcounts): small cost, unknown gain.
 
 Not worth it (measured or reasoned then): more threads or another pool; a lower-resolution
