@@ -22,6 +22,7 @@ extends RefCounted
 
 const Records = preload("res://scripts/sim/records.gd")
 const Envelope = preload("res://scripts/sim/envelope.gd")
+const CombatWeapon = preload("res://scripts/sim/combat_weapon.gd")
 
 const UNITS_DIR := "res://data/units"
 const SCHEMA_PATH := "res://data/units/_schema.json"
@@ -39,6 +40,10 @@ var silhouette: String = ""
 # and the Envelope built from it. envelope is null when the file is not ok().
 var envelope_values: Dictionary = {}
 var envelope: Envelope = null
+# The unit's weapons (data/units/_schema.json "weapons"): one record per cone,
+# each with one or more hardpoints. Empty when the file is not ok().
+var weapons: Array[CombatWeapon] = []
+var weapon_values: Array = []     # the validated weapons section as plain values (an Array of Dictionaries)
 var errors: Array[String] = []
 
 static func path_for(type_id: String, units_dir: String = UNITS_DIR) -> String:
@@ -75,10 +80,13 @@ func _init(unit_source: Variant, band_order: Array, quiet: bool = false, label: 
 		sight_range_m = float(v.get("sight_range_m", NAN))
 		silhouette = str((v.get("drawing", {}) as Dictionary).get("silhouette", ""))
 		envelope_values = v.get("envelope", {})
+		weapon_values = v.get("weapons", [])
 		_check(r, stem)
 	errors = r.errors
 	if errors.is_empty():
 		envelope = Envelope.new(envelope_values, band_order)
+		for w: Dictionary in weapon_values:
+			weapons.append(CombatWeapon.new(w))
 
 func ok() -> bool:
 	return errors.is_empty()
@@ -117,12 +125,46 @@ static func _walk(r: Records, fields: Dictionary, data: Dictionary, prefix: Stri
 				out[key] = r.id_list(data, key, label, band_order)
 			"band":
 				out[key] = r.id_value(data, key, label, band_order)
+			"points3":
+				out[key] = _points3(r, data, key, label)
+			"list":
+				# A list of objects, each walked against the schema's item_fields
+				# (the weapons). The list itself is structure, not a tunable.
+				var items: Array = []
+				var raw: Variant = data.get(key)
+				if raw is Array:
+					for i in (raw as Array).size():
+						if raw[i] is Dictionary:
+							items.append(_walk(r, spec.get("item_fields", {}), raw[i], "%s[%d]." % [label, i], band_order))
+						else:
+							r.err("'%s[%d]' is not an object" % [label, i])
+				else:
+					r.err("missing list '%s'" % label)
+				out[key] = items
 			_:
 				r.err("the schema gives '%s' an unknown kind '%s'" % [label, kind])
 	for key: Variant in data:
 		var k := str(key)
 		if not k.begins_with("_") and not fields.has(k):
 			r.err("unknown field '%s' (not in %s -- misspelt?)" % [prefix + k, SCHEMA_PATH])
+	return out
+
+# A value record holding a non-empty list of [forward, right, up] points, metres
+# (a weapon's hardpoints). Finite numbers only.
+static func _points3(r: Records, data: Dictionary, key: String, label: String) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	var v: Variant = r.record(data, key, label)
+	if typeof(v) == TYPE_NIL:
+		return out
+	if not (v is Array) or (v as Array).is_empty():
+		r.err("'%s' must be a non-empty list of [forward, right, up] points in metres" % label)
+		return out
+	for p: Variant in v:
+		if not (p is Array) or (p as Array).size() != 3 or not Records.is_number(p[0]) or not Records.is_number(p[1]) or not Records.is_number(p[2]) \
+				or not is_finite(float(p[0])) or not is_finite(float(p[1])) or not is_finite(float(p[2])):
+			r.err("'%s' has a point that is not [forward, right, up] in finite numbers: %s" % [label, str(p)])
+			continue
+		out.append(Vector3(float(p[0]), float(p[1]), float(p[2])))
 	return out
 
 func _check(r: Records, stem: String) -> void:
@@ -139,3 +181,9 @@ func _check(r: Records, stem: String) -> void:
 	var start := str(e.get("start_band", ""))
 	if start != "" and not bands.has(start):
 		r.err("envelope.start_band '%s' is not one of the unit's altitude_bands %s" % [start, str(bands)])
+	var seen: Array[String] = []
+	for w: Variant in weapon_values:
+		var wid := str((w as Dictionary).get("id", ""))
+		if wid != "" and seen.has(wid):
+			r.err("weapons: id '%s' is used twice" % wid)
+		seen.append(wid)

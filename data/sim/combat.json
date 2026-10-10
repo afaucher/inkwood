@@ -1,0 +1,43 @@
+{
+  "_about": "Combat constants for the simulation (scripts/sim/combat_rules.gd reads this; scripts/sim/combat.gd, combat_resolver.gd and the World use it). ALL PROPOSED by Track C, 2026-10-09, for the first fight: Alex decided the model (a cone per weapon on a hardpoint, hits random-ish, machine-gun odds better near the cone's centre, the same cone in height, the host resolves and sends the result; and that a dead plane either explodes mid air or loses control and crashes eventually) but none of these numbers. Every tunable is a value record: {value, _proposed, _reason} until a decision replaces _proposed with a decision id. The per-weapon numbers (cones, range, odds, damage, roll rate) are in data/units/<id>.json under 'weapons'.",
+  "tick_seconds": {
+    "value": 0.25,
+    "_proposed": true,
+    "_reason": "the lead's brief: combat walks the turn at a fixed tick. 0.25 s is 20 ticks per 5 s turn: finer than the shortest motion step (a 5-step fighter's step is 1 s), so a pass through a cone is seen, and cheap enough that a turn resolves in milliseconds. The turn is cut into round(turn_seconds / tick_seconds) equal ticks, so the last tick always ends exactly on the turn"
+  },
+  "target_rule": {
+    "value": "best_odds",
+    "_proposed": true,
+    "_reason": "a default so a weapon with several enemies in its cone still rolls at one of them: the one with the best odds (ties: nearer, then the unit added first). NOT target priority, which Alex will design; when he does, this record names the new rule"
+  },
+  "odds_factors": {
+    "value": ["centre"],
+    "_proposed": true,
+    "_reason": "the named factors that multiply a weapon's base_hit_chance. Only 'centre' (better odds nearer the cone's centre, per weapon falloff) is decided (Alex 2026-10-09). Range, crossing speed, damage and others come later by adding a name here and a function in combat.gd; none is built"
+  },
+  "max_pitch_deg": {
+    "value": 35,
+    "_proposed": true,
+    "_reason": "while a plane changes altitude band its guns tilt with the climb or dive: the cone's axis pitches by the path's angle, atan(vertical speed / speed), at most this much either way. Bands are 280 to 600 m apart and a step is 1 to 1.7 s, so the raw angle is always 60 to 80 degrees; this caps it at about the 37 degree dive drawn on the engagement-cones sheet. 0 turns the tilt off (the cone stays level in a climb or dive)"
+  },
+  "explode_chance": {
+    "value": 0.35,
+    "_proposed": true,
+    "_reason": "Alex 2026-10-09: a dead plane either explodes mid air or loses control and crashes eventually. The lead's proposed split: this chance it explodes at once, otherwise it falls out of control. One seeded roll per kill (its own stream, combat.gd fate_seed). Per-weapon or overkill factors come later, not now"
+  },
+  "fall_turn_rate_dps": {
+    "value": 30,
+    "_proposed": true,
+    "_reason": "an out-of-control plane turns at this fixed rate, to the left or the right as the same roll says: a spiral. About a light fighter's sustained turn at slow speed (data/units: 30 deg/s at 45 m/s), so at cruise it spirals on a circle of about 190 m radius"
+  },
+  "fall_speed_gain_mps2": {
+    "value": 4,
+    "_proposed": true,
+    "_reason": "it holds speed and gains this much per second as it falls (gravity beats drag), up to the unit type's dive_speed_max_mps. 4 m/s^2 is the light fighter's own acceleration"
+  },
+  "fall_descent_mps": {
+    "value": 50,
+    "_proposed": true,
+    "_reason": "metres of height lost per second while out of control. From the high band (1000 m) that is 20 s, 4 turns; from medium (400 m) 8 s, 1.6 turns; from low (120 m) 2.4 s. Slow enough that the fall is watched over a turn or two, fast enough that it is a fall and not a glide. The sim has no terrain: the ground is 0 m"
+  }
+}

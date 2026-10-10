@@ -30,11 +30,19 @@ extends RefCounted
 #   resolve    planning -> resolving -> resolved. Every unit advances step by
 #              step in TIME ORDER across the whole world (a 5-step fighter's
 #              steps interleave with a 3-step bomber's), re-clamping each step
-#              against the unit's actual state. Units do not interact yet, so
-#              the order cannot change anything today; it is the order combat
-#              will need. Resolution is a pure function of (unit states,
-#              plans): no randomness anywhere in the sim -- anything that ever
-#              needs it takes a seeded Mulberry32 (scripts/core/mulberry32.gd).
+#              against the unit's actual state. Motion does not depend on
+#              combat. Then COMBAT (Track C; scripts/sim/combat.gd documents the
+#              model and the event shapes) walks the turn at a fixed tick over
+#              the histories just built, rolls every weapon with seeded
+#              Mulberry32 streams (rng_seed; the only randomness in the sim, and
+#              only the host's World resolves) and adds fire / hit / down events.
+#              Resolution is a pure function of (unit states, plans, rng_seed).
+#              A unit at 0 health is DOWN with a fate (Unit.fate): it explodes
+#              and stays put, or goes out of control -- the sim flies it down
+#              in a spiral, across turns, to a crash (events "down" and "crash").
+#              Down units cannot be planned (plan_step / clear_plan refuse
+#              them), fire or are fired at; they stay in `units` and do not hold
+#              up the ready-up.
 #   resolved   histories are on the units and in turn_resolved; plans are
 #              consumed. begin_turn() starts the next planning phase.
 #
@@ -56,6 +64,8 @@ const SimRules = preload("res://scripts/sim/sim_rules.gd")
 const UnitDef = preload("res://scripts/sim/unit_def.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
 const Envelope = preload("res://scripts/sim/envelope.gd")
+const CombatRules = preload("res://scripts/sim/combat_rules.gd")
+const CombatResolver = preload("res://scripts/sim/combat_resolver.gd")
 
 const PHASE_PLANNING := "planning"
 const PHASE_RESOLVING := "resolving"
@@ -81,12 +91,18 @@ var quiet: bool = false
 # are random-ish). A scenario sets it. In a networked game only the host's
 # World resolves, so only the host rolls.
 var rng_seed: int = 0
+var combat: CombatRules         # data/sim/combat.json: the tick, the odds factors, the fall
 
-func _init(turn_path: String = SimRules.TURN_PATH, altitude_path: String = SimRules.ALTITUDE_PATH, unit_dir: String = UnitDef.UNITS_DIR) -> void:
+var _combat_resolver: CombatResolver
+
+func _init(turn_path: String = SimRules.TURN_PATH, altitude_path: String = SimRules.ALTITUDE_PATH, unit_dir: String = UnitDef.UNITS_DIR, combat_path: String = CombatRules.PATH) -> void:
 	rules = SimRules.new(turn_path, altitude_path)
 	units_dir = unit_dir
 	errors.append_array(rules.errors)
 	bounds = rules.bounds
+	combat = CombatRules.new(combat_path)
+	errors.append_array(combat.errors)
+	_combat_resolver = CombatResolver.new(combat)
 
 func ok() -> bool:
 	return errors.is_empty()
@@ -192,6 +208,8 @@ func plan_step(unit_id: String, step_index: int, request: Variant) -> Dictionary
 	var u := _unit(unit_id)
 	if u == null:
 		return {}
+	if u.down:
+		return _fail_d("plan_step: unit '%s' is down (%s) and takes no orders" % [unit_id, u.fate if u.fate != "" else "down"])
 	if phase != PHASE_PLANNING:
 		return _fail_d("plan_step: plans change only in the planning phase (phase is %s)" % phase)
 	var n := u.def.actions_per_turn
@@ -214,6 +232,9 @@ func plan_step(unit_id: String, step_index: int, request: Variant) -> Dictionary
 func clear_plan(unit_id: String) -> void:
 	var u := _unit(unit_id)
 	if u == null:
+		return
+	if u.down:
+		_fail("clear_plan: unit '%s' is down (%s) and takes no orders" % [unit_id, u.fate if u.fate != "" else "down"])
 		return
 	if phase != PHASE_PLANNING:
 		_fail("clear_plan: plans change only in the planning phase (phase is %s)" % phase)
@@ -335,7 +356,8 @@ func resolve() -> Dictionary:
 		var k: int = int(item[0]) - 1
 		var prev: Dictionary = cursor[id]
 		var s := _step(u, k, prev)
-		if bool(s["out_of_bounds"]) != bool(prev["out_of_bounds"]):
+		# A unit that is already down is not reported leaving or entering the map.
+		if not u.down and bool(s["out_of_bounds"]) != bool(prev["out_of_bounds"]):
 			events.append({
 				"type": "left_bounds" if s["out_of_bounds"] else "returned_to_bounds",
 				"unit": id, "turn": turn, "step": k, "t": s["t"], "x": s["x"], "y": s["y"],
@@ -343,12 +365,74 @@ func resolve() -> Dictionary:
 		(histories[id] as Array).append(s)
 		cursor[id] = s
 
+	# COMBAT, after motion (which it does not change; Track C, combat.gd). The
+	# sampler reads the histories just built, so they go on the units first.
+	for id: String in units:
+		(units[id] as Unit).history = histories[id]
+	var fight := _combat_resolver.run(units, histories, turn, rng_seed, rules.turn_seconds,
+		func(uid: String, t: float) -> Dictionary: return sample(uid, t, "history"),
+		func(band: String) -> float: return band_height(band))
+	var down_at: Dictionary = fight["down_at"]
+	var fates: Dictionary = fight["fates"]
 	for id: String in units:
 		var u: Unit = units[id]
-		var last: Dictionary = cursor[id]
-		u.apply_state(last)
-		u.out_of_bounds = bool(last["out_of_bounds"])
-		u.history = histories[id]
+		u.health = int(fight["health"][id])
+		u.down_at = NAN
+	# Units that went down this turn: their fate. An exploded unit is gone at
+	# down_at. An out-of-control one is flown on from there: its path after
+	# down_at is rebuilt as a fall (the states before are untouched).
+	for id: String in down_at:
+		var u: Unit = units[id]
+		u.down = true
+		u.down_at = float(down_at[id])
+		u.fate = str((fates[id] as Dictionary)["fate"])
+		if u.fate == Unit.FATE_OUT_OF_CONTROL:
+			u.fall_dir = int((fates[id] as Dictionary)["spin"])
+			histories[id] = _begin_fall(u, histories[id], u.down_at)
+			u.history = histories[id]
+	# What a unit did after it went down is not reported: its bounds events past
+	# down_at describe a path it no longer flies.
+	if not down_at.is_empty():
+		events = events.filter(func(ev: Dictionary) -> bool:
+			return not (down_at.has(str(ev.get("unit", ""))) and float(ev.get("t", 0.0)) > float(down_at[str(ev["unit"])])))
+	# Out-of-control units that reach the ground this turn (the ones that fell
+	# into it from an earlier turn, and the ones that went down in this one).
+	var crash_at := {}
+	var crash_events: Array = []
+	for id: String in units:
+		var u: Unit = units[id]
+		if u.fate != Unit.FATE_OUT_OF_CONTROL:
+			continue
+		var tc := _crash_time(histories[id])
+		if is_nan(tc):
+			continue
+		crash_at[id] = tc
+		var at := sample(id, tc, "history")
+		crash_events.append({"type": "crash", "turn": turn, "unit": id, "t": tc, "x": at["x"], "y": at["y"]})
+	crash_events.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["t"]) < float(b["t"]))
+	events = CombatResolver.merge_events(CombatResolver.merge_events(events, fight["events"]), crash_events)
+
+	for id: String in units:
+		var u: Unit = units[id]
+		var h: Array = histories[id]
+		var last: Dictionary = h[h.size() - 1]
+		if crash_at.has(id) or (down_at.has(id) and u.fate == Unit.FATE_EXPLODED):
+			# It stops where it exploded or struck the ground, not where its path
+			# would have ended the turn.
+			var stop: float = float(crash_at[id]) if crash_at.has(id) else float(down_at[id])
+			var at := sample(id, stop, "history")
+			at["speed"] = 0.0
+			u.apply_state(at)
+			u.out_of_bounds = not in_bounds(float(at["x"]), float(at["y"]))
+			if crash_at.has(id):
+				u.fate = Unit.FATE_CRASHED
+				u.fall_height_m = 0.0
+				u.fall_dir = 0
+		else:
+			u.apply_state(last)
+			u.out_of_bounds = bool(last["out_of_bounds"])
+			if u.fate == Unit.FATE_OUT_OF_CONTROL:
+				u.fall_height_m = float(last["fall_height_m"])
 		u.plan.clear()
 
 	_set_phase(PHASE_RESOLVED)
@@ -449,7 +533,7 @@ func sample(unit_id: String, t: float, source: String = "history") -> Dictionary
 	# No resolve yet (or a path of one state): the unit is where it is.
 	if path.size() < 2:
 		var s := u.state()
-		s["height_m"] = band_height(u.altitude_band)
+		s["height_m"] = u.fall_height_m if is_finite(u.fall_height_m) else band_height(u.altitude_band)
 		return s
 	var tt := clampf(t, 0.0, rules.turn_seconds)
 	var k := 0
@@ -463,7 +547,13 @@ func sample(unit_id: String, t: float, source: String = "history") -> Dictionary
 	var band_a := str(a["altitude_band"])
 	var band_b := str(b["altitude_band"])
 	p["altitude_band"] = band_b if f >= 0.5 else band_a
-	p["height_m"] = band_height(band_a) + (band_height(band_b) - band_height(band_a)) * f
+	# Height: the band heights, or for a falling unit (its states carry
+	# fall_height_m) the continuous fall height, never below the ground.
+	var ha := _state_height(a)
+	var hb := _state_height(b)
+	p["height_m"] = ha + (hb - ha) * f
+	if a.has("fall_height_m") or b.has("fall_height_m"):
+		p["height_m"] = maxf(float(p["height_m"]), 0.0)
 	return p
 
 # --- Internals ---------------------------------------------------------------
@@ -481,6 +571,23 @@ func _run_plan(u: Unit) -> Array:
 # The ONLY place a step is computed, so the preview and the resolve agree.
 func _step(u: Unit, k: int, prev: Dictionary) -> Dictionary:
 	var n := u.def.actions_per_turn
+	# A unit that is down takes no orders. Out of control, the sim flies it
+	# (a spiral that loses height); exploded or crashed, it stays where it is.
+	if u.fate == Unit.FATE_OUT_OF_CONTROL:
+		var fs := _fall_step(u, prev, rules.step_dt(n), u.fall_dir)
+		fs["step"] = k
+		fs["t"] = rules.turn_seconds * float(k + 1) / float(n)
+		return fs
+	if u.down:
+		var ws := prev.duplicate(true)
+		ws["speed"] = 0.0
+		ws["turn"] = 0.0
+		ws["clamped"] = false
+		ws["limits"] = []
+		ws["planned"] = false
+		ws["step"] = k
+		ws["t"] = rules.turn_seconds * float(k + 1) / float(n)
+		return ws
 	var planned := k < u.plan.size() and not (u.plan[k] as Dictionary).is_empty()
 	var req: Variant = u.plan[k] if k < u.plan.size() else {}
 	var s := u.def.envelope.clamp_step(prev, req, rules.step_dt(n))
@@ -499,7 +606,113 @@ func _start_state(u: Unit) -> Dictionary:
 	s["clamped"] = false
 	s["limits"] = []
 	s["out_of_bounds"] = u.out_of_bounds
+	if is_finite(u.fall_height_m):
+		s["fall_height_m"] = u.fall_height_m
 	return s
+
+# --- A unit going down out of control (Track C; combat.gd, WHAT A KILL DOES) -----
+#
+# The fall is flown by the sim, not planned: a spiral at a fixed turn rate in the
+# direction the fate roll picked (spin), holding or gaining speed, losing height
+# at a fixed rate (data/sim/combat.json fall_*). Its states carry
+# fall_height_m, metres above the ground (0 m; no terrain), unclamped: it goes
+# negative in the step that reaches the ground, and sample() clamps at 0. The
+# crash is the moment the height crosses 0 (_crash_time).
+
+# The state `d` seconds on from `prev` (a falling unit's state with fall_height_m),
+# as an arc like any step: the caller sets step and t.
+func _fall_step(u: Unit, prev: Dictionary, d: float, spin: int) -> Dictionary:
+	var v0 := float(prev["speed"])
+	var v1 := minf(v0 + combat.fall_speed_gain * d, maxf(v0, u.def.envelope.dive_speed_max))
+	var turn := float(spin) * combat.fall_turn_rate * d
+	var h0 := float(prev["heading"])
+	var end := Envelope.advance(float(prev["x"]), float(prev["y"]), h0, turn, (v0 + v1) * 0.5 * d)
+	var h1 := float(prev["fall_height_m"]) - combat.fall_descent * d
+	return {
+		"x": end[0], "y": end[1], "heading": Envelope.wrap_angle(h0 + turn), "speed": v1,
+		"altitude_band": _nearest_band(u, maxf(h1, 0.0)),
+		"turn": turn, "clamped": false, "limits": [], "planned": false,
+		"out_of_bounds": not in_bounds(float(end[0]), float(end[1])),
+		"fall_height_m": h1,
+	}
+
+# `hist` (a unit's history this turn, as motion built it) with the unit set to
+# fall from t_d: the states before t_d stay as they are, a state AT t_d is
+# inserted (unless a step already ends there) carrying the height it had, and
+# every later state is the fall. The inserted state keeps the step's end speed
+# and takes the share of its turn up to t_d, so the arc into it is the old arc
+# exactly: nothing before t_d moves. The unit's fate and fall_dir are already
+# set. `u.history` must still be `hist`.
+func _begin_fall(u: Unit, hist: Array, t_d: float) -> Array:
+	const EPS := 1e-9
+	var k := 1
+	while k < hist.size() - 1 and float(hist[k]["t"]) < t_d - EPS:
+		k += 1
+	var out: Array = []
+	for i in k:
+		out.append(hist[i])
+	var b: Dictionary = hist[k]
+	var at := sample(u.id, t_d, "history")
+	var c: Dictionary
+	var first_after := k
+	if absf(float(b["t"]) - t_d) <= EPS:
+		c = b.duplicate(true)
+		first_after = k + 1
+	else:
+		var a: Dictionary = hist[k - 1]
+		var f := (t_d - float(a["t"])) / (float(b["t"]) - float(a["t"]))
+		c = {
+			"x": at["x"], "y": at["y"], "heading": at["heading"], "speed": float(b["speed"]),
+			"altitude_band": at["altitude_band"], "turn": float(b["turn"]) * f,
+			"step": b["step"], "t": t_d, "planned": b["planned"], "clamped": false, "limits": [],
+			"out_of_bounds": not in_bounds(float(at["x"]), float(at["y"])),
+		}
+	c["fall_height_m"] = float(at["height_m"])
+	out.append(c)
+	var prev := c
+	for i in range(first_after, hist.size()):
+		var old: Dictionary = hist[i]
+		var s := _fall_step(u, prev, float(old["t"]) - float(prev["t"]), u.fall_dir)
+		s["step"] = old["step"]
+		s["t"] = old["t"]
+		out.append(s)
+		prev = s
+	return out
+
+# When, in seconds into the turn, a falling unit's path reaches the ground: the
+# height is linear between states, so the crossing is exact. NAN if it does not
+# this turn.
+func _crash_time(path: Array) -> float:
+	for i in range(1, path.size()):
+		var a: Dictionary = path[i - 1]
+		var b: Dictionary = path[i]
+		if not a.has("fall_height_m") or not b.has("fall_height_m"):
+			continue
+		var ha := float(a["fall_height_m"])
+		var hb := float(b["fall_height_m"])
+		if ha <= 0.0:
+			return float(a["t"])
+		if hb <= 0.0:
+			return float(a["t"]) + (float(b["t"]) - float(a["t"])) * ha / (ha - hb)
+	return NAN
+
+# The band of the unit's own (low, medium, high) nearest to a height: what a
+# falling unit's altitude_band reads.
+func _nearest_band(u: Unit, height: float) -> String:
+	var best := ""
+	var best_d := INF
+	for band: String in u.def.envelope.bands:
+		var d := absf(band_height(band) - height)
+		if d < best_d:
+			best_d = d
+			best = band
+	return best
+
+# A state's height: the continuous fall height while falling, else its band's.
+func _state_height(s: Dictionary) -> float:
+	if s.has("fall_height_m"):
+		return float(s["fall_height_m"])
+	return band_height(str(s["altitude_band"]))
 
 func _set_phase(p: String) -> void:
 	phase = p

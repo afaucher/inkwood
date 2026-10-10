@@ -24,5 +24,23 @@
     "bands_per_step": { "value": 1, "_proposed": true, "_reason": "one band per step keeps a climb a deliberate, visible choice" },
     "climb_speed_cost_mps": { "value": 25, "_proposed": true, "_reason": "a climb trades speed for height: a quarter of cruise per band" },
     "dive_speed_gain_mps": { "value": 20, "_proposed": true, "_reason": "less than the climb costs, so a climb-and-dive loses energy overall" }
-  }
+  },
+  "weapons": [
+    {
+      "id": "wing_guns",
+      "name": "Wing guns",
+      "kind": "fixed",
+      "hardpoints": { "value": [[-0.3, -3.0, 0], [-0.3, 3.0, 0]], "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided. A fixed machine-gun PAIR, one hardpoint per wing, each rolling for itself" },
+      "mount_deg": { "value": 0, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "half_across_deg": { "value": 10, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "elevation_deg": { "value": 0, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "half_height_deg": { "value": 8, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "range_m": { "value": 450, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "base_hit_chance": { "value": 0.14, "_proposed": true, "_reason": "Track C proposal (not in the lead's sheet): with two hardpoints at 2 rolls a second the pair makes about 0.56 hits a second on a centred target (2.8 pips a turn), so a light fighter takes about 3 turns of full chase to bring down the bomber's 8 pips" },
+      "rim_odds_factor": { "value": 0.2, "_proposed": true, "_reason": "Track C proposal: a fixed gun is peaked (the lead's sheet: 'better near the centre'; Alex: a machine gun has better odds the closer the target is to the centre of its cone): a target on the rim has a fifth of the centre's odds" },
+      "falloff_exponent": { "value": 2, "_proposed": true, "_reason": "Track C proposal: a quadratic fall (r squared) keeps the odds high through the inner half and drops them near the rim" },
+      "damage_pips": { "value": 1, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "rolls_per_second": { "value": 2, "_proposed": true, "_reason": "Track C proposal (not in the lead's sheet): a machine-gun burst is a roll every half second (every second tick); two hardpoints, 20 rolls over a turn in the cone" }
+    }
+  ]
 }

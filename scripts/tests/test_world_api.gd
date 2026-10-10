@@ -52,9 +52,9 @@ const WORLD_SIGNALS := {
 	"turn_resolved": ["turn", "histories", "events"],
 	"unit_left_bounds": ["unit_id", "turn", "step_index"],
 }
-const WORLD_PROPERTIES := ["units", "bounds", "turn", "phase", "players", "ready", "rules", "last_error", "quiet", "rng_seed"]
+const WORLD_PROPERTIES := ["units", "bounds", "turn", "phase", "players", "ready", "rules", "last_error", "quiet", "rng_seed", "combat"]
 # The demo-plan's unit fields, plus what Track S adds.
-const UNIT_FIELDS := ["id", "type", "side", "controller", "x", "y", "heading", "speed", "altitude_band", "plan", "history", "def", "out_of_bounds", "health", "down", "down_at"]
+const UNIT_FIELDS := ["id", "type", "side", "controller", "x", "y", "heading", "speed", "altitude_band", "plan", "history", "def", "out_of_bounds", "health", "down", "down_at", "fate", "fall_height_m", "fall_dir"]
 const STATE_KEYS := ["x", "y", "heading", "speed", "altitude_band", "turn", "clamped", "limits", "step", "t", "planned", "out_of_bounds"]
 const REACHABLE_KEYS := ["step_dt", "speed", "turn_max", "turn_rate", "turn_radius", "speed_lo", "speed_hi", "speed_lo_full_turn", "speed_hi_full_turn", "bands", "outline"]
 

@@ -24,5 +24,39 @@
     "bands_per_step": { "value": 1, "_proposed": true, "_reason": "one band per step keeps a climb a deliberate, visible choice" },
     "climb_speed_cost_mps": { "value": 30, "_proposed": true, "_reason": "more mass to lift than the light fighter" },
     "dive_speed_gain_mps": { "value": 22, "_proposed": true, "_reason": "heavier aircraft gain a little more in a dive; still less than the climb costs" }
-  }
+  },
+  "weapons": [
+    {
+      "id": "nose_cannon",
+      "name": "Nose cannon",
+      "kind": "fixed",
+      "hardpoints": { "value": [[8.0, 0, 0]], "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided. On the nose, 8 m forward of the centre" },
+      "mount_deg": { "value": 0, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "half_across_deg": { "value": 7, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "elevation_deg": { "value": 0, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "half_height_deg": { "value": 6, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "range_m": { "value": 600, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "base_hit_chance": { "value": 0.30, "_proposed": true, "_reason": "Track C proposal (not in the lead's sheet): a cannon fires less often and hits harder: 2 pips at 0.3 once a second is 0.6 pips a second on a centred target, about the pair of machine guns, at a longer range and in a narrower cone" },
+      "rim_odds_factor": { "value": 0.2, "_proposed": true, "_reason": "Track C proposal: a fixed gun is peaked (the lead's sheet: 'better near the centre'; Alex: a machine gun has better odds the closer the target is to the centre of its cone): a target on the rim has a fifth of the centre's odds" },
+      "falloff_exponent": { "value": 2, "_proposed": true, "_reason": "Track C proposal: a quadratic fall (r squared) keeps the odds high through the inner half and drops them near the rim" },
+      "damage_pips": { "value": 2, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "rolls_per_second": { "value": 1, "_proposed": true, "_reason": "Track C proposal (not in the lead's sheet): a cannon is slower than machine guns: a roll a second" }
+    },
+    {
+      "id": "rear_gunner",
+      "name": "Rear gunner",
+      "kind": "flexible",
+      "hardpoints": { "value": [[-3.5, 0, 0.8]], "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided. Behind the cockpit, a little above the centre line" },
+      "mount_deg": { "value": 180, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "half_across_deg": { "value": 50, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "elevation_deg": { "value": 10, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "half_height_deg": { "value": 35, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "range_m": { "value": 350, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "base_hit_chance": { "value": 0.08, "_proposed": true, "_reason": "Track C proposal (not in the lead's sheet): a single flexible machine gun: 0.16 hits a second, about a quarter of a fighter's wing pair" },
+      "rim_odds_factor": { "value": 1, "_proposed": true, "_reason": "Track C proposal: flat, as the lead's sheet has flexible guns and turrets (a gunner aims within the arc): the same odds anywhere in the cone" },
+      "falloff_exponent": { "value": 1, "_proposed": true, "_reason": "Track C proposal: no effect while the factor is flat (rim_odds_factor 1)" },
+      "damage_pips": { "value": 1, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
+      "rolls_per_second": { "value": 2, "_proposed": true, "_reason": "Track C proposal (not in the lead's sheet): the same burst rate as the fighters' machine guns" }
+    }
+  ]
 }

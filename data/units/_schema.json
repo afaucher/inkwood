@@ -1,5 +1,5 @@
 {
-  "_about": "The unit record: what every data/units/<id>.json carries. scripts/sim/unit_def.gd VALIDATES EACH FILE AGAINST THIS at load: a field listed here and missing from a file is a load error, never a default; a field in a file and not listed here is a load error too (it catches a misspelt key that would otherwise be ignored). Files starting with '_' are not units. The SHAPE is PROPOSED by Track S, 2026-10-09; the design doc's unit design sheet (Execution plan > Design work > Unit design sheets) lists what a full sheet holds, and the fields not here yet (weapons, engagement parameters, specials, armor, shadow behaviour, card contents) come with combat and the unit sheets.",
+  "_about": "The unit record: what every data/units/<id>.json carries. scripts/sim/unit_def.gd VALIDATES EACH FILE AGAINST THIS at load: a field listed here and missing from a file is a load error, never a default; a field in a file and not listed here is a load error too (it catches a misspelt key that would otherwise be ignored). Files starting with '_' are not units. The SHAPE is PROPOSED by Track S, 2026-10-09; the design doc's unit design sheet (Execution plan > Design work > Unit design sheets) lists what a full sheet holds, and the fields not here yet (specials, armor, shadow behaviour, card contents) come with the unit sheets; weapons were added by Track C, 2026-10-09.",
   "conventions": {
     "units": "Metres, seconds, metres per second, metres per second squared. Angles are DEGREES in data and radians at runtime (unit_def.gd converts).",
     "frame": "World x to the right, y DOWN (the prototype's canvas and Godot 2D). A heading of 0 points along +x; a positive turn is clockwise on screen (a right turn); the direction of motion is Vector2(cos(heading), sin(heading)).",
@@ -15,7 +15,9 @@
     "curve": "a value record holding [[speed_mps, value], ...]: at least one point, speeds strictly increasing, values >= 0. Read by straight-line interpolation between points and held flat beyond the first and last point.",
     "band_list": "a value record holding a non-empty list of band ids from data/sim/altitude.json, no repeats",
     "band": "a value record holding one band id from data/sim/altitude.json",
-    "section": "an object whose own fields are listed under 'fields'"
+    "section": "an object whose own fields are listed under 'fields'",
+    "points3": "a value record holding a non-empty list of [forward, right, up] points, metres, in the airframe's axes (a weapon's hardpoints)",
+    "list": "a plain list of objects, each validated against 'item_fields' (the weapons); the list is structure, the fields in each item are the tunables"
   },
   "fields": {
     "id": { "kind": "text", "about": "Unit type id; must equal the file name without .json. The World's units refer to it as their 'type'." },
@@ -23,7 +25,7 @@
     "domain": { "kind": "enum", "values": ["air", "ground", "sea"], "about": "From the Initial unit roster table." },
     "size_m": { "kind": "number", "min": 0, "unit": "m", "about": "Largest planform dimension: wingspan for aircraft, length for tanks and ships. Drawing scale and, later, hit size." },
     "actions_per_turn": { "kind": "integer", "min": 1, "about": "Steps per turn: the number of points on the unit's motion curve each turn. data/sim/turn.json splits turn_seconds into this many equal steps." },
-    "health": { "kind": "integer", "min": 1, "about": "Hit points; the unit card's pips. Carried, unused until combat." },
+    "health": { "kind": "integer", "min": 1, "about": "Hit points; the unit card's pips. Combat (scripts/sim/combat_resolver.gd) takes a weapon's damage_pips from it per hit; at 0 the unit is down." },
     "sight_range_m": { "kind": "number", "min": 0, "unit": "m", "about": "Vision radius for fog of war. Carried, unused until Track F's first vision rule reads it." },
     "drawing": {
       "kind": "section",
@@ -51,6 +53,26 @@
         "bands_per_step": { "kind": "integer", "min": 0, "about": "Most bands the unit may climb or dive in one step. 0 for units that cannot change band." },
         "climb_speed_cost_mps": { "kind": "number", "min": 0, "unit": "m/s per band", "about": "Speed lost per band climbed in a step. A climb the unit cannot afford without falling below speed_min_mps is refused (the band stays)." },
         "dive_speed_gain_mps": { "kind": "number", "min": 0, "unit": "m/s per band", "about": "Speed gained per band dived in a step; diving adds speed (design doc, Height). May carry the unit up to dive_speed_max_mps." }
+      }
+    },
+    "weapons": {
+      "kind": "list",
+      "about": "The unit's weapons, one record per CONE (Alex 2026-10-09: a bomber's tail turret and its front guns are different weapons). A gun sits on one or more HARDPOINTS (Alex): mount points on the airframe from which the cone starts, so a pair of wing guns is one weapon with two hardpoints, each rolling on its own. The model (geometry, odds, rolls, events) is documented in scripts/sim/combat.gd; the values are the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json) plus Track C's proposed odds and roll rate, all proposed, none Alex's yet. Angles are in the airframe's axes: 0 forward, 180 rearward, positive to the right and up. An empty list is a valid unit that cannot shoot.",
+      "item_fields": {
+        "id": { "kind": "text", "about": "The weapon's id, unique within the unit (combat events name it)." },
+        "name": { "kind": "text", "about": "Display name." },
+        "kind": { "kind": "enum", "values": ["fixed", "flexible", "turret"], "about": "How it is mounted: fixed (points where the nose points), flexible (a gunner aims it within a cone) or turret (a powered mount with a wide arc). Identity, not a number: what it implies for the odds is in rim_odds_factor." },
+        "hardpoints": { "kind": "points3", "unit": "m [forward, right, up]", "about": "Where the cone starts: offsets from the unit's centre in the airframe's axes. One or more; each hardpoint rolls on its own, with its own cone." },
+        "mount_deg": { "kind": "number", "min": -180, "max": 180, "unit": "deg", "about": "The cone centre's direction relative to the nose, around: 0 forward, 180 rearward, positive to the right (clockwise seen from above)." },
+        "half_across_deg": { "kind": "number", "min": 0.1, "max": 180, "unit": "deg", "about": "Half the cone's width: the most the target may be off the centre, sideways." },
+        "elevation_deg": { "kind": "number", "min": -90, "max": 90, "unit": "deg", "about": "The cone centre's elevation above the airframe's level." },
+        "half_height_deg": { "kind": "number", "min": 0.1, "max": 90, "unit": "deg", "about": "Half the cone's height: the most the target may be off the centre, up or down. Firing between altitude bands is this same cone (Alex)." },
+        "range_m": { "kind": "number", "min": 1, "unit": "m", "about": "The longest slant distance (3D, from the hardpoint) at which the weapon rolls." },
+        "base_hit_chance": { "kind": "number", "min": 0, "max": 1, "about": "The odds of one roll at the cone's centre, before any other factor." },
+        "rim_odds_factor": { "kind": "number", "min": 0, "max": 1, "about": "The 'centre' factor's value at the cone's rim: odds multiply by 1 at the centre falling to this at the rim. 1 is flat (flexible guns and turrets); well under 1 is peaked (fixed guns): a machine gun has better odds the nearer the target is to the centre of its cone (Alex)." },
+        "falloff_exponent": { "kind": "number", "min": 0.1, "about": "The centre factor is 1 - (1 - rim_odds_factor) x r^falloff_exponent, r the normalized offset (0 centre, 1 rim). 1 falls in a straight line, 2 stays near the top longer. Unused when rim_odds_factor is 1." },
+        "damage_pips": { "kind": "integer", "min": 1, "about": "Health pips one hit takes." },
+        "rolls_per_second": { "kind": "number", "min": 0.01, "unit": "1/s", "about": "How often each hardpoint rolls while it has a target in the cone, on the turn's clock (data/sim/combat.json tick_seconds is the finest it can be resolved)." }
       }
     }
   }
