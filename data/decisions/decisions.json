@@ -765,13 +765,14 @@
         "marker.trails.mode": "ribbon",
         "marker.trails.applies_to": "all (every moving unit in sight, each in its side colour)",
         "falling_units": "a plane out of control keeps leaving its trail until it crashes",
-        "flight_line": "the whole-flight line stops where the trail begins; the trail runs up to the plane's current position"
+        "flight_line": "the whole-flight line stops where the trail begins; the trail runs up to the plane's current position",
+        "cone_overlap": "accepted for now: the trail and the cone wash overlap behind a selected plane, nothing is faded"
       },
       "applied_to": [
         "data/ui/ui.json#marker.trails.mode"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'D · One ribbon between the wingtips'. Still proposed and open: own planes only, a one-turn window, whether the whole-flight line stops at the last turn's start, the trail's overlap with the cone wash behind a selected plane, a trail for a falling plane. Alex 2026-10-10: '2 all moving units' (trails on every moving unit, not only the players'); '5 yes' (a plane falling out of control leaves a trail). '3 yes, the trail is to the current position.'"
+      "notes": "Alex: 'D · One ribbon between the wingtips'. Still proposed and open: own planes only, a one-turn window, whether the whole-flight line stops at the last turn's start, the trail's overlap with the cone wash behind a selected plane, a trail for a falling plane. Alex 2026-10-10: '2 all moving units' (trails on every moving unit, not only the players'); '5 yes' (a plane falling out of control leaves a trail). '3 yes, the trail is to the current position.' 'Ignore the cone/trail overlap for now.'"
     },
     {
       "id": "node-hover",
