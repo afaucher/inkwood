@@ -2142,6 +2142,29 @@
       ],
       "status": "chosen by Alex",
       "notes": "Asked about the board images in git (about 520 MB and growing): 'Board images should not go in it' / 'Git'. The images already committed are untracked from now on; they remain in the history (rewriting it would need a force-push over the other sessions' work: not done, ask Alex first)."
+    },
+    {
+      "id": "wind-with-height",
+      "date": "2026-10-11",
+      "area": "Environment, Effects",
+      "question": "How does the wind act on smoke as it rises? (after the first drifting-smoke frames, where a plume leaned only about 10 m at 2.8 m/s and still read as a white lump over its tree)",
+      "board": "none (said in chat)",
+      "options": [
+        "one wind at every height (as built)",
+        "the wind picks up with height"
+      ],
+      "chosen": "the wind picks up as the smoke rises",
+      "parameters": {
+        "rule": "each smoke puff drifts with the wind at its own height, so plumes stand over their source and bend downwind as they climb; all smoke (fire, damaged planes, wrecks)",
+        "profile": "PROPOSED: the decision coastal-wind speeds (2-5 m/s by day, 1-3 at night) are the wind near the ground (10 m); above it the standard power law (exponent about 0.2 over land: about 1.6x at 100 m, 2x at 300 m), levelling off near 500 m, about the depth of a sea breeze",
+        "smoke_zone": "PROPOSED: the untrackable zone stays with the low smoke near the ground, where the units are",
+        "not_affected": "planes and bombs, as decision coastal-wind"
+      },
+      "applied_to": [
+        "to be built (track 'Forest fire'): scripts/sim/wind.gd (the wind by height), data/sim/wind.json, the effects layer's puff drift"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'The wind should pick up as the smoke rises'. The lead's answer: wind shear, the near-ground wind slowed by friction and growing with height; the profile and its numbers are the lead's proposal."
     }
   ]
 }
