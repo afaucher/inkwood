@@ -1147,9 +1147,9 @@
         "hold: nothing is released and no bombs are spent",
         "poor_shot: the stick is released at the cone's nearest point to the target, with the rim's accuracy or worse, and the bombs are spent"
       ],
-      "chosen": null,
+      "chosen": "fire a poorer shot rather than hold it -- for bombs whose target leaves the cone and for guns whose target drops out of sight before they fire; an engagement mode may come later, not now",
       "parameters": {
-        "switch": "data/sim/bombs.json outside_cone_mode (hold | poor_shot), working default hold (PROPOSED)",
+        "switch": "data/sim/bombs.json outside_cone_mode -> poor_shot; the guns' held salvo becomes a poor shot at the last seen place (to build)",
         "poor_shot_floor": "0.15, PROPOSED: the least accuracy of a poor shot (rim accuracy / how far outside the cone, never below this)",
         "planning_rule": "stands either way (Alex): a special cannot be activated on a step whose cone does not hold the target; the card says why",
         "wording": "PROPOSED: the card and the map say 'will not release: target outside the cone' under hold and 'poor shot: target outside the cone' under poor_shot (data/ui/ui.json bombs.text)"
@@ -1158,8 +1158,8 @@
         "scripts/sim/bombs.gd (release_rule, poor_shot_accuracy), scripts/sim/world.gd, scripts/ui/motion_planner.gd (drop_blocked)",
         "both settings are tested in scripts/tests/test_bomb_target.gd and scripts/tests/test_ui_target.gd"
       ],
-      "status": "open: Alex is weighing two answers, not decided",
-      "notes": "Alex: 'That means it might leave the cone and completely not fire' and then 'Or just be a bad shot'."
+      "status": "chosen by Alex",
+      "notes": "Alex: 'That means it might leave the cone and completely not fire' and then 'Or just be a bad shot'. Alex 2026-10-11: 'Fire a poorer one. Maybe in the future we have an engagement mode but for now that is extra complexity we are not ready for.'"
     },
     {
       "id": "playtest-strike-1",
@@ -1598,6 +1598,57 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'And the hanger yard'."
+    },
+    {
+      "id": "bridge-durability",
+      "date": "2026-10-11",
+      "area": "Combat, Structures",
+      "question": "Can tank guns damage a bridge?",
+      "board": "none (said in chat)",
+      "options": [
+        "only bombs and shells (proposed)",
+        "tank guns too"
+      ],
+      "chosen": "tank guns can damage a bridge, but it should take a lot: a tank would have to sit there and shell it for a while, exposing itself",
+      "parameters": {},
+      "applied_to": [
+        "to build: data/units/bridge.json health, tuned against a tank's gun"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'it should take a lot. Like you would have to sit there and shell it for awhile exposing yourself.'"
+    },
+    {
+      "id": "shell-blast",
+      "date": "2026-10-11",
+      "area": "Specials, Combat",
+      "question": "The cruiser's shell blast: the bombs' table, or a smaller one?",
+      "board": "none (said in chat)",
+      "options": [
+        "the bombs' table (12/25/45 m)",
+        "a smaller blast (6/12/20 m)"
+      ],
+      "chosen": "for the smaller ship: high damage, smaller range",
+      "parameters": {},
+      "applied_to": [
+        "to build: data/sim/guns.json blast table"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'for the smaller ship lets do high damage smaller range.'"
+    },
+    {
+      "id": "strafe-later",
+      "date": "2026-10-11",
+      "area": "Combat",
+      "question": "Should fighters strafe ground units?",
+      "board": "none (said in chat)",
+      "options": [],
+      "chosen": "a future feature, absolutely: a plane at low altitude can do a low pass; potentially the low band is the last height band with some interaction with hills",
+      "parameters": {},
+      "applied_to": [
+        "not built: deferred"
+      ],
+      "status": "chosen by Alex; deferred",
+      "notes": "Alex: 'Future feature absolutely. A plane at low altitude can do a low pass. Potentially this is the last height band that has some interaction with hills.'"
     }
   ]
 }

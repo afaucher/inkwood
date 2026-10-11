@@ -33,6 +33,13 @@ ready-up are modelled on Alex's Robo Rally clone `goto` (also a sibling).
    accents; lightness is a ramp off paper; material is linework. No hex
    literal in draw code once the style layer exists -- colours are roles in
    data. See `docs/proposals/palette-architecture.md`.
+7. **Read `docs/operating.md` and `docs/status.md` before starting work.** The
+   first is how the work is run: recording a decision in all three places
+   (`decisions.json`, the design doc's log, the Decision Ledger artifact),
+   boards shown at full resolution, the lead and its Sonnet builders, reusing
+   work, interrupts stopping builders, several agents in one tree, never running
+   `build.ps1` while Alex may be playing. The second says what is in flight:
+   **claim a track there before you start one**, and stay inside its folders.
 
 ## What exists and what does not
 
