@@ -56,9 +56,10 @@ extends Node2D
 #
 # THE ARCS SWITCH (Track C, 2026-10-10; Alex, on the Strike playtest: "We need to be able to toggle off the weapon arcs so we can
 # see more easily." and "Lets prioritize onscreen buttons. No keyboard mapping."): arcs_shown() says whether the map shows the
-# cones at all. The roster header's button (roster.arcs) flips it through UnitUI.toggle_arcs(); collect() gives nothing while
+# cones at all. The side view panel's button (side_view.arcs; the roster's was removed, decision side-view-views) flips it through UnitUI.toggle_arcs(); collect() gives nothing while
 # it is off, so every cone of the map goes (this layer and its Marks), and the choice stays for the session (a class-level
-# setting, so a new game or a rebuilt interface keeps it). The starting state is planner.cones.shown. It is not a key.
+# setting, so a new game or a rebuilt interface keeps it). The starting state is planner.cones.shown (false: the side view's strips show
+# the cones). It is not a key.
 # The side view's cones and the bomb cone are drawn by other files and are not part of it.
 #
 # NO SLICE, NO LINE (planner.cones.overhead_footprint, PROPOSED, off): a cone with no slice at the plane's own level (the

@@ -339,11 +339,6 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	roster.unit_selected.connect(_on_roster_pick)
 	roster.down_unit_picked.connect(_on_roster_pick)
 	roster.playback = marker_layer
-	# The weapon-arcs button in the roster's header (Track C; Alex: on-screen buttons, no key): it reads the cone overlay's switch
-	# and presses it.
-	roster.arcs_state = arcs_shown
-	roster.arcs_pressed.connect(toggle_arcs)
-	cones.arcs_changed.connect(func(_on: bool) -> void: roster.queue_redraw())
 	health = roster.health
 	selection.allow = _may_select
 	# The overlay layer, above the markers: the health arc first, then whatever part 2 adds.
@@ -393,6 +388,11 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 		side_view.shown_pose = marker_layer.pose_of
 		side_view.range_factor = _range_factor
 		side_view.playback = marker_layer
+		# The Arcs button in the panel's heading row (decision side-view-views; Alex: "Yes, remove the extra": the roster header's
+		# button is gone, this is the only arcs control): it reads and presses the cone overlay's own switch.
+		side_view.arcs_state = arcs_shown
+		side_view.arcs_pressed.connect(toggle_arcs)
+		cones.arcs_changed.connect(func(_on: bool) -> void: side_view.queue_redraw())
 		set_meta("side_view", side_view)
 	# --- end side view ---
 	result_card = ResultCard.new()
@@ -441,7 +441,7 @@ func _mount_combat(map_parent: Node, host_mapping: Variant) -> void:
 
 # --- The weapon arcs (Track C, 2026-10-10) -----------------------------------------------------
 
-# Whether the map shows the weapon cones (the roster's "Arcs: on / off" button; ConeOverlay.arcs_shown has the rules).
+# Whether the map shows the weapon cones (the side view panel's "Arcs: on / off" button; ConeOverlay.arcs_shown has the rules).
 func arcs_shown() -> bool:
 	return cones != null and cones.arcs_shown()
 
@@ -449,7 +449,7 @@ func set_arcs(on: bool) -> void:
 	if cones != null:
 		cones.set_arcs_shown(on)
 
-# What the roster's button does: every cone on the map goes, or comes back. There is no key for it (Alex: "No keyboard mapping").
+# What the side view panel's button does: every cone on the map goes, or comes back. There is no key for it (Alex: "No keyboard mapping").
 func toggle_arcs() -> void:
 	if cones != null:
 		cones.toggle_arcs()

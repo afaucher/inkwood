@@ -1,0 +1,326 @@
+{
+  "id": "sun-time",
+  "date": "2026-10-11",
+  "area": "Light and shadow, World",
+  "question": "Should the shadow angles follow the time of day? Alex (playtest): 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.'",
+  "source": "scripts/ui/boards/sun_time_board_shot.gd: one run of the real game per sun (the Strike on seed 20261009, water on, fog off, one patch of map between the bridge and the radio tower at zoom 0.85 and at the planning zoom 0.35; the same units in the same places), through the sun source scripts/world/sun.gd and data/params/sun.json. Nothing in the live game changes: the default mode is 'fixed' (today's sun).",
+  "seed": 20261009,
+  "held_constant": {
+    "map": "the Strike's map and units on seed 20261009, water on (a river, the bridge, the sea); the same camera on the patch centred at (1654, 1308) m",
+    "units": "a bomber in the high band (1,000 m) at (1560, 1250) heading 0.45 rad over the field; a tank on the road 70 m from the bridge, on the village side; the Strike's own tower, batteries and bridge. The other planes are out of the frame.",
+    "shadow": "the one steel tint at the map's shadow strength 0.44; the shadow-side pen; the planes' altitude shadow rule (1% of the height)",
+    "left_off": "the HUD, the height and speed lettering, the target ring, the build stamp",
+    "detail_light": "the trees' interior detail light (linework.detail_light, top-left) is independent of the sun and unchanged"
+  },
+  "decided": [
+    {
+      "decision": "sun-time",
+      "id": "fixed_at_start",
+      "by": "Alex",
+      "alex_words": "Fixed time at start",
+      "status": "chosen by Alex",
+      "meaning": "The sun is taken once when the mission starts and stays fixed for the whole mission, so the map bakes once. No moving-sun option."
+    },
+    {
+      "decision": "sun-time",
+      "id": "every_shadow_follows",
+      "by": "Alex",
+      "alex_words": "Every shadow follows",
+      "status": "chosen by Alex",
+      "meaning": "Every shadow follows the one sun: the trees', the terrain's, the structures', the planes' altitude shadows, the effects' and the shadow-side pen. The trees-only frame is kept as a why-not note."
+    }
+  ],
+  "parameter": "data/params/sun.json: mode ('fixed' | 'clock_at_start'), hour, hour_source, scope, the 'clock' block (sunrise 6, sunset 18, bearings 90 to 270, noon elevation 60, max shadow length 3.0, night rule); DebugSettings knobs sun_mode, sun_hour, sun_scope (INKWOOD_SUN_MODE=clock_at_start INKWOOD_SUN_HOUR=9)",
+  "model_proposed": {
+    "bearing": "90 (east) at 06:00 through 180 (south) at noon to 270 (west) at 18:00, straight over the hours; 0 is north, the map's north is up",
+    "elevation": "60 * sin(pi * t), t = 0 at sunrise, 1 at sunset",
+    "shadow_length": "1 / tan(elevation) per unit of height, clamped at 3.0 (an 18.4 degree sun); today's fixed sun is 46 degrees, 0.97",
+    "night": "clamp (the nearest daytime hour) or fold (24 hours on the arc): open question (b)",
+    "note": "ALL PROPOSED by the builder BS except today's sun, which is the design doc's."
+  },
+  "options": [
+    {
+      "id": "fixed",
+      "title": "Today's sun (fixed)",
+      "proposed": true,
+      "files": [
+        "fixed.png",
+        "fixed_plan.png"
+      ],
+      "sun": {
+        "mode": "fixed",
+        "scope": "all",
+        "hour": null,
+        "bearing_deg": 315.0,
+        "elevation_deg": 46.0,
+        "shadow_length_per_height": 0.965688774807074,
+        "tree_bearing_deg": 315.0,
+        "tree_elevation_deg": 46.0
+      },
+      "set_by": "data/params/sun.json mode 'fixed'",
+      "mean_lightness": {
+        "zoom_0.85": 0.78,
+        "planning_zoom": 0.786
+      },
+      "name": "A"
+    },
+    {
+      "id": "h07",
+      "title": "07:00",
+      "proposed": true,
+      "files": [
+        "h07.png",
+        "h07_plan.png"
+      ],
+      "sun": {
+        "mode": "clock_at_start",
+        "scope": "all",
+        "hour": 7.0,
+        "bearing_deg": 105.0,
+        "elevation_deg": 18.434948822922,
+        "shadow_length_per_height": 3.0,
+        "tree_bearing_deg": 105.0,
+        "tree_elevation_deg": 18.434948822922
+      },
+      "set_by": "data/params/sun.json mode 'clock_at_start', hour 07:00",
+      "mean_lightness": {
+        "zoom_0.85": 0.772,
+        "planning_zoom": 0.774
+      },
+      "name": "B"
+    },
+    {
+      "id": "h09",
+      "title": "09:00",
+      "proposed": true,
+      "files": [
+        "h09.png",
+        "h09_plan.png"
+      ],
+      "sun": {
+        "mode": "clock_at_start",
+        "scope": "all",
+        "hour": 9.0,
+        "bearing_deg": 135.0,
+        "elevation_deg": 42.4264068711928,
+        "shadow_length_per_height": 1.09412660736123,
+        "tree_bearing_deg": 135.0,
+        "tree_elevation_deg": 42.4264068711928
+      },
+      "set_by": "data/params/sun.json mode 'clock_at_start', hour 09:00",
+      "mean_lightness": {
+        "zoom_0.85": 0.782,
+        "planning_zoom": 0.787
+      },
+      "name": "C"
+    },
+    {
+      "id": "h12",
+      "title": "12:00",
+      "proposed": true,
+      "files": [
+        "h12.png",
+        "h12_plan.png"
+      ],
+      "sun": {
+        "mode": "clock_at_start",
+        "scope": "all",
+        "hour": 12.0,
+        "bearing_deg": 180.0,
+        "elevation_deg": 60.0,
+        "shadow_length_per_height": 0.577350269189626,
+        "tree_bearing_deg": 180.0,
+        "tree_elevation_deg": 60.0
+      },
+      "set_by": "data/params/sun.json mode 'clock_at_start', hour 12:00",
+      "mean_lightness": {
+        "zoom_0.85": 0.788,
+        "planning_zoom": 0.794
+      },
+      "name": "D"
+    },
+    {
+      "id": "h15",
+      "title": "15:00",
+      "proposed": true,
+      "files": [
+        "h15.png",
+        "h15_plan.png"
+      ],
+      "sun": {
+        "mode": "clock_at_start",
+        "scope": "all",
+        "hour": 15.0,
+        "bearing_deg": 225.0,
+        "elevation_deg": 42.4264068711929,
+        "shadow_length_per_height": 1.09412660736123,
+        "tree_bearing_deg": 225.0,
+        "tree_elevation_deg": 42.4264068711929
+      },
+      "set_by": "data/params/sun.json mode 'clock_at_start', hour 15:00",
+      "mean_lightness": {
+        "zoom_0.85": 0.78,
+        "planning_zoom": 0.786
+      },
+      "name": "E"
+    },
+    {
+      "id": "h18",
+      "title": "18:00",
+      "proposed": true,
+      "files": [
+        "h18.png",
+        "h18_plan.png"
+      ],
+      "sun": {
+        "mode": "clock_at_start",
+        "scope": "all",
+        "hour": 18.0,
+        "bearing_deg": 270.0,
+        "elevation_deg": 18.434948822922,
+        "shadow_length_per_height": 3.0,
+        "tree_bearing_deg": 270.0,
+        "tree_elevation_deg": 18.434948822922
+      },
+      "set_by": "data/params/sun.json mode 'clock_at_start', hour 18:00",
+      "mean_lightness": {
+        "zoom_0.85": 0.766,
+        "planning_zoom": 0.771
+      },
+      "name": "F"
+    }
+  ],
+  "why_not_frame": {
+    "id": "trees09",
+    "title": "Why not: only the trees follow (09:00)",
+    "proposed": true,
+    "files": [
+      "trees09.png",
+      "trees09_plan.png"
+    ],
+    "sun": {
+      "mode": "clock_at_start",
+      "scope": "trees",
+      "hour": 9.0,
+      "bearing_deg": 315.0,
+      "elevation_deg": 46.0,
+      "shadow_length_per_height": 0.965688774807074,
+      "tree_bearing_deg": 135.0,
+      "tree_elevation_deg": 42.4264068711928
+    },
+    "set_by": "data/params/sun.json mode 'clock_at_start', hour 09:00",
+    "mean_lightness": {
+      "zoom_0.85": 0.78,
+      "planning_zoom": 0.786
+    },
+    "why_not": "Only the trees' cast shadows follow the 09:00 sun; the scarps, structures, units and the pen keep today's. Two suns on one map break the look (the tower's shadow runs south-east while the trees' run north-west). Alex decided 'Every shadow follows'; this frame is the note of why."
+  },
+  "questions": [
+    {
+      "id": "a_time_source",
+      "status": "open",
+      "question": "(a) Where does the hour come from, and in co-op whose clock?",
+      "options": [
+        {
+          "id": "each_clock",
+          "text": "Each player's own clock at the moment the mission starts. Simple, but in co-op the two players can see two different maps (one at 09:00, one at 21:00), which breaks 'one shared map'."
+        },
+        {
+          "id": "host_clock",
+          "text": "The host's clock at mission start, sent to the client with the start (the way the seed travels), so both see one map. A single player's game is Alex's own idea: their own clock."
+        },
+        {
+          "id": "scenario_hour",
+          "text": "An hour written into the scenario (a Strike at dawn, a Bridge at noon), with the clock used only when the scenario names none. Gives every mission a look of its own, and the headless tests need it anyway (a test pins an hour)."
+        }
+      ],
+      "recommendation_proposed": "host_clock, with scenario_hour as an override: the host's clock at the start of the mission, sent to the client; a scenario may name its own hour. (PROPOSED by the builder BS; Alex decides. Alex's own suggestion was the current time of day.)"
+    },
+    {
+      "id": "b_night",
+      "status": "open",
+      "question": "(b) What does an hour outside the day (before 06:00, after 18:00) mean?",
+      "options": [
+        {
+          "id": "clamp",
+          "text": "The nearest daytime hour: before 06:00 the 06:00 sun, after 18:00 the 18:00 sun. Half of the clock's hours (the 12 night ones) then land on the two longest-shadow suns of the day."
+        },
+        {
+          "id": "fold",
+          "text": "Fold the 24 hours onto the day arc: midnight is the sunrise sun, 06:00 the 09:00 sun, noon is noon, 18:00 the 15:00 sun. The sun always moves with the clock, every hour of the real day gives a different map, and no part of the day piles up on the clamp."
+        }
+      ],
+      "recommendation_proposed": "fold (PROPOSED by the builder BS): with clamp, a game played at any hour from 18:00 to 06:00, half of all hours, gets the dawn-or-dusk sun with the longest shadows the model has; fold spreads them. sun.json 'night' holds the switch."
+    },
+    {
+      "id": "c_when",
+      "status": "decided",
+      "question": "(c) A sun fixed for the mission, or moving during it?",
+      "alex": "Fixed time at start",
+      "note": "DECIDED by Alex (decision sun-time): \"Fixed time at start\". The map bakes once; what that costs is measured above."
+    },
+    {
+      "id": "d_look",
+      "status": "open",
+      "question": "(d) The look across the hours: what the model's numbers should be.",
+      "options": [
+        {
+          "id": "as_shown",
+          "text": "As shown: sunrise 06:00 and sunset 18:00, noon elevation 60 degrees, the shadow's length per unit of height clamped at 3.0 (an 18.4 degree sun). Today's fixed sun is 46 degrees, a length of 0.97."
+        },
+        {
+          "id": "gentler",
+          "text": "A shorter clamp (2.0, a 26.6 degree sun): the dawn and dusk shadows are less dramatic, less of the map is under them, and the tower's lattice shadow and a plane's gap stay closer to today's."
+        },
+        {
+          "id": "narrower_day",
+          "text": "A narrower day (08:00 to 16:00 in the model; the hours outside follow the night rule): no frame at the clamp, only the middle of the day's looks."
+        },
+        {
+          "id": "plane_gap",
+          "text": "The planes' altitude shadow (1% of the height, decision unit-sheet-choices) is scaled by the sun's length, so at the 07:00 and 18:00 clamp the gap is 3.1 times today's (see the detail rows). Either leave that, or hold the gap at today's length so a plane's shadow never strays far from it."
+        }
+      ],
+      "recommendation_proposed": "as_shown for the model, and the planes' gap held at today's length (PROPOSED by the builder BS): the long shadows are the point of the board, but a plane's shadow that drifts 100 px from it reads as a second plane. Alex looks at the frames and decides."
+    }
+  ],
+  "measured": {
+    "_about": "Measured 2026-10-11 by the builder BS on this machine (an RTX 3080, other builders working in the same tree, so about 10% run to run). Raw output: tmp/sun/bench_*.txt (not committed).",
+    "tool": "scripts/render/map_bake_bench.gd -- pool=on chunks=all water=on, windowed, nothing else drawn (no fog, no units, no UI), the sun by INKWOOD_SUN_MODE / INKWOOD_SUN_HOUR",
+    "whole_map_bake_s": {
+      "fixed": 42.0,
+      "clock_07_00": 44.5,
+      "clock_12_00": 36.7
+    },
+    "first_chunk_s": {
+      "fixed": 5.3,
+      "clock_07_00": 5.8,
+      "clock_12_00": 4.7
+    },
+    "tree_shadow_worker_s": {
+      "fixed": 2.2,
+      "clock_07_00": 5.1
+    },
+    "worker_total_s_about": 140.0,
+    "tree_set_s": {
+      "fixed": 3.1,
+      "clock_07_00": 3.3
+    },
+    "time_to_playable_s": {
+      "fixed": 27.5,
+      "clock_07_00": 32.5,
+      "clock_09_00": 27.6,
+      "clock_12_00": 29.7,
+      "clock_15_00": 31.7,
+      "clock_18_00": 28.4,
+      "note": "the Strike started as the menu starts it (the first view of 40 chunks, the tree set, water on, fog off); the spread is the machine's, not the sun's"
+    },
+    "text": "THE WHOLE MAP (scripts/render/map_bake_bench.gd, the real baker on all 100 chunks of the 5 km map with the tree set and the water, nothing else running): 42.0 s under today's sun, 44.5 s under the 07:00 sun (the longest shadows the model makes) and 36.7 s at noon, the first chunk after 5 s: the spread is the machine's (about 10% run to run), the sun is not what moves it. The part of the work that depends on the sun, the trees' shadow silhouettes, is 2.2 s of worker time under today's sun and 5.1 s under 07:00, in about 140 s of worker time in all. So a clock sun costs a map no more to bake than today's. A change of sun in the middle of a mission would mean dropping every chunk, the tree set, the unit art and the fog's contour layer and baking them again, the same redraw as the pen knob's (the first view in about 5 s, the whole map in about 40 s, the contour map showing meanwhile); Alex's answer, a fixed sun at the start, avoids it."
+  },
+  "palette_check": "The sun adds no colour: every shadow is the one steel tint at the same strength, a shadow over a lit roof the roof-shaded chip. The hours change the share of the ground in shadow (mean lightness of the zoom 0.85 patch by hour in each option), not the lightness ramp. No dawn or dusk colour cast is proposed (it would add a hue). The trees' interior detail light does not follow the sun.",
+  "recommendation_proposed": "PROPOSED by the builder BS (Alex decides): the model as shown (06:00 to 18:00, noon 60 degrees, shadow length clamped at 3.0), the host's clock at mission start with a scenario able to name its own hour, the night hours FOLDED, and the planes' altitude shadow held at today's length. See 'questions'.",
+  "frames": "frames.json (every frame, native 1280 x 720)",
+  "sheet": "board.png (1:1 crops of every frame, enlarged plane and tank details, the measured cost, the questions, the palette strip)",
+  "chosen": null,
+  "chosen_by": null
+}

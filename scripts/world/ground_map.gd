@@ -117,6 +117,26 @@ func road_path(a: Vector2, b: Vector2) -> PackedVector2Array:
 	out.append(fb["p"])
 	return out
 
+# The point `m` metres along a road polyline from its point `idx`: forward (m > 0) is toward higher indexes (away from the village,
+# index 0, to the map's edge), negative toward the village. Vector2(INF, INF) when the road ends first. (Track BM: a scenario places
+# a unit "road_m" metres along the road from the bridge.)
+static func road_point(road: PackedVector2Array, idx: int, m: float) -> Vector2:
+	var step := 1 if m >= 0.0 else -1
+	var left := absf(m)
+	var i := clampi(idx, 0, road.size() - 1)
+	var p := road[i]
+	while left > 0.0:
+		var j := i + step
+		if j < 0 or j >= road.size():
+			return Vector2(INF, INF)
+		var seg := road[j].distance_to(road[i])
+		if seg >= left:
+			return road[i].lerp(road[j], left / seg)
+		left -= seg
+		i = j
+		p = road[j]
+	return p
+
 # --- The road's index -------------------------------------------------------------------------------
 
 func _index_road() -> void:

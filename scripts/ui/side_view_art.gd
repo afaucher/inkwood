@@ -32,62 +32,74 @@ const ConeOverlay = preload("res://scripts/ui/cone_overlay.gd")
 static func paint(ci: CanvasItem, m: Dictionary, st: UiStyle) -> int:
 	var failed := 0
 	var size: Vector2 = m["size"]
-	ci.draw_rect(Rect2(Vector2.ZERO, size), _role(st, "paper_role"))
-	failed += 0 if _ground(ci, m, st) else 1
+	ci.draw_rect(Rect2(Vector2.ZERO, size), role(st, "paper_role"))
+	failed += 0 if ground(ci, m, st) else 1
 	if str(m["mode"]) == "drop" or str(m["mode"]) == "fire":
 		failed += 0 if _drop(ci, m, st) else 1
 	else:
 		failed += ConeOverlay.draw_cones(ci, m["cones"], st, st.text("side_view.cone_mode"), "all")
-	failed += 0 if _target(ci, m, st) else 1
-	failed += 0 if _mark(ci, m, st) else 1
-	failed += 0 if _frame(ci, m, st) else 1
+	failed += 0 if target(ci, m, st) else 1
+	failed += 0 if mark(ci, m, st) else 1
+	failed += 0 if frame(ci, m, st) else 1
 	return failed
 
-static func _role(st: UiStyle, key: String) -> Color:
+# (public: the Top and Front strips (side_view_top.gd, side_view_front.gd) draw the same ground line, plane mark, target and frame)
+static func role(st: UiStyle, key: String) -> Color:
 	return UiRoles.resolve(st, st.lookup("side_view." + key), "side_view." + key)
 
-static func _ground(ci: CanvasItem, m: Dictionary, st: UiStyle) -> bool:
+# A role by its whole path in ui.json (planner.cones.rim_role: the map's own cone colours, which the Top strip shares).
+static func role_of(st: UiStyle, path: String) -> Color:
+	return UiRoles.resolve(st, st.lookup(path), path)
+
+static func ground(ci: CanvasItem, m: Dictionary, st: UiStyle) -> bool:
 	var gy: float = m["ground_y"]
 	var size: Vector2 = m["size"]
 	if not is_finite(gy) or gy < 0.0 or gy > size.y:
 		return true
-	var col := _role(st, "ground.role")
+	var col := role(st, "ground.role")
 	UiInk.ink_line(ci, PackedVector2Array([Vector2(0.0, gy), Vector2(size.x, gy)]), false, col, st.num("side_view.ground.px"), 11, 0.5)
 	return true
 
-static func _frame(ci: CanvasItem, m: Dictionary, st: UiStyle) -> bool:
+static func frame(ci: CanvasItem, m: Dictionary, st: UiStyle) -> bool:
 	var size: Vector2 = m["size"]
-	UiInk.ink_line(ci, UiInk.rect_pts(Rect2(Vector2(0.5, 0.5), size - Vector2.ONE)), true, _role(st, "frame_role"), st.num("side_view.frame_px"), 3, 0.3)
+	UiInk.ink_line(ci, UiInk.rect_pts(Rect2(Vector2(0.5, 0.5), size - Vector2.ONE)), true, role(st, "frame_role"), st.num("side_view.frame_px"), 3, 0.3)
 	return true
 
 # --- the plane --------------------------------------------------------------------------------
 
-static func _mark(ci: CanvasItem, m: Dictionary, st: UiStyle) -> bool:
+static func mark(ci: CanvasItem, m: Dictionary, st: UiStyle) -> bool:
 	var o: Vector2 = m["origin"]
 	var r: float = st.num("side_view.mark.r_px")
 	var accent: Color = st.side_color(str(m["side"]))
-	var rim := _role(st, "mark.rim_role")
-	# The pitch tick: the nose, tilted by the step's pitch (the plane always faces right on this page).
-	var pitch: float = float((m["pose"] as Dictionary)["pitch"])
-	var dir := Vector2(cos(pitch), -sin(pitch))
-	var tick: float = st.num("side_view.mark.pitch_tick_px")
-	ci.draw_line(o + dir * (r + 0.5), o + dir * (r + tick), rim, st.num("side_view.mark.pitch_tick_line_px"), true)
+	var rim := role(st, "mark.rim_role")
+	# The pitch tick: the nose, tilted by the step's pitch (the plane always faces right on this page). A model with a "tick_dir" says
+	# where the nose points on ITS page instead (the Top strip's: the heading's own direction; a zero vector: no tick, the Front strip
+	# looks down the nose).
+	var dir: Vector2
+	if m.has("tick_dir"):
+		dir = m["tick_dir"]
+	else:
+		var pitch: float = float((m["pose"] as Dictionary)["pitch"])
+		dir = Vector2(cos(pitch), -sin(pitch))
+	if dir.length_squared() > 1e-9:
+		var tick: float = st.num("side_view.mark.pitch_tick_px")
+		ci.draw_line(o + dir * (r + 0.5), o + dir * (r + tick), rim, st.num("side_view.mark.pitch_tick_line_px"), true)
 	ci.draw_circle(o, r, accent, true, -1.0, true)
 	ci.draw_circle(o, r, rim, false, st.num("side_view.mark.rim_px"), true)
 	return true
 
 # --- the target -------------------------------------------------------------------------------
 
-static func _target(ci: CanvasItem, m: Dictionary, st: UiStyle) -> bool:
+static func target(ci: CanvasItem, m: Dictionary, st: UiStyle) -> bool:
 	var t: Dictionary = m["target"]
 	if t.is_empty():
 		return true
 	var o: Vector2 = m["origin"]
 	var inside: bool = t["inside"]
 	var to: Vector2 = t["px"] if inside else t["edge"]
-	UiInk.dashed(ci, PackedVector2Array([o, to]), _role(st, "line.role"), st.num("side_view.line.px"),
+	UiInk.dashed(ci, PackedVector2Array([o, to]), role(st, "line.role"), st.num("side_view.line.px"),
 		st.num("side_view.line.dash_px"), st.num("side_view.line.gap_px"))
-	var ink := _role(st, "target.rim_role")
+	var ink := role(st, "target.rim_role")
 	var is_unit: bool = str(t["kind"]) == "unit"
 	var accent: Color = st.side_color(str(t["side"])) if is_unit else ink
 	if not inside:
@@ -99,6 +111,12 @@ static func _target(ci: CanvasItem, m: Dictionary, st: UiStyle) -> bool:
 		var w: float = st.num("side_view.target.cross_line_px")
 		ci.draw_line(px + Vector2(-c, 0.0), px + Vector2(c, 0.0), ink, w, true)
 		ci.draw_line(px + Vector2(0.0, -c), px + Vector2(0.0, c), ink, w, true)
+	elif bool(t["ground"]) and str(m.get("ground_marker", "tick")) == "square":
+		# (the Top and Front strips: no ground line to stand on) a small square in the side's accent, ink-rimmed
+		var q: float = st.num("side_view.target.square_px")
+		var box := Rect2(px - Vector2(q, q), Vector2(q, q) * 2.0)
+		ci.draw_rect(box, accent, true)
+		ci.draw_rect(box, ink, false, st.num("side_view.target.rim_px"))
 	elif bool(t["ground"]):
 		# A tick standing on the ground line: an ink under-stroke, the side's accent over it.
 		var h: float = st.num("side_view.target.tick_px")
@@ -109,12 +127,32 @@ static func _target(ci: CanvasItem, m: Dictionary, st: UiStyle) -> bool:
 	else:
 		var r: float = st.num("side_view.target.r_px")
 		if bool(t["hollow"]):
-			ci.draw_circle(px, r, _role(st, "paper_role"), true, -1.0, true)
+			ci.draw_circle(px, r, role(st, "paper_role"), true, -1.0, true)
 			ci.draw_circle(px, r - st.num("side_view.target.hollow_ring_px") * 0.5, accent, false, st.num("side_view.target.hollow_ring_px"), true)
 		else:
 			ci.draw_circle(px, r, accent, true, -1.0, true)
 		ci.draw_circle(px, r, ink, false, st.num("side_view.target.rim_px"), true)
 	return true
+
+# Puts a point on a page: whether it is inside the page (its edge inset), and when it is not, where the line from `origin` to it leaves
+# the page and which way that points. {"inside", "edge", "dir"}. (The Top and Front strips; the Side strip's own copy is side_view.gd's.)
+static func place_edge(px: Vector2, origin: Vector2, pic: Vector2, inset: float) -> Dictionary:
+	var inner := Rect2(Vector2.ZERO, pic).grow(-inset)
+	var inside := inner.has_point(px)
+	var v := px - origin
+	var edge := px
+	if not inside:
+		var tt := 1.0
+		if v.x > 1e-9:
+			tt = minf(tt, (inner.end.x - origin.x) / v.x)
+		elif v.x < -1e-9:
+			tt = minf(tt, (inner.position.x - origin.x) / v.x)
+		if v.y > 1e-9:
+			tt = minf(tt, (inner.end.y - origin.y) / v.y)
+		elif v.y < -1e-9:
+			tt = minf(tt, (inner.position.y - origin.y) / v.y)
+		edge = origin + v * maxf(tt, 0.0)
+	return {"inside": inside, "edge": edge, "dir": v.normalized() if v.length() > 1e-9 else Vector2.RIGHT}
 
 # A small arrow whose tip is on the edge, pointing along `dir`.
 static func _arrow(ci: CanvasItem, tip: Vector2, dir: Vector2, fill: Color, ink: Color, st: UiStyle) -> void:
@@ -140,11 +178,11 @@ static func _drop(ci: CanvasItem, m: Dictionary, st: UiStyle) -> bool:
 	var k: float = 1.0 if bool(d["releases"]) else st.num("side_view.drop.unreleased_alpha_k")
 	var rect := Rect2(band.x, gy - bh, maxf(band.y - band.x, 1.0), bh)
 	ci.draw_rect(rect, Color(accent.r, accent.g, accent.b, st.num("side_view.drop.spread_alpha") * k), true)
-	UiInk.ink_line(ci, UiInk.rect_pts(rect), true, _role(st, "line.role"), 0.8, 5, 0.2)
+	UiInk.ink_line(ci, UiInk.rect_pts(rect), true, role(st, "line.role"), 0.8, 5, 0.2)
 	# The fall: bombs.gd's own arc, level across and 1 - f^2 in height.
 	var arc: PackedVector2Array = d["arc"]
 	if arc.size() >= 2:
 		ci.draw_polyline(arc, Color(accent.r, accent.g, accent.b, st.num("side_view.drop.arc_alpha") * k), st.num("side_view.drop.arc_px"), true)
 	var land: Vector2 = d["land"]
-	ci.draw_arc(land, st.num("side_view.drop.land_r_px"), 0.0, TAU, 16, _role(st, "target.rim_role"), 1.0, true)
+	ci.draw_arc(land, st.num("side_view.drop.land_r_px"), 0.0, TAU, 16, role(st, "target.rim_role"), 1.0, true)
 	return true

@@ -172,6 +172,7 @@ func _mount() -> void:
 	w.combat.range_overshoot = 0.5
 	near(ui.cones.range_factor.call(wp, eff * 1.25), 0.5, 1e-9, "the rules' overshoot 0.5: half way is at 1.25 x the effective range")
 	ui.select("fighter")
+	ui.set_arcs(true)   # (the map's arcs start off now, decision side-view-views)
 	var cones: Array = ui.cones.collect()
 	var wing: Array = cones.filter(func(c: Dictionary) -> bool: return c["unit"] == "fighter")
 	if check(not wing.is_empty(), "the selected fighter has cones"):

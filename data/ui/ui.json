@@ -103,23 +103,12 @@
       "heading": { "needs_orders": "needs orders", "planned": "planned", "down": "down" },
       "label": "group by",
       "bar_px": 26,
-      "button_w_px": 112,
-      "_button_w_px": "Was 124. PROPOSED by Track C, 2026-10-10: 12 px narrower to give the weapon-arcs button (roster.arcs) its place in the same bar; 'needs orders' and its chevrons still fit.",
+      "button_w_px": 124,
+      "_button_w_px": "124 again (2026-10-11, decision side-view-views). It was 112 for a while: Track C, 2026-10-10, made it 12 px narrower to give the roster header's weapon-arcs button its place in the same bar; Alex then asked for that button to go ('Yes, remove the extra'), the side view panel's Arcs button being the only arcs control.",
       "button_h_px": 20,
       "_button_h_px": "Was 18. Track L, 2026-10-10: the button's word is 14 px now (it was 12), so the button is two px taller (the bar is 26).",
       "heading_px": 20,
       "_heading_px": "Was 18. Track L: the group headings are 14 px (they were 11 px thin italic)."
-    },
-    "arcs": {
-      "_proposed": true,
-      "_reason": "THE WEAPON-ARCS BUTTON (Track C, 2026-10-10). Alex, on the Strike playtest: 'We need to be able to toggle off the weapon arcs so we can see more easily.' and 'Lets prioritize onscreen buttons. No keyboard mapping.' A button at the left of the roster header's bar, 'group by' and its button staying together at the right: it shows or hides EVERY weapon cone on the map (planner.cones; the cone overlay), reads 'Arcs: on' (pressed, in ink) or 'Arcs: off' (raised), starts as planner.cones.shown says and stays as the player left it for the session. There is no key for it. WHERE (PROPOSED): the roster header, because it is always on screen whatever unit is selected or phase it is (the orders card is about one unit's steps, and is being reworked for the bombs), it holds the map's other per-player VIEW setting (group by), and the bar has the room. It is a view setting of this player's: never in the World, never sent. Sizes in px.",
-      "label_on": "Arcs: on",
-      "label_off": "Arcs: off",
-      "tooltip": "Show or hide the weapon arcs on the map",
-      "w_px": 66,
-      "h_px": 20,
-      "gap_px": 6,
-      "_gap_px": "The space between the 'group by' label and its own button, which the label now sits against (it was at the left of the bar before the arcs button took that place)."
     }
   },
 
@@ -198,6 +187,11 @@
     "leader_to_roster": false,
     "_leader_to_roster": "REMOVED by Alex 2026-10-10 (the Strike playtest): 'The bomber has a thin black line that just goes to the top right corner? Lets identify that and remove it.' It was this: the selected unit's leader line to its roster row (the design doc's proposed selection treatment: an inked ring, 'with a leader line up to its floating panel'), a 0.8 px ink line from the ring to the left edge of the unit's row, ending in a dot; with the roster in the top right corner of the screen it read as a stray line to the corner. false draws neither the line nor its dot (scripts/ui/unit_marker_layer.gd _draw_ring); the ring, its ticks and its health arc are unchanged. true brings it back. leader_line_px and the 'leader' role are kept for that.",
     "leader_line_px": 0.8,
+    "side_badge": {
+      "drawn_for": "none",
+      "modes": ["none", "non_air", "all"]
+    },
+    "_side_badge": "REMOVED by Alex 2026-10-11 (the second playtest, build 2026-10-10.134839): 'The red/blue indicator dot for each unit (planes at least) with the dotted line. We can remove that. The tail serves this purpose well.' Then, asked whether tanks, ships and static units keep it: 'No badge on units. We can figure something else out of we need it.' So drawn_for is 'none' (Alex). The mark is the SIDE BADGE (the lead's reading, PROPOSED, of which mark he meant: the one that is red or blue, a dot, one per unit): a roundel of badge_r_px in the unit's side accent (brick red for the players, slate blue for the enemy) with a paper eye and an ink rim, drawn badge_offset_px past the selection ring's radius on the sun side of the unit, and the short thin line (1 px, the 'leader' role) tying it to the marker (scripts/ui/unit_marker_layer.gd _draw_marks; side_badge(m) and side_badge_shown(m) are the one place that decides, per marker). drawn_for is the SCOPE of what is drawn: 'none' (the default, Alex's) draws it for nobody; 'non_air' draws it for ground units, ships and static units and for no aircraft; 'all' is the layer as it was. Known cost: a tank or a ship has no wingtip ribbon (UnitMarkerArt.half_span_m is 0 for them) and in Hold the bridge the tanks are about 10 px at the opening zoom; Alex: 'We can figure something else out of we need it.' The selection ring, its ticks, its health arc and the lettering are unchanged and the roster's own row marks are not part of it. badge_r_px, badge_offset_px and the 'leader' role are kept. The other marks that could be read as 'a dot with a dotted line' are the planner's dashed 'flies on' line ending in an open circle (planner.others_*) and the playback's dashed rest-of-turn line (ahead_line): they are ink, not red or blue, and were NOT removed; shots in tmp/playtest2/.",
     "playback_speed": 1.0,
     "trail_dt_s": 0.1,
     "ahead_line": {
@@ -220,6 +214,13 @@
       "replaces_flown_line": true,
       "whole_flight_line": false,
       "_whole_flight_line": "REMOVED by Alex 2026-10-10 (the Strike playtest): 'The red stripe behind the units is great for seeing them, but then we transition to an extremely thin red/blue line which seems to serve no purpose but show you where you were. Remove that line.' The line is scripts/app/sandbox_tracks.gd's whole-flight track: every turn before the ribbon's window, a 1.6 px line in the unit's side colour (view.track_line_px in the scenario) with a dot where each turn ended, so it began exactly where the ribbon fades out. false draws none of it, so the ribbon is the only trail; the track is still RECORDED each turn, so true brings back the whole flight at any time. Nothing else read the drawing (the tests read the recorded points). It was also the zoomed-out map's 'where everyone went' (sandbox exit criterion 5): with it off the far map shows no tracks; asked of Alex in the report.",
+      "start_tail": {
+        "_proposed": true,
+        "_reason": "THE TAIL AT THE START (Alex 2026-10-10, the playtest of build 2026-10-10.134839): 'The plane motion tails don't render at the start. Create a tail for them assuming they are moving forward at normal speed.' At mission start no turn has resolved, so no history exists to record a ribbon from. enabled: every unit that is MOVING at the start is given a synthetic past instead -- a straight path behind it, along minus its heading, for the ribbon's window (window_turns x turn_seconds) at its start speed -- drawn, faded and clipped exactly as the real ribbon (scripts/ui/wingtip_trails.gd start_tail_record). It is visual only (never written into World history), is a function of the unit's initial state and this data alone (so every co-op peer draws the same one), and gives way to real history as turns resolve. A static unit (the tower, the batteries, the complex, the bridge) has none. Values below are PROPOSED (the lead's brief, not Alex's): min_speed_mps: a unit moving slower than this counts as not moving; air_at_rest_uses_cruise: a plane whose start speed is 0 is taken to fly at its type's normal speed, speed_cruise_mps (a ground unit or a ship that is not moving has none). enabled false draws no start tail (the record before this change).",
+        "enabled": true,
+        "min_speed_mps": 0.5,
+        "air_at_rest_uses_cruise": true
+      },
       "under_smoke": true,
       "_under_smoke": "PROPOSED by Track U2 (2026-10-10), on the effects track's finding: Alex chose the smoke W1, soft white to grey, and the ribbon in the side colour, drawn over white smoke along the same centre line, nearly hides it. true = the ribbon is drawn UNDER the effects layer (ribbon, then ground marks, shadows and smoke, then the planner and the cone wash, then the planes, then the bursts on top); false = the ribbon over the smoke, just under the planes, as it was mounted first. Alex has not ruled on this. UnitUI.apply_trail_order() reads it (setup() calls it; a host that changes the value at run time calls it again).",
       "_replaces": "While a trail mode other than none is on, the marker layer does not draw its own solid ink line of the track flown so far this turn during playback (the trail is that, at the wingtips); the dashed rest-of-turn line stays. The sandbox's whole-flight track (scripts/app/sandbox_tracks.gd, Track A's) is not touched by this switch: it stops where the ribbon begins (WingtipTrails.start_t), and whether it is drawn at all is whole_flight_line (below).",
@@ -315,8 +316,9 @@
       "_overshoot": "EFFECTIVE RANGE (Alex 2026-10-09: guns fire 'slightly over effective range'): a weapon's range_m is its effective range; past it the odds fall smoothly to 0 over a short overshoot. Track C builds the real factor (an overshoot of about 15 to 25% of the effective range, data/sim/combat.json); until the overlay's range_factor seam (scripts/ui/cone_overlay.gd) is pointed at it, THIS fraction (proposed 0.2, the middle of that band) and a smoothstep ramp stand in, so the falloff zone is drawn at the size the rule will have. falloff_side_alpha and falloff_dash_px: the wedge's sides carry on through the zone, dashed and fainter.",
       "falloff_side_alpha": 0.45,
       "falloff_dash_px": 4,
-      "shown": true,
-      "_shown": "THE WEAPON-ARCS BUTTON's starting state (Alex 2026-10-10, the Strike playtest: 'We need to be able to toggle off the weapon arcs so we can see more easily.'; and 'Lets prioritize onscreen buttons. No keyboard mapping.'). true: the map shows the cones, as before. The button on the roster header (roster.arcs, scripts/ui/roster.gd) flips it for every cone on the map at once, and what it was set to stays for the session (ConeOverlay.arcs_shown); there is no key for it. The side view's own cones and the bomb cone are not part of this switch.",
+      "shown": false,
+      "shown_decision": "side-view-views",
+      "_shown": "THE WEAPON-ARCS BUTTON's starting state. DECIDED by Alex (decision side-view-views, 2026-10-11): the map's cone wash is OFF by default, because the side view's Top, Front and Side strips show the selected unit's own cones now: 'It would also make it easier to disable the cones on the main map which visually make it much harder to read.' and, asked whether the map's cones should start off with an on/off button in the panel: 'Yes, lets actually add a button to the panel to turn arcs on/off'. The button in the side view panel's own header (side_view.arcs, scripts/ui/side_view.gd) flips that switch (ConeOverlay.arcs_shown, UnitUI.toggle_arcs) for every cone on the map at once, and what it was set to stays for the session; it is the ONLY arcs control now (Alex, 2026-10-11: 'Yes, remove the extra' -- the roster header's own button was taken out); there is no key for it (Alex 2026-10-10: 'Lets prioritize onscreen buttons. No keyboard mapping.'). It was true until then (the Strike playtest: 'We need to be able to toggle off the weapon arcs so we can see more easily.'). The side view's own strips and the bomb cone are not part of this switch.",
       "overhead_footprint": false,
       "_overhead_footprint": "PROPOSED by Track C, 2026-10-10, for Alex's note 'The bomber has dashed arcs to either side but it isn't clear what they cover.' They are the DORSAL TURRET's cone (data/units/bomber.json: mounted to the rear, +-110 degrees across, pitched up +35 degrees with a half height of 35, so its cone starts exactly at the bomber's own level and rises overhead): at the plane's own height it has no slice, and the map drew its whole footprint as a dashed rim, a 400 m arc round the rear with two dashed sides (its label, 'overhead', is off since decision side-view-look, so nothing said what it was). It covers enemies ABOVE the bomber, which the top-down map cannot show; the side view does. false: a cone with no slice at the plane's level draws nothing on the map (neither the rim nor its hardpoint dot); true brings the dashed footprint back (overhead_dash_px, overhead_alpha). Alex has not ruled on it.",
       "overhead_dash_px": 4,
@@ -365,6 +367,17 @@
     "handle_px": 16,
     "fan_line_px": 1.2,
     "rib_line_px": 0.7,
+    "fan": {
+      "_proposed": true,
+      "_reason": "THE RANGE-OF-MOTION INDICATOR (Alex 2026-10-11, the second playtest: 'I want to look at the design of the acceptable range of motion indicator for planes. Is there a style that makes more sense across all unit types? Should we just have a little shaded area where you can set the node? Show me some options before commiting this.'). The board is variants/motion-range/; EVERY OPTION AND VALUE HERE IS PROPOSED by builder BM and nothing is chosen until Alex picks, so the default stays today's look. mode names how the region where the NEXT step's node may be set (World.reachable's outline, clipped by the ground and sea rules for a tank or a ship) is drawn: 'ribs' is today's (the inked outline, a faint wash and one rib per sampled turn: planner.fan_line_px, rib_line_px and the fan_fill, fan_line, fan_rib roles); 'shade' a flat shaded area and no outline at all (Alex's own idea); 'wash_rim' the wash under a thin inked rim, no ribs; 'stipple' ink dots, no outline; 'hatch' 45 degree ink strokes, no outline; 'rim_ticks' a quiet rim and a ruler along the centre line with a tick at the slowest and the fastest reach. Switching on the chosen one is this one value. Colours are the roles named in each block (all ink at a lower alpha: no hue, lightness a ramp off the paper); sizes are screen px.",
+      "mode": "ribs",
+      "modes": ["ribs", "shade", "wash_rim", "stipple", "hatch", "rim_ticks"],
+      "shade": { "fill_role": "fan_shade" },
+      "wash_rim": { "fill_role": "fan_wash", "rim_role": "fan_rim", "rim_px": 0.9 },
+      "stipple": { "dot_role": "fan_dot", "cell_px": 3.6, "dot_px": 0.9, "max_cells": 30000 },
+      "hatch": { "line_role": "fan_hatch", "spacing_px": 4.0, "line_px": 0.8, "angle_deg": 45 },
+      "rim_ticks": { "rim_role": "fan_rim_quiet", "rim_px": 0.9, "centre_role": "fan_centre", "centre_px": 0.7, "tick_role": "fan_tick", "tick_px": 4.0, "tick_line_px": 1.1 }
+    },
     "path_line_px": 1.6,
     "carry_line_px": 1.0,
     "dash_px": 6,
@@ -639,13 +652,58 @@
     "section": {
       "_about": "The section at the bottom of the orders card: a faint rule, a line saying which step, the picture, the quiet line. gap_px is the room under the card's own content. The picture shrinks to fit the window (the card must stay on screen) and the whole section is left out under min_picture_h_px.",
       "gap_px": 10,
-      "head_px": 20,
+      "head_px": 22,
+      "_head_px": "Was 20. PROPOSED, 2026-10-11 (decision side-view-views): 22 px so the panel's own Arcs button (side_view.arcs, 20 px high) sits in the heading row with the words.",
       "picture_h_px": 150,
       "min_picture_h_px": 60,
       "caption_h_px": 20,
       "_lettering": "Track L, 2026-10-10: head_px and caption_h_px were 18 for 12 px italic lines; the two lines are 14 px now (lettering.min_px), so each row is 2 px taller (4 px for the section; the picture gives it back: at 1280x720 with three units it is 80 px high against a floor of 60).",
       "bottom_px": 8,
       "pad_px": 9
+    },
+    "strips": {
+      "_proposed": true,
+      "_reason": "THE THREE STRIPS (decision side-view-views, 2026-10-11). ALEX: 'I want to be able to select between top, front & side. I think this solves the cone but only upwards problem. Maybe they fold instead of you selecting only one - so you could have all three.' and, to the layout question: '1 B - but no limit on which are open at a time. I am testing on 4k' (B: folding strips, three strips each folded or unfolded on its own). EVERYTHING ELSE HERE IS PROPOSED by the builder: the order (Alex's: top, front, side), the names, a row of head_px with a fold box and the strip's name in the card face, which strips start open (all three: he wants all three), the pictures' heights, and the room rule: the strips stack under the panel's heading row and the card must stay on the screen, so a window too short for them shares the room between the open strips (down to min_picture_h_px each) and holds the ones that do not fit folded -- the one the player opened last keeps its place first, then the order in `priority` -- while what the player chose is kept; a window too short even for one picture and the three rows (about 190 px of room, a 1280x720 window with three units has 138) shows the panel as it was before the strips, the Side picture alone (compact), still with its Arcs button. What the player folds or unfolds is kept for the session (SideView.reset_view_setting forgets it), not per unit.",
+      "order": ["top", "front", "side"],
+      "name": { "top": "Top", "front": "Front", "side": "Side" },
+      "open": { "top": true, "front": true, "side": true },
+      "priority": ["side", "top", "front"],
+      "_priority": "PROPOSED: when the room holds fewer pictures than are open, the Side strip (the picture the panel has always had, the only one with the bombs' fall and the shells' flight) comes first, then Top, then Front; a strip the player has just opened comes before all of them.",
+      "head_px": 22,
+      "gap_px": 4,
+      "box_px": 14,
+      "box_gap_px": 8,
+      "name_px": 14,
+      "box_line_px": 1.0,
+      "chevron_px": 3.2,
+      "chevron_line_px": 1.6,
+      "picture_h_px": { "top": 150, "front": 130, "side": 150 },
+      "min_picture_h_px": 60
+    },
+    "arcs": {
+      "_proposed": true,
+      "_reason": "THE PANEL'S ARCS BUTTON (decision side-view-views, 2026-10-11). ALEX: 'Yes, lets actually add a button to the panel to turn arcs on/off' (and, 2026-10-10, 'Lets prioritize onscreen buttons. No keyboard mapping.'). In the panel's heading row, at the right: it flips the cone overlay's switch (ConeOverlay.arcs_shown / UnitUI.toggle_arcs), and it is the ONLY arcs control (Alex, 2026-10-11: 'Yes, remove the extra' -- the roster header's button is gone); 'Arcs: on' pressed (filled with ink, paper lettering) or 'Arcs: off' raised. The size and the words are PROPOSED (the roster button's).",
+      "label_on": "Arcs: on",
+      "label_off": "Arcs: off",
+      "tooltip": "Show or hide the weapon arcs on the map",
+      "w_px": 66,
+      "h_px": 20
+    },
+    "top": {
+      "_proposed": true,
+      "_reason": "THE TOP STRIP (decision side-view-views, 2026-10-11; the projection is PROPOSED by the builder). The horizontal plane through the unit: the map's own cone wash (cone_overlay.gd's records and drawing) made small, in the unit's own frame, so it replaces the map's wash now that the map's is off by default. nose_deg is the screen angle of the nose (0 = to the right, -90 = up): PROPOSED 0, so the picture shares its horizontal axis and its scale rule with the Side strip and fills a card that is wider than it is tall (a nose-up picture is a thin sliver for a fighter's guns); the weapons keep their sides (the right wing is down the page). footprint: a weapon whose cone misses that plane (the bomber's dorsal turret covers what is ABOVE it) is drawn as its footprint, dashed, as cone_overlay.gd draws the overhead footprint (planner.cones.overhead_*); the map itself draws none (planner.cones.overhead_footprint false). pitch_shift: the plane is the horizontal one, so a climb or a dive changes each cone's slice (each horizontal direction is put through the airframe's pitch as combat.gd does, and the azimuths inside the cone are the wedge), as the Side strip tilts its cones.",
+      "nose_deg": 0,
+      "footprint": true,
+      "pitch_shift": true
+    },
+    "front": {
+      "_proposed": true,
+      "_reason": "THE FRONT STRIP (decision side-view-views, 2026-10-11; the projection is PROPOSED by the builder). Looking along the nose: the vertical plane across the heading through the unit, x the lateral offset (right is right), y the height. Each weapon's cone is the set of directions it reaches (azimuth and elevation, an ellipse, as combat.gd tests it), out to its effective range and then the fade; a point t metres out along a direction (a, e) lands at t (cos e sin a, cos e cos a sin p + sin e cos p) on the plane (p the airframe's pitch), so a dorsal turret is a fan over the top, a waist gun a fan to the side, a fixed gun a small disc at the centre, a battery's all-round upward cone a dome. The wash is nested: the cone's rings of equal odds (steps of planner.cones.wash.steps for a peaked gun, one flat wash for a turret) each projected, drawn the way the map's wash is, and fading past the effective range as it does. The target is at its lateral offset and height difference. rear_dashed: a cone that faces the tail projects onto the same plane as one that faces the nose, so its rim is dashed. theta_bins: the outline is sampled every 360/theta_bins degrees round the unit; pitch_step_deg: the pitch is taken to this step so a playback reuses outlines; boundary_samples is how many points of a cone's own edge are projected and densify_step (in units of the weapon's range) how finely the segments between them are walked, so that no angle round the unit is missed.",
+      "theta_bins": 72,
+      "pitch_step_deg": 0.5,
+      "boundary_samples": 360,
+      "densify_step": 0.01,
+      "rear_dashed": true
     },
     "frame": {
       "_about": "The metres-to-px rule. ONE scale for both axes. Guns view: the horizontal span is the longest reach (effective range plus the fade) of the weapons that face forward, times span_margin, and of those that face rearward on the left (the room behind a unit with none is rear_room_fraction of the forward span); at least span_min_m. The unit sits down the page where its cones need room (their extents above and below it, the ground when near; unit_y_frac when they need none), between unit_y_min_frac and unit_y_max_frac of the height, and moved as far as the page allows to give a target on the page the room it needs. A target the picture does not hold is an arrow on the edge, edge_inset_px in.",
@@ -681,6 +739,8 @@
       "tick_line_px": 1.8,
       "tick_under_px": 3.4,
       "arrow_px": 7.0,
+      "square_px": 3.4,
+      "_square": "PROPOSED (decision side-view-views): in the Top and Front strips a ground unit has no ground line to stand on, so it is a small square in its side's accent with an ink rim (the Side strip keeps its tick).",
       "off_axis_hollow": true,
       "rim_role": { "base": "ink" }
     },
@@ -789,6 +849,10 @@
         { "pattern": "^(military_complex_\\d+) is down$", "text": "the %s is destroyed" },
         { "pattern": "^(military_complex_\\d+) still stands after turn \\d+$", "text": "the %s still stands" },
         { "pattern": "^turn (\\d+) was played without the objective$", "text": "the tower still stands after turn %s" },
+        { "pattern": "^relief arrives: the bridge held through turn \\d+$", "text": "relief arrives: the bridge held" },
+        { "pattern": "^(.+) got past the bridge$", "text": "an enemy %s got across the bridge" },
+        { "pattern": "^all of .* are down$", "text": "both tanks are lost" },
+        { "pattern": "^(bridge_\\d+) is down$", "text": "the %s is destroyed" },
         { "pattern": "^(.+) is down$", "text": "%s down" }
       ]
     }
@@ -831,6 +895,14 @@
     "fan_fill": { "base": "ink", "alpha": 0.1 },
     "fan_line": { "base": "ink", "alpha": 0.78 },
     "fan_rib": { "base": "ink", "alpha": 0.2 },
+    "fan_shade": { "base": "ink", "alpha": 0.3 },
+    "fan_wash": { "base": "ink", "alpha": 0.14 },
+    "fan_rim": { "base": "ink", "alpha": 0.5 },
+    "fan_dot": { "base": "ink", "alpha": 0.7 },
+    "fan_hatch": { "base": "ink", "alpha": 0.55 },
+    "fan_rim_quiet": { "base": "ink", "alpha": 0.45 },
+    "fan_centre": { "base": "ink", "alpha": 0.22 },
+    "fan_tick": { "base": "ink", "alpha": 0.8 },
     "path": { "base": "ink", "alpha": 0.9 },
     "path_carry": { "base": "ink", "alpha": 0.5 },
     "clamp": { "base": "ink", "alpha": 0.55 },

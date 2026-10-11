@@ -100,6 +100,12 @@ var az: float          # the prototype's az: (sunAz + 90) degrees, the shadow's 
 var dir: Vector2       # unit, away from the sun
 var L: float           # 1 / tan(elevation): shadow length per unit of height
 var stretch: float     # canopy stretch along the sun
+# The sun the TREES' cast shadows follow: the same four numbers as above unless Sun's scope is "trees"
+# (PROPOSED, the sun-time board's two-suns frame: only the trees take the clock's sun).
+var tree_az: float
+var tree_dir: Vector2
+var tree_L: float
+var tree_stretch: float
 var lee_dot_min: float
 var last_count := 0    # silhouettes added by the last cast_terrain / cast_trees
 
@@ -113,6 +119,10 @@ func _init(t: Terrain, params: RenderParams = null) -> void:
 	dir = Vector2(cos(az), sin(az))
 	L = 1.0 / tan(P.elev * PI / 180.0)
 	stretch = minf(P.canopy_shadow_stretch_max, 1.0 + L * 0.3)
+	tree_az = (P.treeSunAz + 90.0) * PI / 180.0
+	tree_dir = Vector2(cos(tree_az), sin(tree_az))
+	tree_L = 1.0 / tan(P.treeElev * PI / 180.0)
+	tree_stretch = minf(P.canopy_shadow_stretch_max, 1.0 + tree_L * 0.3)
 	lee_dot_min = terrain.data.num("shadow.lee_dot_min")
 	if terrain.level_count() > MAX_RECEIVERS:
 		push_error("TerrainShadows: %d levels; the merge handles %d" % [terrain.level_count(), MAX_RECEIVERS])
@@ -123,7 +133,7 @@ func _init(t: Terrain, params: RenderParams = null) -> void:
 func reach_px() -> float:
 	var top := terrain.heights_m[terrain.heights_m.size() - 1] * terrain.px_per_m
 	var tallest := P.treeSize * (1.0 + P.sizeVar) * P.big_tree_scale * P.height * 1.15
-	return (top + tallest) * L + tallest * stretch * 1.3 + 8.0
+	return (top + tallest) * maxf(L, tree_L) + tallest * maxf(stretch, tree_stretch) * 1.3 + 8.0
 
 # --- terrain class -------------------------------------------------------------------
 
@@ -186,11 +196,11 @@ func add_tree_silhouettes(sp: ShadowPass, trees: Array, receiver: int, view: Tra
 		if top <= zr:
 			continue
 		var pos := Vector2(t.x, t.y)
-		var foot := pos + dir * ((maxf(base, zr) - zr) * L)
-		var s := pos + dir * ((top - zr) * L)
+		var foot := pos + tree_dir * ((maxf(base, zr) - zr) * tree_L)
+		var s := pos + tree_dir * ((top - zr) * tree_L)
 		var half: float = t.half
 		var lvl: int = t.get("level", 0)
-		if lvl > receiver and not _reaches_level(s, foot, half * stretch, receiver):
+		if lvl > receiver and not _reaches_level(s, foot, half * tree_stretch, receiver):
 			continue
 		m.save()
 		m.set_transform_matrix(view)
@@ -200,8 +210,8 @@ func add_tree_silhouettes(sp: ShadowPass, trees: Array, receiver: int, view: Tra
 		m.line_to(s.x, s.y)
 		m.stroke()
 		m.restore()
-		var xf := view * Transform2D(0.0, s) * Transform2D(az, Vector2.ZERO) \
-			* Transform2D(Vector2(stretch, 0.0), Vector2(0.0, 1.0), Vector2.ZERO) * Transform2D(-az, Vector2.ZERO)
+		var xf := view * Transform2D(0.0, s) * Transform2D(tree_az, Vector2.ZERO) \
+			* Transform2D(Vector2(tree_stretch, 0.0), Vector2(0.0, 1.0), Vector2.ZERO) * Transform2D(-tree_az, Vector2.ZERO)
 		sp.draw_silhouette_texture(t.sprite, xf, Rect2(-half, -half, half * 2.0, half * 2.0))
 		count += 1
 	return count

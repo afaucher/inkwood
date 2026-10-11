@@ -61,6 +61,25 @@ extends Control
 # (side_view.live_during_playback), for the same unit at its SHOWN pose, so the picture follows the playback.
 # Hidden for an enemy or nothing selected, and when the window is too short to hold it.
 #
+# THE THREE STRIPS (decision side-view-views, 2026-10-11). ALEX: "I want to be able to select between top, front & side. I think this
+# solves the 'cone but only upwards' problem. Maybe they fold instead of you selecting only one - so you could have all three. It would
+# also make it easier to disable the cones on the main map which visually make it much harder to read." And: "1 B - but no limit on which
+# are open at a time. I am testing on 4k  2 Yes, lets actually add a button to the panel to turn arcs on/off  3 self only". So the panel
+# is a heading row (which step, and the ARCS button: the same switch as the roster's) and three folding STRIPS under it, each a row with
+# a fold box and its name (Top, Front, Side) and, unfolded, a picture of the selected unit's OWN cones:
+#   Top    the horizontal plane through the unit: the map's cone wash made small (side_view_top.gd)
+#   Front  looking along the nose: each weapon's coverage on the plane across it (side_view_front.gd)
+#   Side   the vertical plane along the nose: what the panel has always shown, the drop and the fire frames included (this file)
+# Each strip folds on its own and any number are open at once; what the player folds is kept for the session (static, like
+# ConeOverlay's arcs switch), not per unit. The three projections, the sizes and everything but the quoted words are PROPOSED
+# (data/ui/ui.json side_view.strips, .top, .front, .arcs).
+# THE ROOM. The card must stay on the screen, so the open strips share the room the window leaves (down to strips.min_picture_h_px each);
+# the ones that do not fit are held folded by the room (the player's choice is kept; the strip the player opened last keeps its place
+# first, then strips.priority). A window too short even for the three rows and one picture shows the panel as it was before the
+# strips ("compact": heading row, the Side picture, the quiet line), and one too short for that shows nothing. A model is
+# {"layout": {"mode": "strips" | "compact", ...}}; model()["size"] is always the Side picture's size, model()["top"] and ["front"] the
+# other two strips' models (the same keys, the cones as each strip draws them).
+#
 # THE PLAN-READ RULE (test_ui_coop's tripwire, and test_side_view's): every plan-derived question goes through
 # the planner and only after planner.plan_shown(id) -- the planning phase, a player-controlled unit, not down --
 # so an AI unit's plan, drop or step can never reach this picture. The playback view reads the shown pose and
@@ -71,6 +90,8 @@ const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
 const ConeOverlay = preload("res://scripts/ui/cone_overlay.gd")
 const SideViewArt = preload("res://scripts/ui/side_view_art.gd")
+const SideViewTop = preload("res://scripts/ui/side_view_top.gd")
+const SideViewFront = preload("res://scripts/ui/side_view_front.gd")
 const Combat = preload("res://scripts/sim/combat.gd")
 const Bombs = preload("res://scripts/sim/bombs.gd")
 const Guns = preload("res://scripts/sim/guns.gd")
@@ -88,13 +109,24 @@ var shown_pose: Callable = Callable()      # unit_id -> {x, y, heading, speed, a
 var range_factor: Callable = Callable()    # (CombatWeapon, distance_m) -> 0..1: the odds' fall past the effective range
 var ground_height: Callable = Callable()   # (x, y) -> metres: the terrain; the sim has none, so it is not wired
 var playback: Object = null                # the marker layer: is_playing() / playback_t
+var arcs_state: Callable = Callable()      # () -> bool: whether the map shows the weapon cones (UnitUI.arcs_shown); with none there is no Arcs button
+
+# The Arcs button was pressed: UnitUI points it at the cone overlay's own switch (UnitUI.toggle_arcs), the roster's button's.
+signal arcs_pressed
+
+# What the player has folded or unfolded this session: strip id -> open (a strip never touched takes the data's), and the order the
+# strips were opened in, the latest first (it decides which strip keeps its picture when the room is short). Forgotten by
+# reset_view_setting(); never per unit.
+static var _session_open: Dictionary = {}
+static var _session_recent: Array = []
 
 # Counted when a draw ran to its end (a runtime error ends one early and silently).
 var draw_count: int = 0
 var picture_draws: int = 0
 var failed_draws: int = 0
 
-var _pic: Control = null
+var _pic: Control = null                  # the Side strip's picture
+var _pics: Dictionary = {}                # strip id -> its picture canvas
 var _model: Dictionary = {"active": false}
 var _sig: String = ""
 var _rev: int = 0
@@ -104,12 +136,13 @@ var _tg_id: int = 0
 # The picture's own canvas: it clips to its rect (a wide cone may leave the page).
 class _Pic extends Control:
 	var panel: Object = null
+	var kind: String = "side"
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		clip_contents = true
 	func _draw() -> void:
 		if panel != null:
-			panel.paint_picture(self)
+			panel.paint_strip(kind, self)
 
 func setup(w: World, motion_planner: Object, sel: RefCounted, st: RefCounted = null) -> void:
 	world = w
@@ -117,13 +150,18 @@ func setup(w: World, motion_planner: Object, sel: RefCounted, st: RefCounted = n
 	selection = sel
 	style = (st if st != null else UiStyle.shared()) as UiStyle
 	name = "SideView"
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mouse_filter = Control.MOUSE_FILTER_STOP   # the Arcs button and the strips' headers are clicked here
 	visible = false
 	if _pic == null:
-		_pic = _Pic.new()
-		_pic.name = "Picture"
-		_pic.panel = self
-		add_child(_pic)
+		for id: String in ["side", "top", "front"]:
+			var pic := _Pic.new()
+			pic.name = "Picture" if id == "side" else "%sPicture" % id.capitalize()
+			pic.panel = self
+			pic.kind = id
+			pic.visible = false
+			add_child(pic)
+			_pics[id] = pic
+		_pic = _pics["side"]
 	if not world.plan_changed.is_connected(_on_change):
 		world.plan_changed.connect(_on_change)
 		world.phase_changed.connect(_on_change)
@@ -159,8 +197,8 @@ func refresh() -> void:
 	_apply_layout()
 	visible = bool(_model.get("active", false))
 	queue_redraw()
-	if _pic != null:
-		_pic.queue_redraw()
+	for id: String in _pics:
+		(_pics[id] as Control).queue_redraw()
 
 # The whole picture as numbers (see the header). {"active": false} when nothing is shown.
 func model() -> Dictionary:
@@ -206,51 +244,266 @@ func _signature() -> String:
 			parts.append("%s:%.1f,%.1f,%s,%s" % [tid, float(sp["x"]), float(sp["y"]), str(sp.get("height_m", 0.0)), str(_is_shown(tid, world.units[tid]))])
 		elif not raw.is_empty():
 			parts.append("p%s" % str(raw["point"]))
+	# What is unfolded and what the Arcs button says: a click on either is a change.
+	var open_ids := PackedStringArray()
+	for sid: String in strip_ids():
+		if strip_chosen(sid):
+			open_ids.append(sid)
+	parts.append("o:" + ",".join(open_ids))
+	parts.append("a:" + str(arcs_on()))
 	if host != null:
 		var pc := host.get_parent_control()
 		parts.append("%.0f,%.0f,%.0f" % [host.position.y, host.size.x, pc.size.y if pc != null else 0.0])
 	return "|".join(parts)
 
-# --- The card's room ------------------------------------------------------------------------
+# --- The strips: what is folded, and in what order they keep their room ----------------------------------
 
-func _chrome() -> float:
-	return style.num("side_view.section.gap_px") + style.num("side_view.section.head_px") + _caption_h() + style.num("side_view.section.bottom_px")
+# The strips' ids, top to bottom (data side_view.strips.order).
+func strip_ids() -> Array:
+	var out: Array = []
+	var v: Variant = style.lookup("side_view.strips.order")
+	if v is Array:
+		for e: Variant in v:
+			out.append(str(e))
+	return out
+
+func strip_name(id: String) -> String:
+	return style.text("side_view.strips.name." + id)
+
+# Whether the player (or, until they touch it, the data) has the strip unfolded: the CHOICE, kept for the session. Whether the room
+# lets it show is strip_shown().
+func strip_chosen(id: String) -> bool:
+	if _session_open.has(id):
+		return bool(_session_open[id])
+	return style.flag("side_view.strips.open." + id)
+
+# Whether the strip is unfolded on the screen now: chosen, and held by the room (see the header: "THE ROOM"). Read from the model.
+func strip_shown(id: String) -> bool:
+	var lay: Dictionary = _model.get("layout", {})
+	for e: Dictionary in lay.get("strips", []):
+		if str(e["id"]) == id:
+			return bool(e["shown"])
+	return false
+
+# Folds or unfolds one strip, on its own. An unfolded strip comes first when the room is short.
+func set_strip_open(id: String, on: bool) -> void:
+	if not strip_ids().has(id):
+		return
+	_session_open[id] = on
+	if on:
+		_session_recent.erase(id)
+		_session_recent.push_front(id)
+	_rev += 1
+	if world != null and style != null:
+		refresh()
+
+func toggle_strip(id: String) -> void:
+	set_strip_open(id, not strip_shown(id) if layout_mode() == "strips" else not strip_chosen(id))
+
+# A click on a strip's header: folds a strip that is showing, unfolds one that is not (one the room is holding folded comes forward and
+# another gives up its place). False when the panel has no strips on the screen (compact, or nothing shown).
+func press_strip(id: String) -> bool:
+	if layout_mode() != "strips" or not strip_ids().has(id):
+		return false
+	toggle_strip(id)
+	return true
+
+# Forgets what the player folded and unfolded (tests, a fresh session): the data's starting state rules again.
+static func reset_view_setting() -> void:
+	_session_open = {}
+	_session_recent = []
+
+# The strips in the order they keep their room: the one opened last first, then the data's priority, then the order on the screen.
+func _priority_ids() -> Array:
+	var ids := strip_ids()
+	var out: Array = []
+	for id: Variant in _session_recent:
+		if ids.has(id) and not out.has(id):
+			out.append(id)
+	var v: Variant = style.lookup("side_view.strips.priority")
+	if v is Array:
+		for e: Variant in v:
+			if ids.has(str(e)) and not out.has(str(e)):
+				out.append(str(e))
+	for id: String in ids:
+		if not out.has(id):
+			out.append(id)
+	return out
+
+func layout_mode() -> String:
+	return str((_model.get("layout", {}) as Dictionary).get("mode", "off"))
+
+# --- The arcs button -------------------------------------------------------------------------------------------
+
+func has_arcs_button() -> bool:
+	return arcs_state.is_valid()
+
+# Whether the map shows the arcs (the button reads pressed); false with no button.
+func arcs_on() -> bool:
+	return arcs_state.is_valid() and bool(arcs_state.call())
+
+func arcs_label() -> String:
+	return style.text("side_view.arcs.label_on" if arcs_on() else "side_view.arcs.label_off")
+
+# The button, in this section's space: in the heading row, at the right.
+func arcs_button_rect() -> Rect2:
+	var gap: float = style.num("side_view.section.gap_px")
+	var head: float = style.num("side_view.section.head_px")
+	var w: float = style.num("side_view.arcs.w_px")
+	var h: float = style.num("side_view.arcs.h_px")
+	return Rect2(Vector2(maxf(size.x - w, 0.0), gap + (head - h) * 0.5), Vector2(w, h))
+
+# The button, as a click does it. False when there is none (or no panel on the screen).
+func press_arcs() -> bool:
+	if not has_arcs_button() or not is_active():
+		return false
+	arcs_pressed.emit()
+	queue_redraw()
+	return true
+
+func _gui_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mb := event as InputEventMouseButton
+	if not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT or not is_active():
+		return
+	if has_arcs_button() and arcs_button_rect().has_point(mb.position):
+		press_arcs()
+		accept_event()
+		return
+	for e: Dictionary in (_model.get("layout", {}) as Dictionary).get("strips", []):
+		if (e["head"] as Rect2).size.y > 0.0 and (e["head"] as Rect2).has_point(mb.position):
+			press_strip(str(e["id"]))
+			accept_event()
+			return
+	accept_event()   # (the rest of the section is not the orders card's)
+
+func _get_tooltip(at_position: Vector2) -> String:
+	if has_arcs_button() and is_active() and arcs_button_rect().has_point(at_position):
+		return style.text("side_view.arcs.tooltip")
+	return ""
+
+# --- The card's room ------------------------------------------------------------------------
 
 func _caption_h() -> float:
 	return style.num("side_view.section.caption_h_px") if style.flag("side_view.text.enabled") else 0.0
 
-# The picture's size, or a height of 0 when the window cannot hold the section.
-func _picture_size() -> Vector2:
+# The section's chrome without any strip: the gap, the heading row, the quiet line, the bottom.
+func _chrome() -> float:
+	return style.num("side_view.section.gap_px") + style.num("side_view.section.head_px") + _caption_h() + style.num("side_view.section.bottom_px")
+
+# How the section is laid out in the room there is (see the header, "THE ROOM"): {"mode": "strips" | "compact" | "off", "w", "shown":
+# {id: bool}, "h": {id: picture height}, "section_h"}. With no card to grow (a panel alone) there is no room limit: the strips the
+# player has unfolded, at the data's heights.
+func _plan_layout() -> Dictionary:
+	var ids := strip_ids()
 	var pad: float = style.num("card.pad_px")
 	var w: float = (host.size.x if host != null else style.num("roster.width_px")) - 2.0 * pad
-	var h: float = style.num("side_view.section.picture_h_px")
+	var sh: float = style.num("side_view.strips.head_px")
+	var sgap: float = style.num("side_view.strips.gap_px")
+	var min_h: float = style.num("side_view.strips.min_picture_h_px")
+	var pref := {}
+	for id: String in ids:
+		pref[id] = style.num("side_view.strips.picture_h_px." + id)
+	var chosen: Array = []
+	for id: String in ids:
+		if strip_chosen(id):
+			chosen.append(id)
+	var room := INF
 	if host != null:
 		var pc := host.get_parent_control()
 		if pc != null and pc.size.y > 1.0:
-			h = minf(h, pc.size.y - style.num("card.margin_px") - (host.position.y + _base_h) - _chrome())
-	if h < style.num("side_view.section.min_picture_h_px"):
-		return Vector2(w, 0.0)
-	return Vector2(w, h)
+			room = pc.size.y - style.num("card.margin_px") - (host.position.y + _base_h)
+	var shown := {}
+	var heights := pref.duplicate()
+	var mode := "strips"
+	var base := _chrome() + float(ids.size()) * sh
+	if room == INF:
+		for id: String in chosen:
+			shown[id] = true
+	elif room >= base + (0.0 if chosen.is_empty() else min_h + sgap):
+		var by_priority: Array = []
+		for id: Variant in _priority_ids():
+			if chosen.has(id):
+				by_priority.append(id)
+		var n := chosen.size()
+		var each := 0.0
+		while n > 0:
+			each = (room - base - float(n) * sgap) / float(n)
+			if each >= min_h:
+				break
+			n -= 1
+		for i in n:
+			var id2: String = by_priority[i]
+			shown[id2] = true
+			heights[id2] = minf(float(pref[id2]), each)
+	else:
+		# Too short for the strips: the panel as it was, the Side picture alone, if even that fits.
+		mode = "compact"
+		var side_h := minf(float(style.num("side_view.section.picture_h_px")), room - _chrome())
+		if side_h < style.num("side_view.section.min_picture_h_px"):
+			return {"mode": "off", "w": w, "shown": {}, "h": heights, "section_h": 0.0}
+		shown["side"] = true
+		heights["side"] = side_h
+	var section_h := _chrome()
+	if mode == "strips":
+		for id: String in ids:
+			section_h += sh
+			if shown.has(id):
+				section_h += float(heights[id]) + sgap
+	else:
+		section_h += float(heights["side"])
+	return {"mode": mode, "w": w, "shown": shown, "h": heights, "section_h": section_h}
+
+# Where everything is, in the section's own space: the plan as rectangles.
+func _rects(plan: Dictionary) -> Dictionary:
+	var w: float = plan["w"]
+	var gap: float = style.num("side_view.section.gap_px")
+	var head: float = style.num("side_view.section.head_px")
+	var sh: float = style.num("side_view.strips.head_px")
+	var sgap: float = style.num("side_view.strips.gap_px")
+	var y := gap + head
+	var strips: Array = []
+	if str(plan["mode"]) == "strips":
+		for id: String in strip_ids():
+			var row := Rect2(0.0, y, w, sh)
+			y += sh
+			var shown: bool = (plan["shown"] as Dictionary).has(id)
+			var pic := Rect2()
+			if shown:
+				pic = Rect2(0.0, y, w, float((plan["h"] as Dictionary)[id]))
+				y += pic.size.y + sgap
+			strips.append({"id": id, "name": strip_name(id), "chosen": strip_chosen(id), "shown": shown, "head": row, "pic": pic})
+	else:
+		var side := Rect2(0.0, y, w, float((plan["h"] as Dictionary)["side"]))
+		y += side.size.y
+		strips.append({"id": "side", "name": strip_name("side"), "chosen": true, "shown": true, "head": Rect2(), "pic": side})
+	return {"mode": plan["mode"], "w": w, "section_h": plan["section_h"], "strips": strips,
+		"head": Rect2(0.0, gap, w, head), "caption": Rect2(0.0, y, w, _caption_h())}
 
 # Sizes the section and grows (or restores) the card.
 func _apply_layout() -> void:
 	var on := bool(_model.get("active", false))
-	if host == null:
-		if on and _pic != null:
-			var sz: Vector2 = _model["size"]
-			size = Vector2(sz.x, _chrome() + sz.y)
-			_pic.position = Vector2(0.0, style.num("side_view.section.gap_px") + style.num("side_view.section.head_px"))
-			_pic.size = sz
-		return
-	var want := _base_h
 	if on:
-		var sz2: Vector2 = _model["size"]
-		var section := _chrome() + sz2.y
-		want = _base_h + section
+		var lay: Dictionary = _model["layout"]
+		for id: String in _pics:
+			(_pics[id] as Control).visible = false
+		for e: Dictionary in lay["strips"]:
+			if bool(e["shown"]):
+				var pic: Control = _pics[str(e["id"])]
+				pic.visible = true
+				pic.position = (e["pic"] as Rect2).position
+				pic.size = (e["pic"] as Rect2).size
+		size = Vector2(float(lay["w"]), float(lay["section_h"]))
+		if host == null:
+			return
 		position = Vector2(style.num("card.pad_px"), _base_h)
-		size = Vector2(sz2.x, section)
-		_pic.position = Vector2(0.0, style.num("side_view.section.gap_px") + style.num("side_view.section.head_px"))
-		_pic.size = sz2
+	else:
+		for id: String in _pics:
+			(_pics[id] as Control).visible = false
+		if host == null:
+			return
+	var want := _base_h + (size.y if on else 0.0)
 	if not is_equal_approx(host.custom_minimum_size.y, want):
 		host.custom_minimum_size = Vector2(host.custom_minimum_size.x, want)
 		host.size = Vector2(host.size.x, want)
@@ -262,26 +515,75 @@ func _draw() -> void:
 	if not bool(_model.get("active", false)):
 		return
 	var st := style
+	var ink: Color = st.color("ink")
 	var soft: Color = st.color("ink")   # (Track L, readable lettering: the heading and the caption are full ink in the label face, 14 px)
 	var faint: Color = st.color("ink_faint")
-	var italic: Font = st.text_font()
+	var label_face: Font = st.text_font()
 	var detail: float = st.num("fonts.detail_px")
-	var gap: float = st.num("side_view.section.gap_px")
-	var head: float = st.num("side_view.section.head_px")
+	var lay: Dictionary = _model["layout"]
+	var head_r: Rect2 = lay["head"]
 	UiInk.ink_line(self, PackedVector2Array([Vector2(0.0, 1.0), Vector2(size.x, 1.0)]), false, faint, 0.8, 9, 0.4)
-	UiInk.text(self, italic, Vector2(0.0, gap + head - 5.0), str(_model["head"]), detail, soft)
+	var head_w := size.x - (st.num("side_view.arcs.w_px") + 8.0 if has_arcs_button() else 0.0)
+	UiInk.text(self, label_face, Vector2(0.0, head_r.end.y - 5.0), str(_model["head"]), detail, soft, HORIZONTAL_ALIGNMENT_LEFT, head_w)
+	if has_arcs_button():
+		_draw_arcs_button(ink)
+	for e: Dictionary in lay["strips"]:
+		if (e["head"] as Rect2).size.y > 0.0:
+			_draw_strip_head(e, ink)
 	var line := str(_model["line"])
 	if line != "":
-		var sz: Vector2 = _model["size"]
-		UiInk.text(self, italic, Vector2(0.0, gap + head + sz.y + _caption_h() - 5.0), line, detail, soft, HORIZONTAL_ALIGNMENT_LEFT, size.x)
+		var cap: Rect2 = lay["caption"]
+		UiInk.text(self, label_face, Vector2(0.0, cap.end.y - 5.0), line, detail, soft, HORIZONTAL_ALIGNMENT_LEFT, size.x)
 	draw_count += 1
 
-# Called by the picture canvas.
-func paint_picture(ci: CanvasItem) -> void:
+# "Arcs: on" filled with ink and lettered in paper (a toggle that is on), or "Arcs: off" raised: the roster button's pair of roles.
+func _draw_arcs_button(ink: Color) -> void:
+	var st := style
+	var r := arcs_button_rect()
+	var on := arcs_on()
+	draw_rect(r, st.color("button_on_fill") if on else st.color("button_fill"), true)
+	UiInk.ink_line(self, UiInk.rect_pts(r), true, ink, 1.0, 17, 0.35)
+	var px: float = st.num("fonts.button_px")
+	UiInk.text(self, st.font(false), Vector2(r.position.x, r.position.y + r.size.y * 0.5 + px * 0.34), arcs_label(), px,
+		st.color("button_on_text") if on else ink, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+
+# A strip's header row: the fold box (filled with ink and a paper chevron down when the strip is unfolded, paper with an ink chevron
+# right when it is folded) and the strip's name in the card face.
+func _draw_strip_head(e: Dictionary, ink: Color) -> void:
+	var st := style
+	var row: Rect2 = e["head"]
+	var q: float = st.num("side_view.strips.box_px")
+	var box := Rect2(Vector2(0.0, row.position.y + (row.size.y - q) * 0.5), Vector2(q, q))
+	var on: bool = bool(e["shown"])
+	draw_rect(box, st.color("button_on_fill") if on else st.color("button_fill"), true)
+	UiInk.ink_line(self, UiInk.rect_pts(box), true, ink, st.num("side_view.strips.box_line_px"), 21, 0.3)
+	var c := box.get_center()
+	var k: float = st.num("side_view.strips.chevron_px")
+	var chev: PackedVector2Array
+	if on:
+		chev = PackedVector2Array([Vector2(c.x - k, c.y - k * 0.5), Vector2(c.x, c.y + k * 0.5), Vector2(c.x + k, c.y - k * 0.5)])
+	else:
+		chev = PackedVector2Array([Vector2(c.x - k * 0.5, c.y - k), Vector2(c.x + k * 0.5, c.y), Vector2(c.x - k * 0.5, c.y + k)])
+	draw_polyline(chev, st.color("button_on_text") if on else ink, st.num("side_view.strips.chevron_line_px"), true)
+	var px: float = st.num("side_view.strips.name_px")
+	UiInk.text(self, st.font(false), Vector2(q + st.num("side_view.strips.box_gap_px"), row.end.y - 6.0), str(e["name"]), px, ink)
+
+# Called by a picture canvas: the strip of that kind.
+func paint_strip(kind: String, ci: CanvasItem) -> void:
 	if not bool(_model.get("active", false)):
 		return
-	failed_draws += SideViewArt.paint(ci, _model, style)
+	match kind:
+		"top":
+			failed_draws += SideViewTop.paint(ci, _model["top"], style)
+		"front":
+			failed_draws += SideViewFront.paint(ci, _model["front"], style)
+		_:
+			failed_draws += SideViewArt.paint(ci, _model, style)
 	picture_draws += 1
+
+# (the Side strip's canvas, as before)
+func paint_picture(ci: CanvasItem) -> void:
+	paint_strip("side", ci)
 
 # --- The model ------------------------------------------------------------------------------------
 
@@ -303,9 +605,10 @@ func _compute() -> Dictionary:
 		live = true
 	elif not planner.plan_shown(id):
 		return off   # the planning phase, a player unit, not down: the one rule every plan-derived read goes through
-	var pic := _picture_size()
-	if pic.y <= 0.0:
+	var plan := _plan_layout()
+	if str(plan["mode"]) == "off":
 		return off
+	var pic := Vector2(float(plan["w"]), float((plan["h"] as Dictionary)["side"]))
 	var pose := _pose(id, u, live)
 	var k: int = int(pose["step"])
 	var tgt := _normalise_target(_raw_target(id, k, live))
@@ -328,6 +631,11 @@ func _compute() -> Dictionary:
 		m["target"] = _place_target(tgt, m, pic)
 	m["head"] = style.text("side_view.text.head_live") if live else (style.text("side_view.text.head_step") % (k + 1) if k >= 0 else style.text("side_view.text.head_now"))
 	m["line"] = _line(m, tgt)
+	# The other two strips, the unit as the same step leaves it and the same target (their projections: side_view_top.gd, side_view_front.gd).
+	m["top"] = SideViewTop.model(u, id, pose, tgt, Vector2(float(plan["w"]), float((plan["h"] as Dictionary)["top"])), style, range_factor)
+	m["front"] = SideViewFront.model(u, id, pose, tgt, Vector2(float(plan["w"]), float((plan["h"] as Dictionary)["front"])), style, range_factor,
+		float(pose["height_m"]) - _ground_at(float(pose["x"]), float(pose["y"])))
+	m["layout"] = _rects(plan)
 	return m
 
 # The unit as the step the card is about leaves it ({x, y, heading, speed, band, pitch, step, height_m}).

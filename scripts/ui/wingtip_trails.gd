@@ -46,6 +46,19 @@ extends Node2D
 #
 # STYLES (marker.trails.mode): lines, steps, ribbon, rungs, wake -- see data.
 #
+# THE TAIL AT THE START (Alex 2026-10-10, the playtest of build 2026-10-10.134839: "The plane motion tails
+# don't render at the start. Create a tail for them assuming they are moving forward at normal speed."). At
+# mission start nothing has resolved, so there is no history to record. Every unit that is MOVING at the
+# start is given a synthetic past instead: the straight path behind it, along minus its heading, for the
+# ribbon's window, at its start speed (data marker.trails.start_tail; PROPOSED rules: a plane whose start
+# speed is 0 uses its type's normal speed, speed_cruise_mps; a static unit, and a ground unit or a ship that
+# is not moving, has none). It is VISUAL ONLY: it lives in this node's own record (game time -window .. 0),
+# never in World history, and is a function of the unit's initial state alone (start_tail_record), so every
+# co-op peer draws the same one. It is drawn, faded and clipped by the window exactly as the recorded
+# ribbon is, and gives way to real history as turns resolve (the first turn's samples start at game time 0
+# where the tail ends, and the record's cutoff drops the tail as the window rolls past it). A game that is
+# already past turn 1 when this node first looks (a client that joined late) gets none.
+#
 # It redraws only when something it shows changes (a pose, the camera, the playback clock,
 # the mode), so a planning view costs nothing per frame.
 
@@ -54,6 +67,7 @@ const UiMapping = preload("res://scripts/ui/ui_mapping.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const UiFate = preload("res://scripts/ui/ui_fate.gd")
+const UnitDef = preload("res://scripts/sim/unit_def.gd")
 
 var world: World = null
 var mapping: UiMapping = null
@@ -68,6 +82,7 @@ var failed_draws: int = 0
 # unit id -> {t: PackedFloat64Array (game seconds), x, y, h: PackedFloat64Array, steps: PackedFloat64Array}
 var _buf: Dictionary = {}
 var _recorded_end := 0.0     # game seconds at the end of the latest turn recorded
+var _start_seeded: Dictionary = {}   # unit id -> true: its start tail was looked at (given, or not owed) -- once per unit
 var _sig := ""
 var _items: Array = []
 var _span: Dictionary = {}   # silhouette -> the drawn wing's half-span, art metres
@@ -91,12 +106,90 @@ func set_mapping(host_mapping: Variant) -> void:
 # Forgets every recorded turn (a new game, a host change).
 func clear() -> void:
 	_buf.clear()
+	_start_seeded.clear()
 	_recorded_end = 0.0
 	_sig = ""
 	queue_redraw()
 
 func _on_turn_resolved(turn_no: int, _histories: Dictionary, _events: Array) -> void:
 	record_turn(turn_no)
+
+# --- The tail at the start (PROPOSED; data marker.trails.start_tail) -----------------------------
+
+# The speed a unit's start tail is drawn at, m/s, SIGNED (a unit backing off has its tail in front); 0 for no tail. A static unit
+# has none; a unit moving at least min_speed_mps keeps its own speed; a plane that is not (its start speed is 0) is taken to be
+# flying at its type's normal speed, speed_cruise_mps, while air_at_rest_uses_cruise is true (PROPOSED); a ground unit or a ship
+# that is not moving has none.
+static func start_tail_speed(def: UnitDef, speed: float, st: UiStyle) -> float:
+	if def == null or def.is_static():
+		return 0.0
+	if absf(speed) >= st.num("marker.trails.start_tail.min_speed_mps"):
+		return speed
+	if str(def.domain) == "air" and st.flag("marker.trails.start_tail.air_at_rest_uses_cruise"):
+		return float(def.envelope.speed_cruise)
+	return 0.0
+
+# The record of a start tail for a unit with this def in this INITIAL state ({x, y, heading, speed}), as _buf holds one -- game
+# seconds -window .. 0, one sample every marker.trails.sample_s -- or {} when none is owed. Derived from the initial state and the
+# data alone: it reads no World, no history, no clock.
+static func start_tail_record(def: UnitDef, state: Dictionary, win_s: float, st: UiStyle) -> Dictionary:
+	if not st.flag("marker.trails.start_tail.enabled"):
+		return {}
+	var v := start_tail_speed(def, float(state.get("speed", 0.0)), st)
+	if v == 0.0 or win_s <= 0.0:
+		return {}
+	var dt := maxf(st.num("marker.trails.sample_s"), 0.02)
+	var h := float(state["heading"])
+	var dir := Vector2.from_angle(h)
+	var x0 := float(state["x"])
+	var y0 := float(state["y"])
+	var b := {"t": PackedFloat64Array(), "x": PackedFloat64Array(), "y": PackedFloat64Array(), "h": PackedFloat64Array(), "steps": PackedFloat64Array(), "synthetic": true}
+	var n := ceili(win_s / dt)
+	var ts: PackedFloat64Array = b["t"]
+	var xs: PackedFloat64Array = b["x"]
+	var ys: PackedFloat64Array = b["y"]
+	var hs: PackedFloat64Array = b["h"]
+	for k in n + 1:
+		var tau := -win_s + (win_s * float(k) / float(n))   # -window .. 0
+		ts.append(tau)
+		xs.append(x0 + dir.x * v * tau)
+		ys.append(y0 + dir.y * v * tau)
+		hs.append(h)
+	b["t"] = ts
+	b["x"] = xs
+	b["y"] = ys
+	b["h"] = hs
+	return b
+
+# Gives each unit that has no record its start tail, from its INITIAL state, once: while the game is at its start (turn 1, nothing
+# recorded yet). The initial state is the unit's own while the first turn is being planned, and the first state of its history
+# (the state at the turn's start) once the first turn has resolved -- record_turn(1) calls this before it records anything.
+func _seed_start_tails() -> void:
+	if world == null or _recorded_end > 0.0 or int(world.turn) != 1 or not style.flag("marker.trails.start_tail.enabled"):
+		return
+	var win := maxf(style.num("marker.trails.window_turns") * float(world.rules.turn_seconds), 0.05)
+	for id: String in world.units:
+		if _start_seeded.has(id) or _buf.has(id):
+			continue
+		_start_seeded[id] = true
+		var u = world.units[id]
+		if u.down:
+			continue
+		var s: Dictionary = (u.history[0] as Dictionary) if u.history.size() >= 2 else u.state()
+		var b := start_tail_record(u.def, s, win, style)
+		if not b.is_empty():
+			_buf[id] = b
+
+# A game that has moved on without this node seeing a turn resolve (a client whose snapshot arrived after it was mounted) is not at
+# its start: the tails seeded from the scenario's initial state are forgotten.
+func _forget_stale_start_tails() -> void:
+	if world == null or _recorded_end > 0.0 or int(world.turn) <= 1 or _start_seeded.is_empty():
+		return
+	for id: String in _start_seeded:
+		if _buf.has(id) and bool((_buf[id] as Dictionary).get("synthetic", false)):
+			_buf.erase(id)
+	_start_seeded.clear()
+	_sig = ""
 
 # --- The record ----------------------------------------------------------------------------
 
@@ -105,6 +198,8 @@ func _on_turn_resolved(turn_no: int, _histories: Dictionary, _events: Array) -> 
 func record_turn(turn_no: int) -> void:
 	var turn_s: float = world.rules.turn_seconds
 	var t0 := float(turn_no - 1) * turn_s
+	if turn_no == 1:
+		_seed_start_tails()   # the first turn's units are still at their START state in history[0]: the tail is built from it
 	var dt := maxf(style.num("marker.trails.sample_s"), 0.02)
 	var keep_s := (style.num("marker.trails.window_turns") + 1.0) * turn_s
 	for id: String in world.units:
@@ -233,6 +328,8 @@ static func pose_at(b: Dictionary, t: float) -> Dictionary:
 # Empty in mode "none".
 func collect() -> Array:
 	var out: Array = []
+	_forget_stale_start_tails()
+	_seed_start_tails()
 	if world == null or mapping == null or style.text("marker.trails.mode") == "none":
 		return out
 	var applies := style.text("marker.trails.applies_to")
@@ -314,6 +411,8 @@ func collect() -> Array:
 # whole-flight line is drawn up to this time and the ribbon from it. Fog is not looked at:
 # the caller knows what is drawn.
 func start_t(id: String) -> float:
+	_forget_stale_start_tails()
+	_seed_start_tails()
 	if world == null or style.text("marker.trails.mode") == "none" or not _buf.has(id):
 		return NAN
 	var u = world.units.get(id)

@@ -32,6 +32,19 @@ extends RefCounted
 #       beats it. Meant as a LOSE condition ("lose at a turn limit", Alex's strike-plan).
 #       Optional "unit": id (Track M2L, 2026-10-11): the objective unit that still stands at the limit; the reason then
 #       names it ("military_complex_1 still stands after turn 28"), for the result card's words. Nothing else changes.
+#   {"type": "turn_reached", "turn": n, "reason": "..."}                   (Track BM, 2026-10-11: Hold the bridge)
+#       the game has reached the end of turn n: it holds when the turn just resolved is n or later, at the END of that turn (t =
+#       turn_seconds), so a loss earlier in turn n beats it. Meant as a WIN condition: "survive until turn n" (relief arrives). The
+#       optional "reason" is the words the result carries (default "turn n was reached"). Like every condition it is an ORDINARY one: the
+#       loss conditions that held earlier in the game have already ended it, so "no enemy across and the bridge standing at turn n" is
+#       simply this condition alongside those losses.
+#   {"type": "side_past", "side": id | "units": [id, ...] | "controller": id, "point": [x, y], "toward": [dx, dy], "label": "the bridge"}
+#                                                                          (Track BM, 2026-10-11: Hold the bridge)
+#       a mobile unit of the set (a static one never moves) is PAST A LINE: on the far side of the line through `point`, square to
+#       `toward` (any length), in the direction `toward` points -- (position - point) . toward > 0 -- at ANY sampled time of the turn
+#       (the turn's path is looked at every sample_dt_s, as unit_within is). A unit that went down this turn counts only up to the moment
+#       it went down; one that was already down counts for nothing. The reason is "<unit id> got past <label>" (label default "the
+#       line"). Meant as a LOSE condition: an enemy tank across the bridge.
 #
 #   var m := Mission.new(world, spec)       # spec: see intercept()
 #   m.attach()                              # evaluates after every turn_resolved
@@ -64,7 +77,9 @@ const TYPE_UNIT_DOWN := "unit_down"
 const TYPE_ALL_DOWN := "all_down"
 const TYPE_UNIT_WITHIN := "unit_within"
 const TYPE_TURN_LIMIT := "turn_limit"
-const TYPES := [TYPE_UNIT_DOWN, TYPE_ALL_DOWN, TYPE_UNIT_WITHIN, TYPE_TURN_LIMIT]
+const TYPE_TURN_REACHED := "turn_reached"
+const TYPE_SIDE_PAST := "side_past"
+const TYPES := [TYPE_UNIT_DOWN, TYPE_ALL_DOWN, TYPE_UNIT_WITHIN, TYPE_TURN_LIMIT, TYPE_TURN_REACHED, TYPE_SIDE_PAST]
 
 var world: World = null
 var spec: Dictionary = {}
@@ -198,7 +213,44 @@ func _check(c: Dictionary) -> Dictionary:
 				if c.has("unit"):
 					return {"t": world.rules.turn_seconds, "reason": "%s still stands after turn %d" % [str(c["unit"]), int(c["turn"])]}
 				return {"t": world.rules.turn_seconds, "reason": "turn %d was played without the objective" % int(c["turn"])}
+		TYPE_TURN_REACHED:
+			if turn >= int(c["turn"]):
+				return {"t": world.rules.turn_seconds, "reason": str(c.get("reason", "turn %d was reached" % int(c["turn"])))}
+		TYPE_SIDE_PAST:
+			return _check_past(c)
 	return {}
+
+# The first sampled time this turn a mobile unit of the set was past the line (side_past), as {t, reason}, or {}.
+func _check_past(c: Dictionary) -> Dictionary:
+	var pt: Array = c["point"]
+	var dir: Array = c["toward"]
+	var norm := sqrt(float(dir[0]) * float(dir[0]) + float(dir[1]) * float(dir[1]))
+	var nx := float(dir[0]) / norm
+	var ny := float(dir[1]) / norm
+	var label := str(c.get("label", "the line"))
+	var turn_s := world.rules.turn_seconds
+	var steps := int(ceil(turn_s / _sample_dt))
+	var best: Dictionary = {}
+	for u: Unit in _unit_set(c):
+		if u.def.is_static():
+			continue
+		var until := turn_s
+		if u.down:
+			if is_nan(u.down_at):
+				continue   # down since an earlier turn: it was judged then
+			until = u.down_at
+		for k in steps + 1:
+			var t := minf(float(k) * _sample_dt, turn_s)
+			if u.down and t >= until:
+				break
+			var s := world.sample(u.id, t, "history")
+			if s.is_empty():
+				break
+			if (float(s["x"]) - float(pt[0])) * nx + (float(s["y"]) - float(pt[1])) * ny > 0.0:
+				if best.is_empty() or t < float(best["t"]):
+					best = {"t": t, "reason": "%s got past %s" % [u.id, label]}
+				break
+	return best
 
 # The first sampled time this turn the unit was within the radius of the point.
 func _check_within(c: Dictionary) -> Dictionary:
@@ -322,19 +374,39 @@ func _validate_condition(c: Variant, label: String) -> void:
 			if d.has("radius_m") and not ((d["radius_m"] is float or d["radius_m"] is int) and float(d["radius_m"]) > 0.0):
 				_err("%s: 'radius_m' must be a positive number" % label)
 		TYPE_ALL_DOWN:
-			var selectors := 0
-			for k: String in ["units", "controller", "side"]:
-				if d.has(k):
-					selectors += 1
-			if selectors != 1:
-				_err("%s: all_down needs exactly one of 'units', 'controller', 'side'" % label)
-			if d.has("units"):
-				if not (d["units"] is Array):
-					_err("%s: 'units' must be a list of unit ids" % label)
-				else:
-					for id: Variant in (d["units"] as Array):
-						if not world.units.has(str(id)):
-							_err("%s: no unit '%s'" % [label, str(id)])
+			_validate_selector(d, label, "all_down")
+		TYPE_TURN_REACHED:
+			if not ((d.get("turn") is float or d.get("turn") is int) and float(d["turn"]) >= 1.0 and float(d["turn"]) == floorf(float(d["turn"]))):
+				_err("%s: 'turn' must be a whole number of turns, 1 or more" % label)
+			if d.has("reason") and not (d["reason"] is String and str(d["reason"]) != ""):
+				_err("%s: 'reason' must be words" % label)
+		TYPE_SIDE_PAST:
+			_validate_selector(d, label, "side_past")
+			for key: String in ["point", "toward"]:
+				var v: Variant = d.get(key)
+				if not (v is Array and (v as Array).size() == 2 and ((v as Array)[0] is float or (v as Array)[0] is int) and ((v as Array)[1] is float or (v as Array)[1] is int)):
+					_err("%s: '%s' must be [x, y]" % [label, key])
+			var tv: Variant = d.get("toward")
+			if tv is Array and (tv as Array).size() == 2 and ((tv as Array)[0] is float or (tv as Array)[0] is int) and ((tv as Array)[1] is float or (tv as Array)[1] is int) 					and float(tv[0]) == 0.0 and float(tv[1]) == 0.0:
+				_err("%s: 'toward' must point somewhere (not [0, 0])" % label)
+			if d.has("label") and not (d["label"] is String and str(d["label"]) != ""):
+				_err("%s: 'label' must be words" % label)
+
+# A condition over a SET of units: exactly one of 'units', 'controller', 'side'; a list of units must name units of the world.
+func _validate_selector(d: Dictionary, label: String, what: String) -> void:
+	var selectors := 0
+	for k: String in ["units", "controller", "side"]:
+		if d.has(k):
+			selectors += 1
+	if selectors != 1:
+		_err("%s: %s needs exactly one of 'units', 'controller', 'side'" % [label, what])
+	if d.has("units"):
+		if not (d["units"] is Array):
+			_err("%s: 'units' must be a list of unit ids" % label)
+		else:
+			for id: Variant in (d["units"] as Array):
+				if not world.units.has(str(id)):
+					_err("%s: no unit '%s'" % [label, str(id)])
 
 func _need_unit(d: Dictionary, key: String, label: String) -> void:
 	if not d.has(key) or not world.units.has(str(d[key])):

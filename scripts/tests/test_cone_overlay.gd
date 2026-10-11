@@ -69,6 +69,7 @@ func setup(_main) -> void:
 	add_child(_ov)
 	var xf := Transform2D(0.0, Vector2(PPM, PPM), 0.0, Vector2.ZERO)
 	_ov.setup(_w, xf, _sel, _st)
+	_ov.set_arcs_shown(true)   # (the map's arcs start OFF now, decision side-view-views; every rule below is about the cones once they are on)
 
 	# 1. Who shows cones.
 	var none := _ov.collect()
@@ -183,11 +184,13 @@ func setup(_main) -> void:
 	_ov.range_factor = Callable()
 
 	# 6. The arcs switch (Track C, 2026-10-10; Alex: "We need to be able to toggle off the weapon arcs so we can see more easily." and
-	# "Lets prioritize onscreen buttons. No keyboard mapping."): one switch hides every cone on the map, the data starts it shown,
-	# and what the player sets stays for the session.
+	# "Lets prioritize onscreen buttons. No keyboard mapping."): one switch hides every cone on the map, the data starts it HIDDEN
+	# (decision side-view-views, 2026-10-11: the side view's strips show the cones), and what the player sets stays for the session.
 	ConeOverlay.reset_view_setting()
-	eq(_st.flag("planner.cones.shown"), true, "6. the data starts the arcs shown")
-	eq(_ov.arcs_shown(), true, "6. so the overlay shows them")
+	eq(_st.flag("planner.cones.shown"), false, "6. the data starts the arcs hidden")
+	eq(_ov.arcs_shown(), false, "6. so the overlay shows none")
+	eq(_ov.collect().size(), 0, "6. and collects nothing")
+	_ov.set_arcs_shown(true)   # the player turns them on
 	_sel.select("p2")
 	var all_n := _ov.collect().size()
 	check(all_n >= 2 and _count(_ov.collect(), "ai1") == 3, "6. shown: the selected unit's cones and the enemy bomber's (%d records)" % all_n)
@@ -206,12 +209,13 @@ func setup(_main) -> void:
 	_ov.toggle_arcs()
 	eq(_ov.collect().size(), all_n, "6. toggled back: the same cones return")
 	eq(got, [false, true], "6. announced")
-	_st.ui["planner"]["cones"]["shown"] = false
-	ConeOverlay.reset_view_setting()
-	eq(_ov.arcs_shown(), false, "6. the data's starting state rules until the player sets it (shown false)")
-	eq(_ov.collect().size(), 0, "6. and then nothing is collected")
 	_st.ui["planner"]["cones"]["shown"] = true
 	ConeOverlay.reset_view_setting()
+	eq(_ov.arcs_shown(), true, "6. the data's starting state rules until the player sets it (shown true)")
+	eq(_ov.collect().size(), all_n, "6. and then the cones are collected")
+	_st.ui["planner"]["cones"]["shown"] = false
+	ConeOverlay.reset_view_setting()
+	_ov.set_arcs_shown(true)   # (on again for the rest of the test)
 	# 6b. No slice, no line: the dorsal turret's dashed footprint is not drawn unless the data says so.
 	var rear_all: Array = _of(_ov.collect(), "ai1")
 	var drawn_default: Array = ConeOverlay.drawn_cones(rear_all, _st)

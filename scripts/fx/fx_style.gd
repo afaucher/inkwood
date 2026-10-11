@@ -21,6 +21,8 @@ extends RefCounted
 # A role the data does not hold is an ERROR (recorded and pushed once); the
 # getter returns a loud magenta so the caller can go on.
 
+const Sun = preload("res://scripts/world/sun.gd")
+
 const RENDER_PATH := "res://data/params/render_defaults.json"
 const PALETTE_KEYS := ["paper", "ink", "object_fill", "wall_fill", "rock_fill", "roof_lit", "dirt"]
 
@@ -87,6 +89,11 @@ func ink() -> Color:
 	return palette["ink"]
 
 func param(name: String) -> float:
+	# THE SUN is data/params/sun.json's, read live (scripts/world/sun.gd): one source for every reader
+	if name == "sun_direction":
+		return Sun.current().azimuth_deg
+	if name == "sun_elevation":
+		return Sun.current().elevation_deg
 	var v: Variant = params.get(name)
 	if v is float or v is int:
 		return float(v)
@@ -110,11 +117,10 @@ func lw(element: String) -> float:
 
 # The direction shadows fall, unit vector, screen axes (y down).
 func shadow_dir() -> Vector2:
-	var az := deg_to_rad(param("sun_direction") + 90.0)
-	return Vector2(cos(az), sin(az))
+	return Sun.current().shadow_dir()
 
 func sun_len() -> float:
-	return 1.0 / tan(deg_to_rad(param("sun_elevation")))
+	return Sun.current().sun_len()
 
 # Where a plane's shadow (or a puff's, a falling piece's) sits from the thing at
 # `height_m` above the surface under it: cast as if it flew at height x

@@ -569,6 +569,7 @@ func _check_ground() -> void:
 	var cone_units: Array = _ui.cones.collect().map(func(c: Dictionary) -> String: return str(c["unit"]))
 	check(not cone_units.has("aa1") and not cone_units.has("aa2") and not cone_units.has("tower"), "10. no flak cone of the enemy's batteries is drawn (selected: %s)" % str(cone_units))
 	_ui.select("b1")
+	_ui.set_arcs(true)   # (the map's arcs start off now, decision side-view-views: this check is about which cones the map draws once they are on)
 	check(_ui.cones.collect().size() > 0, "10. while the selected bomber's own cones are (%d)" % _ui.cones.collect().size())
 	check(UnitMarkerArt.is_static("radio_tower") and UnitMarkerArt.is_static("anti_aircraft_battery"), "10. both are static silhouettes")
 	var k_static: float = _st.num("marker.static_scale")

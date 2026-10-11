@@ -16,7 +16,8 @@ extends Node2D
 # "none"), every unit's shadow (one CanvasGroup, composited
 # once at the map's shadow strength, so overlapping shadows merge and never
 # darken twice -- the map's own shadow rule), every plane, then the marks: side
-# roundels, the selected unit's inked ring, and its leader line up to its
+# roundels (OFF FOR AIRCRAFT since Alex's second playtest, 2026-10-11 -- data marker.side_badge.drawn_for;
+# the wingtip ribbon says the side; still drawn for ground units, ships and static units, PROPOSED), the selected unit's inked ring, and its leader line up to its
 # roster row (the design doc's proposed selection treatment; the line is OFF since Alex's
 # Strike playtest, 2026-10-10 -- data marker.leader_to_roster -- the ring is not).
 #
@@ -47,6 +48,7 @@ const UnitStandout = preload("res://scripts/ui/unit_standout.gd")
 const UiFate = preload("res://scripts/ui/ui_fate.gd")
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const UiLabels = preload("res://scripts/ui/ui_labels.gd")
+const UnitSunk = preload("res://scripts/ui/unit_sunk.gd")
 
 var world: World = null
 var mapping: UiMapping = null
@@ -124,12 +126,27 @@ func sync_units() -> void:
 		if UnitMarkerArt.is_static(u.def.silhouette):
 			m.base_scale = style.num("marker.static_scale")   # the tower and the batteries read at the planning zoom
 			m.draw_scale = m.base_scale
+		elif UnitMarkerArt.is_map_scale(u.def.silhouette):
+			m.map_scale = true   # the bridge: drawn at the MAP's scale, not the planes' (Track BB)
 		m.setup(style, id, u.def.silhouette, u.def.size_m, style.side_color(u.side), _shadows, _under)
 		_planes.add_child(m)
 		markers[id] = m
 		m.selected = selection != null and selection.unit_id == id
 		if not _standout.is_empty():
 			m.set_standout(_standout)
+	_order_markers()
+
+# The markers' drawing order (Track BB): boats and ships first, then the map-scale scenery (the bridge), then everything else, so a boat sails
+# UNDER the bridge and a tank drives over its deck, a plane over both. A marker keeps its place among its own tier.
+func _order_markers() -> void:
+	var idx := 0
+	for tier in 2:
+		for id: String in markers:
+			var m: UnitMarker = markers[id]
+			var t := 0 if str(world.units[id].def.domain) == "sea" else (1 if m.map_scale else 2)
+			if t == tier and m.get_parent() == _planes:
+				_planes.move_child(m, idx)
+				idx += 1
 
 func marker(id: String) -> UnitMarker:
 	return markers.get(id)
@@ -199,6 +216,8 @@ func fall_wobble(id: String) -> float:
 	if not is_playing() or not unit_falling(id):
 		return 0.0
 	var u = world.units[id]
+	if str(u.def.domain) == "sea" or float(pose_of(id).get("height_m", 0.0)) <= 0.0:
+		return 0.0   # a hull going down does not rock, and nothing rocks under the water (Track BB, decision ship-sinks)
 	var turn_s: float = world.rules.turn_seconds
 	var game_t := float(playback_turn - 1) * turn_s + playback_t
 	var phase := float(hash(id) & 0xFF) / 255.0 * TAU
@@ -243,6 +262,14 @@ func update_poses() -> void:
 		var falling := UiFate.falling_at(u, playback_t, playing)
 		var h := fall_height_above_ground(pose) if falling else height_above_ground(pose)
 		m.underway = absf(float(pose.get("speed", 0.0))) > style.num("unit_art.ship.underway_mps")
+		# BELOW THE WATER (Track BB, decision ship-sinks): a ship that sank or a plane that came down over water is drawn intact under the water
+		# layer's own depth wash for the metres of water above it (UnitSunk): none at the surface, the map's colour at its floor by the metres.
+		var under_m := -float(pose.get("height_m", 0.0))
+		if under_m > 0.001 and world.has_water():
+			var wsh := UnitSunk.wash(world, style, world.water_depth_at(wp.x, wp.y), under_m)
+			m.set_sunk(wsh["color"], float(wsh["amount"]))
+		else:
+			m.set_sunk(Color.WHITE, 0.0)
 		var off: Vector2 = shadow_offset_px(wp, h, m.draw_scale)
 		var cast_h := cast_height_m(style, m)
 		if cast_h > 0.0:
@@ -433,6 +460,9 @@ func _flown_line_replaced(m: UnitMarker) -> bool:
 # The height (m) printed for a unit now: the simulation's, or the ground's by data (labels.height_ref); during a
 # playback the pose the marker is drawn at.
 func unit_height_m(id: String) -> float:
+	var under: float = float(pose_of(id).get("height_m", 0.0))
+	if under < -0.001:
+		return under   # under the water: the label says how deep (Track BB)
 	var falling := unit_falling(id)
 	var ground := func(pose: Dictionary) -> float:
 		return fall_height_above_ground(pose) if falling else height_above_ground(pose)
@@ -453,6 +483,31 @@ func label_shown(id: String) -> bool:
 
 # --- Marks: side roundels, the selection ring, the leader line ------------------------
 
+# Whether the side badge is drawn for this marker's unit: the little roundel in the unit's side colour beside its marker and the short
+# thin line tying it to the unit. Data marker.side_badge.drawn_for is the scope (Alex 2026-10-11, the playtest of build 2026-10-10.134839:
+# "The red/blue indicator dot for each unit (planes at least) with the dotted line. We can remove that. The tail serves this purpose
+# well."): "non_air" (the default, PROPOSED) draws it for ground units, ships and static units and for no aircraft -- a tank has no wingtip
+# ribbon, so it keeps its badge; "none" for nobody; "all" for everyone, as it was. An unrecognised value draws it for all.
+func side_badge_shown(m: UnitMarker) -> bool:
+	var scope := style.text("marker.side_badge.drawn_for")
+	if scope == "none":
+		return false
+	if scope == "non_air":
+		var u = world.units.get(m.unit_id) if world != null else null
+		return u == null or str(u.def.domain) != "air"
+	return true
+
+# The side badge of a marker, in screen px: {centre, r, tie: [from the plane, to the roundel's edge]}, or {} when it is not drawn
+# (data marker.side_badge.drawn_for does not cover this unit). It sits toward the sun, so the plane's shadow never covers it.
+func side_badge(m: UnitMarker) -> Dictionary:
+	if not side_badge_shown(m):
+		return {}
+	var toward_sun: Vector2 = -style.shadow_dir()
+	var r: float = style.num("marker.badge_r_px")
+	var c := m.position + toward_sun * (ring_radius(m) + style.num("marker.badge_offset_px"))
+	var a := m.position + toward_sun * (m.radius_px() * 0.55 + 2.0)
+	return {"centre": c, "r": r, "tie": PackedVector2Array([a, c - toward_sun * r])}
+
 func ring_radius(m: UnitMarker) -> float:
 	return maxf(style.num("marker.ring_min_px"), m.radius_px() + style.num("marker.ring_pad_px"))
 
@@ -462,20 +517,16 @@ func _draw_marks() -> void:
 	var ink: Color = style.color("ring")
 	var eye: Color = style.color("card_fill")
 	var leader: Color = style.color("leader")
-	var badge_r: float = style.num("marker.badge_r_px")
-	var badge_off: float = style.num("marker.badge_offset_px")
-	# The side mark sits toward the sun, so the plane's shadow never covers it.
-	var toward_sun: Vector2 = -style.shadow_dir()
 	for id: String in markers:
 		var m: UnitMarker = markers[id]
 		if not m.visible:
 			continue
 		var r := ring_radius(m)
-		var bc := m.position + toward_sun * (r + badge_off)
-		var tie_a := m.position + toward_sun * (m.radius_px() * 0.55 + 2.0)
-		var tie_b := bc - toward_sun * badge_r
-		_marks.draw_line(tie_a, tie_b, leader, 1.0, true)
-		UiInk.roundel(_marks, bc, badge_r, m.accent, eye, ink)
+		var badge := side_badge(m)   # {} for a unit marker.side_badge.drawn_for leaves out (aircraft, by Alex's word, 2026-10-11): the roundel and its tie are one mark
+		if not badge.is_empty():
+			var tie: PackedVector2Array = badge["tie"]
+			_marks.draw_line(tie[0], tie[1], leader, 1.0, true)
+			UiInk.roundel(_marks, badge["centre"], float(badge["r"]), m.accent, eye, ink)
 		if m.selected:
 			_draw_ring(m, r, ink, leader)
 		if label_shown(id):

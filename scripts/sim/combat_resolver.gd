@@ -42,7 +42,11 @@ extends RefCounted
 #   fight.released    unit id -> drops it released this turn
 #
 # A unit that goes down and is not an aircraft is DESTROYED (Unit.FATE_DESTROYED): no fate roll, it
-# stays where it is.
+# stays where it is. A SEA unit, when the World has water (`ships_sink`), SINKS instead (Track BB, 2026-10-11; Alex, decision
+# ship-sinks: 'ideally we just sink them to the bottom', 'just like a downed plane its altitude should decrease until it hits the floor.
+# It just does so through the water'): its fate is OUT_OF_CONTROL with no spin, the World flies the fall (scripts/sim/world.gd, _fall_step:
+# a hull stays where it went down and loses height at combat.json sink_descent_mps below the surface to the water's floor, then it is
+# CRASHED, on the floor).
 #
 # SHELLS (Track SH, the warship, 2026-10-10; scripts/sim/guns.gd has the model and the events). The same walk also fires the BIG-GUN
 # SPECIALS: the histories' step states carry the "fire" a unit planned (its special, its target, the moment); a unit that is up at
@@ -78,6 +82,8 @@ const GunRules = preload("res://scripts/sim/gun_rules.gd")
 var rules: CombatRules
 var bomb_rules: BombRules = null
 var gun_rules: GunRules = null
+# Set by the World each resolve: it has water, so a destroyed sea unit sinks (fate out_of_control, no spin) instead of being destroyed.
+var ships_sink: bool = false
 
 # One run's working state (reset by run()).
 var _units: Dictionary = {}
@@ -229,8 +235,11 @@ func _hurt(target_id: String, by_id: String, weapon_id: String, pips: int, t: fl
 		_down_at[target_id] = t
 		_up[target_id] = false
 		var fate: Dictionary
-		if (_units[target_id] as Unit).def.domain == "air":
+		var domain: String = (_units[target_id] as Unit).def.domain
+		if domain == "air":
 			fate = Combat.fate_roll(_seed, _turn, int(_index[target_id]), tick, rules.explode_chance)
+		elif domain == "sea" and ships_sink:
+			fate = {"fate": Unit.FATE_OUT_OF_CONTROL, "spin": 0}   # a hull going down: no turn, the sink rate (World._fall_step)
 		else:
 			fate = {"fate": Unit.FATE_DESTROYED, "spin": 0}
 		_fates[target_id] = fate

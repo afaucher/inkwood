@@ -92,6 +92,7 @@ const ChunkBaker = preload("res://scripts/render/chunk_baker.gd")
 const ChunkTerrainProvider = preload("res://scripts/render/chunk_terrain_provider.gd")
 const ChunkSceneProvider = preload("res://scripts/render/chunk_scene_provider.gd")
 const RenderParams = preload("res://scripts/world/render_params.gd")
+const MapBorder = preload("res://scripts/render/map_border.gd")
 
 var seed_value: int
 var bounds_m: Rect2
@@ -106,6 +107,7 @@ var camera: Camera2D
 var map_layer: Node2D
 var live_layer: Node2D
 var background: Polygon2D
+var border: Node2D   # what the map shows past its edge (map_border.gd; data/view/map_border.json): nothing while its option is "none"
 
 var zoom_min := 0.25
 var zoom_max := 2.0
@@ -221,6 +223,10 @@ func _init(seed_v: int = 20261009, bounds: Rect2 = Rect2(), ppm: float = 0.0, ki
 	camera = Camera2D.new()
 	camera.name = "Camera"
 	add_child(camera)
+	# THE BORDER (builder, map-border board, 2026-10-11; PROPOSED): the node that draws the outside of the map, above the chunks and
+	# the fog and only past the map's bounds. Default option "none": it adds no node and costs nothing. border.set_option("A".."D").
+	border = MapBorder.new(self)
+	add_child(border)
 	_update_background()
 	camera.position = map_rect().get_center()
 	set_zoom(float(z.get("start", 1.0)))

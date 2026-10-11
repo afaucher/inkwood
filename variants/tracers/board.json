@@ -1,0 +1,205 @@
+{
+  "id": "tracers",
+  "date": "2026-10-11",
+  "area": "Effects",
+  "question": "How is a machine gun's tracer drawn: a short-lived line of fire from the gun toward its target in the map's own materials (ink, paper, the side accents), no glow, no new hue; a hit ends on the target and a miss passes beside it. (Alex 2026-10-11, the second playtest: 'We should show tracers for machine guns.'; scope, decision tracers-mg: 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'.)",
+  "source": "scripts/fx/fx_board_tracers.gd over the real map (terrain provider) at 2 px/m, planes at the sandbox's own scale (36 px at zoom 1); the scene is one resolved turn of the real sim, its fire events fed through FxTracer.feed_event (the call the game's CombatFeed makes), the tracers FxLayer.tracer",
+  "seed": 20261009.0,
+  "parameter": "data/fx/fx.json#tracers.options (every value a proposed record); the working default is working_default.tracers",
+  "held_constant": {
+    "scene": "one resolved turn of the real sim over the village: a light fighter (side A) 150 m behind a bomber (side B), both at 400 m, the fighter 16 m to its left; seeds 1 (a miss volley), 51 (a hit) and 8 (two fighters); every fire event drawn",
+    "light": "sun azimuth 315, elevation 46; shadow strength 0.44",
+    "pen": "shadow side",
+    "fire": "none",
+    "weapons": "the machine guns of data/fx/fx.json tracers.weapons (PROPOSED list; the scope is Alex's)",
+    "fog": "all units seen"
+  },
+  "options": [
+    {
+      "name": "T1",
+      "label": "T1 · Ink dashes",
+      "note": "PROPOSED. Short ink dashes along the line of fire, from the gun to where the round ended, on a paper halo so they read over forest and hatching. They sweep out in a tenth of a second, drift outward a little, thin toward the far end and fade over half a second. The simplest mark in the map's own material (ink): a dotted line, not a light. Seen on the board: it reads at every zoom and is the heaviest ink of the five, and a dashed line is already the planner's and the drop's mark.",
+      "file": "option_T1.png",
+      "parameters": {
+        "form": "dashes",
+        "timing": {
+          "life_s": 0.5,
+          "hold_frac": 0.2,
+          "fade_power": 1.3,
+          "flight_s": 0.15
+        },
+        "colour": {
+          "core_role": "ink.ring",
+          "edge_role": "",
+          "halo_role": "tracer.halo",
+          "halo_px": 1.5
+        },
+        "widths": {
+          "width_px": 2.0,
+          "edge_px": 0.0
+        },
+        "dashes": {
+          "dash_m": 1.1,
+          "gap_m": 1.9,
+          "dash_min_px": 3.0,
+          "gap_min_px": 5.0,
+          "flow_mps": 40.0,
+          "jitter_px": 0.3,
+          "tail_fade": 0.35
+        }
+      }
+    },
+    {
+      "name": "T2",
+      "label": "T2 · Paper-light streak, ink edge",
+      "note": "PROPOSED. A bright round flies out along the line: a short tapered streak in the palette's lightest step (the knock-out, 'light is the paper') with a fine ink edge on both sides, and a hairline of ink where it passed. It reads as light without a glow or a new hue; the ink edge is what keeps it visible on the pale fills. Seen on the board: it reads on forest, hatching and the ribbons alike, and at the planning zoom its streak is the most visible of the thin marks.",
+      "file": "option_T2.png",
+      "parameters": {
+        "form": "streak",
+        "timing": {
+          "life_s": 0.45,
+          "hold_frac": 0.25,
+          "fade_power": 1.3,
+          "flight_s": 0.18
+        },
+        "colour": {
+          "core_role": "tracer.light",
+          "edge_role": "ink.ring",
+          "halo_role": "",
+          "halo_px": 0.0
+        },
+        "widths": {
+          "width_px": 4.4,
+          "edge_px": 1.1
+        },
+        "streak": {
+          "streak_m": 6.0,
+          "streak_min_px": 12.0,
+          "taper_pow": 0.9,
+          "trace_role": "ink.soft",
+          "trace_px": 1.3,
+          "trace_alpha": 0.9,
+          "trace_fade": 0.7
+        }
+      }
+    },
+    {
+      "name": "T3",
+      "label": "T3 · Side-colour streak",
+      "note": "PROPOSED. The same flying streak in the shooter's own side accent (brick red for the players, slate blue for the enemy), on a paper halo, with a fainter line of the same colour where it passed. It says who is firing at a glance and uses only a colour the palette already has (the two accents); no new accent is proposed. A thin line, so it is not mistaken for the wingtip ribbon, a broad band. Seen on the board: thin and low in contrast; the slate blue over the blue shadows and the ribbon nearly vanishes.",
+      "file": "option_T3.png",
+      "parameters": {
+        "form": "streak",
+        "timing": {
+          "life_s": 0.45,
+          "hold_frac": 0.25,
+          "fade_power": 1.3,
+          "flight_s": 0.18
+        },
+        "colour": {
+          "core_role": "tracer.@side",
+          "edge_role": "",
+          "halo_role": "tracer.halo",
+          "halo_px": 1.2
+        },
+        "widths": {
+          "width_px": 4.0,
+          "edge_px": 0.0
+        },
+        "streak": {
+          "streak_m": 6.0,
+          "streak_min_px": 12.0,
+          "taper_pow": 0.9,
+          "trace_role": "tracer.@side",
+          "trace_px": 1.6,
+          "trace_alpha": 0.75,
+          "trace_fade": 0.7
+        }
+      }
+    },
+    {
+      "name": "T4",
+      "label": "T4 · Dotted burst",
+      "note": "PROPOSED. A burst as a stipple: bunches of ink dots along the line (four to a bunch, a gap, the next bunch), the dots shrinking toward the far end, appearing out to the target at once and fading from the gun end outward, like the tree stipple and the damage smoke's dots. It needs no line at all. Seen on the board: the most ink-like of the five close in, but at the planning zoom the bunches of a dogfight run together into a smear.",
+      "file": "option_T4.png",
+      "parameters": {
+        "form": "dots",
+        "timing": {
+          "life_s": 0.55,
+          "hold_frac": 0.15,
+          "fade_power": 1.2,
+          "flight_s": 0.15
+        },
+        "colour": {
+          "core_role": "ink.ring",
+          "edge_role": "",
+          "halo_role": "tracer.halo",
+          "halo_px": 1.2
+        },
+        "widths": {
+          "width_px": 1.0,
+          "edge_px": 0.0
+        },
+        "dots": {
+          "pitch_m": 0.9,
+          "pitch_min_px": 3.5,
+          "bunch": 4.0,
+          "bunch_gap_m": 4.5,
+          "bunch_gap_min_px": 9.0,
+          "dot_px": 2.5,
+          "dot_min_px": 1.2,
+          "stagger": 0.55,
+          "jitter_px": 0.4
+        }
+      }
+    },
+    {
+      "name": "T5",
+      "label": "T5 · Ink streak, hit and miss marks",
+      "note": "PROPOSED. A flying streak in ink with a hairline behind it, and a small mark where the round ended: a dot on the airframe for a hit, a short cross-tick for a miss. Most rolls miss (the odds are 5 to 30 percent), so the tick says 'that one went by' without a hit mark's burst; the hit marks of the interface (pips, the ink on the plane) still say 'that one landed'. Seen on the board: cleaner than T2's pale streak, but the marks are small.",
+      "file": "option_T5.png",
+      "parameters": {
+        "form": "streak",
+        "timing": {
+          "life_s": 0.45,
+          "hold_frac": 0.25,
+          "fade_power": 1.3,
+          "flight_s": 0.18
+        },
+        "colour": {
+          "core_role": "ink.ring",
+          "edge_role": "",
+          "halo_role": "tracer.halo",
+          "halo_px": 1.2
+        },
+        "widths": {
+          "width_px": 3.0,
+          "edge_px": 0.0
+        },
+        "streak": {
+          "streak_m": 5.0,
+          "streak_min_px": 10.0,
+          "taper_pow": 0.9,
+          "trace_role": "ink.soft",
+          "trace_px": 1.5,
+          "trace_alpha": 0.9,
+          "trace_fade": 0.7
+        },
+        "marks": {
+          "hit_dot_px": 4.0,
+          "miss_tick_px": 7.0,
+          "miss_tick_w_px": 2.2
+        }
+      }
+    }
+  ],
+  "sheet": "board.png (every option, scaled), compare.png (the options side by side, one key frame per row), option_<X>.png (each at full size, with the palette row and the specimen strip); every frame at native size in frames/, listed in frames.json",
+  "recommendation": {
+    "option": "T2",
+    "_proposed": true,
+    "_reason": "PROPOSED by Track TR, not Alex's call: T2 (a paper-light streak with an ink edge) reads as a bright round, which is what a tracer is, without a glow or a new hue: the ink edge keeps it visible on forest, hatching and the ribbons, it is the most visible of the thin marks at the planning zoom, and its fading hairline shows who fired at whom. T5 is the same streak in plain ink with hit and miss marks, if Alex wants every roll's outcome marked; T4 is the most ink-like close in but smears at the planning zoom; T1 is the loudest and echoes the planner's dashed lines; T3 (side colours) is too faint over the blue shadows."
+  },
+  "chosen": null,
+  "chosen_by": null,
+  "decision": "tracers-mg"
+}

@@ -1,0 +1,701 @@
+{
+  "id": "map-border",
+  "date": "2026-10-11",
+  "area": "Map",
+  "question": "What does the map show past its edge? Alex (2026-10-11): 'look at a couple of art proposals for what to do for the area around the map when you zoom out. It is just a solid color right now. What are some treatments?' with the decision pan-stops-at-edge: keep the zoom-out limit at 'whole map fits' and stop panning past the edge, so a treatment is a band along the edge, at most pan.edge_overscroll_m (100 m) deep, seen at the planning zoom 0.35 and at zoom 1, and the fill of wide strips at the full zoom-out, where the map itself is the topographic overview.",
+  "source": "scripts/ui/boards/map_border_board_shot.gd: the real game (the Strike scenario as the Local button starts it, seed 20261009, 1280 x 720, the roster sidebar up) with MapView.border.set_option(letter) (scripts/render/map_border.gd and map_border_a/b/c/d.gd, data/view/map_border.json); every option is PROPOSED",
+  "seed": 20261009,
+  "held_constant": {
+    "game": "the Strike as Local starts it, seed 20261009, the sea on the east edge, 1280 x 720, the roster sidebar up (358 px at the right); the hint and the turn card are hidden for the photographs",
+    "camera": "views are put with CameraController.set_view, so the view is where the edge clamp allows: far = the whole map centred in the free area (zoom 0.0679); edge035 and edge1 = the free area 100 m past the north-west corner",
+    "fog": "on in the far view (the topographic overview, as the game shows it); off in the two edge views, so the full render shows beside the border",
+    "band": "reach.band_m = 100 m = pan.edge_overscroll_m (data/view/camera.json; test_map_border holds them equal): 70 px at zoom 0.35, 200 px at zoom 1, 14 px at the full zoom-out",
+    "shared": {
+      "reach.band_m": 100.0,
+      "reach.outside_px": 200000.0,
+      "reach.inset_px": 80.0,
+      "paper.role": {
+        "base": "paper"
+      },
+      "paper.grain": true,
+      "paper.grain_tile_px": 512.0
+    }
+  },
+  "options": [
+    {
+      "name": "A",
+      "label": "Hatched edge onto blank paper",
+      "note": "PROPOSED. Alex's idea, built as he said it: blank paper continues past the edge (the map's own tint at world coordinates and its grain, no ink and no specks) and along the edge a band of ink hachures points outward, clipped to the band (reach.band_m = 100 m; on screen at most 56 px deep). It is drawn by one shader in screen px, like the fog's inked edge, so a line keeps its width at every zoom; the hatch lines are perpendicular to the edge and fan out at the corners. HOW IT READS AS THE WORLD'S EDGE AND NOT THE FOG'S SIGHT EDGE (the fog's: a 1.5 px line, hatching at 45 degrees, 4 px apart, 0.9 px wide, ink alpha 0.55, 26 px deep, inside the fog): this one is HEAVIER (a 2.6 px edge line, hatch 1.1 px wide at alpha 0.80), DENSER (3 px between lines), DEEPER (56 px), DOUBLED (a fine rule 4.5 px outside the heavy line) and PERPENDICULAR to the edge. Nothing is baked: no memory, no bake time.",
+      "parameters": {
+        "name": "Hatched edge onto blank paper",
+        "edge.line_role": {
+          "base": "ink",
+          "alpha": 0.95
+        },
+        "edge.line_px": 2.6,
+        "edge.wobble_px": 1.4,
+        "edge.wobble_per_px": 0.02,
+        "rule2.role": {
+          "base": "ink",
+          "alpha": 0.75
+        },
+        "rule2.px": 0.9,
+        "rule2.gap_px": 4.5,
+        "hatch.role": {
+          "base": "ink",
+          "alpha": 0.8
+        },
+        "hatch.spacing_px": 3.0,
+        "hatch.width_px": 1.1,
+        "hatch.depth_px": 56.0,
+        "hatch.ragged_min": 0.45,
+        "hatch.jitter": 0.3,
+        "hatch.taper": 0.5
+      },
+      "files": [
+        "frames/A_far.png",
+        "frames/A_edge035.png",
+        "frames/A_edge1.png",
+        "frames/A_edge1_se.png"
+      ],
+      "measured": {
+        "build_ms": 0.19,
+        "bake_s_to_ready": 0.1,
+        "border_stats_after_bake": {
+          "frames": 1433,
+          "frame_us": 2,
+          "frame_us_max": 7816,
+          "builds": 7,
+          "build_ms": 0.17
+        },
+        "gpu_ms_far": 0.92,
+        "render_cpu_ms_far": 0.95,
+        "gpu_ms_edge035": 0.14,
+        "render_cpu_ms_edge035": 0.28,
+        "gpu_ms_edge1": 0.28,
+        "render_cpu_ms_edge1": 0.3,
+        "gpu_ms_edge1_se": 0.3,
+        "render_cpu_ms_edge1_se": 0.34
+      },
+      "proposed": true,
+      "chosen": false
+    },
+    {
+      "name": "B",
+      "label": "Printed map sheet",
+      "note": "PROPOSED. Blank paper continues; at the edge a ruled neatline in the cards' double-rule language (a fine rule on the edge, a heavy one 5 px outside it), a graticule tick every 500 m with its number in metres in the label face (14 px, full ink, on the paper margin under the map's paper halo; a number that does not fit is left off: at the full zoom-out on a 720 px window the margin above and below the map is 20 px, so the numbers go on the left and right and the ticks stay), and, when the whole map is in view, a scale bar (the longest of 100, 200, 250, 500, 1000, 2000, 2500 m that fits the margin) and a north arrow in the margin (north is up: there is no rotation). Drawn in screen px by a screen-pinned node that repaints when the camera moves; nothing baked.",
+      "parameters": {
+        "name": "Printed map sheet",
+        "rule.inner_role": {
+          "base": "ink",
+          "alpha": 0.9
+        },
+        "rule.inner_px": 1.0,
+        "rule.outer_role": {
+          "base": "ink",
+          "alpha": 0.95
+        },
+        "rule.outer_px": 2.2,
+        "rule.gap_px": 5.0,
+        "rule.wobble_px": 0.5,
+        "tick.spacing_m": 500.0,
+        "tick.length_px": 6.0,
+        "tick.width_px": 1.2,
+        "tick.role": {
+          "base": "ink",
+          "alpha": 0.95
+        },
+        "label.role": {
+          "base": "ink"
+        },
+        "label.gap_px": 4.0,
+        "label.suffix": " m",
+        "label.min_gap_px": 10.0,
+        "scale_bar.lengths_m": [
+          100.0,
+          200.0,
+          250.0,
+          500.0,
+          1000.0,
+          2000.0,
+          2500.0
+        ],
+        "scale_bar.height_px": 6.0,
+        "scale_bar.min_px": 40.0,
+        "scale_bar.margin_px": 12.0,
+        "scale_bar.role": {
+          "base": "ink"
+        },
+        "north_arrow.height_px": 46.0,
+        "north_arrow.role": {
+          "base": "ink"
+        },
+        "furniture_when": "whole_map_in_view"
+      },
+      "files": [
+        "frames/B_far.png",
+        "frames/B_edge035.png",
+        "frames/B_edge1.png",
+        "frames/B_edge1_se.png"
+      ],
+      "measured": {
+        "build_ms": 16.01,
+        "bake_s_to_ready": 0.0,
+        "border_stats_after_bake": {
+          "frames": 1758,
+          "frame_us": 2,
+          "frame_us_max": 7816,
+          "builds": 8,
+          "build_ms": 15.98,
+          "paint_us": 208,
+          "paint_us_max": 240,
+          "paints": 3,
+          "labels": 6
+        },
+        "gpu_ms_far": 0.94,
+        "render_cpu_ms_far": 1.07,
+        "gpu_ms_edge035": 0.38,
+        "render_cpu_ms_edge035": 0.29,
+        "gpu_ms_edge1": 0.15,
+        "render_cpu_ms_edge1": 0.29,
+        "gpu_ms_edge1_se": 0.36,
+        "render_cpu_ms_edge1_se": 0.33
+      },
+      "proposed": true,
+      "chosen": false
+    },
+    {
+      "name": "C",
+      "label": "Contours continue",
+      "note": "PROPOSED. Past the edge the terrain continues in the fog's topographic style -- contour lines, no trees, no level tones, no hachures -- in a fainter ink (the contour ink 50% of the way to paper), and fades to blank paper by 1100 m out; the playable map keeps its full ink and ends at a thin 1.2 px line. The contours are the fog's own drawing (FogTopo._add_offset) recorded for chunks outside the map on worker threads and baked ONCE per option into 60 tiles of three levels of detail ([1.0, 0.25, 0.0625] texels a map px), 23 MB of one-channel textures. Alex said \"contours only\", but open deep sea has no contours: without more, this seed's east edge (sea) would stop at the line with blank paper beyond it. So the sea's shore and depth steps go on as lines AND the sea goes on as the fog's own quiet wash (its three depth steps at topo.water.quiet, the water palette's colours; data c.wash.on, one switch: false is contours only), fading with the contours.",
+      "parameters": {
+        "name": "Contours continue",
+        "contour.role": {
+          "base": "ink",
+          "toward": "paper",
+          "t": 0.5
+        },
+        "contour.alpha": 0.85,
+        "contour.water_lines": true,
+        "wash.on": true,
+        "wash.cell_m": 16.0,
+        "wash.strength": 1.0,
+        "edge.line_role": {
+          "base": "ink",
+          "alpha": 0.9
+        },
+        "edge.line_px": 1.2,
+        "edge.wobble_px": 0.6,
+        "edge.wobble_per_px": 0.02,
+        "lods.texels_per_px": [
+          1.0,
+          0.25,
+          0.0625
+        ],
+        "lods.depth_m": [
+          120.0,
+          1200.0,
+          1200.0
+        ],
+        "lods.lod_ratio": 0.75,
+        "lods.tile_texels": 1024.0,
+        "fade.from_m": 700.0,
+        "fade.to_m": 1100.0,
+        "bake.workers": 3.0,
+        "bake.tiles_per_frame": 2.0,
+        "bake.in_flight": 6.0
+      },
+      "files": [
+        "frames/C_far.png",
+        "frames/C_edge035.png",
+        "frames/C_edge1.png",
+        "frames/C_edge1_se.png"
+      ],
+      "measured": {
+        "build_ms": 10.09,
+        "bake_s_to_ready": 2.4,
+        "border_stats_after_bake": {
+          "frames": 2225,
+          "frame_us": 4439,
+          "frame_us_max": 7816,
+          "builds": 9,
+          "build_ms": 10.04,
+          "tiles": 60,
+          "tiles_done": 60,
+          "texture_bytes": 23638832,
+          "levels": 3,
+          "shown_level": 0,
+          "wash": true,
+          "record_ms": 3831.5,
+          "failed": 0,
+          "bake_frame_ms_max": 1.22,
+          "bake_begin_ms_max": 0.13,
+          "bake_collect_ms_max": 0.03,
+          "bake_done_ms_max": 0.41
+        },
+        "gpu_ms_far": 0.5,
+        "render_cpu_ms_far": 0.74,
+        "gpu_ms_edge035": 0.42,
+        "render_cpu_ms_edge035": 0.31,
+        "gpu_ms_edge1": 0.1,
+        "render_cpu_ms_edge1": 0.3,
+        "gpu_ms_edge1_se": 0.35,
+        "render_cpu_ms_edge1_se": 0.24
+      },
+      "proposed": true,
+      "chosen": false
+    },
+    {
+      "name": "D",
+      "label": "Sheet on a table",
+      "note": "PROPOSED. The map is a sheet of paper with a slightly ragged deckle edge (the table's colour bitten into the map's edge by 7 m of two-octave noise) and a thin pale lip, lying on a darker table; the sheet's lifted shadow is its silhouette moved 18 m away from the sun, flat, at the map's shadow tint and strength (the cards' lifted-shadow language), on the table only. NO NEW HUE: the table is the paper stepped 42% toward the ink (an ink wash), a role in data; a step toward the shadow tint is a one-line change. Faint seams every 650 m tell the boards. Static geometry recorded once; nothing baked.",
+      "parameters": {
+        "name": "Sheet on a table",
+        "table.role": {
+          "base": "paper",
+          "toward": "ink",
+          "t": 0.42
+        },
+        "table.seam_role": {
+          "base": "ink",
+          "alpha": 0.2
+        },
+        "table.seam_px": 1.0,
+        "table.seam_phase": 0.37,
+        "table.board_m": 650.0,
+        "deckle.amplitude_m": 7.0,
+        "deckle.step_m": 9.0,
+        "deckle.per_m": 0.045,
+        "deckle.seed": 41.0,
+        "lip.role": {
+          "base": "object_fill",
+          "alpha": 0.9
+        },
+        "lip.width_m": 2.5,
+        "shadow.role": {
+          "base": "shadow"
+        },
+        "shadow.lift_m": 18.0,
+        "shadow.strength_scale": 1.0
+      },
+      "files": [
+        "frames/D_far.png",
+        "frames/D_edge035.png",
+        "frames/D_edge1.png",
+        "frames/D_edge1_se.png"
+      ],
+      "measured": {
+        "build_ms": 20.34,
+        "bake_s_to_ready": 0.1,
+        "border_stats_after_bake": {
+          "frames": 2550,
+          "frame_us": 2,
+          "frame_us_max": 8016,
+          "builds": 10,
+          "build_ms": 18.03,
+          "bite_vertices": 2228,
+          "shadow_polys": 4,
+          "seams": 3
+        },
+        "gpu_ms_far": 0.91,
+        "render_cpu_ms_far": 0.83,
+        "gpu_ms_edge035": 0.74,
+        "render_cpu_ms_edge035": 0.28,
+        "gpu_ms_edge1": 0.55,
+        "render_cpu_ms_edge1": 0.34,
+        "gpu_ms_edge1_se": 0.34,
+        "render_cpu_ms_edge1_se": 0.3
+      },
+      "proposed": true,
+      "chosen": false
+    },
+    {
+      "name": "E",
+      "label": "Hatched edge with the distance legend",
+      "note": "CHOSEN BY ALEX (2026-10-11: \"I like the hatches, with the distance legend\"); every number in it is still a PROPOSED record. A's hatched edge onto blank paper (the heavy 2.6 px edge line, the fine rule, the perpendicular hatching clipped to the band, the paper going on) PLUS B's distance legend: a tick every 500 m with its number in metres and, at the full zoom-out, the scale bar. NOT B's double-ruled neatline (A's heavy line and hatch are the edge) and NOT B's north arrow. WHERE THE NUMBERS SIT: INSIDE THE MAP, just inside the edge line, never on the hatching: each tick is a 8 px stroke from the edge INWARD and its number stands 3 px inside the tick's end, 14 px, full ink, on the map's paper halo (top edge: under its tick and centred; bottom edge: above; left edge: to the right; right edge: to the left). Outside the hatch band they would not fit: the view shows 70 px past the edge at zoom 0.35 and the hatching takes 56 of them, and at the full zoom-out the margin above and below the map is 14 to 20 px. The corners (0 and 5,000 m) are not numbered. A number that does not fit between its neighbours loses its \" m\" first, then goes (the ticks stay): at the full zoom-out on this window the spacing is 68 px, so all stay. The scale bar (the longest of 100, 200, 250, 500, 1000, 2000, 2500 m that fits left of the map, clear of the hatching) is at the bottom of that margin. Screen-pinned paint like B's, repainted when the camera moves; nothing baked.",
+      "parameters": {
+        "e.name": "Hatched edge with the distance legend",
+        "e.tick.spacing_m": 500.0,
+        "e.tick.length_px": 8.0,
+        "e.tick.width_px": 1.2,
+        "e.tick.role": {
+          "base": "ink",
+          "alpha": 0.95
+        },
+        "e.tick.number_the_ends": false,
+        "e.label.role": {
+          "base": "ink"
+        },
+        "e.label.gap_px": 3.0,
+        "e.label.suffix": " m",
+        "e.label.min_gap_px": 10.0,
+        "e.scale_bar.lengths_m": [
+          100.0,
+          200.0,
+          250.0,
+          500.0,
+          1000.0,
+          2000.0,
+          2500.0
+        ],
+        "e.scale_bar.height_px": 6.0,
+        "e.scale_bar.min_px": 40.0,
+        "e.scale_bar.margin_px": 12.0,
+        "e.scale_bar.role": {
+          "base": "ink"
+        },
+        "e.scale_bar.when": "whole_map_in_view",
+        "a.name": "Hatched edge onto blank paper",
+        "a.edge.line_role": {
+          "base": "ink",
+          "alpha": 0.95
+        },
+        "a.edge.line_px": 2.6,
+        "a.edge.wobble_px": 1.4,
+        "a.edge.wobble_per_px": 0.02,
+        "a.rule2.role": {
+          "base": "ink",
+          "alpha": 0.75
+        },
+        "a.rule2.px": 0.9,
+        "a.rule2.gap_px": 4.5,
+        "a.hatch.role": {
+          "base": "ink",
+          "alpha": 0.8
+        },
+        "a.hatch.spacing_px": 3.0,
+        "a.hatch.width_px": 1.1,
+        "a.hatch.depth_px": 56.0,
+        "a.hatch.ragged_min": 0.45,
+        "a.hatch.jitter": 0.3,
+        "a.hatch.taper": 0.5
+      },
+      "files": [
+        "frames/chosen_far.png",
+        "frames/chosen_edge035.png",
+        "frames/chosen_edge1.png",
+        "frames/chosen_edge1_se.png",
+        "frames/chosen_edge1_tick_n.png",
+        "frames/chosen_edge1_tick_e.png"
+      ],
+      "measured": {
+        "build_ms": 0.3,
+        "bake_s_to_ready": 0.0,
+        "border_stats_after_bake": {
+          "frames": 2875,
+          "frame_us": 1,
+          "frame_us_max": 8016,
+          "builds": 11,
+          "build_ms": 0.26,
+          "paint_us": 49,
+          "paint_us_max": 49,
+          "paints": 3,
+          "labels": 4,
+          "ticks": 4
+        },
+        "gpu_ms_far": 0.94,
+        "render_cpu_ms_far": 0.82,
+        "gpu_ms_edge035": 0.35,
+        "render_cpu_ms_edge035": 0.22,
+        "gpu_ms_edge1": 0.25,
+        "render_cpu_ms_edge1": 0.24,
+        "gpu_ms_edge1_se": 0.09,
+        "render_cpu_ms_edge1_se": 0.31,
+        "gpu_ms_edge1_tick_n": 0.25,
+        "render_cpu_ms_edge1_tick_n": 0.32,
+        "gpu_ms_edge1_tick_e": 0.26,
+        "render_cpu_ms_edge1_tick_e": 0.36
+      },
+      "proposed": false,
+      "chosen": true
+    }
+  ],
+  "reference": {
+    "name": "none",
+    "label": "the map's own edge (today's look)",
+    "note": "REFERENCE, not an option: the engine's clear colour past the map's hard edge, which is the last 256 m chunk of the fog and 512 m chunk of the map, 120 m past the 5,000 m bounds on the right and the bottom",
+    "files": [
+      "frames/none_far.png",
+      "frames/none_edge035.png",
+      "frames/none_edge1.png"
+    ],
+    "measured": {
+      "build_ms": 0.03,
+      "bake_s_to_ready": 0.0,
+      "border_stats_after_bake": {
+        "frames": 3413,
+        "frame_us": 2,
+        "frame_us_max": 8016,
+        "builds": 11,
+        "build_ms": 0.26
+      },
+      "gpu_ms_far": 0.74,
+      "render_cpu_ms_far": 1.05,
+      "gpu_ms_edge035": 0.32,
+      "render_cpu_ms_edge035": 0.35,
+      "gpu_ms_edge1": 0.06,
+      "render_cpu_ms_edge1": 0.32,
+      "gpu_ms_edge1_se": 0.2,
+      "render_cpu_ms_edge1_se": 0.35
+    }
+  },
+  "default": "E, the chosen look (data/view/map_border.json option, decision map-border); none, A, B, C and D stay switchable (MapView.border.set_option)",
+  "palette_check": {
+    "how_it_stays_one_palette": "Every colour is a role in data/view/map_border.json resolved by the fog's resolver (scripts/render/fog_style.gd) against the palette in data/params/render_defaults.json: the paper, the ink at an alpha or mixed toward the paper, the object fill, or the shadow tint; D's table is the paper stepped toward the ink. No hue is added; the lightness of the ink roles is a ramp off the paper. test_map_border checks every role's base is a palette colour and its chroma never exceeds its endpoints'.",
+    "roles": {
+      "paper.role": {
+        "rgba": [
+          0.851,
+          0.8,
+          0.667,
+          1.0
+        ],
+        "oklch": [
+          0.847,
+          0.048,
+          89.6
+        ]
+      },
+      "e.tick.role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          0.95
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "e.label.role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          1.0
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "e.scale_bar.role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          1.0
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "a.edge.line_role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          0.95
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "a.rule2.role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          0.75
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "a.hatch.role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          0.8
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "b.rule.inner_role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          0.9
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "b.rule.outer_role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          0.95
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "b.tick.role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          0.95
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "b.label.role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          1.0
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "b.scale_bar.role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          1.0
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "b.north_arrow.role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          1.0
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "c.contour.role": {
+        "rgba": [
+          0.545,
+          0.498,
+          0.408,
+          1.0
+        ],
+        "oklch": [
+          0.601,
+          0.036,
+          83.6
+        ]
+      },
+      "c.edge.line_role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          0.9
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "d.table.role": {
+        "rgba": [
+          0.594,
+          0.546,
+          0.449,
+          1.0
+        ],
+        "oklch": [
+          0.642,
+          0.038,
+          84.9
+        ]
+      },
+      "d.table.seam_role": {
+        "rgba": [
+          0.239,
+          0.196,
+          0.149,
+          0.2
+        ],
+        "oklch": [
+          0.325,
+          0.026,
+          69.2
+        ]
+      },
+      "d.lip.role": {
+        "rgba": [
+          0.937,
+          0.902,
+          0.804,
+          0.9
+        ],
+        "oklch": [
+          0.925,
+          0.034,
+          90.5
+        ]
+      },
+      "d.shadow.role": {
+        "rgba": [
+          0.239,
+          0.424,
+          0.561,
+          1.0
+        ],
+        "oklch": [
+          0.513,
+          0.076,
+          242.4
+        ]
+      }
+    }
+  },
+  "decision": "map-border",
+  "frames": "frames.json (every frame whole, with its caption)",
+  "sheet": "board.png (1:1 crops of the frames, the notes, the palette strip)",
+  "measured_note": "gpu_ms_* is the root viewport's measured GPU render time per frame averaged over 60 frames at that view (RenderingServer.viewport_get_measured_render_time_gpu); compare an option with none at the same view for its cost. border_stats_after_bake: build_ms is MapBorder.set_option's own time, frame_us / frame_us_max the border's own _process time per frame (microseconds), paint_us B's repaint of its screen-space marks, C's record_ms the worker-thread recording time of all its tiles added up and texture_bytes its memory.",
+  "chosen": "E - the hatched edge onto blank paper with the distance legend: option A's heavy edge line, fine rule and perpendicular hatching, plus option B's 500 m ticks with their numbers in metres and the scale bar at the full zoom-out; NOT B's double-ruled neatline and NOT B's north arrow. The numbers sit inside the map, just inside the edge line, on the paper halo, never on the hatching. Alex (2026-10-11): \"I like the hatches, with the distance legend.\" Frames: frames/chosen_<view>.png.",
+  "chosen_by": "Alex, 2026-10-11"
+}

@@ -1,5 +1,5 @@
 {
-  "_about": "Effects data (Track X, scripts/fx/): damage smoke and the three-phase crash (mid-air explosion, out of control, ground impact). EVERY VALUE IS A PROPOSED VALUE RECORD {value, _proposed, _reason}, made 2026-10-09; none is a decision until Alex chooses from variants/damage-smoke/ and variants/crash-explosion/ and the choice is recorded in data/decisions/decisions.json. Decisions in force it obeys: particles are designed in style, FAST FLASHES WITH A VERY SLOW DECAY (Alex); everything is ink on parchment; shadow strength 0.44; pen 'shadow side'; a plane's shadow falls as if it flew at 1% of its altitude and its gap follows the drawn size. 2026-10-10, Track X2 (the strike): flak, bomb and ruin sections and their roles were added, all proposed, for variants/flak/, variants/bomb-impact/ and variants/tower-ruin/.",
+  "_about": "Effects data (Track X, scripts/fx/): damage smoke and the three-phase crash (mid-air explosion, out of control, ground impact). EVERY VALUE IS A PROPOSED VALUE RECORD {value, _proposed, _reason}, made 2026-10-09; none is a decision until Alex chooses from variants/damage-smoke/ and variants/crash-explosion/ and the choice is recorded in data/decisions/decisions.json. Decisions in force it obeys: particles are designed in style, FAST FLASHES WITH A VERY SLOW DECAY (Alex); everything is ink on parchment; shadow strength 0.44; pen 'shadow side'; a plane's shadow falls as if it flew at 1% of its altitude and its gap follows the drawn size. 2026-10-10, Track X2 (the strike): flak, bomb and ruin sections and their roles were added, all proposed, for variants/flak/, variants/bomb-impact/ and variants/tower-ruin/. 2026-10-11, Track TR: machine-gun tracers (the `tracers` section, roles tracer.*), all proposed, for variants/tracers/.",
   "accents": {
     "_about": "The effects' extra base colours, in OKLCH beside the two side accents of data/params/render_defaults.json (side_a oklch(0.551 0.100 30), side_b oklch(0.551 0.100 260), equal lightness and chroma, Alex). INTERIM (2026-10-10): Alex rejected the first fire colour, oklch(0.72 0.14 56), as cartoony (round-1 crash board); until he picks from the fire research (docs/proposals/fire-in-ink.md) the working values are that document's treatment 6, 'knock-out + scorch edge'. EVERY ONE OF THESE IS A PROPOSED WORKING VALUE, NOT A DECISION. The principles it follows: the flash is the lightest value on the map (light is the paper), colour is a quiet earth on the paper-ink axis at or below the sides' chroma and lives only in the first tenths of a second and the embers, cooling goes to grey-brown and ink, never to pastel.",
     "flash": {
@@ -556,6 +556,29 @@
       "alpha": 0.55,
       "_proposed": true,
       "_reason": "the floor of a roofless hut: the dirt ink at alpha 0.55, burnt earth (the art plan's terrain.burnt is dirt at 0.40)"
+    },
+    "tracer.halo": {
+      "base": "paper",
+      "alpha": 0.5,
+      "_proposed": true,
+      "_reason": "PROPOSED (Track TR, tracers): the paper halo an ink mark sits on so it reads over hatching and forest (the style guide's 'a mark in ink with a paper halo'): the paper at the palette's alpha step 0.5 (the hatch step)"
+    },
+    "tracer.light": {
+      "base": "flash",
+      "_proposed": true,
+      "_reason": "PROPOSED (Track TR, tracers): the 'paper-light' tracer: the knock-out step, the lightest value on the map (light is the paper), no new hue; it is drawn with an ink edge so it reads on the pale fills"
+    },
+    "tracer.side_a": {
+      "base": "side_a",
+      "alpha": 0.88,
+      "_proposed": true,
+      "_reason": "PROPOSED (Track TR, tracers): the shooter's own side accent (Alex's brick red, the same colour as its wingtip ribbon and cone wash) at the palette's ring alpha step 0.88; NO new accent is proposed, so the palette stays one palette"
+    },
+    "tracer.side_b": {
+      "base": "side_b",
+      "alpha": 0.88,
+      "_proposed": true,
+      "_reason": "PROPOSED (Track TR, tracers): the other side's accent (slate blue) at the ring alpha step 0.88; see tracer.side_a"
     }
   },
   "common": {
@@ -627,6 +650,11 @@
       "value": "R1",
       "_proposed": true,
       "_reason": "the working default until Alex chooses from variants/tower-ruin/ (PROPOSED by Track X2)"
+    },
+    "tracers": {
+      "value": "T2",
+      "_proposed": true,
+      "_reason": "PROPOSED (Track TR, 2026-10-11): T2, the paper-light streak with an ink edge, is the look the game runs until Alex picks from variants/tracers/ (decision tracers-mg asked for tracers for machine guns; the look is open). Why T2: a real tracer is a bright round, and the knock-out step (the lightest value on the map, no new hue) with a fine ink edge reads as one on forest, hatching and the wingtip ribbons alike, at the planning zoom as close in; it needs no colour and leaves a hairline of the line of fire that fades toward the gun. NOT A DECISION"
     }
   },
   "smoke": {
@@ -20895,6 +20923,607 @@
             "value": 6.0,
             "_proposed": true,
             "_reason": "ruin.remains: stub_h_m, a proposed starting value (Track X2, 2026-10-10), to be judged on its board"
+          }
+        }
+      }
+    }
+  },
+  "tracers": {
+    "_about": "MACHINE-GUN TRACERS (Track TR, 2026-10-11). Alex 2026-10-11 (the second playtest): 'We should show tracers for machine guns.' and, confirming the scope, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. ALL VALUES ARE PROPOSED VALUE RECORDS except where a record names the decision (the SCOPE, machine guns only, is Alex's, decision tracers-mg; the weapon list that scope picks out, the look and every number are the builder's proposals). A 'fire' event (scripts/sim/combat.gd, one per roll) from a weapon in `weapons` draws a tracer from its hardpoint toward the target, as scripts/fx/fx_tracer.gd: a hit ends on the target, a miss passes beside it and carries on a little; it lives a short time on the playback clock; visual only and deterministic from the event. The look is one of `options` (T1..T5, the board is variants/tracers/); `working_default.tracers` names the one the game runs until Alex picks. Colours are roles (data/fx/fx.json roles tracer.* and the ink roles): no new hue, no glow. Nothing in the code keys on a weapon's class or kind: ADDING A WEAPON (the tank's 'turret_gun', say) IS A DATA EDIT, one id in `weapons`.",
+    "enabled": {
+      "value": true,
+      "_proposed": true,
+      "_reason": "PROPOSED (Track TR): tracers are on in the working build so the next playtest has them (Alex asked for them). false draws none and the feed falls back to what it did before (a ground-type shooter at a plane draws a flak burst)"
+    },
+    "scope": {
+      "value": "machine_guns_only",
+      "decision": "tracers-mg",
+      "_decided": "Alex 2026-10-11 (the second playtest): 'We should show tracers for machine guns.' and, confirming the scope, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'",
+      "_reason": "Alex's scope, decision tracers-mg: machine guns only for now; other direct-fire weapons (the tank's gun) may be revisited. Which weapon ids count as machine guns is the list below, PROPOSED"
+    },
+    "weapons": {
+      "value": [
+        "wing_guns",
+        "nose_gun",
+        "dorsal_turret",
+        "tail_turret",
+        "rear_gunner",
+        "aa_guns"
+      ],
+      "_proposed": true,
+      "_reason": "PROPOSED list of the weapon ids (data/units/*.json weapons[].id) that draw a tracer, picking out the machine guns for Alex's scope (decision tracers-mg: Alex 2026-10-11 (the second playtest): 'We should show tracers for machine guns.' and, confirming the scope, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'). wing_guns: the light fighter's twin wing guns (two hardpoints, two tracers); nose_gun, dorsal_turret, tail_turret: the bomber's flexible nose gun and turrets; rear_gunner: the heavy fighter's flexible rear gun; aa_guns: the 'Light AA guns' of the P1 cutter (the patrol boat), which the same id gives the cruiser's four mounts and the mobile AA's quad mount (one id, three unit types: listed together here, flagged to Alex). NOT listed: flak and light_flak (the battery's guns: bursts, decision flak-look F2), nose_cannon (the heavy fighter's cannon: 2 pips, not a machine gun), turret_gun (the tank's light gun: the case Alex says may be revisited; to add it, add \"turret_gun\" here and nothing else), the cruiser's main guns and the bombs (shell_fire / bomb events, not 'fire' events). The sim's weapon records have no class field; the code matches the id alone"
+    },
+    "fog": {
+      "shown_when": {
+        "value": "shooter_seen",
+        "_proposed": true,
+        "_reason": "PROPOSED (Track TR): a tracer is drawn only when the player can see the SHOOTER (the same rule as the damage smoke and the flak burst: an unseen enemy's line of fire would give its place away). 'either_seen' also shows an unseen shooter's tracers at a plane you can see; 'always' ignores the fog. A question for Alex"
+      }
+    },
+    "aim": {
+      "hit_spread": {
+        "value": 0.3,
+        "_proposed": true,
+        "_reason": "PROPOSED (Track TR): a hit ends at a point on the target's airframe, inside a disc of this fraction of the target's drawn size round its centre, picked by the event (so two hits on one plane do not stack on one pixel)"
+      },
+      "miss_min": {
+        "value": 0.7,
+        "_proposed": true,
+        "_reason": "PROPOSED (Track TR): a miss passes the target's centre at least this many target-sizes to one side (the side picked by the event), so it clears the airframe (a half span is 0.5)"
+      },
+      "miss_max": {
+        "value": 1.4,
+        "_proposed": true,
+        "_reason": "PROPOSED (Track TR): ...and at most this many"
+      },
+      "miss_overshoot": {
+        "value": 0.3,
+        "_proposed": true,
+        "_reason": "PROPOSED (Track TR): a miss carries on past the target by about this fraction of its distance (0.6 to 1.4 times it, picked by the event), as a round that missed flies on"
+      }
+    },
+    "limits": {
+      "max_records": {
+        "value": 96,
+        "_proposed": true,
+        "_reason": "PROPOSED (Track TR): the book keeps at most this many tracers (the oldest go first); at two rolls a second a weapon, a long dogfight is a few dozen live at a time"
+      }
+    },
+    "options": {
+      "T1": {
+        "_label": "T1 · Ink dashes",
+        "_note": "PROPOSED. Short ink dashes along the line of fire, from the gun to where the round ended, on a paper halo so they read over forest and hatching. They sweep out in a tenth of a second, drift outward a little, thin toward the far end and fade over half a second. The simplest mark in the map's own material (ink): a dotted line, not a light. Seen on the board: it reads at every zoom and is the heaviest ink of the five, and a dashed line is already the planner's and the drop's mark.",
+        "form": {
+          "value": "dashes",
+          "_proposed": true,
+          "_reason": "PROPOSED (Track TR): which drawing routine of scripts/fx/fx_tracer.gd draws this option"
+        },
+        "timing": {
+          "life_s": {
+            "value": 0.5,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): how long a tracer lives on the playback clock, game seconds (a roll is 0.5 s apart per gun, so a few overlap)"
+          },
+          "hold_frac": {
+            "value": 0.2,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the share of its life it stays at full strength (fast flash, slow decay: Alex's effects rule)"
+          },
+          "fade_power": {
+            "value": 1.3,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): (1 - x)^power over the rest of its life"
+          },
+          "flight_s": {
+            "value": 0.15,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the seconds the round takes to fly the whole line, however long (a snap, not a ballistic flight)"
+          }
+        },
+        "colour": {
+          "core_role": {
+            "value": "ink.ring",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the tracer itself ('@side' = the shooter's side accent, tracer.side_a / tracer.side_b)"
+          },
+          "edge_role": {
+            "value": "",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of its edge ('' = none)"
+          },
+          "halo_role": {
+            "value": "tracer.halo",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the paper halo under it ('' = none)"
+          },
+          "halo_px": {
+            "value": 1.5,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the halo's width beyond the mark on each side, screen px"
+          }
+        },
+        "widths": {
+          "width_px": {
+            "value": 2.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the mark's width, screen px (a streak's full width at its head, a dash's; a dot's size is dots.dot_px)"
+          },
+          "edge_px": {
+            "value": 0.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the edge's line width, screen px (0 = none)"
+          }
+        },
+        "dashes": {
+          "dash_m": {
+            "value": 1.1,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): dash length, drawn metres (a plane is drawn at its own scale: a light fighter 9 m across)"
+          },
+          "gap_m": {
+            "value": 1.9,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the gap between dashes, drawn metres"
+          },
+          "dash_min_px": {
+            "value": 3.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): no dash shorter than this at the planning zoom, screen px"
+          },
+          "gap_min_px": {
+            "value": 5.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): no gap shorter than this, screen px"
+          },
+          "flow_mps": {
+            "value": 40.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the train drifts outward at this many drawn metres a second (0 = still)"
+          },
+          "jitter_px": {
+            "value": 0.3,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): each dash is set off the line by up to this, screen px, by the pen's hand wobble"
+          },
+          "tail_fade": {
+            "value": 0.35,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the far end of the line is this much fainter than the gun end"
+          }
+        }
+      },
+      "T2": {
+        "_label": "T2 · Paper-light streak, ink edge",
+        "_note": "PROPOSED. A bright round flies out along the line: a short tapered streak in the palette's lightest step (the knock-out, 'light is the paper') with a fine ink edge on both sides, and a hairline of ink where it passed. It reads as light without a glow or a new hue; the ink edge is what keeps it visible on the pale fills. Seen on the board: it reads on forest, hatching and the ribbons alike, and at the planning zoom its streak is the most visible of the thin marks.",
+        "form": {
+          "value": "streak",
+          "_proposed": true,
+          "_reason": "PROPOSED (Track TR): which drawing routine of scripts/fx/fx_tracer.gd draws this option"
+        },
+        "timing": {
+          "life_s": {
+            "value": 0.45,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): how long a tracer lives on the playback clock, game seconds (a roll is 0.5 s apart per gun, so a few overlap)"
+          },
+          "hold_frac": {
+            "value": 0.25,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the share of its life it stays at full strength (fast flash, slow decay: Alex's effects rule)"
+          },
+          "fade_power": {
+            "value": 1.3,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): (1 - x)^power over the rest of its life"
+          },
+          "flight_s": {
+            "value": 0.18,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the seconds the round takes to fly the whole line, however long (a snap, not a ballistic flight)"
+          }
+        },
+        "colour": {
+          "core_role": {
+            "value": "tracer.light",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the tracer itself ('@side' = the shooter's side accent, tracer.side_a / tracer.side_b)"
+          },
+          "edge_role": {
+            "value": "ink.ring",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of its edge ('' = none)"
+          },
+          "halo_role": {
+            "value": "",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the paper halo under it ('' = none)"
+          },
+          "halo_px": {
+            "value": 0.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the halo's width beyond the mark on each side, screen px"
+          }
+        },
+        "widths": {
+          "width_px": {
+            "value": 4.4,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the mark's width, screen px (a streak's full width at its head, a dash's; a dot's size is dots.dot_px)"
+          },
+          "edge_px": {
+            "value": 1.1,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the edge's line width, screen px (0 = none)"
+          }
+        },
+        "streak": {
+          "streak_m": {
+            "value": 6.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the bright streak's length, drawn metres"
+          },
+          "streak_min_px": {
+            "value": 12.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): no shorter than this, screen px"
+          },
+          "taper_pow": {
+            "value": 0.9,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): how fast it widens from the tail to the head (1 = straight)"
+          },
+          "trace_role": {
+            "value": "ink.soft",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the line left where the round passed"
+          },
+          "trace_px": {
+            "value": 1.3,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): that line's width, screen px (0 = none)"
+          },
+          "trace_alpha": {
+            "value": 0.9,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): ...and its strength against the streak's"
+          },
+          "trace_fade": {
+            "value": 0.7,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the line is this much fainter at the gun than where the streak is (0 = even)"
+          }
+        }
+      },
+      "T3": {
+        "_label": "T3 · Side-colour streak",
+        "_note": "PROPOSED. The same flying streak in the shooter's own side accent (brick red for the players, slate blue for the enemy), on a paper halo, with a fainter line of the same colour where it passed. It says who is firing at a glance and uses only a colour the palette already has (the two accents); no new accent is proposed. A thin line, so it is not mistaken for the wingtip ribbon, a broad band. Seen on the board: thin and low in contrast; the slate blue over the blue shadows and the ribbon nearly vanishes.",
+        "form": {
+          "value": "streak",
+          "_proposed": true,
+          "_reason": "PROPOSED (Track TR): which drawing routine of scripts/fx/fx_tracer.gd draws this option"
+        },
+        "timing": {
+          "life_s": {
+            "value": 0.45,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): how long a tracer lives on the playback clock, game seconds (a roll is 0.5 s apart per gun, so a few overlap)"
+          },
+          "hold_frac": {
+            "value": 0.25,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the share of its life it stays at full strength (fast flash, slow decay: Alex's effects rule)"
+          },
+          "fade_power": {
+            "value": 1.3,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): (1 - x)^power over the rest of its life"
+          },
+          "flight_s": {
+            "value": 0.18,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the seconds the round takes to fly the whole line, however long (a snap, not a ballistic flight)"
+          }
+        },
+        "colour": {
+          "core_role": {
+            "value": "tracer.@side",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the tracer itself ('@side' = the shooter's side accent, tracer.side_a / tracer.side_b)"
+          },
+          "edge_role": {
+            "value": "",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of its edge ('' = none)"
+          },
+          "halo_role": {
+            "value": "tracer.halo",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the paper halo under it ('' = none)"
+          },
+          "halo_px": {
+            "value": 1.2,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the halo's width beyond the mark on each side, screen px"
+          }
+        },
+        "widths": {
+          "width_px": {
+            "value": 4.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the mark's width, screen px (a streak's full width at its head, a dash's; a dot's size is dots.dot_px)"
+          },
+          "edge_px": {
+            "value": 0.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the edge's line width, screen px (0 = none)"
+          }
+        },
+        "streak": {
+          "streak_m": {
+            "value": 6.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the streak's length, drawn metres"
+          },
+          "streak_min_px": {
+            "value": 12.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): no shorter than this, screen px"
+          },
+          "taper_pow": {
+            "value": 0.9,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): how fast it widens from the tail to the head"
+          },
+          "trace_role": {
+            "value": "tracer.@side",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the line left where the round passed (the shooter's accent)"
+          },
+          "trace_px": {
+            "value": 1.6,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): that line's width, screen px"
+          },
+          "trace_alpha": {
+            "value": 0.75,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): ...and its strength against the streak's"
+          },
+          "trace_fade": {
+            "value": 0.7,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the line is this much fainter at the gun than where the streak is (0 = even)"
+          }
+        }
+      },
+      "T4": {
+        "_label": "T4 · Dotted burst",
+        "_note": "PROPOSED. A burst as a stipple: bunches of ink dots along the line (four to a bunch, a gap, the next bunch), the dots shrinking toward the far end, appearing out to the target at once and fading from the gun end outward, like the tree stipple and the damage smoke's dots. It needs no line at all. Seen on the board: the most ink-like of the five close in, but at the planning zoom the bunches of a dogfight run together into a smear.",
+        "form": {
+          "value": "dots",
+          "_proposed": true,
+          "_reason": "PROPOSED (Track TR): which drawing routine of scripts/fx/fx_tracer.gd draws this option"
+        },
+        "timing": {
+          "life_s": {
+            "value": 0.55,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): how long a tracer lives on the playback clock, game seconds (a roll is 0.5 s apart per gun, so a few overlap)"
+          },
+          "hold_frac": {
+            "value": 0.15,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the share of its life it stays at full strength (fast flash, slow decay: Alex's effects rule)"
+          },
+          "fade_power": {
+            "value": 1.2,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): (1 - x)^power over the rest of its life"
+          },
+          "flight_s": {
+            "value": 0.15,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the seconds the round takes to fly the whole line, however long (a snap, not a ballistic flight)"
+          }
+        },
+        "colour": {
+          "core_role": {
+            "value": "ink.ring",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the tracer itself ('@side' = the shooter's side accent, tracer.side_a / tracer.side_b)"
+          },
+          "edge_role": {
+            "value": "",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of its edge ('' = none)"
+          },
+          "halo_role": {
+            "value": "tracer.halo",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the paper halo under it ('' = none)"
+          },
+          "halo_px": {
+            "value": 1.2,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the halo's width beyond the mark on each side, screen px"
+          }
+        },
+        "widths": {
+          "width_px": {
+            "value": 1.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the mark's width, screen px (a streak's full width at its head, a dash's; a dot's size is dots.dot_px)"
+          },
+          "edge_px": {
+            "value": 0.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the edge's line width, screen px (0 = none)"
+          }
+        },
+        "dots": {
+          "pitch_m": {
+            "value": 0.9,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the spacing of the dots in a bunch, drawn metres"
+          },
+          "pitch_min_px": {
+            "value": 3.5,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): no closer than this, screen px"
+          },
+          "bunch": {
+            "value": 4,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): dots to a bunch"
+          },
+          "bunch_gap_m": {
+            "value": 4.5,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the extra gap between bunches, drawn metres"
+          },
+          "bunch_gap_min_px": {
+            "value": 9.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): no smaller than this, screen px"
+          },
+          "dot_px": {
+            "value": 2.5,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): a dot's radius at the gun end, screen px"
+          },
+          "dot_min_px": {
+            "value": 1.2,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): ...and at the far end"
+          },
+          "stagger": {
+            "value": 0.55,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): how much later the far dots start to fade than the near ones (a share of the life)"
+          },
+          "jitter_px": {
+            "value": 0.4,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): each dot is set off the line by up to this, screen px"
+          }
+        }
+      },
+      "T5": {
+        "_label": "T5 · Ink streak, hit and miss marks",
+        "_note": "PROPOSED. A flying streak in ink with a hairline behind it, and a small mark where the round ended: a dot on the airframe for a hit, a short cross-tick for a miss. Most rolls miss (the odds are 5 to 30 percent), so the tick says 'that one went by' without a hit mark's burst; the hit marks of the interface (pips, the ink on the plane) still say 'that one landed'. Seen on the board: cleaner than T2's pale streak, but the marks are small.",
+        "form": {
+          "value": "streak",
+          "_proposed": true,
+          "_reason": "PROPOSED (Track TR): which drawing routine of scripts/fx/fx_tracer.gd draws this option"
+        },
+        "timing": {
+          "life_s": {
+            "value": 0.45,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): how long a tracer lives on the playback clock, game seconds (a roll is 0.5 s apart per gun, so a few overlap)"
+          },
+          "hold_frac": {
+            "value": 0.25,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the share of its life it stays at full strength (fast flash, slow decay: Alex's effects rule)"
+          },
+          "fade_power": {
+            "value": 1.3,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): (1 - x)^power over the rest of its life"
+          },
+          "flight_s": {
+            "value": 0.18,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the seconds the round takes to fly the whole line, however long (a snap, not a ballistic flight)"
+          }
+        },
+        "colour": {
+          "core_role": {
+            "value": "ink.ring",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the tracer itself ('@side' = the shooter's side accent, tracer.side_a / tracer.side_b)"
+          },
+          "edge_role": {
+            "value": "",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of its edge ('' = none)"
+          },
+          "halo_role": {
+            "value": "tracer.halo",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the paper halo under it ('' = none)"
+          },
+          "halo_px": {
+            "value": 1.2,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the halo's width beyond the mark on each side, screen px"
+          }
+        },
+        "widths": {
+          "width_px": {
+            "value": 3.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the mark's width, screen px (a streak's full width at its head, a dash's; a dot's size is dots.dot_px)"
+          },
+          "edge_px": {
+            "value": 0.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the edge's line width, screen px (0 = none)"
+          }
+        },
+        "streak": {
+          "streak_m": {
+            "value": 5.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the streak's length, drawn metres"
+          },
+          "streak_min_px": {
+            "value": 10.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): no shorter than this, screen px"
+          },
+          "taper_pow": {
+            "value": 0.9,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): how fast it widens from the tail to the head"
+          },
+          "trace_role": {
+            "value": "ink.soft",
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the colour role of the line left where the round passed"
+          },
+          "trace_px": {
+            "value": 1.5,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): that line's width, screen px"
+          },
+          "trace_alpha": {
+            "value": 0.9,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): ...and its strength against the streak's"
+          },
+          "trace_fade": {
+            "value": 0.7,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): the line is this much fainter at the gun than where the streak is (0 = even)"
+          }
+        },
+        "marks": {
+          "hit_dot_px": {
+            "value": 4.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): a hit's dot radius where the round ended, screen px"
+          },
+          "miss_tick_px": {
+            "value": 7.0,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): a miss's tick, half its length, screen px"
+          },
+          "miss_tick_w_px": {
+            "value": 2.2,
+            "_proposed": true,
+            "_reason": "PROPOSED (Track TR): ...and its width"
           }
         }
       }

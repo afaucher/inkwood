@@ -1175,6 +1175,7 @@ func resolve() -> Dictionary:
 	_resolve_followed_drops(histories)
 	for id: String in units:
 		_apply_drop_limits(units[id], histories[id], 1)
+	_combat_resolver.ships_sink = water_depth.is_valid()   # (a destroyed sea unit sinks where there is water: _fall_step)
 	var fight := _combat_resolver.run(units, histories, turn, rng_seed, rules.turn_seconds,
 		func(uid: String, t: float) -> Dictionary: return sample(uid, t, "history"),
 		func(band: String) -> float: return band_height(band), bombs_in_flight, shells_in_flight,
@@ -1231,6 +1232,16 @@ func resolve() -> Dictionary:
 		crash_at[id] = tc
 		var at := sample(id, tc, "history")
 		crash_events.append({"type": "crash", "turn": turn, "unit": id, "t": tc, "x": at["x"], "y": at["y"]})
+	# A unit that goes UNDER the water this turn (a hull at the moment it went down, a plane at the surface): a splash.
+	for id: String in units:
+		var u: Unit = units[id]
+		if u.fate != Unit.FATE_OUT_OF_CONTROL:
+			continue
+		var ts := _surface_time(histories[id])
+		if is_nan(ts):
+			continue
+		var wat := sample(id, ts, "history")
+		crash_events.append({"type": "splash", "turn": turn, "unit": id, "t": ts, "x": wat["x"], "y": wat["y"]})
 	crash_events.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["t"]) < float(b["t"]))
 	events = CombatResolver.merge_events(CombatResolver.merge_events(events, fight["events"]), crash_events)
 
@@ -1267,7 +1278,7 @@ func resolve() -> Dictionary:
 			u.out_of_bounds = not in_bounds(float(at["x"]), float(at["y"]))
 			if crash_at.has(id):
 				u.fate = Unit.FATE_CRASHED
-				u.fall_height_m = 0.0
+				u.fall_height_m = 0.0 - water_depth_at(float(at["x"]), float(at["y"]))   # on the ground (0 m), or on the water's floor (below the surface)
 				u.fall_dir = 0
 		else:
 			u.apply_state(last)
@@ -1400,12 +1411,12 @@ func sample(unit_id: String, t: float, source: String = "history") -> Dictionary
 	var band_b := str(b["altitude_band"])
 	p["altitude_band"] = band_b if f >= 0.5 else band_a
 	# Height: the band heights, or for a falling unit (its states carry
-	# fall_height_m) the continuous fall height, never below the ground.
+	# fall_height_m) the continuous fall height, never below the ground (or the water's floor).
 	var ha := _state_height(a)
 	var hb := _state_height(b)
 	p["height_m"] = ha + (hb - ha) * f
 	if a.has("fall_height_m") or b.has("fall_height_m"):
-		p["height_m"] = maxf(float(p["height_m"]), 0.0)
+		p["height_m"] = maxf(float(p["height_m"]), float(b.get("floor_m", a.get("floor_m", 0.0))))   # (the floor: 0 m, or the water's)
 	return p
 
 # --- Internals ---------------------------------------------------------------
@@ -1630,6 +1641,10 @@ func _start_state(u: Unit) -> Dictionary:
 	s["out_of_bounds"] = u.out_of_bounds
 	if is_finite(u.fall_height_m):
 		s["fall_height_m"] = u.fall_height_m
+		if u.fall_height_m <= 0.0 and water_depth.is_valid():
+			var depth := water_depth_at(u.x, u.y)
+			if depth > 0.0:
+				s["floor_m"] = -depth   # a hull going down, a wreck on the floor
 	return s
 
 # --- A unit going down out of control (Track C; combat.gd, WHAT A KILL DOES) -----
@@ -1640,23 +1655,79 @@ func _start_state(u: Unit) -> Dictionary:
 # fall_height_m, metres above the ground (0 m; no terrain), unclamped: it goes
 # negative in the step that reaches the ground, and sample() clamps at 0. The
 # crash is the moment the height crosses 0 (_crash_time).
+#
+# THROUGH THE WATER (Track BB, 2026-10-11; Alex, decision ship-sinks: "ideally we just sink them to the
+# bottom", "just like a downed plane its altitude should decrease until it hits the floor. It just does so
+# through the water", "we could have planes do the same if they crash there"). The water's surface is 0 m and
+# its floor is MINUS THE WATER'S DEPTH at the unit's place (water_depth_at, the very query the water rule uses):
+#   - a destroyed SEA unit (the resolver gives it fate out_of_control, spin 0, when the World has water) falls
+#     from 0 m: it stays where it went down (the way it had carries it a few metres, its speed gone within the
+#     step) and loses height at combat.json sink_descent_mps (_sink_step);
+#   - a plane whose fall reaches 0 m over water does not crash there: it stops moving along (the water takes
+#     its speed) and sinks straight down at the same rate (_fall_step); over land nothing changes;
+#   - either reaches the floor, where it is CRASHED, with fall_height_m = the floor (negative: below the
+#     surface), and stays there for the rest of the game.
+# The states below the surface carry floor_m (the floor's height, negative): the crash is the moment the height
+# reaches it (_crash_time), sample() clamps at it, and a "splash" event marks the moment a unit goes under
+# (_surface_time). Nothing here is drawn: the interface draws the water over it (scripts/ui/unit_sunk.gd).
+# The rate and the stop-dead-on-entry are PROPOSED (Track BB); what is Alex's is that it falls through the water to the floor.
 
 # The state `d` seconds on from `prev` (a falling unit's state with fall_height_m),
 # as an arc like any step: the caller sets step and t.
 func _fall_step(u: Unit, prev: Dictionary, d: float, spin: int) -> Dictionary:
+	var h0 := float(prev["fall_height_m"])
+	if u.def.domain == "sea" or h0 <= 0.0:
+		return _sink_step(u, prev, d)   # a hull going down, or anything already under the surface
 	var v0 := float(prev["speed"])
 	var v1 := minf(v0 + combat.fall_speed_gain * d, maxf(v0, u.def.envelope.dive_speed_max))
 	var turn := float(spin) * combat.fall_turn_rate * d
-	var h0 := float(prev["heading"])
-	var end := Envelope.advance(float(prev["x"]), float(prev["y"]), h0, turn, (v0 + v1) * 0.5 * d)
-	var h1 := float(prev["fall_height_m"]) - combat.fall_descent * d
+	var heading0 := float(prev["heading"])
+	var h1 := h0 - combat.fall_descent * d
+	# Over water the fall does not end at 0 m: the plane goes under and the water takes its speed. The step it reaches
+	# the surface in ends with it stopped (its speed 0 at the end of the step, so the arc the states are read by,
+	# which averages the two end speeds, brings it to rest at this state's place) and the rest of the step is below the
+	# surface, at the sink rate; the water's floor is the depth where it stops.
+	if h1 <= 0.0 and water_depth.is_valid():
+		var stop := Envelope.advance(float(prev["x"]), float(prev["y"]), heading0, turn, v0 * 0.5 * d)
+		var depth := water_depth_at(float(stop[0]), float(stop[1]))
+		if depth > 0.0:
+			var f := h0 / (h0 - h1)   # the share of the step in the air
+			return {
+				"x": stop[0], "y": stop[1], "heading": Envelope.wrap_angle(heading0 + turn), "speed": 0.0,
+				"altitude_band": _nearest_band(u, 0.0),
+				"turn": turn, "clamped": false, "limits": [], "planned": false,
+				"out_of_bounds": not in_bounds(float(stop[0]), float(stop[1])),
+				"fall_height_m": -combat.sink_descent * d * (1.0 - f), "floor_m": -depth,
+			}
+	var end := Envelope.advance(float(prev["x"]), float(prev["y"]), heading0, turn, (v0 + v1) * 0.5 * d)
 	return {
-		"x": end[0], "y": end[1], "heading": Envelope.wrap_angle(h0 + turn), "speed": v1,
+		"x": end[0], "y": end[1], "heading": Envelope.wrap_angle(heading0 + turn), "speed": v1,
 		"altitude_band": _nearest_band(u, maxf(h1, 0.0)),
 		"turn": turn, "clamped": false, "limits": [], "planned": false,
 		"out_of_bounds": not in_bounds(float(end[0]), float(end[1])),
 		"fall_height_m": h1,
 	}
+
+# The state `d` seconds on from `prev` for a unit going down THROUGH THE WATER: it stays where it is (a hull that
+# was under way carries on for the few metres its way takes, its speed gone by the end of the step: a slow drift,
+# proposed), loses height at combat.json sink_descent_mps and does not turn. Like the fall, the height is
+# unclamped (it goes below the floor in the step that reaches it; sample() clamps and _crash_time finds the moment).
+func _sink_step(u: Unit, prev: Dictionary, d: float) -> Dictionary:
+	var h0 := float(prev["fall_height_m"])
+	var heading0 := float(prev["heading"])
+	var end := Envelope.advance(float(prev["x"]), float(prev["y"]), heading0, 0.0, float(prev["speed"]) * 0.5 * d)
+	var floor_m := float(prev["floor_m"]) if prev.has("floor_m") else -water_depth_at(float(end[0]), float(end[1]))
+	var h1 := h0 - combat.sink_descent * d
+	var s := {
+		"x": end[0], "y": end[1], "heading": heading0, "speed": 0.0,
+		"altitude_band": _nearest_band(u, maxf(h1, 0.0)),
+		"turn": 0.0, "clamped": false, "limits": [], "planned": false,
+		"out_of_bounds": not in_bounds(float(end[0]), float(end[1])),
+		"fall_height_m": h1,
+	}
+	if floor_m < 0.0:
+		s["floor_m"] = floor_m
+	return s
 
 # `hist` (a unit's history this turn, as motion built it) with the unit set to
 # fall from t_d: the states before t_d stay as they are, a state AT t_d is
@@ -1690,6 +1761,10 @@ func _begin_fall(u: Unit, hist: Array, t_d: float) -> Array:
 			"out_of_bounds": not in_bounds(float(at["x"]), float(at["y"])),
 		}
 	c["fall_height_m"] = float(at["height_m"])
+	if water_depth.is_valid():   # over water the state knows its floor (a hull going down, a plane that will reach the surface)
+		var depth := water_depth_at(float(c["x"]), float(c["y"]))
+		if depth > 0.0:
+			c["floor_m"] = -depth
 	out.append(c)
 	var prev := c
 	for i in range(first_after, hist.size()):
@@ -1701,20 +1776,35 @@ func _begin_fall(u: Unit, hist: Array, t_d: float) -> Array:
 		prev = s
 	return out
 
-# When, in seconds into the turn, a falling unit's path reaches the ground: the
-# height is linear between states, so the crossing is exact. NAN if it does not
-# this turn.
+# When, in seconds into the turn, a falling unit's path reaches the ground (or, over water, the water's
+# floor: a state's floor_m, negative; none means 0 m): the height is linear between states, so the crossing is
+# exact. NAN if it does not this turn.
 func _crash_time(path: Array) -> float:
 	for i in range(1, path.size()):
 		var a: Dictionary = path[i - 1]
 		var b: Dictionary = path[i]
 		if not a.has("fall_height_m") or not b.has("fall_height_m"):
 			continue
+		var ca := float(a["fall_height_m"]) - float(a.get("floor_m", 0.0))   # the clearance above the floor
+		var cb := float(b["fall_height_m"]) - float(b.get("floor_m", 0.0))
+		if ca <= 0.0:
+			return float(a["t"])
+		if cb <= 0.0:
+			return float(a["t"]) + (float(b["t"]) - float(a["t"])) * ca / (ca - cb)
+	return NAN
+
+# When, in seconds into the turn, a falling unit's path goes UNDER the water's surface (its height crossing 0 m
+# downward into a state with a floor, so over water): where the interface draws the splash. NAN if it does not
+# this turn (a unit already under the surface, or over land).
+func _surface_time(path: Array) -> float:
+	for i in range(1, path.size()):
+		var a: Dictionary = path[i - 1]
+		var b: Dictionary = path[i]
+		if not a.has("fall_height_m") or not b.has("fall_height_m") or not b.has("floor_m"):
+			continue
 		var ha := float(a["fall_height_m"])
 		var hb := float(b["fall_height_m"])
-		if ha <= 0.0:
-			return float(a["t"])
-		if hb <= 0.0:
+		if ha >= 0.0 and hb < 0.0:
 			return float(a["t"]) + (float(b["t"]) - float(a["t"])) * ha / (ha - hb)
 	return NAN
 

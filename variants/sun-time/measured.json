@@ -1,0 +1,33 @@
+{
+  "_about": "Measured 2026-10-11 by the builder BS on this machine (an RTX 3080, other builders working in the same tree, so about 10% run to run). Raw output: tmp/sun/bench_*.txt (not committed).",
+  "tool": "scripts/render/map_bake_bench.gd -- pool=on chunks=all water=on, windowed, nothing else drawn (no fog, no units, no UI), the sun by INKWOOD_SUN_MODE / INKWOOD_SUN_HOUR",
+  "whole_map_bake_s": {
+    "fixed": 42.0,
+    "clock_07_00": 44.5,
+    "clock_12_00": 36.7
+  },
+  "first_chunk_s": {
+    "fixed": 5.3,
+    "clock_07_00": 5.8,
+    "clock_12_00": 4.7
+  },
+  "tree_shadow_worker_s": {
+    "fixed": 2.2,
+    "clock_07_00": 5.1
+  },
+  "worker_total_s_about": 140,
+  "tree_set_s": {
+    "fixed": 3.1,
+    "clock_07_00": 3.3
+  },
+  "time_to_playable_s": {
+    "fixed": 27.5,
+    "clock_07_00": 32.5,
+    "clock_09_00": 27.6,
+    "clock_12_00": 29.7,
+    "clock_15_00": 31.7,
+    "clock_18_00": 28.4,
+    "note": "the Strike started as the menu starts it (the first view of 40 chunks, the tree set, water on, fog off); the spread is the machine's, not the sun's"
+  },
+  "text": "THE WHOLE MAP (scripts/render/map_bake_bench.gd, the real baker on all 100 chunks of the 5 km map with the tree set and the water, nothing else running): 42.0 s under today's sun, 44.5 s under the 07:00 sun (the longest shadows the model makes) and 36.7 s at noon, the first chunk after 5 s: the spread is the machine's (about 10% run to run), the sun is not what moves it. The part of the work that depends on the sun, the trees' shadow silhouettes, is 2.2 s of worker time under today's sun and 5.1 s under 07:00, in about 140 s of worker time in all. So a clock sun costs a map no more to bake than today's. A change of sun in the middle of a mission would mean dropping every chunk, the tree set, the unit art and the fog's contour layer and baking them again, the same redraw as the pen knob's (the first view in about 5 s, the whole map in about 40 s, the contour map showing meanwhile); Alex's answer, a fixed sun at the start, avoids it."
+}

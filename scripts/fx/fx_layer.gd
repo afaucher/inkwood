@@ -109,6 +109,7 @@ const FxPass = preload("res://scripts/fx/fx_pass.gd")
 const FxShadowPass = preload("res://scripts/fx/fx_shadow_pass.gd")
 const FxBomb = preload("res://scripts/fx/fx_bomb.gd")
 const FxRuin = preload("res://scripts/fx/fx_ruin.gd")
+const FxTracer = preload("res://scripts/fx/fx_tracer.gd")
 const FxFire = preload("res://scripts/fx/fx_fire.gd")
 
 var style: FxStyle = null
@@ -249,12 +250,15 @@ func queue_redraws() -> void:
 
 func _process(_delta: float) -> void:
 	# a camera that moves or zooms is followed with no call, as the markers are
-	if mapping != null and mapping.is_live() and _anything():
+	if mapping != null and mapping.is_live() and (_anything() or _tracers_live()):
 		queue_redraws()
+
+func _tracers_live() -> bool:   # (Track TR) a tracer in flight moves with the camera too
+	return field.tracers != null and field.tracers.live_count(now) > 0
 
 func _anything() -> bool:
 	return fire.active() or not (field.puffs.is_empty() and field.bursts.is_empty() and field.scars.is_empty() and field.debris.is_empty() and field.riders.is_empty() \
-		and field.craters.is_empty() and field.ruins.is_empty() and field.drops.is_empty())
+		and field.craters.is_empty() and field.ruins.is_empty() and field.drops.is_empty() and field.splashes_live(now, _splash_life_s()) == 0)
 
 # --- The calls the interface makes -----------------------------------------------------------------------------------
 
@@ -307,6 +311,35 @@ func ruin(unit_id: String, world_pos: Vector2, t: float, kind: String = "radio_t
 func add_ruin(unit_id: String, world_pos: Vector2, t: float, kind: String = "radio_tower", size_m: float = 12.0, heading: float = 0.0, seed_v: int = 0) -> void:
 	_build()
 	field.add_ruin(unit_id, world_pos, t, kind, size_m, heading, seed_v)
+
+# A sea unit that sinks (Track BB, decision ship-sinks): the flash every destroyed unit gets, no smoke, no ruin.
+func down_flash(unit_id: String, world_pos: Vector2, t: float, size_m: float) -> void:
+	_build()
+	field.down_flash(unit_id, world_pos, t, size_m)
+
+# The splash where a unit goes under the water: rings in the ink (PROPOSED look, data/world/boats.json game.sunk.splash).
+func splash(unit_id: String, world_pos: Vector2, t: float, size_m: float) -> void:
+	_build()
+	field.add_splash(unit_id, world_pos, t, size_m)
+
+# MACHINE-GUN TRACERS (Track TR, 2026-10-11, PROPOSED; fx.json tracers, scripts/fx/fx_tracer.gd). The feed asks tracer_weapon(weapon) of a
+# "fire" event (a weapon in the data's list, while tracers are on: it is then no flak burst) and calls tracer() with the event's
+# fields (FxTracer.feed_event). A hit ends on the target, a miss passes beside it; it lives a short time on the playback clock.
+func tracer_weapon(weapon: String) -> bool:
+	_build()
+	return field.tracer_book().is_weapon(weapon)
+
+func tracer(shot_id: String, weapon: String, muzzle: Vector2, centre: Vector2, aim: Vector2, aim_size_m: float, t: float, hit: bool, accent: String = "", draw_k: float = 1.0, seen_shooter: bool = true, seen_target: bool = true) -> bool:
+	_build()
+	return field.tracer(shot_id, weapon, muzzle, centre, aim, aim_size_m, t, hit, accent, draw_k, seen_shooter, seen_target)
+
+func select_tracers(option_name: String) -> void:
+	_build()
+	field.select_tracers(option_name)
+
+func tracer_flight_s() -> float:   # the feed leads the target by what it flies in this time
+	_build()
+	return field.tracer_book().flight_s()
 
 # THE FOREST FIRE (decision forest-fire): the sim's feed -- one Dictionary per tree ever lit, {id, x_m, y_m, r_m, lit_turn, lit_t, out_turn}
 # (world.fire.feed(); fx_fire.gd's header has the meaning) -- is all the layer needs: it draws a column of W1 smoke for every tree
@@ -693,11 +726,60 @@ func _draw_top(item: CanvasItem, view: Rect2) -> void:
 			continue
 		_blit(item, bs.frames[k]["tex"], bs.origin, sp, 0.0, ppm / q, Color.WHITE)
 	_draw_strike_air(item, view)   # the bombs falling: over the bomber they were dropped from (they are under it in the air)
+	if field.tracers != null:   # Track TR: machine-gun tracers, over the planes (a round leaves the gun and ends on the target)
+		FxTracer.draw_all(item, field.tracers, mapping, style, true_scale, now, view)
 
 # --- The strike's drawing (Track X2) -----------------------------------------------------------------------------------------------
 
+# THE SPLASHES (Track BB, decision ship-sinks; PROPOSED look): where a unit goes under the water, a few rings in the effects palette's ink widen and fade
+# on the water, under the unit. The numbers are data/world/boats.json game.sunk.splash.
+func _splash_data() -> Dictionary:
+	return load("res://scripts/ui/unit_sunk.gd").data()["splash"]
+
+func _splash_life_s() -> float:
+	var d := _splash_data()
+	var u = load("res://scripts/render/boat_art.gd")
+	return float(u.val(d["duration_s"])) + float(u.val(d["stagger_s"])) * float(int(u.val(d["rings"])) - 1)
+
+func _draw_splashes(item: CanvasItem, view: Rect2) -> void:
+	if field.splashes.is_empty():
+		return
+	var d := _splash_data()
+	var bv = load("res://scripts/render/boat_art.gd")
+	var dur := float(bv.val(d["duration_s"]))
+	var rings := int(bv.val(d["rings"]))
+	var stagger := float(bv.val(d["stagger_s"]))
+	var r0 := float(bv.val(d["radius_start_m"]))
+	var r1f := float(bv.val(d["radius_end_frac"]))
+	var a0 := float(bv.val(d["alpha"]))
+	var w := float(bv.val(d["line_px"]))
+	var squash := float(bv.val(d["squash"]))
+	var ink: Color = style.ink()
+	item.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	for s: Dictionary in field.splashes:
+		var age := now - float(s["t0"])
+		if age < 0.0 or age > dur + stagger * float(rings - 1):
+			continue
+		var wp: Vector2 = s["pos"]
+		var sp := mapping.world_to_screen(wp)
+		if not view.grow(160.0).has_point(sp):
+			continue
+		var ppm := drawn_ppm(wp)
+		for k in rings:
+			var ak := age - float(k) * stagger
+			if ak <= 0.0 or ak >= dur:
+				continue
+			var f := ak / dur
+			var radius := (r0 + (r1f * float(s["size_m"]) - r0) * (1.0 - (1.0 - f) * (1.0 - f))) * ppm
+			var pts := PackedVector2Array()
+			for j in 33:
+				var ang := float(j) / 32.0 * TAU
+				pts.append(sp + Vector2(cos(ang) * radius, sin(ang) * radius * squash))
+			item.draw_polyline(pts, Color(ink.r, ink.g, ink.b, a0 * (1.0 - f)), w, true)
+
 # On the ground: the craters, then each ruin (what stays at the foot, the mast falling or lying).
 func _draw_strike_ground(item: CanvasItem, view: Rect2) -> void:
+	_draw_splashes(item, view)
 	for c in field.craters:
 		var a := field.crater_alpha(c, now)
 		if a <= 0.0:
@@ -725,6 +807,9 @@ func _draw_strike_ground(item: CanvasItem, view: Rect2) -> void:
 		var q := quantize(ppm)
 		if str(r.get("kind", "")) == "military_complex":
 			_blit_complex_ruin(item, r, sp, ppm, q, Color(1.0, 1.0, 1.0, a), false)   # mission 2: the compound's own destroyed art
+			continue
+		if _boats_ruin_kind(str(r.get("kind", ""))):
+			_blit_boats_ruin(item, r, sp, Color(1.0, 1.0, 1.0, a), false)   # Track BB: the bridge's ruin, a boat's wreck
 			continue
 		# the foot is baked ALREADY TURNED by the unit's heading (as the static markers are: the light is the map's at any heading)
 		var rs := _ruin_set_for(q, mapping.screen_angle(wp, float(r["heading"])) + PI / 2.0)
@@ -756,9 +841,35 @@ func _blit_complex_ruin(item: CanvasItem, r: Dictionary, sp: Vector2, ppm: float
 	var tex: Texture2D = art.mask if shadow else art.texture
 	_blit(item, tex, art.origin, sp, 0.0, ppm / art.ppm, mod)
 
+# THE DESTROYED BRIDGE AND THE WRECKED BOATS (Track BB, 2026-10-11): the art unit_marker_art_boats.gd bakes (ruin_art), already turned by the
+# unit's heading as its marker was. The bridge is map scenery, so it is drawn at the MAP's scale; a boat's wreck at the planes' (the boats'
+# rule), as the boat was. `shadow` draws the cast-shadow mask (in the shadow pass) in place of the sprite.
+func _boats_ruin_kind(kind: String) -> bool:
+	return load("res://scripts/ui/unit_marker_art_boats.gd").has_ruin(kind)
+
+func _blit_boats_ruin(item: CanvasItem, r: Dictionary, sp: Vector2, mod: Color, shadow: bool) -> void:
+	var ui: RefCounted = load("res://scripts/ui/ui_style.gd").shared()
+	var boats = load("res://scripts/ui/unit_marker_art_boats.gd")
+	var kind := str(r.get("kind", ""))
+	var wp: Vector2 = r["pos"]
+	var ppm: float = mapping.px_per_m(wp) if boats.is_map_scale(kind) else drawn_ppm(wp)
+	var rot := mapping.screen_angle(wp, float(r["heading"])) + PI / 2.0
+	var art = boats.ruin_art(ui, kind, quantize(ppm), rot)
+	if art == null or art.texture == null:
+		return
+	var tex: Texture2D = art.mask if shadow else art.texture
+	_blit(item, tex, art.origin, sp, 0.0, ppm / art.ppm, mod)
+
 # Bombs in the air cast their shadow by the altitude rule, the gap closing as they fall.
 func _draw_strike_shadows(item: CanvasItem, view: Rect2) -> void:
 	for r in field.ruins:
+		if _boats_ruin_kind(str(r.get("kind", ""))):
+			var bp: Vector2 = r["pos"]
+			var bsp := mapping.world_to_screen(bp)
+			var ba := field.ruin_alpha(r, now)
+			if ba > 0.0 and view.grow(160.0).has_point(bsp):
+				_blit_boats_ruin(item, r, bsp, Color(_tint.r, _tint.g, _tint.b, ba), true)
+			continue
 		if str(r.get("kind", "")) != "military_complex":
 			continue
 		var ra := field.ruin_alpha(r, now)
