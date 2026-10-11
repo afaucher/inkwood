@@ -1787,13 +1787,14 @@
         "smoke_sight": "a, refined (Alex: 'a', then '1 visible but untrackable and 2 last place you saw it'): smoke does not hide a unit (fog, the enemy AI's knowledge and woods cover are unchanged by it); it denies tracking: fire control (the cruiser's guns) does not count a target in smoke as spotted, so they fire the poorer shot at its last tracked place (decision outside-cone-release); a bomb following a unit that is in smoke at the release aims at the last place it was tracked; PROPOSED: ground and sea units, mobile and static, not planes; a click on an enemy in smoke sets a point target, not a unit target; leaving the smoke makes it trackable again",
         "smoke.reach_m": "PROPOSED: inside the smoke = within 20 m of a burning tree's canopy edge",
         "look": "W1 smoke (decision damage-smoke) as a stand-in column per burning tree; then a board for the burning grove and the burnt-out trunk",
-        "first_scenario": "suppress (data/scenarios/suppress.json), plus a sandbox switch"
+        "first_scenario": "suppress (data/scenarios/suppress.json), plus a sandbox switch",
+        "smoke_in_fog": "hidden: fog hides the smoke (Alex: 'No, fog should hide smoke.'); data/fx/fx.json forest_fire smoke_when_hidden = false"
       },
       "applied_to": [
         "to be built (track 'Forest fire', docs/status.md): data/sim/fire.json and scripts/sim/fire*.gd, the World's resolve and its net state, the effects layer's smoke per burning tree, the map's burnt trunks, Suppress"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'I want to build a forest fire mechanic.' Then: 'I am thinking that the fire is actually just smoke coming from the trees. It spreads from tree to tree based on distance. It can inflict damage to nearby units with low power and low chance.' Then: 'It should generate smoke which makes it harder to see.' On the lead's seven proposals: '1 - yes 2 - yes 3 - lets fade the change with distance as well 4 - this is deeper then I was thinking. tell me more about this decision in a second. 5 - yes, lets burn down to the trunks? 6 - that is what I wanted 7 - suppress sounds good'. On the lead's explanation of question 4 (a cover, b sight lines, c aim): 'a - but confirm what the implication of this is.  the player might be able to visually see the unit on screen but won't be able to target it directly in a way that tracks it if it moves?' The lead explained that woods cover hides the marker entirely, that bombs today keep following a hidden target, and asked: hidden or visible but not trackable; a bomb's target lost in smoke aimed at its last-seen place? Alex: '1 visible but untrackable and 2 last place you saw it'. The numbers are starting values for a playtest (decision balance-uncalibrated); every detail marked PROPOSED is the lead's."
+      "notes": "Alex: 'I want to build a forest fire mechanic.' Then: 'I am thinking that the fire is actually just smoke coming from the trees. It spreads from tree to tree based on distance. It can inflict damage to nearby units with low power and low chance.' Then: 'It should generate smoke which makes it harder to see.' On the lead's seven proposals: '1 - yes 2 - yes 3 - lets fade the change with distance as well 4 - this is deeper then I was thinking. tell me more about this decision in a second. 5 - yes, lets burn down to the trunks? 6 - that is what I wanted 7 - suppress sounds good'. On the lead's explanation of question 4 (a cover, b sight lines, c aim): 'a - but confirm what the implication of this is.  the player might be able to visually see the unit on screen but won't be able to target it directly in a way that tracks it if it moves?' The lead explained that woods cover hides the marker entirely, that bombs today keep following a hidden target, and asked: hidden or visible but not trackable; a bomb's target lost in smoke aimed at its last-seen place? Alex: '1 visible but untrackable and 2 last place you saw it'. The numbers are starting values for a playtest (decision balance-uncalibrated); every detail marked PROPOSED is the lead's. Later, asked whether smoke should show over the fog (the lead recommended yes): 'No, fog should hide smoke.'"
     },
     {
       "id": "pan-right-drag-off",
@@ -1978,6 +1979,29 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. The tracers' look is still open (variants/tracers/)."
+    },
+    {
+      "id": "lost-target-last-seen",
+      "date": "2026-10-11",
+      "area": "Specials, Targeting, Fog of war",
+      "question": "A bomb follows a unit target; what if the target is out of the side's sight at the release (in the fog, or hidden in woods)? Today it is followed anyway (PROPOSED by the strike track: 'the sim has no fog rule').",
+      "board": "none (said in chat, after decision forest-fire made a target in smoke aim at the last place it was seen)",
+      "options": [
+        "followed anyway (as built)",
+        "aimed at the last place it was seen, wherever it was lost (fog, woods, smoke)",
+        "fog and smoke only; woods as built"
+      ],
+      "chosen": "a bomb whose followed target is out of the side's sight in the FOG at the release aims at the last place it was seen, with no lead; a target hidden in woods is still followed, as built, for now; smoke as decision forest-fire",
+      "parameters": {
+        "fog": "last place seen (the side's sight circles, and line of sight where it is on)",
+        "woods": "followed as built (concealment does not count), for now",
+        "smoke": "last place seen outside the smoke (decision forest-fire)"
+      },
+      "applied_to": [
+        "to be built (track 'Forest fire'): World._resolve_followed_drops, scripts/sim/bombs.gd tracked_aim, scripts/sim/spotting.gd"
+      ],
+      "status": "chosen by Alex",
+      "notes": "The lead asked: 'should bombs aim at the last place you saw any lost target? ... a target lost in fog or woods is still followed. I recommend yes, to match the cruiser's guns.' Alex: '1. We should do last place for fog. Keep trees as they are for now.'"
     }
   ]
 }

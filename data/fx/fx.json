@@ -21013,8 +21013,8 @@
       },
       "smoke_when_hidden": {
         "value": false,
-        "_proposed": true,
-        "_reason": "PROPOSED, as combat.fx.smoke_when_hidden: a column whose tree stands out of the player's sight is not drawn (smoke over fog would give a fire away); true draws every column"
+        "decision": "forest-fire",
+        "_reason": "Alex 2026-10-11: 'No, fog should hide smoke.' A column whose tree stands out of the player's sight is not drawn, as combat.fx.smoke_when_hidden; true would draw every column"
       },
       "draw_budget": {
         "value": 1500,
