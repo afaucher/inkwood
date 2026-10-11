@@ -1436,7 +1436,9 @@ func step_labels(id: String = "") -> Array:
 			lines.append(special_label(id))   # the special on this step, in the unit's own words: "Bomb Drop", "Main Guns Fire" (Alex: name and action, from data)
 			if drop_blocked(k, id):   # its target outside its cone (Track T): "will not release" / "poor shot", by the sim's switch
 				lines.append(style.text("bombs.text.step_tag_blocked" if bombs.outside_mode() == "hold" else "bombs.text.step_tag_poor"))
-			elif fire_blocked(k, id):   # a fire that will not go off as things stand (Track SH): the guns reload, the target left the sight ...
+			elif fire_poor(k, id):   # a fire whose target is out of sight or out of reach: it goes off, poorly (Alex, outside-cone-release)
+				lines.append(style.text("guns.text.step_tag_poor"))
+			elif fire_blocked(k, id):   # a fire that will not go off as things stand (Track SH): the guns reload, the target is down ...
 				lines.append(style.text("guns.text.step_tag_blocked"))
 		var band := str(s["altitude_band"])
 		if with_band and band != prev_band:
@@ -1892,6 +1894,17 @@ func gun_reason_text(chk: Dictionary, id: String, label: String) -> String:
 			return style.text("guns.text." + why)
 	return why
 
+# The card's words for a fire that goes off as a poor shot, by the sim's reason ("poor shot: target is not spotted").
+func gun_poor_text(chk: Dictionary) -> String:
+	match str(chk.get("reason", "")):
+		"out_of_range":
+			return style.text("guns.text.poor_out_of_range") % [roundi(float(chk.get("range_m", 0.0))), roundi(float(chk.get("range_max_m", 0.0)))]
+		"too_close":
+			return style.text("guns.text.poor_too_close") % roundi(float(chk.get("range_min_m", 0.0)))
+		"inland":
+			return style.text("guns.text.poor_inland")
+	return style.text("guns.text.poor_unspotted")
+
 # The sim's check for the fire step k carries (its own stored target); {} when the step has none or its plan may not be shown.
 func fire_check(k: int, id: String = "") -> Dictionary:
 	if id == "":
@@ -1900,11 +1913,18 @@ func fire_check(k: int, id: String = "") -> Dictionary:
 		return {}
 	return guns.check(id, k, _fire_target_request(k, id))
 
-# Whether step k carries a fire that will not go off as things stand (the target out of reach or no longer spotted, the guns
-# reloading ...): its lettering says so.
+# Whether step k carries a fire that will not go off as things stand (the guns reloading, the target already down, a friend ...): its
+# lettering says so. A fire whose target is out of sight or out of reach DOES go off, as a poor shot, unless the sim's switch
+# (data/sim/guns.json gun_unspotted_mode) is "hold": that one is fire_poor's.
 func fire_blocked(k: int, id: String = "") -> bool:
 	var chk := fire_check(k, id)
-	return not chk.is_empty() and not bool(chk["ok"])
+	return not chk.is_empty() and not bool(chk["ok"]) and not bool(chk.get("poor_shot", false))
+
+# Whether step k carries a fire that will go off as a POOR SHOT (Alex, decision outside-cone-release: "Fire a poorer one"): its target is
+# no longer spotted, or is out of range or off the coastal strip, and the sim fires at where it was last seen with a wider scatter.
+func fire_poor(k: int, id: String = "") -> bool:
+	var chk := fire_check(k, id)
+	return not chk.is_empty() and not bool(chk["ok"]) and bool(chk.get("poor_shot", false))
 
 # What the card and the map say about step k's fire (-2: the step the card is about): {check (the sim's record), blocked, reason,
 # range_m, spread_m (one shell's scatter, sigma), flight_s, spotted_s, salvos}. {} when the step has none.
@@ -1915,7 +1935,8 @@ func fire_info(k: int = -2) -> Dictionary:
 	var chk := fire_check(k, id)
 	if chk.is_empty():
 		return {}
-	return {"check": chk, "blocked": not bool(chk["ok"]), "reason": str(chk["reason"]), "range_m": float(chk["range_m"]),
+	return {"check": chk, "blocked": not bool(chk["ok"]) and not bool(chk.get("poor_shot", false)), "poor_shot": bool(chk.get("poor_shot", false)),
+		"reason": str(chk["reason"]), "range_m": float(chk["range_m"]),
 		"spread_m": float(chk["spread_m"]), "flight_s": float(chk["flight_s"]), "spotted_s": float(chk["spotted_s"]), "salvos": int(chk["salvos"])}
 
 # The line under the target's, for a unit with big guns: what the special does at the SELECTED step, or why it cannot be switched on.
@@ -1932,6 +1953,8 @@ func gun_caption() -> String:
 		var info := fire_info(k)
 		if info.is_empty():
 			return ""
+		if bool(info["poor_shot"]):   # the card says it as it says a poor bomb: "poor shot: ..." (Alex, outside-cone-release)
+			return gun_poor_text(info["check"])
 		if bool(info["blocked"]):
 			return style.text("guns.text.wont_fire") % gun_reason_text(info["check"], id, label)
 		return style.text("guns.text.on") % [k + 1, label, roundi(float(info["spread_m"])), roundi(float(info["range_m"]))]

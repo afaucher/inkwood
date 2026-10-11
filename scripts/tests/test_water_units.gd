@@ -599,16 +599,22 @@ func _bridge() -> void:
 	var at: Vector2 = site["pos"]
 	var w := _bridge_world(1)
 	var br: Unit = w.units[BRIDGE]
-	eq([br.health, br.down, br.fate], [10, false, ""], "the bridge stands with its 10 pips")
+	# 14 pips (Alex, decision bridge-durability, 2026-10-11: "it should take a lot. Like you would have to sit there and shell it for awhile
+	# exposing yourself."; the number is proposed: data/units/bridge.json, tuned with scripts/test_support/bridge_tuning.gd). Was 10.
+	eq([br.health, br.down, br.fate], [14, false, ""], "the bridge stands with its 14 pips")
 	check(not w.units[BRIDGE].def.carries_bombs() and w.units[BRIDGE].def.is_static(), "a static unit")
 	# bombs landed on it: three direct hits are 9 pips and leave it standing
 	BombWorlds.drop_bombs(w, [BombWorlds.record(w, at.x, at.y, 1.0, 0), BombWorlds.record(w, at.x, at.y, 2.0, 1), BombWorlds.record(w, at.x, at.y, 3.0, 2)])
 	var res := _turn(w)
-	eq([br.health, br.down], [1, false], "three direct bombs (3 pips each) leave the bridge with 1 pip")
-	# the fourth brings it down, in the next turn
+	eq([br.health, br.down], [5, false], "three direct bombs (3 pips each) leave the bridge with 5 pips")
+	# the fourth leaves it standing too
 	BombWorlds.drop_bombs(w, [BombWorlds.record(w, at.x + 5.0, at.y, 1.0, 3)])
 	res = _turn(w)
-	check(br.down and br.health == 0, "a fourth bomb brings the bridge down")
+	eq([br.health, br.down], [2, false], "a fourth bomb leaves it with 2 pips")
+	# the fifth brings it down, in the next turn
+	BombWorlds.drop_bombs(w, [BombWorlds.record(w, at.x - 5.0, at.y, 1.0, 4)])
+	res = _turn(w)
+	check(br.down and br.health == 0, "a fifth bomb brings the bridge down")
 	eq(br.fate, Unit.FATE_DESTROYED, "...its fate is 'destroyed', as the tower's")
 	var downs: Array = (res["events"] as Array).filter(func(ev: Dictionary) -> bool: return ev["type"] == "down" and ev["unit"] == BRIDGE)
 	eq(downs.size(), 1, "...exactly one 'down' event")
@@ -659,7 +665,7 @@ func _bridge() -> void:
 		_turn(quiet)
 	control_down = (quiet.units[BRIDGE] as Unit).down
 	check(not control_down, "a bridge nobody bombs stands (the control)")
-	print("[water-units] the bridge: 3 direct bombs leave 1 pip, the 4th destroys it; a bomber's run destroyed it on dice seed %d at turn %d" % [won_seed, won_turn])
+	print("[water-units] the bridge: 3 direct bombs leave 5 pips, the 5th destroys it; a bomber's run destroyed it on dice seed %d at turn %d" % [won_seed, won_turn])
 
 # --- 8. the Strike -----------------------------------------------------------------------------------------------------------
 

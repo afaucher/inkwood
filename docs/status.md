@@ -9,7 +9,6 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| Combat answers: bridge durability, the cruiser's shell blast, poor shots for bombs and guns | lead session (builder) | data/units/bridge.json, data/sim/guns.json, data/sim/bombs.json, scripts/sim/guns.gd, gun_rules.gd, combat_resolver.gd (the held-salvo path), their tests | 2026-10-11 |
 
 ## Next, free to take
 
@@ -40,6 +39,12 @@ Decisions and open questions live in the Decision Ledger
 
 ## Recently landed
 
+- 2026-10-11: combat answers (Alex's four). Bridge: 14 pips, about 20 turns of one tank's gun (bridge-durability, number proposed). Cruiser
+  shell blast: 6 / 12 / 20 m at 4 / 3 / 2 pips (shell-blast, pips proposed). A bomb whose target left its cone and a gun salvo whose
+  target is no longer spotted or in reach now fire a POOR shot instead of holding (outside-cone-release): `data/sim/bombs.json`
+  outside_cone_mode and `data/sim/guns.json` gun_unspotted_mode are both `poor_shot`, `hold` stays as the switch's other setting; the
+  salvo goes at the target's last spotted place, scatter x2, reload spent. Strafing stays deferred (strafe-later). Tables:
+  `scripts/test_support/bridge_tuning.gd`, `gun_tuning.gd`.
 - 2026-10-11: hatching stays inside its outline (6c01b7c, the hatch-clipping session; test_hatch_inside).
 - 2026-10-11: tanks and ground movement, the cruiser and Main Guns Fire, shared
   spotting, Suppress with concealment and reveal-on-fire (4f1b820); water in the

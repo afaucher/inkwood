@@ -213,29 +213,49 @@ func _destroyed_bridge() -> void:
 	var u2: Object = w2.units["t"]
 	check(TankWorlds.road_index_near(Vector2(u2.x, u2.y)) > BR, "3. a bridge destroyed on the way stops the tank on the near side")
 	eq(TankWorlds.pose_problem(w2, u2.x, u2.y, u2.heading), "", "3. ... dry")
-	# a bridge shot down by a tank of the other side: the same stop. (1 pip a hit, 10 pips: found by seed.)
+	# a bridge shot down by a tank of the other side: the same stop. Alex (decision bridge-durability, 2026-10-11): a tank's gun CAN bring a
+	# bridge down, but "it should take a lot. Like you would have to sit there and shell it for awhile exposing yourself." One pip a hit and
+	# 14 pips (data/units/bridge.json, was 10): scripts/test_support/bridge_tuning.gd measures a median of 20 turns of one tank firing steadily.
 	var shot := false
-	for seed_v in range(1, 25):
+	var taken: Array[int] = []
+	var followed_up := false
+	for seed_v in range(1, 9):
 		var w3 := TankWorlds.world("axis", true)       # the bridge is the enemy's: the allied tank's gun is for it
 		w3.rng_seed = seed_v
 		var b := TankWorlds.bridge_site()["pos"] as Vector2
 		TankWorlds.tank(w3, "gun", "allies", "player", b + Vector2(120.0, 40.0), 0.0, 0.0)
-		for i in 12:
+		var took := 0
+		for i in 70:
 			TankWorlds.turn(w3)
+			took += 1
 			if (w3.units["bridge_1"] as Object).down:
-				shot = true
 				break
-		if shot:
-			TankWorlds.tank(w3, "t", "axis", "player", TankWorlds.road(BR + 16), TankWorlds.toward(BR + 16, BR - 24), 0.0)
+		if not (w3.units["bridge_1"] as Object).down:
+			continue
+		shot = true
+		taken.append(took)
+		if followed_up:
+			continue
+		followed_up = true
+		TankWorlds.tank(w3, "t", "axis", "player", TankWorlds.road(BR + 16), TankWorlds.toward(BR + 16, BR - 24), 0.0)
+		for k in 2:
+			w3.plan_step("t", k, {"turn": 0.0, "speed": 8.0})
+		for i in 6:
 			for k in 2:
-				w3.plan_step("t", k, {"turn": 0.0, "speed": 8.0})
-			for i in 6:
-				for k in 2:
-					w3.plan_step("t", k, TankWorlds.road(BR - 20))
-				TankWorlds.turn(w3)
-			check(TankWorlds.road_index_near(Vector2(w3.units["t"].x, w3.units["t"].y)) > BR, "3. a bridge shot down by a tank's gun (seed %d) stops a tank like any other" % seed_v)
-			break
-	check(shot, "3. a tank's gun can bring a bridge of the other side down (10 pips, 1 a hit)")
+				w3.plan_step("t", k, TankWorlds.road(BR - 20))
+			TankWorlds.turn(w3)
+		check(TankWorlds.road_index_near(Vector2(w3.units["t"].x, w3.units["t"].y)) > BR, "3. a bridge shot down by a tank's gun (seed %d) stops a tank like any other" % seed_v)
+	check(shot, "3. a tank's gun can bring a bridge of the other side down (14 pips, 1 a hit)")
+	var total := 0
+	var fewest := 999
+	for n: int in taken:
+		total += n
+		fewest = mini(fewest, n)
+	var mean_turns := float(total) / float(maxi(taken.size(), 1))
+	print("[tank] one tank shelling a bridge from 126 m brought it down in %s turns over eight dice seeds (mean %.1f)" % [str(taken), mean_turns])
+	eq(taken.size(), 8, "3. every one of eight dice seeds brought it down, given time")
+	check(fewest >= 8, "3. but none quickly: the fastest took %d turns of one tank firing steadily ('it should take a lot', Alex)" % fewest)
+	check(mean_turns >= 14.0 and mean_turns <= 30.0, "3. about twenty turns on average (the measured median is 20): %.1f" % mean_turns)
 	_done += 1
 
 # --- 4. The map's cliffs and water ------------------------------------------------------------------------------

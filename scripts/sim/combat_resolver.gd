@@ -47,9 +47,12 @@ extends RefCounted
 # SHELLS (Track SH, the warship, 2026-10-10; scripts/sim/guns.gd has the model and the events). The same walk also fires the BIG-GUN
 # SPECIALS: the histories' step states carry the "fire" a unit planned (its special, its target, the moment); a unit that is up at
 # the start of the tick the moment falls in, is loaded, and whose target is still in range and SPOTTED (spot_fn, the World's
-# shared-spotting query) fires its salvo (shell_fire, the shells seeded and scattered); otherwise nothing is spent and a gun_hold
-# says why. A shell whose impact moment falls in a tick lands (shell_impact) and hurts the units that were up at the start of the
-# tick and stand at the surface within the blast -- the very blast code a bomb uses (_blast_at), with the special's own table.
+# shared-spotting query) fires its salvo (shell_fire, the shells seeded and scattered). A target that is no longer spotted or is out of
+# reach by then gets a POOR SHOT (Alex, decision outside-cone-release; data/sim/guns.json gun_unspotted_mode: a shell_fire with "poor_shot":
+# true, at the target's last spotted place, the scatter widened; with the mode "hold" nothing is spent and a gun_hold says why); the guns
+# reloading, a target that is down, a friend or gone are always held, with a gun_hold that says why. A shell whose impact moment falls
+# in a tick lands (shell_impact) and hurts the units that were up at the start of the tick and stand at the surface within the blast --
+# the very blast code a bomb uses (_blast_at), with the special's own table.
 # Shells that land in a later turn are returned in `shells`; the ones carried from earlier turns come in as `shells_in`. Without gun
 # rules (a resolver built with fewer arguments) there are no shells.
 #
@@ -362,7 +365,7 @@ func _start_guns(histories: Dictionary, shells_in: Array, n_ticks: int) -> void:
 			if f is Dictionary and (f as Dictionary).has("fire_t") and (f as Dictionary).get("target") is Dictionary and not ((f as Dictionary)["target"] as Dictionary).is_empty() 					and gun_rules.has_special(str((f as Dictionary).get("special", ""))):
 				var ft := float((f as Dictionary)["fire_t"])
 				_fire_plan.append({"unit": id, "special": str((f as Dictionary)["special"]), "step": int((h[k] as Dictionary).get("step", k - 1)),
-					"t": ft, "tick": _tick_of(ft, n_ticks), "target": (f as Dictionary)["target"]})
+					"t": ft, "tick": _tick_of(ft, n_ticks), "target": (f as Dictionary)["target"], "aim": (f as Dictionary).get("aim", [])})
 	for s: Dictionary in shells_in:
 		_shell_land_or_carry(s.duplicate(true))
 
@@ -409,8 +412,8 @@ func _guns_tick(active: Array[String], tick: int, n_ticks: int, sampler: Callabl
 		})
 		_blast_at(str(s["unit"]), str(s["special"]), float(s["x"]), float(s["y"]), t, active, tick, sampler, spec)
 
-# A unit fires the salvo it planned, if it can: loaded, its target there, in range and spotted at this moment. Otherwise a
-# gun_hold event says why and nothing is spent.
+# A unit fires the salvo it planned, if it can: loaded, its target there, in range and spotted at this moment. Its target out of sight
+# or out of reach is a poor shot (_fire_poor) unless the mode is "hold"; for the other reasons a gun_hold event says why and nothing is spent.
 func _fire_salvo(entry: Dictionary, active: Array[String], sampler: Callable) -> void:
 	var uid: String = entry["unit"]
 	var sid: String = entry["special"]
@@ -448,30 +451,80 @@ func _fire_salvo(entry: Dictionary, active: Array[String], sampler: Callable) ->
 	var why := Guns.range_error(from.distance_to(tpos), spec)
 	if why == "" and _reach_fn.is_valid():
 		why = str(_reach_fn.call(sid, from, tpos))
-	if why != "":
+	var poor := gun_rules.unspotted_mode == "poor_shot"
+	if why != "" and not (poor and Guns.poor_shot_reason(why)):
 		_hold(entry, why)
 		return
-	var spot: Dictionary = {"spotted": true, "run_s": 0.0, "salvos": 0, "spotter_ratio": 0.0}
+	var spot: Dictionary = {"spotted": true, "run_s": 0.0, "salvos": 0, "spotter_ratio": 0.0, "last_t": -1.0}
 	if _spot_fn.is_valid():
 		spot = _spot_fn.call(u.side, target, t, _down_at, sid)
-	if not bool(spot["spotted"]):
-		_hold(entry, Guns.WHY_UNSPOTTED)
+	if why == "" and not bool(spot["spotted"]):
+		why = Guns.WHY_UNSPOTTED
+		if not poor:
+			_hold(entry, why)
+			return
+	if why != "":
+		_fire_poor(entry, why, spec, target, from, tpos, spot, sampler)
 		return
 	var aim := Guns.aim_for(from, tpos, tvel, spec)
 	var salvos_before := int(spot.get("salvos", 0))
 	var spotter_ratio := float(spot.get("spotter_ratio", 0.0))
 	var sigma := Guns.sigma_m(float(aim["range_m"]), float(spot["run_s"]), spec, salvos_before, spotter_ratio)
-	var shells := Guns.make_salvo({"unit": uid, "special": sid, "step": int(entry["step"]), "t": t, "from": from, "aim": aim["aim"],
-		"range_m": aim["range_m"], "flight_s": aim["flight_s"], "sigma_m": sigma}, spec, _seed, _turn, int(_index[uid]))
+	_launch_salvo(entry, spec, target, from, aim["aim"], float(aim["range_m"]), float(aim["flight_s"]), sigma, spot, target.has("unit"), {})
+
+# A POOR SHOT (Alex, decision outside-cone-release: "Fire a poorer one"; data/sim/guns.json gun_unspotted_mode "poor_shot"): the target is no
+# longer spotted, or is out of reach, at the moment of fire. The salvo goes all the same and the reload is spent: at where the guns take the
+# target to be (a point target: where it is; a unit still spotted: where it is; a unit no longer spotted: where it was LAST SPOTTED -- its
+# place at the last walked moment the side saw it this turn, else where it was shown when the fire was set, else where it stood at the start
+# of the turn), pulled back along the line to the edge of the reach if that is outside it (Guns.poor_aim), with no lead and a widened
+# scatter (Guns.poor_sigma_m). If no place on the line is in reach it is held after all, with the reason.
+func _fire_poor(entry: Dictionary, why: String, spec: GunRules.Spec, target: Dictionary, from: Vector2, tpos: Vector2, spot: Dictionary, sampler: Callable) -> void:
+	var known := tpos
+	if target.has("unit") and not bool(spot["spotted"]):
+		var tid := str(target["unit"])
+		var last_t := float(spot.get("last_t", -1.0))
+		var shown: Variant = entry.get("aim", [])
+		if last_t >= 0.0:
+			var ls: Dictionary = sampler.call(tid, last_t)
+			known = Vector2(float(ls["x"]), float(ls["y"]))
+		elif shown is Array and (shown as Array).size() >= 2:
+			known = Vector2(float(shown[0]), float(shown[1]))
+		else:
+			var s0: Dictionary = sampler.call(tid, 0.0)
+			known = Vector2(float(s0["x"]), float(s0["y"]))
+	var sid := str(entry["special"])
+	var reach := Callable()
+	if _reach_fn.is_valid():
+		reach = func(f: Vector2, to: Vector2) -> String: return str(_reach_fn.call(sid, f, to))
+	var pa := Guns.poor_aim(from, known, spec, reach)
+	if not bool(pa["ok"]):
+		_hold(entry, why)
+		return
+	var salvos_before := int(spot.get("salvos", 0))
+	var spotter_ratio := float(spot.get("spotter_ratio", 1.0))
+	var sigma := Guns.poor_sigma_m(float(pa["range_m"]), float(spot.get("run_s", 0.0)), spec, salvos_before, spotter_ratio)
+	_launch_salvo(entry, spec, target, from, pa["aim"], float(pa["range_m"]), float(pa["flight_s"]), sigma, spot, false,
+		{"poor_shot": true, "poor_why": why, "known": [known.x, known.y], "clamped": bool(pa["clamped"])})
+
+# The salvo leaves: its shells are made and scheduled, the guns are spent (the World sets the reload from `_fired`), the shell_fire event
+# says so. `extra` is added to the event (a poor shot's marks).
+func _launch_salvo(entry: Dictionary, spec: GunRules.Spec, target: Dictionary, from: Vector2, aim: Vector2, range_m: float, flight_s: float, sigma: float, spot: Dictionary, followed: bool, extra: Dictionary) -> void:
+	var uid := str(entry["unit"])
+	var sid := str(entry["special"])
+	var t := float(entry["t"])
+	var shells := Guns.make_salvo({"unit": uid, "special": sid, "step": int(entry["step"]), "t": t, "from": from, "aim": aim,
+		"range_m": range_m, "flight_s": flight_s, "sigma_m": sigma}, spec, _seed, _turn, int(_index[uid]))
+	var fired: Array = _fired.get(uid, [])
 	fired.append(sid)
 	_fired[uid] = fired
-	var a: Vector2 = aim["aim"]
-	var first_impact := t + float(aim["flight_s"])
-	_events.append({
+	var ev := {
 		"type": "shell_fire", "turn": _turn, "unit": uid, "special": sid, "t": t, "x": from.x, "y": from.y, "step": int(entry["step"]),
-		"target": target.duplicate(true), "aim": [a.x, a.y], "shells": shells.size(), "range_m": aim["range_m"], "flight_s": aim["flight_s"],
-		"impact_t": first_impact, "spread_m": sigma, "spotted_s": float(spot["run_s"]), "salvos_before": salvos_before, "spotter_ratio": spotter_ratio, "followed": target.has("unit"),
-	})
+		"target": target.duplicate(true), "aim": [aim.x, aim.y], "shells": shells.size(), "range_m": range_m, "flight_s": flight_s,
+		"impact_t": t + flight_s, "spread_m": sigma, "spotted_s": float(spot.get("run_s", 0.0)), "salvos_before": int(spot.get("salvos", 0)),
+		"spotter_ratio": float(spot.get("spotter_ratio", 0.0)), "followed": followed,
+	}
+	ev.merge(extra)
+	_events.append(ev)
 	for sh: Dictionary in shells:
 		_shell_land_or_carry(Bombs.schedule(sh, _turn_seconds))
 

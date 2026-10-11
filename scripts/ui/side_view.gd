@@ -52,7 +52,9 @@ extends Control
 #               frame: the ship on the ground line, the arc the shell flies (guns.gd's own model: level across, a parabola up to
 #               apex_per_range x the range), where it lands (the target as it is shown) with the expected scatter (two sigma, the
 #               card's number) on the ground, and the target indicator as ever; faint when the sim says the salvo would not go
-#               off (planner.fire_check: unspotted, out of range, reloading ...). Indicators only: the same wash and ink.
+#               off (planner.fire_check: reloading, the target down ...). A salvo whose target is unspotted or out of reach goes off as
+#               a POOR SHOT (Alex, outside-cone-release; data/sim/guns.json gun_unspotted_mode) and is drawn in full with a wider
+#               scatter; with the mode on "hold" it is faint. Indicators only: the same wash and ink.
 #   the words   at most one quiet line under the picture (distance and height difference); data side_view.text.
 #
 # WHEN. Planning, for a friendly mobile unit that takes orders; and, while a turn plays back
@@ -614,7 +616,7 @@ func _fire_frame(id: String, k: int, tgt: Dictionary, pic: Vector2, m: Dictionar
 		"arc": arc, "land": origin + Vector2(land_m, 0.0) * ppm, "land_m": land_m, "fall_s": flight,
 		"spread_px": Vector2(origin.x + (land_m - extent) * ppm, origin.x + (land_m + extent) * ppm),
 		"release": from, "aim": aim, "release_height_m": 0.0, "extent_m": extent, "apex_m": apex,
-		"clamped": false, "outside": false, "releases": bool(chk["ok"]), "poor_shot": false, "fire": true,
+		"clamped": false, "outside": false, "releases": bool(chk["ok"]) or bool(chk.get("poor_shot", false)), "poor_shot": bool(chk.get("poor_shot", false)), "fire": true,
 	}
 
 # --- The target --------------------------------------------------------------------------------------------

@@ -45,7 +45,10 @@ func setup(_main) -> void:
 	if not check(_data.ok(), "data/sim/bombs.json loads: %s" % str(_data.errors)):
 		finish()
 		return
-	eq(_data.outside_cone_mode, "hold", "0. the working default is hold (PROPOSED)")
+	# Alex (decision outside-cone-release, 2026-10-11): 'Fire a poorer one. Maybe in the future we have an engagement mode but for now that
+	# is extra complexity we are not ready for.' The default is poor_shot; hold stays a tested setting of the switch.
+	eq(_data.outside_cone_mode, "poor_shot", "0. the default is poor_shot (Alex, outside-cone-release: 'Fire a poorer one')")
+	check(JSON.parse_string(FileAccess.get_file_as_string(BombRules.PATH))["outside_cone_mode"].get("decision", "") == "outside-cone-release", "0. and the record cites the decision")
 	_write_tank()
 	eq(_request(), true, "1. the request part ran to its end")
 	eq(_travels(), true, "2. the travel part ran to its end")

@@ -209,15 +209,20 @@ func spotters_now(world: Object, side: String, target: Dictionary) -> Array[Stri
 
 # Walk the turn from its start to `t_end` every `step_s`: whether the target is spotted at t_end and for how many seconds without a break.
 # `carry_s` is the run it had at the start of the turn (World.spot_memory); it counts only if the target is spotted at 0.
-# {spotted: bool, run_s: float}. A break in the run (not spotted at some step) starts it again from nothing.
+# {spotted: bool, run_s: float, last_t: float}. A break in the run (not spotted at some step) starts it again from nothing. `last_t` is
+# the last walked moment (0 .. t_end) the target was spotted at, -1.0 when it was not at any: where the guns take a target that has dropped
+# out of sight to have been (the poor shot, guns.gd).
 func run_at(world: Object, side: String, target: Dictionary, t_end: float, carry_s: float, step_s: float, down_at: Dictionary = {}, source: String = "history") -> Dictionary:
 	var run := 0.0
 	var spotted := false
+	var last_seen := -1.0
 	var t := 0.0
 	var prev := 0.0
 	var first := true
 	while true:
 		spotted = spotted_at(world, side, target, t, down_at, source)
+		if spotted:
+			last_seen = t
 		if first:
 			run = carry_s if spotted else 0.0
 			first = false
@@ -229,7 +234,7 @@ func run_at(world: Object, side: String, target: Dictionary, t_end: float, carry
 			break
 		prev = t
 		t = minf(t + step_s, t_end)
-	return {"spotted": spotted, "run_s": run}
+	return {"spotted": spotted, "run_s": run, "last_t": last_seen}
 
 # The memory a turn leaves: {side: {unit id: run seconds at the turn's end}} for every enemy unit (still up) some unit of a side has
 # spotted without a break to the end of the turn. `memory` is what the turn began with (the carry), `down_at` the units downed in it.

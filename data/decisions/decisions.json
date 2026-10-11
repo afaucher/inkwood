@@ -1149,14 +1149,18 @@
       ],
       "chosen": "fire a poorer shot rather than hold it -- for bombs whose target leaves the cone and for guns whose target drops out of sight before they fire; an engagement mode may come later, not now",
       "parameters": {
-        "switch": "data/sim/bombs.json outside_cone_mode -> poor_shot; the guns' held salvo becomes a poor shot at the last seen place (to build)",
+        "switch": "data/sim/bombs.json outside_cone_mode -> poor_shot (decided; was hold while open); data/sim/guns.json gun_unspotted_mode -> poor_shot (the guns' twin, new)",
         "poor_shot_floor": "0.15, PROPOSED: the least accuracy of a poor shot (rim accuracy / how far outside the cone, never below this)",
-        "planning_rule": "stands either way (Alex): a special cannot be activated on a step whose cone does not hold the target; the card says why",
-        "wording": "PROPOSED: the card and the map say 'will not release: target outside the cone' under hold and 'poor shot: target outside the cone' under poor_shot (data/ui/ui.json bombs.text)"
+        "planning_rule": "stands either way (Alex): a special cannot be activated on a step whose cone does not hold the target; the card says why. The same for a gun: a target nobody sees or out of reach cannot be switched on",
+        "wording": "PROPOSED: the card and the map say 'will not release: target outside the cone' under hold and 'poor shot: target outside the cone' under poor_shot (data/ui/ui.json bombs.text); a gun's fire already set whose target is not spotted or out of reach says 'poor shot: target is not spotted' (guns.text.poor_*, step_tag_poor) under poor_shot and 'will not fire: ...' under hold",
+        "gun_poor_shot": "PROPOSED by Track CA: a salvo whose target is no longer spotted, or is out of reach (range, too close, off the coastal strip), when it fires IS fired and the reload spent: aimed at where the target was last spotted (its place at the last moment of the turn the side saw it, else the place it was shown at when the fire was set, else its place at the start of the turn; a point is where it is), no lead; pulled back along the line from the ship to the edge of the reach (range_max_m, range_min_m, the coastal strip) when that is outside it; each shell's scatter x poor_shot_factor 2.0 (data/sim/guns.json) and never under poor_shot_min_sigma_m 50 m; a poor shot is not a bracketing salvo. A reloading gun, a target already down, a friend and a missing target still hold",
+        "event": "shell_fire with poor_shot: true, poor_why (unspotted | out_of_range | too_close | inland), known [x, y] and clamped; a held salvo is still a gun_hold"
       },
       "applied_to": [
+        "data/sim/bombs.json outside_cone_mode: poor_shot (citing this decision); data/sim/guns.json gun_unspotted_mode: poor_shot, specials.main_guns.poor_shot_factor, poor_shot_min_sigma_m",
         "scripts/sim/bombs.gd (release_rule, poor_shot_accuracy), scripts/sim/world.gd, scripts/ui/motion_planner.gd (drop_blocked)",
-        "both settings are tested in scripts/tests/test_bomb_target.gd and scripts/tests/test_ui_target.gd"
+        "scripts/sim/guns.gd (poor_shot_reason, poor_sigma_m, poor_aim), scripts/sim/gun_rules.gd, scripts/sim/combat_resolver.gd (_fire_poor), scripts/sim/spotting.gd (run_at: last_t), scripts/sim/world.gd (gun_check: poor_shot), scripts/ui/motion_planner.gd (fire_poor, gun_poor_text), data/ui/ui.json guns.text",
+        "both settings are tested in scripts/tests/test_bomb_target.gd and scripts/tests/test_ui_target.gd; the guns' in scripts/tests/test_cruiser.gd (_hold, _poor_shot), test_ui_guns.gd and test_sight_wiring.gd"
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'That means it might leave the cone and completely not fire' and then 'Or just be a bad shot'. Alex 2026-10-11: 'Fire a poorer one. Maybe in the future we have an engagement mode but for now that is extra complexity we are not ready for.'"
@@ -1610,9 +1614,15 @@
         "tank guns too"
       ],
       "chosen": "tank guns can damage a bridge, but it should take a lot: a tank would have to sit there and shell it for a while, exposing itself",
-      "parameters": {},
+      "parameters": {
+        "health": "14 pips (data/units/bridge.json, was 10), PROPOSED by Track CA: Alex gave the direction ('it should take a lot'), not the number. MEASURED with the real combat (scripts/test_support/bridge_tuning.gd): one tank's turret gun, stationary inside its 350 m range, takes 0.73 pips a turn, so 14 pips is a median of 20 turns of one tank firing steadily (10th to 90th percentile 13 to 23; the old 10 pips was 14 [10..17]). The lead's proposed target was about 15 to 20 turns",
+        "bombs": "no single stick can drop it (the most a stick of 4 does is 12): a bomber on the ideal release needs 2.1 sticks from the low band, 3.4 from medium, 8.9 from high (3 drops in a load)",
+        "shells": "a fresh direct salvo cannot (the most in 300 to 400 seeds: 13 pips at 600 m and at 1200 m, 7 at 3000 m); one ranged in for the full 20 s does it 35 percent of the time at 1200 m (1 percent at 3000 m), with a salvo already on the target 81 percent (7 percent at 3000 m), with two 99 percent (43 percent at 3000 m). Only 25 pips or more would be proof against a fully ranged salvo (6 shells x 4 pips is 24), and that is 34 turns for a tank: PROPOSED against, listed here so Alex can say"
+      },
       "applied_to": [
-        "to build: data/units/bridge.json health, tuned against a tank's gun"
+        "data/units/bridge.json health (14, citing this decision)",
+        "scripts/tests/test_tank.gd (a tank's gun brings a bridge down: 8 seeds, none under 8 turns, about 20 on average), scripts/tests/test_water_units.gd (bombs: 3 direct leave 5 pips, the 5th destroys it), scripts/tests/test_cruiser.gd (a fresh direct salvo cannot one-shot it)",
+        "scripts/test_support/bridge_tuning.gd (the table: tank turns, salvos and sticks to drop a bridge of 8 to 30 pips)"
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'it should take a lot. Like you would have to sit there and shell it for awhile exposing yourself.'"
@@ -1628,9 +1638,13 @@
         "a smaller blast (6/12/20 m)"
       ],
       "chosen": "for the smaller ship: high damage, smaller range",
-      "parameters": {},
+      "parameters": {
+        "blast_pips_by_distance": "[[6, 4], [12, 3], [20, 2]] (data/sim/guns.json, was [[6, 3], [12, 2], [20, 1]]): the radii 6 / 12 / 20 m are the 'smaller blast' option; the pips 4 / 3 / 2 are PROPOSED by Track CA ('high damage'): one shell within 6 m is a whole 4-pip battery",
+        "effect": "against a 4-pip battery (scripts/test_support/gun_tuning.gd, kills = the share of salvos that destroy it): fresh target 600 m 28 -> 55 percent, 1200 m 9 -> 26, 2000 m 2 -> 12, 3000 m 1 -> 5; ranged in for 20 s with two salvos on it 100 percent at every range up to 2000 m and 92 -> 99 percent at 3000 m"
+      },
       "applied_to": [
-        "to build: data/sim/guns.json blast table"
+        "data/sim/guns.json specials.main_guns.blast_pips_by_distance (citing this decision)",
+        "scripts/tests/test_cruiser.gd (the table, a hit near the target is decisive)"
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'for the smaller ship lets do high damage smaller range.'"
