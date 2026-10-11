@@ -1841,6 +1841,30 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex, to the camera session's question 'Zoom-out limit: keep whole map fits and stop panning past the edge (my pick), or make the map always fill the screen?': '4. your pick'. The 100 m band is PROPOSED (the map border board shows it). Trade-off: a plane more than 100 m outside the map cannot be centred or followed."
+    },
+    {
+      "id": "ship-sinks",
+      "date": "2026-10-11",
+      "area": "Units, Water",
+      "question": "How is a destroyed ship drawn?",
+      "board": "none (said in chat)",
+      "options": [
+        "a broken wreck afloat (proposed by Track BB)",
+        "sunk to the bottom under the water"
+      ],
+      "chosen": "sunk to the bottom: the intact hull on the bottom, flooded with the water's own wash for that depth; no damage drawn",
+      "parameters": {
+        "hull": "intact, on the bottom",
+        "cover": "the water layer's depth wash at its position",
+        "damage": "none"
+      },
+      "applied_to": [
+        "scripts/ui/unit_marker_art_boats.gd (the wreck)",
+        "data/world/boats.json game.wreck",
+        "scripts/tests/test_boats_live.gd"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'For destroyed ships, ideally we just sink them to the bottom.' Then: 'We don't even need to show damage if we just height-appropriately flood them with water.' PROPOSED (not Alex's): the flood rises from the waterline to full depth over the resolve after the down event; the standard down flash stays, the boat's smoke column goes; it applies to every sea unit (cutter, barge, cruiser). The bridge's ruin is unchanged."
     }
   ]
 }
