@@ -35,6 +35,9 @@ extends Node2D
 #   m_to_map(p_m) / map_to_m(p_px)             metres <-> map px
 #   follow(p_m or null), set_zoom(z)           the own-camera helpers (no-ops once controlled)
 #   get_zoom(), view_rect(), missing_in_view(), rebake()
+#   set_burnt_trees(trees)                     the forest fire: trees burnt down to their trunks ([{x_m, y_m, ...}], the
+#                                              whole set); only the chunks they touch are baked again, each old chunk kept on
+#                                              screen until its new one lands (invalidate_chunks / dirty_count)
 #   signal chunk_baked(c: Vector2i)
 #
 # COORDINATES: WORLD = metres (Track S's units: bounds, unit positions).
@@ -142,6 +145,11 @@ var bake_boost := false
 var motion_px_s := Vector2.ZERO
 var _motion: Array = []       # [[seconds, view centre]]
 var _chunks: Dictionary = {}  # Vector2i -> Sprite2D
+# CHUNKS TO BAKE AGAIN (the forest fire, 2026-10-11): shown chunks whose content changed (a tree burnt down to its trunk). Each is
+# asked for again at a low priority (dirty_offset after the view's own missing chunks) and its sprite stays on screen until the new
+# one lands (_show swaps it), as rebake() keeps a stale floor -- but only for these chunks, not the whole map.
+var _dirty: Dictionary = {}   # Vector2i -> true
+const DIRTY_OFFSET := 10.0    # PROPOSED: a chunk baked again waits behind the view's own missing chunks, ahead of the prefetch ring
 # THE FLOOR (Track P2, 2026-10-10; Alex: "showing a stale map seems better then a plain brown square"): a rebake
 # (a scale, pen or tree-pool knob) does not blank the map. The sprites of the earlier bake stay on screen,
 # under the fresh ones, until the chunks that cover their place are baked, and then go (at a new scale
@@ -387,7 +395,53 @@ func rebake(keep_sprites: bool = false) -> void:
 	for c: Vector2i in _chunks:
 		_stale.append(_chunks[c])
 	_chunks.clear()
+	_dirty.clear()
 	chunk_serial += 1
+
+# THE FOREST FIRE: the trees that have burnt down to their trunks, as [{x_m, y_m, ...}] (the whole set every time; fx_fire.gd
+# burnt_at() makes it). The provider swaps the canopies for trunks and says which chunks changed; those that are shown are baked
+# again (see _dirty) and the ones not baked yet will read the new set when they are. Returns how many chunks changed. Cheap when
+# nothing did. A provider without burnt trees (the scene stand-in) does nothing.
+func set_burnt_trees(trees: Array) -> int:
+	if provider == null or not provider.has_method("set_burnt_trees"):
+		return 0
+	var changed: Array = provider.set_burnt_trees(trees)
+	invalidate_chunks(changed)
+	return changed.size()
+
+# Marks shown chunks as out of date: each is baked again, and its old sprite stays until the new one is ready. A chunk not baked yet
+# needs nothing (its bake reads the current content; one already running is caught in _show by the provider's burn_current()).
+func invalidate_chunks(cs: Array) -> void:
+	for c: Vector2i in cs:
+		if _chunks.has(c):
+			_dirty[c] = true
+	if not cs.is_empty():
+		_sched_sig = []
+		_idle_at = -1
+
+# How many shown chunks wait to be baked again.
+func dirty_count() -> int:
+	return _dirty.size()
+
+func is_dirty(c: Vector2i) -> bool:
+	return _dirty.has(c)
+
+# Asks the baker for the dirty chunks (both schedules call it; `requested` is the set they keep from being cancelled).
+func _request_dirty(requested: Dictionary, view: Rect2) -> void:
+	if _dirty.is_empty():
+		return
+	var centre := view.get_center() / float(chunk_px)
+	var off_sight := float((cfg.get("priority_offsets", {}) as Dictionary).get("sighted_offscreen", 30.0))
+	var c0 := Vector2i(floori(view.position.x / chunk_px), floori(view.position.y / chunk_px))
+	var c1 := Vector2i(floori(view.end.x / chunk_px), floori(view.end.y / chunk_px))
+	for c: Vector2i in _dirty.keys():
+		if not _chunks.has(c):
+			_dirty.erase(c)   # (dropped since: its next bake reads the new content)
+			continue
+		var d := (Vector2(c) + Vector2(0.5, 0.5)).distance_to(centre)
+		var in_view := c.x >= c0.x and c.x <= c1.x and c.y >= c0.y and c.y <= c1.y
+		baker.request(c, DIRTY_OFFSET + (d if in_view else off_sight + d), true)
+		requested[c] = true
 
 # Is the map-px rectangle shown by the map layer, a fresh chunk or a stale one, wherever it lies on the map? A
 # layer above uses it to show something else (the fog's contour map) where this says no.
@@ -637,6 +691,7 @@ func _schedule() -> void:
 		if not _chunks.has(c) and open[tier[c]]:
 			baker.request(c, wanted[c], true)
 			requested[c] = true
+	_request_dirty(requested, view)
 	# Content for one ring further out is generated ahead (idle generator lane),
 	# once the view is baked.
 	baker.warm_paused = not open[2]
@@ -717,11 +772,12 @@ func _schedule_fogged() -> void:
 		baker.request(c, float(e[0]), true)
 		requested[c] = true
 	baker.warm_paused = true
+	_request_dirty(requested, view)
 	for c: Vector2i in baker.queued():
 		if not requested.has(c):
 			baker.cancel(c)
 	_evict(view, keep_set, cap)
-	_idle_at = _chunks.size() if (near_missing == 0 and not rest_missing) else -1
+	_idle_at = _chunks.size() if (near_missing == 0 and not rest_missing and _dirty.is_empty()) else -1
 
 # Splits the map's chunks by sight (hidden_test) into _sighted and _rest, each with its priority.
 func _classify(view: Rect2, m0: Vector2i, m1: Vector2i, c0: Vector2i, c1: Vector2i) -> void:
@@ -803,6 +859,14 @@ func _show(c: Vector2i, tex: Texture2D) -> void:
 	s.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	map_layer.add_child(s)
 	_chunks[c] = s
+	# a bake that read the burnt set before a change that touched this chunk is baked again (the new picture is still better than
+	# the one it replaces); otherwise the chunk is up to date
+	if provider.has_method("burn_current") and not bool(provider.burn_current(c)):
+		_dirty[c] = true
+		_sched_sig = []
+		_idle_at = -1
+	else:
+		_dirty.erase(c)
 	_drop_covered_stale()
 	chunk_serial += 1
 	chunk_baked.emit(c)
@@ -833,6 +897,7 @@ func _evict(view: Rect2, wanted: Dictionary, cap: int) -> void:
 		var c: Vector2i = scored[i][1]
 		(_chunks[c] as Node).queue_free()
 		_chunks.erase(c)
+		_dirty.erase(c)
 	chunk_serial += 1
 
 # --- status --------------------------------------------------------------------------------

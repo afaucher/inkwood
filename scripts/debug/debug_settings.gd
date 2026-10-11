@@ -81,6 +81,13 @@ const OPTIONS := {
 		"default": 0,
 		"help": "THE WATER SWITCH of the scenario (Track WB, Job 3, proposed). data = the scenario file's \"water\" key (the strike has it ON: a river, a sea, a bridge, a patrol boat and a supply barge, the map drawn with the water in it and its ground capped by the coast); 'off' plays the same scenario on dry land, with no boat and no bridge, the map as it was; 'on' forces the water on (only a scenario that has \"water_units\"). Read when a game is built, so set it before pressing Local: INKWOOD_WATER=off. Not a live knob (it is not on the F2 panel).",
 	},
+	"fire": {
+		"section": "Sandbox",
+		"label": "Forest fire",
+		"choices": ["data", "on", "off"],
+		"default": 0,
+		"help": "THE FOREST FIRE SWITCH of the scenario (decision forest-fire; scripts/sim/fire.gd, data/sim/fire.json). data = the scenario file's \"fire\" key (Suppress has it ON, the others off); 'on' lights it in any scenario, 'off' puts it out. With it on, bomb and shell hits and crashes set the trees they reach alight, the fire spreads from tree to tree by distance, a burning tree smokes for 3 turns and then stands as a trunk, units near it may lose a pip, and a unit in the smoke can be seen but not tracked. Read when a game is built, so set it before pressing Local: INKWOOD_FIRE=on (a joining window should have the same). Not a live knob (it is not on the F2 panel).",
+	},
 	# --- Sandbox knobs (Track A; the F2 panel shows them) ---------------------------
 	# Index 0 is always "data": whatever the data files say (data/scenarios/
 	# sandbox.json view, data/terrain/terrain.json, data/view/*.json,

@@ -12,12 +12,19 @@ extends RefCounted
 #                         when the target is revealed to the spotter's side at that moment
 #
 #   var cover := Concealment.shared()                          # data/sim/concealment.json, read once
-#   cover.covered(world, unit, x, y)                           # is this unit hidden by cover where it stands (x, y)?
-#   cover.sight_limit_m(world, unit, x, y, sight_m)            # how far an observer of sight `sight_m` sees it: min(sight_m, radius_m) in cover
+#   cover.covered(world, unit, x, y[, t])                      # is this unit hidden by cover where it stands (x, y) [at moment t]?
+#   cover.sight_limit_m(world, unit, x, y, sight_m[, t])       # how far an observer of sight `sight_m` sees it: min(sight_m, radius_m) in cover
 #
 # The tree density is the World's own query (World.set_ground's woods function: scripts/world/ground_map.gd woods_at), so the sim never learns
 # the terrain, and a World that was never given the ground (the Strike, the Intercept: no mobile ground unit) conceals nothing. Alex's rule that
 # trees do not block sight for now stands: this is a spotting radius for small ground units, not a line of sight.
+#
+# THE FOREST FIRE (decision forest-fire, 2026-10-11): a BURNT-OUT tree takes its woods cover with it (Alex, "5 - yes"). When the World has a fire
+# (world.fire, scripts/sim/fire.gd) the woods density at a point is scaled by the share of the trees within data/sim/fire.json burnt_cover.share_radius_m
+# (PROPOSED 20 m) that are NOT burnt out at the moment asked about. SMOKE IS NOT COVER (Alex: "visible but untrackable"): a unit in smoke is seen exactly
+# as it would be without it; what smoke denies is tracking (scripts/sim/spotting.gd, World._resolve_followed_drops, UiTarget). The moment is `t`, as
+# everywhere in the sim: seconds into the last resolve, < 0 (the default) as the world stands. The ground movement rule (ground_rules.gd) is NOT
+# scaled: trunks still slow a tank (PROPOSED).
 
 const Records = preload("res://scripts/sim/records.gd")
 
@@ -87,19 +94,26 @@ static func _strings(r: Records, d: Dictionary, key: String) -> Array[String]:
 func applies(def: Object) -> bool:
 	return ok() and on and domains.has(str(def.domain)) and mobility.has(str(def.mobility))
 
-# Is the point in cover: the World has a tree-density query (World.set_ground) and the density there is at least cover_density_min?
-func in_cover(world: Object, x: float, y: float) -> bool:
+# Is the point in cover: the World has a tree-density query (World.set_ground) and the density there -- scaled by the share of the trees near it that
+# have not burnt out at moment `t`, when the World has a fire -- is at least cover_density_min?
+func in_cover(world: Object, x: float, y: float, t: float = -1.0) -> bool:
 	if not (ok() and on) or world == null:
 		return false
 	var ground: Variant = world.get("ground")
 	if ground == null or not (ground.woods_fn as Callable).is_valid():
 		return false
-	return float((ground.woods_fn as Callable).call(x, y)) >= cover_density_min
+	var density := float((ground.woods_fn as Callable).call(x, y))
+	if density < cover_density_min:
+		return false   # (burning down can only lower it)
+	var fire: Variant = world.get("fire")
+	if fire != null:
+		density *= float(fire.burnt_scale(x, y, float(fire.moment(world, t))))
+	return density >= cover_density_min
 
-# Is this unit hidden by cover where it stands (x, y metres)?
-func covered(world: Object, unit: Object, x: float, y: float) -> bool:
-	return unit != null and applies(unit.def) and in_cover(world, x, y)
+# Is this unit hidden by cover where it stands (x, y metres) at moment `t`?
+func covered(world: Object, unit: Object, x: float, y: float, t: float = -1.0) -> bool:
+	return unit != null and applies(unit.def) and in_cover(world, x, y, t)
 
 # How far an observer whose sight is `sight_m` sees this unit at (x, y): its sight, or radius_m when the unit is in cover and that is shorter.
-func sight_limit_m(world: Object, unit: Object, x: float, y: float, sight_m: float) -> float:
-	return minf(sight_m, radius_m) if covered(world, unit, x, y) else sight_m
+func sight_limit_m(world: Object, unit: Object, x: float, y: float, sight_m: float, t: float = -1.0) -> float:
+	return minf(sight_m, radius_m) if covered(world, unit, x, y, t) else sight_m

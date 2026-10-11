@@ -1,0 +1,151 @@
+{
+  "_about": "THE FOREST FIRE (decision forest-fire, 2026-10-11; scripts/sim/fire_rules.gd reads this, scripts/sim/fire.gd holds the state and the turn step). ALEX'S WORDS: 'I am thinking that the fire is actually just smoke coming from the trees. It spreads from tree to tree based on distance. It can inflict damage to nearby units with low power and low chance.' 'It should generate smoke which makes it harder to see.' On the lead's proposals: '1 - yes 2 - yes 3 - lets fade the change with distance as well ... 5 - yes, lets burn down to the trunks? 6 - that is what I wanted 7 - suppress sounds good'. On how the smoke makes things harder to see (the cover reading 'a' was replaced): '1 visible but untrackable and 2 last place you saw it' -- a unit in smoke stays VISIBLE exactly as it would be without smoke (the fog, the enemy AI's knowledge and the woods radius ignore smoke), but it cannot be TRACKED: fire control (the cruiser's spotted target) does not hold it, a bomb that follows it aims at the last place it was tracked, and a click on it sets a point target. No flame is drawn (decision fire-colour: 'No fire for now. Just smoke.'). EVERY NUMBER Alex accepted is {value, decision}; every detail the lead proposed (and this track's reading of it) is {value, _proposed, _reason}; the balance is not calibrated (decision balance-uncalibrated). The fire is OFF unless a scenario's 'fire' switch (data/scenarios/suppress.json) or the sandbox knob 'fire' turns it on. Units: metres, seconds into a turn, whole turns. A tree is the terrain's tree (scripts/world/terrain.gd, world px at 2 px per metre; here in metres), identified by its place.",
+
+  "ignite": {
+    "chance": {
+      "value": 0.5,
+      "decision": "forest-fire",
+      "_reason": "each tree caught by a blast catches at 50% (Alex: '1 - yes')"
+    },
+    "events": {
+      "value": ["bomb_impact", "shell_impact", "crash"],
+      "decision": "forest-fire",
+      "_reason": "what starts a fire: bomb hits, shell hits and ground crashes (the resolve's events of those names, scripts/sim/combat_resolver.gd and world.gd). The tree is lit at the event's moment in the turn"
+    },
+    "radius_field": {
+      "value": "blast_m",
+      "decision": "forest-fire",
+      "_reason": "the radius is the event's own blast_m for bombs and shells (the events carry it); a tree is caught when its CANOPY is within the radius of the impact point (the lead's wording: 'each tree whose canopy is within the radius')"
+    },
+    "crash_radius_m": {
+      "value": 20,
+      "_proposed": true,
+      "_reason": "a ground crash has no blast of its own (the crash event carries none), so it lights the trees whose canopy is within this of the place it struck: the lead's proposal, about the footprint of a wrecked fighter's fall and the smoke it makes. A dial"
+    }
+  },
+
+  "spread": {
+    "chance_touching": {
+      "value": 0.4,
+      "decision": "forest-fire",
+      "_reason": "once a turn each burning tree may light each unlit tree near it: 40% when the canopies touch (Alex: '2 - yes')"
+    },
+    "reach_m": {
+      "value": 30,
+      "decision": "forest-fire",
+      "_reason": "the chance falls to 0 at this distance (Alex: '2 - yes'; the lead's option: 'falling to 0 at 30 m')"
+    },
+    "fall": {
+      "value": "linear",
+      "decision": "forest-fire",
+      "_reason": "the chance falls evenly from chance_touching at a gap of 0 to 0 at reach_m ('40% when canopies touch falling to 0 at 30 m'); the only shape the code knows"
+    },
+    "gap_measure": {
+      "value": "canopy_edge",
+      "_proposed": true,
+      "_reason": "the lead's reading: the gap is measured canopy edge to canopy edge (centre distance minus both canopy radii; overlapping canopies are a gap of 0). The other setting, 'centre', measures centre to centre (a gap of the whole distance), for comparison"
+    },
+    "starts": {
+      "value": "next_turn",
+      "_proposed": true,
+      "_reason": "a tree spreads from the turn AFTER the one it was lit in (so a fire does not run across a grove in one turn); the other setting, 'same_turn', lets a tree lit in a turn spread in it"
+    },
+    "lit_t": {
+      "value": "seeded_in_turn",
+      "_proposed": true,
+      "_reason": "a tree lit by spread is lit at a seeded moment inside the turn (so its smoke starts during the playback, not all at once at the turn's start); the other setting, 'turn_start', lights it at second 0"
+    }
+  },
+
+  "burn": {
+    "turns": {
+      "value": 3,
+      "decision": "forest-fire",
+      "_reason": "a tree burns 3 turns, then burns down to its trunk (Alex: '5 - yes, lets burn down to the trunks?')"
+    },
+    "counts_lit_turn": {
+      "value": true,
+      "_proposed": true,
+      "_reason": "the lead's reading of '3 turns': the turn a tree is lit counts as the first, so lit in turn 5 it burns in 5, 6 and 7 and is a trunk from turn 8 (a fire_out event at the end of turn 7). false: it burns 3 whole turns after the one it was lit in"
+    }
+  },
+
+  "damage": {
+    "domains": {
+      "value": ["ground", "sea"],
+      "decision": "forest-fire",
+      "_reason": "ground and sea units only; planes untouched (the lead's option 3, Alex: '3 - lets fade the change with distance as well')"
+    },
+    "pips": {
+      "value": 1,
+      "decision": "forest-fire",
+      "_reason": "a hit takes 1 pip ('low power')"
+    },
+    "chance_near": {
+      "value": 0.1,
+      "decision": "forest-fire",
+      "_reason": "10% a turn for a unit at a burning tree's canopy edge ('low chance')"
+    },
+    "reach_m": {
+      "value": 25,
+      "decision": "forest-fire",
+      "_reason": "beyond the canopy edge; the chance is 0 from this distance on"
+    },
+    "fade": {
+      "value": "linear",
+      "decision": "forest-fire",
+      "_reason": "Alex: 'lets fade the change with distance as well': falling from chance_near at the canopy edge to 0 at reach_m. The shape (linear) is the lead's proposal, the only one the code knows"
+    },
+    "combine": {
+      "value": "independent",
+      "_proposed": true,
+      "_reason": "several burning trees near a unit combine as 1 - product(1 - p_i), as independent chances"
+    },
+    "max_pips_per_unit_turn": {
+      "value": 1,
+      "_proposed": true,
+      "_reason": "at most one pip per unit per turn, however many trees burn round it: one roll a turn, judged at the moment the unit is most exposed"
+    },
+    "sample_s": {
+      "value": 0.25,
+      "_proposed": true,
+      "_reason": "the unit's path through the turn is looked at this often (game seconds) to find the moment of its closest approach to the burning canopies, while those trees burn; the event's t is that moment. A tank crosses 2 to 3 m in a quarter second"
+    }
+  },
+
+  "smoke": {
+    "denies_tracking": {
+      "value": true,
+      "decision": "forest-fire",
+      "_reason": "Alex: '1 visible but untrackable and 2 last place you saw it'. A unit in smoke can be SEEN but not TRACKED: fire control does not hold it, a bomb that follows it aims at the last place it was tracked, a click on it sets a point target. false switches the rule off (the smoke then does nothing but show)"
+    },
+    "reach_m": {
+      "value": 20,
+      "_proposed": true,
+      "_reason": "a unit is IN THE SMOKE when it is within this of the canopy edge of a tree that is smoking at that moment (the lead's proposal: the column drifts a little beyond the crown). A tree smokes from the moment it is lit (lit_t of its turn) to the end of its last burning turn; a burnt-out tree smokes no more"
+    },
+    "domains": {
+      "value": ["ground", "sea"],
+      "_proposed": true,
+      "_reason": "which units smoke hides from tracking: ground and sea units. Planes are not (they fly above it)"
+    },
+    "mobility": {
+      "value": ["mobile", "static"],
+      "_proposed": true,
+      "_reason": "mobile AND static units: a battery or the military complex in smoke is as hard to hold as a tank"
+    },
+    "entry_step_s": {
+      "value": 0.25,
+      "_proposed": true,
+      "_reason": "the resolution (game seconds) at which the last place a unit was tracked is looked for, walking back from the moment it is in the smoke to the last moment it was not; the edge of the smoke is then found to a small fraction of this by bisection"
+    }
+  },
+
+  "burnt_cover": {
+    "share_radius_m": {
+      "value": 20,
+      "_proposed": true,
+      "_reason": "a burnt-out tree takes its woods cover with it (Alex: '5 - yes'). The lead's rule: for the concealment rule only (scripts/sim/concealment.gd), the woods density at a point is scaled by the share of the trees within this of it that are NOT burnt out. The ground rule's woods slowdown (ground.json) is NOT changed: trunks still slow a tank"
+    }
+  }
+}

@@ -95,6 +95,7 @@ const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
 const UnitUI = preload("res://scripts/ui/unit_ui.gd")
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
+const FxFireView = preload("res://scripts/fx/fx_fire_view.gd")
 
 # The scenario when the 'scenario' knob names none (data/scenarios/<id>.json); DebugSettings.get_choice_name("scenario") is the live one.
 const DEFAULT_SCENARIO := "strike"
@@ -115,6 +116,7 @@ var ctl: CameraController = null
 var fog: FogLayer = null
 var ui: UnitUI = null
 var tracks: SandboxTracks = null
+var fire_view: FxFireView = null        # the forest fire's smoke and trunks (scripts/fx/fx_fire_view.gd): made when the World has a fire
 var reveal_marks: RevealMarks = null    # the "last seen" rings of the guns that fired at the players (Track M2L, proposed)
 var knobs: SandboxKnobs = null
 var loading: SandboxLoading = null    # the blocking card, then hidden
@@ -196,6 +198,10 @@ func _init(scenario_id: String = "") -> void:
 	var wk := DebugSettings.get_choice_name("water")
 	if wk == "on" or wk == "off":
 		overrides["water"] = (wk == "on")
+	# the fire knob (DebugSettings "fire", forest fire): data leaves the scenario file's own switch, on / off override it
+	var fk := DebugSettings.get_choice_name("fire")
+	if fk == "on" or fk == "off":
+		overrides["fire"] = (fk == "on")
 	scenario = SandboxScenario.new(scenario_id, false, overrides)
 
 func _ready() -> void:
@@ -443,6 +449,7 @@ func _process(delta: float) -> void:
 	_update_plane_scale()
 	_pause_baking_at_overview()
 	_update_fog()
+	_sync_fire()
 	if not is_playable:
 		_check_loading()
 	elif _rebaking:
@@ -491,6 +498,19 @@ func _update_plane_scale() -> void:
 	if _last_k < 0.0 or absf(k - _last_k) > _last_k * 0.004:
 		_last_k = k
 		_style.set_num("marker.true_scale", k)
+
+# THE FOREST FIRE (decision forest-fire; track 'Forest fire'): with a fire in the World (`world.get("fire") != null`: null when it is off, and
+# then this does nothing) the sim's feed reaches the effects layer's smoke and, as trees burn out, the map's trunks. The view is made on
+# first need -- a client can be handed a fire after its sandbox was built. Smoke is drawn where the ground is in sight (fog.vision).
+func _sync_fire() -> void:
+	if world.get("fire") == null:
+		return
+	if fire_view == null:
+		fire_view = FxFireView.new()
+		fire_view.visible_at = func(p: Vector2) -> bool: return fog == null or not _fog_on or fog.vision.is_visible(p)
+		fire_view.sight_sig = func() -> Variant: return fog.hidden_signature() if fog != null else null
+		fire_view.setup(world, ui.fx, map_view, Callable(ui, "game_time"))
+	fire_view.sync()
 
 # The fog's circles follow the units (where the markers are drawn, mid-playback included).
 func _update_fog() -> void:

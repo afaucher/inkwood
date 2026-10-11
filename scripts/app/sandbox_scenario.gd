@@ -71,6 +71,12 @@ extends RefCounted
 #   "site": "water.supply_route", "site_index": 0   an end of the supply boat's route
 #   "route": {"site": "water.patrol_loop"}          (in an assignment) the whole loop, every point, in order
 #
+# THE FOREST FIRE (decision forest-fire, 2026-10-11; scripts/sim/fire.gd): one switch, off unless the file says so --
+#
+#   "fire": true                           (optional; absent is false) populate() gives the World a fire over the seed's trees (World.enable_fire:
+#                                          the terrain the map is drawn from, GroundMap.shared(seed, water)); Suppress has it on. A test or the
+#                                          sandbox's 'fire' knob may switch it without editing the file: SandboxScenario.new("strike", true, {"fire": true}).
+#
 # `sc.water_on`, `sc.water()` (the shared WaterGen, or null with the switch off) and `sc.water_site(name)` are what the
 # drawing asks. A test may switch it without editing the file: SandboxScenario.new("strike", true, {"water": true}) --
 # the third argument is a Dictionary of top-level keys that replace the file's.
@@ -83,6 +89,7 @@ const WorldLayout = preload("res://scripts/world/world_layout.gd")
 const WaterGen = preload("res://scripts/world/water_gen.gd")
 const GroundMap = preload("res://scripts/world/ground_map.gd")
 const Reveal = preload("res://scripts/sim/reveal.gd")
+const FireTrees = preload("res://scripts/sim/fire_trees.gd")
 
 const WATER_PREFIX := "water."
 const SCENARIO_DIR := "res://data/scenarios"
@@ -101,6 +108,7 @@ var mission_spec: Dictionary = {}     # scripts/sim/mission.gd's spec; {} = no m
 var objective_spec: Dictionary = {}   # the "objective" block: {unit, radius_m, frame_m, label}; {} = none
 var local_player: String = ""
 var water_on := false                 # the "water" switch: the scenario's water units are in `units` when it is on
+var fire_on := false                  # the "fire" switch: populate() gives the World a forest fire (scripts/sim/fire.gd)
 var sides: Dictionary = {}            # scenario side -> {world_side, callsign_pool}
 var units: Array[Dictionary] = []     # World.add_unit specs, callsigns resolved
 var view: Dictionary = {}             # name -> value (value records flattened)
@@ -121,6 +129,7 @@ func _init(scenario_id: String = "sandbox", quiet: bool = false, overrides: Dict
 	for k: Variant in overrides:
 		d[k] = overrides[k]
 	_read_water(d, quiet)
+	_read_fire(d, quiet)
 	seed_value = int(_num(d, "seed", quiet))
 	rng_seed = int(_num(d, "rng_seed", quiet))
 	local_player = _str(d, "local_player", quiet)
@@ -173,6 +182,14 @@ func _init(scenario_id: String = "sandbox", quiet: bool = false, overrides: Dict
 
 func ok() -> bool:
 	return errors.is_empty()
+
+# THE FIRE SWITCH (see the header): "fire" must be true or false when it is there.
+func _read_fire(d: Dictionary, quiet: bool) -> void:
+	var sw: Variant = d.get("fire", false)
+	if not (sw is bool):
+		_err("'fire' must be true or false", quiet)
+		return
+	fire_on = sw
 
 # THE WATER SWITCH (see the header): reads "water" and, when it is on, merges the scenario's water units and their orders
 # into `d` ("units", "ai"."assignments") so everything after sees one scenario. Off, it touches nothing.
@@ -269,6 +286,14 @@ func populate(world: Object) -> Array[String]:
 			gm.attach(world)
 		else:
 			_err("the ground of seed %d did not build: %s" % [seed_value, str(gm.errors)], false)
+	# THE FOREST FIRE: the World lights the trees of the terrain the map is drawn from (the water's capped one when the water is on).
+	if fire_on:
+		var fm: RefCounted = GroundMap.shared(seed_value, water())
+		if fm.ok():
+			if not world.enable_fire(FireTrees.new(fm.terrain)):
+				_err("the fire's data did not load: %s" % str(world.errors), false)
+		else:
+			_err("the terrain of seed %d did not build for the fire: %s" % [seed_value, str(fm.errors)], false)
 	world.add_player(local_player)
 	for spec: Dictionary in units:
 		ids.append(str(world.add_unit(spec)))

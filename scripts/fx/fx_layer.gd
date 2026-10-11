@@ -49,6 +49,16 @@ extends Node2D
 #       column of a ruin that is turns old (and the craters, which stay). The add_* calls put the bare mark down when the
 #       time is not known.
 #
+# THE FOREST FIRE (track 'Forest fire', decision forest-fire, 2026-10-11; scripts/fx/fx_fire.gd, fx_fire_view.gd; the look is PROPOSED, a stand-in
+# in data/fx/fx.json "forest_fire"):
+#   fx.set_fire_feed(feed, turn_seconds = -1.0)
+#       The sim's feed (world.fire.feed(): {id, x_m, y_m, r_m, lit_turn, lit_t, out_turn} for every tree ever lit) is all it needs: a column of W1
+#       smoke (decision damage-smoke; no flame, decision fire-colour) rises from every tree burning at the layer's game time, appearing AT lit_t,
+#       thick while the tree burns and thinning away within about a turn after its out_turn; thick smoke casts a shadow (smoke-shadow). It is
+#       drawn by FxFire inside the shadows and air passes, not through the field's puffs (a grove of hundreds would crowd the planes' smoke out
+#       of the field's cap), at the MAP's scale. FxFireView (the sandbox makes it when the World has a fire) hands the feed over once per fire
+#       revision and the burnt-out trees to the MapView as trunks. An empty feed makes and draws nothing; clear() empties it.
+#
 # FROM THE SIM'S EVENTS (scripts/sim/combat.gd; game time t = (turn - 1) x turn_seconds + the event's t):
 #   hit   -> the unit's health fraction (health / its def's health) for emit_damage_smoke, each frame
 #            of the playback while 0 < health < full (a full-health plane makes no smoke)
@@ -99,10 +109,14 @@ const FxPass = preload("res://scripts/fx/fx_pass.gd")
 const FxShadowPass = preload("res://scripts/fx/fx_shadow_pass.gd")
 const FxBomb = preload("res://scripts/fx/fx_bomb.gd")
 const FxRuin = preload("res://scripts/fx/fx_ruin.gd")
+const FxFire = preload("res://scripts/fx/fx_fire.gd")
 
 var style: FxStyle = null
 var data: FxData = null
 var field: FxField = null
+# THE FOREST FIRE's smoke (track 'Forest fire', decision forest-fire; scripts/fx/fx_fire.gd): one column per burning tree, from the
+# sim's feed (set_fire_feed). Empty feed: nothing is made or drawn and the layer is as it was.
+var fire: FxFire = null
 var mapping: UiMapping = null
 
 var true_scale: float = 1.0          # the plane's drawn px per metre / the mapping's, set by the host
@@ -142,6 +156,8 @@ func _build() -> void:
 		data = FxData.shared() as FxData
 	if field == null:
 		field = FxField.new(data)
+	if fire == null:
+		fire = FxFire.new(data)
 	_ratio = data.common_num("rebake_ratio")
 	ground_node = _make_pass("ground")
 	var sg := FxShadowPass.new()
@@ -237,7 +253,7 @@ func _process(_delta: float) -> void:
 		queue_redraws()
 
 func _anything() -> bool:
-	return not (field.puffs.is_empty() and field.bursts.is_empty() and field.scars.is_empty() and field.debris.is_empty() and field.riders.is_empty() \
+	return fire.active() or not (field.puffs.is_empty() and field.bursts.is_empty() and field.scars.is_empty() and field.debris.is_empty() and field.riders.is_empty() \
 		and field.craters.is_empty() and field.ruins.is_empty() and field.drops.is_empty())
 
 # --- The calls the interface makes -----------------------------------------------------------------------------------
@@ -292,11 +308,23 @@ func add_ruin(unit_id: String, world_pos: Vector2, t: float, kind: String = "rad
 	_build()
 	field.add_ruin(unit_id, world_pos, t, kind, size_m, heading, seed_v)
 
+# THE FOREST FIRE (decision forest-fire): the sim's feed -- one Dictionary per tree ever lit, {id, x_m, y_m, r_m, lit_turn, lit_t, out_turn}
+# (world.fire.feed(); fx_fire.gd's header has the meaning) -- is all the layer needs: it draws a column of W1 smoke for every tree
+# burning at the layer's game time (set_time), and none for one that is lit later or has burnt out and faded. Calling it again with
+# a longer feed (each resolved turn) or the same one is safe. `turn_seconds` (> 0) is the sim's; the layer's 5 otherwise.
+func set_fire_feed(feed: Array, turn_seconds: float = -1.0) -> void:
+	_build()
+	if turn_seconds > 0.0:
+		fire.set_turn_seconds(turn_seconds)
+	fire.set_feed(feed)
+	queue_redraws()
+
 # The game ends or restarts: every puff, burst, piece and scar goes. The baked art stays
 # (it is the same art next game); release_art() drops it too.
 func clear() -> void:
 	_build()
 	field.clear()
+	fire.clear()
 	now = 0.0
 	queue_redraws()
 
@@ -310,6 +338,7 @@ func release_art() -> void:
 
 func stats() -> Dictionary:
 	var c := field.counts()
+	c["fire_trees"] = fire.tree_count() if fire != null else 0
 	c["baked_sets"] = _puff_sets.size() + _burst_sets.size() + _parts_sets.size() + _bomb_sets.size() + _drop_sets.size() + _ruin_sets.size()
 	c["bakes"] = _bakes
 	c["bake_ms"] = _bake_ms
@@ -457,8 +486,10 @@ func draw_pass(item: CanvasItem, kind: String) -> void:
 		"shadows":
 			if show_shadows:
 				_draw_shadows(item, view)
+				fire.draw_shadows(self, item, view)
 		"air":
 			_draw_air(item, view)
+			fire.draw_air(self, item, view)
 		"top":
 			_draw_top(item, view)
 	item.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

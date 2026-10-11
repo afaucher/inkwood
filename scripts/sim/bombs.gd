@@ -36,7 +36,10 @@ extends RefCounted
 # is expected to be; a unit that turns or stops after the release is missed by that much). The release is then the
 # moment of the step with the smallest release error for THAT moving aim (best_release_moving / plan_drop_moving), the
 # way best_release picks it for a fixed one. A followed unit that is out of the player side's sight at the release is
-# still followed (PROPOSED: the sim has no fog rule).
+# still followed (PROPOSED: the sim has no fog rule). EXCEPT in SMOKE (the forest fire, decision forest-fire; Alex: "visible but untrackable" and
+# "last place you saw it"): a followed ground or sea unit that is in the smoke of a burning tree at the moment a release is considered is not
+# tracked, and the aim for that moment is the last place it WAS tracked, without the lead (tracked_aim; World._resolve_followed_drops). If
+# it has left the smoke by the release it is tracked again and followed normally (PROPOSED).
 #
 # WHEN THE TARGET IS OUTSIDE THE CONE (Track T; Alex: "That means it might leave the cone and completely not fire" and
 # then "Or just be a bad shot". DECIDED 2026-10-11 (decision outside-cone-release): "Fire a poorer one. Maybe in the future we
@@ -459,6 +462,15 @@ static func followed_aim(pose: Dictionary, bomber_height_m: float, rules: BombRu
 	var lead := float(pose["speed"]) * fall_time(bomber_height_m, rules.gravity)
 	var h := float(pose["heading"])
 	return Vector2(float(pose["x"]) + cos(h) * lead, float(pose["y"]) + sin(h) * lead)
+
+# The aim of a followed unit for a release at t, given where it was last TRACKED: `last_tracked` is null while the unit is tracked at t (then it is
+# followed_aim's, led by its velocity), and the Vector2 place it was last tracked at when it is IN SMOKE at t (the forest fire, decision forest-fire;
+# Alex: "visible but untrackable ... last place you saw it"): the bomb goes where it was last held, with no lead. PROPOSED: a unit that has left
+# the smoke by the release is tracked again and followed normally (the caller passes null then).
+static func tracked_aim(pose: Dictionary, bomber_height_m: float, rules: BombRules, last_tracked: Variant = null) -> Vector2:
+	if last_tracked is Vector2:
+		return last_tracked
+	return followed_aim(pose, bomber_height_m, rules)
 
 # --- The stick ----------------------------------------------------------------------
 
