@@ -1498,13 +1498,22 @@
         "ground_scale": "ground objectives just start closer; engagement ranges are not settled yet (Alex: 'I am not sure what engagement ranges make sense yet')",
         "shared_spotting": "yes: any friendly unit's sight counts for every gun of its side; long-range guns need a spotted target",
         "big_guns_as_specials": "yes: a warship's main guns and artillery are specials, fired by hand with a long reload, aimed with the target selection",
-        "warship": "not a full battleship: something smaller that operates more independently"
+        "warship": "not a full battleship: something smaller that operates more independently",
+        "sea_guns": "range-limited: they reach the coast, not inland; a target's location can be unknown and must be found",
+        "role_vs_mission": "a unit's role is what it can do; a mission picks a few units and the limits make the puzzle (no airbase, no planes; a mobile target needs spotters)",
+        "goal": "a small set of missions that are fun tactics games; tie them together later; find the fun first",
+        "mission_ideas_alex": [
+          "capture and hold a bridge at the far end of ship range, so shots need to be really on point",
+          "clear mobile AA units and their escorts to enable a bombing run on a military complex",
+          "repel a bombing run with mobile AA and a spotter plane",
+          "capture key tech and evacuate through enemy territory"
+        ]
       },
       "applied_to": [
         "planning"
       ],
       "status": "direction from Alex; details open",
-      "notes": "Alex: 'Let's plan some more units. I love the idea of mixed warfare. You have a huge ship parked off the coast but you need tanks to move inland to spot the aa batteries for the ship. Once it gets those to clear for airstrikes. Or you need airstrikes to clear artillery so the warships can engage the supply boats. Airplanes could land at a little airfield to repair and rearm. A train is a perfect target. Observation balloons could let the enemy know where you are. Mobile artillery could follow tanks to provide more firepower without taking direct fire.' Then: 'Each mission would only have a few elements'. Then: 'Capturing an airfield intact with tanks might make you able to base there (as mission objective, don't need to sim that part.' Answers to the four questions: '1. Ground objectives can just start closer. I am not sure what engagement ranges make sense yet. 2. Yes 3 yes 4 not a full battleship, something smaller that would operate more independently'."
+      "notes": "Alex: 'Let's plan some more units. I love the idea of mixed warfare. You have a huge ship parked off the coast but you need tanks to move inland to spot the aa batteries for the ship. Once it gets those to clear for airstrikes. Or you need airstrikes to clear artillery so the warships can engage the supply boats. Airplanes could land at a little airfield to repair and rearm. A train is a perfect target. Observation balloons could let the enemy know where you are. Mobile artillery could follow tanks to provide more firepower without taking direct fire.' Then: 'Each mission would only have a few elements'. Then: 'Capturing an airfield intact with tanks might make you able to base there (as mission objective, don't need to sim that part.' Answers to the four questions: '1. Ground objectives can just start closer. I am not sure what engagement ranges make sense yet. 2. Yes 3 yes 4 not a full battleship, something smaller that would operate more independently'. Then: '1. The sea guns have a range limit. You can attack coast not inland. Also the target location can be undetermined and needs to be found. But wait, we are mixing role and mission. A mission can always have limited units. No airbase? No planes. Mobile target? Needs spotters. We need to think through some fun mission ideas. Let's think through some historical tactics and how they might apply. For now our goal is a small set of missions that are fun tactics games. We can tie them together later. Find the fun first! Capture and hold a bridge, but you are at the far end of ship range so your shots need to be really on point to hit. Clear mobile Aa units and their escorts to enable a bombing run of a military complex. Rapel a bombing run with mobile aa and a spotter plane. Capture key tech and evac through enemy territory.'"
     }
   ]
 }
