@@ -1438,6 +1438,26 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'And I like the shape of the stone arch but not the blue stripes, what are those?' They were the humped deck: each arch's roadway drawn as a roof of two halves, the half away from the sun in the slope tone (stone mixed toward the shadow tint). Now flat; the arches show in the piers, cutwaters and the shadow on the water. River width and the boat scale are still open."
+    },
+    {
+      "id": "never-blank-map",
+      "date": "2026-10-10",
+      "area": "Rendering, Performance",
+      "question": "What does the map show where a chunk (or the fog's contours) is not drawn yet?",
+      "board": "none (said in chat)",
+      "options": [
+        "a plain paper square until the bake lands",
+        "the best thing already made: a stale bake, a coarser level of detail, the overview"
+      ],
+      "chosen": "never a blank square: show a stale map (or a coarser level of detail) until the fresh one is ready",
+      "parameters": {
+        "fallback": "the previous bake, else a coarser LOD scaled up, else the whole-map overview; never free a texture before its replacement is ready"
+      },
+      "applied_to": [
+        "Track P2 (map and fog performance, finishing)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'At the very least, showing a stale map seems better then a plain brown square'."
     }
   ]
 }
