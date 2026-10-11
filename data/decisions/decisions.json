@@ -1824,6 +1824,27 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex, to the camera session's question 'Zoom-out limit: keep whole map fits and stop panning past the edge (my pick), or make the map always fill the screen?': '4. your pick'. The 100 m band is PROPOSED (the map border board shows it). Trade-off: a plane more than 100 m outside the map cannot be centred or followed."
+    },
+    {
+      "id": "side-view-views",
+      "date": "2026-10-11",
+      "area": "Interface",
+      "question": "The side view: top, front and side views of the selected unit's weapon cones (it solves the turret that only covers above), in what layout; do the map's cones stay on; whose cones?",
+      "board": "none (said in chat; the camera session's options A tabs, B folding strips, C a drafting sheet of all three)",
+      "options": [
+        "A tabs: one picture, Top / Front / Side",
+        "B folding strips: three strips folded or unfolded each on its own",
+        "C a drafting sheet: all three always shown small"
+      ],
+      "chosen": "B folding strips, with no limit on how many are open at once; the map's cone wash off by default with an arcs on/off button in the panel; the views show the selected unit's own cones only",
+      "parameters": {
+        "planner.cones.shown": false
+      },
+      "applied_to": [
+        "being built: scripts/ui/side_view*.gd, data/ui/ui.json side_view and planner.cones.shown"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Next - I want to enhance the side view. I want to be able to select between top, front & side. I think this solves the 'cone but only upwards' problem. Maybe they fold instead of you selecting only one - so you could have all three. It would also make it easier to disable the cones on the main map which visually make it much harder to read.' Then, to the three questions: '1 B - but no limit on which are open at a time. I am testing on 4k 2 Yes, lets actually add a button to the panel to turn arcs on/off 3 self only'. How each view projects the cones, the strips' sizes and which are open at first are PROPOSED by the builder."
     }
   ]
 }
