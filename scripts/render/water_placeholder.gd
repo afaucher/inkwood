@@ -72,11 +72,15 @@ static func bank(g, land: PackedVector2Array, roles: Dictionary, ink_lw: float, 
 # --- Track WB's proposed default water, READ (not copied) ---------------------------------------------------------
 
 const WB_PATH := "res://data/world/water.json"
+const WaterDraw = preload("res://scripts/render/water_draw.gd")
+const TerrainDraw = preload("res://scripts/render/terrain_draw.gd")
 
 # The three depth steps of Track WB's working-default water (data/world/water.json draw.palette: an OKLCH hue, and per
 # step a lightness below the paper's and a chroma): [shallows, shelf, deep] as Colors, or [] when the file is not there
 # or has another shape (the boards then fall back to the placeholder role). Read at render time, so whatever Track WB
-# tunes is what a boat is drawn over; nothing of theirs is edited or called but this data.
+# tunes is what a boat is drawn over; nothing of theirs is edited or called but this data and the two colour functions the
+# map bake itself resolves the steps with (TerrainDraw.to_oklab for the paper's lightness, WaterDraw.oklch_color for the step),
+# so these ARE the map's colours (no second conversion, no new tint: Track BB, 2026-10-11, for the sunk hulls' wash).
 static func wb_steps(st: RefCounted) -> Array:
 	if not FileAccess.file_exists(WB_PATH):
 		return []
@@ -95,40 +99,11 @@ static func wb_steps(st: RefCounted) -> Array:
 	var ch: Array = (p["chroma"] as Dictionary)["value"]
 	if dl.size() != 3 or ch.size() != 3:
 		return []
-	var paper_l := _oklab_l(st.palette["paper"])
+	var paper_l: float = TerrainDraw.to_oklab(st.palette["paper"]).x
 	var out: Array = []
 	for i in 3:
-		out.append(oklch_to_color(paper_l - float(dl[i]), float(ch[i]), hue))
+		out.append(WaterDraw.oklch_color(paper_l - float(dl[i]), float(ch[i]), hue))
 	return out
-
-static func _lin(v: float) -> float:
-	return v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4)
-
-static func _enc(x: float) -> float:
-	x = clampf(x, 0.0, 1.0)
-	return 12.92 * x if x <= 0.0031308 else 1.055 * pow(x, 1.0 / 2.4) - 0.055
-
-static func _oklab_l(c: Color) -> float:
-	var r := _lin(c.r)
-	var g := _lin(c.g)
-	var b := _lin(c.b)
-	var l_ := pow(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b, 1.0 / 3.0)
-	var m_ := pow(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b, 1.0 / 3.0)
-	var s_ := pow(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b, 1.0 / 3.0)
-	return 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_
-
-static func oklch_to_color(L: float, C: float, h_deg: float) -> Color:
-	var a := C * cos(deg_to_rad(h_deg))
-	var b := C * sin(deg_to_rad(h_deg))
-	var l_ := L + 0.3963377774 * a + 0.2158037573 * b
-	var m_ := L - 0.1055613458 * a - 0.0638541728 * b
-	var s_ := L - 0.0894841775 * a - 1.2914855480 * b
-	var l := l_ * l_ * l_
-	var m := m_ * m_ * m_
-	var s := s_ * s_ * s_
-	return Color(_enc(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-		_enc(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-		_enc(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s))
 
 # Folds Track WB's steps into a board's resolved roles: water_placeholder becomes the SHELF (an open coast), water_shallows /
 # water_shelf / water_deep are added, and the placeholder ripple strokes are switched off (option A, WB's default, draws none).

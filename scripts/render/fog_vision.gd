@@ -461,7 +461,7 @@ func shows_unit(world: Object, unit_id: String, at: Variant = null) -> bool:
 	# CONCEALMENT (Track M2L, proposed; scripts/sim/concealment.gd): a mobile ground unit standing in woods is seen only close to a circle, or in a
 	# patch a shot has opened (the reveal circles), not across the whole of a sight circle.
 	var cover: RefCounted = ConcealRules.shared()
-	if cover.covered(world, u, x, y):
+	if cover.covered(world, u, x, y, sample_t):   # (at the moment sampled: a tree that has burnt out takes its cover with it, scripts/sim/fire.gd)
 		return _seen_in_cover(world, u, x, y, st, float(cover.radius_m))
 	if not los_on():
 		return is_visible_xy(x, y)

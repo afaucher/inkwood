@@ -70,9 +70,9 @@ const OPTIONS := {
 	"scenario": {
 		"section": "Sandbox",
 		"label": "Scenario",
-		"choices": ["intercept", "sandbox", "strike", "suppress"],
+		"choices": ["intercept", "sandbox", "strike", "suppress", "bridge"],
 		"default": 2,
-		"help": "Which data/scenarios/<id>.json Local, Host and Join start. 'strike' (the default, proposed: the newest layer) is the bombing mission: a bomber and two fighters against a radio tower in a village, its two flak batteries and a patrolling fighter; 'intercept' is the first fight (an AI bomber and its escort); 'sandbox' is the old flight toy (AiDumb, no mission); 'suppress' is the second mission (Track M2L, proposed): a bomber and two fighters against a military complex, three hidden mobile AA guns that shoot and move and give themselves away when they fire, and two escort fighters. The menu's selector sets this knob. Read when a game is built, so set it before pressing Local: INKWOOD_SCENARIO=intercept. Not a live knob (it is not on the F2 panel). Indexes 0 and 1 are the two older scenarios, in the order the tests set them.",
+		"help": "Which data/scenarios/<id>.json Local, Host and Join start. 'strike' (the default, proposed: the newest layer) is the bombing mission: a bomber and two fighters against a radio tower in a village, its two flak batteries and a patrolling fighter; 'intercept' is the first fight (an AI bomber and its escort); 'sandbox' is the old flight toy (AiDumb, no mission); 'suppress' is the second mission (Track M2L, proposed): a bomber and two fighters against a military complex, three hidden mobile AA guns that shoot and move and give themselves away when they fire, and two escort fighters; 'bridge' is the first mixed mission (Track BM, proposed): two tanks hold a river bridge against three waves of enemy tanks with a cruiser at the far end of its gun range that can fire only at what the tanks spot. The menu's selector sets this knob. Read when a game is built, so set it before pressing Local: INKWOOD_SCENARIO=intercept. Not a live knob (it is not on the F2 panel). Indexes 0 and 1 are the two older scenarios, in the order the tests set them.",
 	},
 	"water": {
 		"section": "Sandbox",
@@ -80,6 +80,13 @@ const OPTIONS := {
 		"choices": ["data", "on", "off"],
 		"default": 0,
 		"help": "THE WATER SWITCH of the scenario (Track WB, Job 3, proposed). data = the scenario file's \"water\" key (the strike has it ON: a river, a sea, a bridge, a patrol boat and a supply barge, the map drawn with the water in it and its ground capped by the coast); 'off' plays the same scenario on dry land, with no boat and no bridge, the map as it was; 'on' forces the water on (only a scenario that has \"water_units\"). Read when a game is built, so set it before pressing Local: INKWOOD_WATER=off. Not a live knob (it is not on the F2 panel).",
+	},
+	"fire": {
+		"section": "Sandbox",
+		"label": "Forest fire",
+		"choices": ["data", "on", "off"],
+		"default": 0,
+		"help": "THE FOREST FIRE SWITCH of the scenario (decision forest-fire; scripts/sim/fire.gd, data/sim/fire.json). data = the scenario file's \"fire\" key (Suppress has it ON, the others off); 'on' lights it in any scenario, 'off' puts it out. With it on, bomb and shell hits and crashes set the trees they reach alight, the fire spreads from tree to tree by distance, a burning tree smokes for 3 turns and then stands as a trunk, units near it may lose a pip, and a unit in the smoke can be seen but not tracked. Read when a game is built, so set it before pressing Local: INKWOOD_FIRE=on (a joining window should have the same). Not a live knob (it is not on the F2 panel).",
 	},
 	# --- Sandbox knobs (Track A; the F2 panel shows them) ---------------------------
 	# Index 0 is always "data": whatever the data files say (data/scenarios/
@@ -157,6 +164,35 @@ const OPTIONS := {
 		"default": 0,
 		"view_only": true,
 		"help": "Turn-seconds played per real second when a turn resolves. data = data/ui/ui.json marker.playback_speed.",
+	},
+	# --- The sun (builder BS, 2026-10-11, PROPOSED: the board variants/sun-time/; nothing changes until Alex picks) ---
+	# Read ONCE, when scripts/world/sun.gd first builds the shared sun (Sun.current()), so set them before the game is built
+	# (INKWOOD_SUN_MODE=clock INKWOOD_SUN_HOUR=9). Not live knobs: a new sun is a rebake of the whole map.
+	"sun_mode": {
+		"section": "Sandbox",
+		"label": "Sun",
+		"choices": ["data", "fixed", "clock_at_start"],
+		"default": 0,
+		"view_only": true,
+		"help": "fixed = today's sun (north-west, elevation 46); clock_at_start = the time-of-day sun, taken once at the mission's start and held (Alex, decision sun-time; the hour from sun_hour: the bearing and the height follow the day, the model's numbers PROPOSED). data = data/params/sun.json mode (fixed). Read when the game is built; the map is NOT redrawn after a change here.",
+	},
+	"sun_hour": {
+		"section": "Sandbox",
+		"label": "Sun hour (clock_at_start)",
+		"kind": "float",
+		"default": -1.0,
+		"min": -1.0,
+		"max": 24.0,
+		"view_only": true,
+		"help": "The hour, 0 to 24, the clock_at_start sun is asked for (9.5 is half past nine). -1 = data/params/sun.json hour (or the machine's clock when its hour_source is system). Read when the game is built.",
+	},
+	"sun_scope": {
+		"section": "Sandbox",
+		"label": "Sun scope (clock_at_start)",
+		"choices": ["data", "all", "trees"],
+		"default": 0,
+		"view_only": true,
+		"help": "all = every shadow follows the one sun (Alex, decision sun-time: \"Every shadow follows\"); trees = ONLY the trees' cast shadows take the clock sun, everything else keeps today's: the board's 'why not' frame, two suns on one map. Not for play. data = data/params/sun.json scope (all).",
 	},
 }
 

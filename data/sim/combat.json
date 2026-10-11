@@ -49,5 +49,10 @@
     "value": 50,
     "_proposed": true,
     "_reason": "metres of height lost per second while out of control. From the high band (1000 m) that is 20 s, 4 turns; from medium (400 m) 8 s, 1.6 turns; from low (120 m) 2.4 s. Slow enough that the fall is watched over a turn or two, fast enough that it is a fall and not a glide. The sim has no terrain: the ground is 0 m"
+  },
+  "sink_descent_mps": {
+    "value": 3,
+    "_proposed": true,
+    "_reason": "PROPOSED by Track BB, 2026-10-11 (Alex, decision ship-sinks: 'ideally we just sink them to the bottom', 'just like a downed plane its altitude should decrease until it hits the floor. It just does so through the water', 'we could have planes do the same if they crash there'; the RATE is the track's). Metres of height lost per second BELOW the water's surface, by a destroyed ship and by a plane that has come down over water (the surface is 0 m, the floor is minus the water's depth there: the sim's own water query, World.water_depth_at). 3 m/s is a hull going down slowly: 1 to 2 s in the shallows (3 to 6 m), 10 s to the floor of the shelf (30 m), the bigger part of two turns to the deep; far slower than a plane falls in the air (50 m/s) and in step with Alex's 'altitude should decrease'. A plane that reaches the surface stops moving along (the water takes its speed) and sinks straight down at this rate."
   }
 }

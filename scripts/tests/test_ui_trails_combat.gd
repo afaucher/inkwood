@@ -185,7 +185,11 @@ func _no_gap() -> void:
 	var ui := _ui_on(w)
 	var layer = ui.marker_layer
 	eq(_st.flag("marker.trails.replaces_flown_line"), true, "(the data has the ribbon replace the marker layer's own flown line)")
-	check(is_nan(ui.trail_start_t("fighter")), "no turn flown yet: no ribbon, no start")
+	# No turn flown yet. Was: no ribbon and no start. Alex 2026-10-10 (the second playtest): "The plane motion tails don't render at the
+	# start. Create a tail for them assuming they are moving forward at normal speed." -- a unit moving at the start has a synthetic tail
+	# (WingtipTrails start_tail_record, data marker.trails.start_tail), so its ribbon begins one window before the game's start.
+	near(ui.trail_start_t("fighter"), -5.0, 1e-9, "no turn flown yet: the ribbon is the start tail, and begins one window (5 s) before the game's start")
+	check(not _item(ui, "fighter").is_empty() and not _item(ui, "bomber").is_empty(), "no turn flown yet: both planes have their start tail")
 	# Turn 1 in real frames.
 	CombatWorlds.turn(w)
 	var worst := 0.0

@@ -71,6 +71,12 @@ extends RefCounted
 #   "site": "water.supply_route", "site_index": 0   an end of the supply boat's route
 #   "route": {"site": "water.patrol_loop"}          (in an assignment) the whole loop, every point, in order
 #
+# THE FOREST FIRE (decision forest-fire, 2026-10-11; scripts/sim/fire.gd): one switch, off unless the file says so --
+#
+#   "fire": true                           (optional; absent is false) populate() gives the World a fire over the seed's trees (World.enable_fire:
+#                                          the terrain the map is drawn from, GroundMap.shared(seed, water)); Suppress has it on. A test or the
+#                                          sandbox's 'fire' knob may switch it without editing the file: SandboxScenario.new("strike", true, {"fire": true}).
+#
 # `sc.water_on`, `sc.water()` (the shared WaterGen, or null with the switch off) and `sc.water_site(name)` are what the
 # drawing asks. A test may switch it without editing the file: SandboxScenario.new("strike", true, {"water": true}) --
 # the third argument is a Dictionary of top-level keys that replace the file's.
@@ -83,6 +89,7 @@ const WorldLayout = preload("res://scripts/world/world_layout.gd")
 const WaterGen = preload("res://scripts/world/water_gen.gd")
 const GroundMap = preload("res://scripts/world/ground_map.gd")
 const Reveal = preload("res://scripts/sim/reveal.gd")
+const FireTrees = preload("res://scripts/sim/fire_trees.gd")
 
 const WATER_PREFIX := "water."
 const SCENARIO_DIR := "res://data/scenarios"
@@ -101,6 +108,7 @@ var mission_spec: Dictionary = {}     # scripts/sim/mission.gd's spec; {} = no m
 var objective_spec: Dictionary = {}   # the "objective" block: {unit, radius_m, frame_m, label}; {} = none
 var local_player: String = ""
 var water_on := false                 # the "water" switch: the scenario's water units are in `units` when it is on
+var fire_on := false                  # the "fire" switch: populate() gives the World a forest fire (scripts/sim/fire.gd)
 var sides: Dictionary = {}            # scenario side -> {world_side, callsign_pool}
 var units: Array[Dictionary] = []     # World.add_unit specs, callsigns resolved
 var view: Dictionary = {}             # name -> value (value records flattened)
@@ -121,6 +129,7 @@ func _init(scenario_id: String = "sandbox", quiet: bool = false, overrides: Dict
 	for k: Variant in overrides:
 		d[k] = overrides[k]
 	_read_water(d, quiet)
+	_read_fire(d, quiet)
 	seed_value = int(_num(d, "seed", quiet))
 	rng_seed = int(_num(d, "rng_seed", quiet))
 	local_player = _str(d, "local_player", quiet)
@@ -155,6 +164,7 @@ func _init(scenario_id: String = "sandbox", quiet: bool = false, overrides: Dict
 		var md: Variant = d["mission"]
 		if md is Dictionary:
 			mission_spec = _strip(md)
+			_resolve_mission_sites(mission_spec, quiet)
 		else:
 			_err("'mission' must be an object", quiet)
 	briefing = briefing.replace("{turn_limit}", str(turn_limit()))
@@ -172,6 +182,14 @@ func _init(scenario_id: String = "sandbox", quiet: bool = false, overrides: Dict
 
 func ok() -> bool:
 	return errors.is_empty()
+
+# THE FIRE SWITCH (see the header): "fire" must be true or false when it is there.
+func _read_fire(d: Dictionary, quiet: bool) -> void:
+	var sw: Variant = d.get("fire", false)
+	if not (sw is bool):
+		_err("'fire' must be true or false", quiet)
+		return
+	fire_on = sw
 
 # THE WATER SWITCH (see the header): reads "water" and, when it is on, merges the scenario's water units and their orders
 # into `d` ("units", "ai"."assignments") so everything after sees one scenario. Off, it touches nothing.
@@ -268,6 +286,14 @@ func populate(world: Object) -> Array[String]:
 			gm.attach(world)
 		else:
 			_err("the ground of seed %d did not build: %s" % [seed_value, str(gm.errors)], false)
+	# THE FOREST FIRE: the World lights the trees of the terrain the map is drawn from (the water's capped one when the water is on).
+	if fire_on:
+		var fm: RefCounted = GroundMap.shared(seed_value, water())
+		if fm.ok():
+			if not world.enable_fire(FireTrees.new(fm.terrain)):
+				_err("the fire's data did not load: %s" % str(world.errors), false)
+		else:
+			_err("the terrain of seed %d did not build for the fire: %s" % [seed_value, str(fm.errors)], false)
 	world.add_player(local_player)
 	for spec: Dictionary in units:
 		ids.append(str(world.add_unit(spec)))
@@ -304,12 +330,18 @@ func make_mission(world: Object) -> Mission:
 		return null
 	return Mission.new(world, mission_spec)
 
-# The mission's turn limit (a "turn_limit" condition of its lose list), or 0 when it has none.
+# The mission's turn limit (a "turn_limit" condition of its lose list, or, for a mission won by holding on, the "turn_reached" of its
+# win list: Hold the bridge's relief turn), or 0 when it has none.
 func turn_limit() -> int:
 	var lose: Variant = mission_spec.get("lose")
 	if lose is Array:
 		for c: Variant in (lose as Array):
 			if c is Dictionary and str((c as Dictionary).get("type", "")) == Mission.TYPE_TURN_LIMIT:
+				return int((c as Dictionary).get("turn", 0))
+	var win: Variant = mission_spec.get("win")
+	if win is Array:
+		for c: Variant in (win as Array):
+			if c is Dictionary and str((c as Dictionary).get("type", "")) == Mission.TYPE_TURN_REACHED:
 				return int((c as Dictionary).get("turn", 0))
 	return 0
 
@@ -338,13 +370,18 @@ func objective() -> Dictionary:
 
 # The world layout's site `key` (and `index` for a list site) as a Vector2 in metres, plus (dx, dy); NAN, NAN
 # and an error when the layout has no such site.
-func site_point(key: String, index: int = 0, dx: float = 0.0, dy: float = 0.0, quiet: bool = false) -> Vector2:
+func site_point(key: String, index: int = 0, dx: float = 0.0, dy: float = 0.0, quiet: bool = false, road_m: float = 0.0) -> Vector2:
 	if key.begins_with(WATER_PREFIX):
 		var rec := water_site(key)
 		var at := Vector2(NAN, NAN)
 		if rec.get("ok", false) == true:
 			if rec.has("pos"):
 				at = rec["pos"] as Vector2
+				if road_m != 0.0 and rec.has("road_index"):
+					# "road_m" (Track BM, Hold the bridge): that many metres ALONG THE ROAD from the site (the bridge's road point):
+					# positive away from the village, to the map's edge; negative toward the village
+					var rd: Variant = water().layout().road() if water() != null else null
+					at = GroundMap.road_point(rd, int(rec["road_index"]), road_m) if rd != null else Vector2(NAN, NAN)
 			elif rec.has("points") and index >= 0 and index < (rec["points"] as Array).size():
 				at = (rec["points"] as Array)[index] as Vector2
 		if is_nan(at.x):
@@ -385,6 +422,37 @@ func _site_heading(key: String, index: int, label: String, quiet: bool) -> float
 			return float((rec["headings"] as Array)[index])
 	_err("%s: the water has no heading for '%s' [%d]" % [label, key, index], quiet)
 	return NAN
+
+# A mission condition may say where its line is by a place on the road instead of numbers (Track BM, Hold the bridge's side_past):
+# "point_site": {"site": "water.bridge", "road_m": -30} becomes "point": [x, y] there, and "toward_site": {...} makes "toward" the vector
+# from that point to the other place (the direction the line is crossed in). The Mission reads plain numbers.
+func _resolve_mission_sites(spec: Dictionary, quiet: bool) -> void:
+	for key: String in ["win", "lose"]:
+		var list: Variant = spec.get(key)
+		if not (list is Array):
+			continue
+		for c: Variant in (list as Array):
+			if not (c is Dictionary) or not (c as Dictionary).has("point_site"):
+				continue
+			var cd: Dictionary = c
+			var p: Array = _point(cd["point_site"], "mission.%s point_site" % key, quiet)
+			cd["point"] = p
+			cd.erase("point_site")
+			if cd.has("toward_site"):
+				var q: Array = _point(cd["toward_site"], "mission.%s toward_site" % key, quiet)
+				cd["toward"] = [float(q[0]) - float(p[0]), float(q[1]) - float(p[1])]
+				cd.erase("toward_site")
+
+# The heading ("road_to_site", Track BM) of a unit `road_m` metres along the road from a water site: along the road, toward the site.
+func _road_heading_to_site(key: String, road_m: float, label: String, quiet: bool) -> float:
+	if road_m == 0.0:
+		return _site_heading(key, 0, label, quiet)
+	var here := site_point(key, 0, 0.0, 0.0, quiet, road_m)
+	var closer := site_point(key, 0, 0.0, 0.0, quiet, road_m - signf(road_m) * 10.0)
+	if is_nan(here.x) or is_nan(closer.x):
+		_err("%s: the road does not run %.0f m from the site '%s'" % [label, road_m, key], quiet)
+		return NAN
+	return (closer - here).angle()
 
 # The "ai" block: its kind, and for a pilot every assignment (each names a unit by an
 # explicit id in 'units', and a role).
@@ -450,7 +518,7 @@ func _points(v: Variant, label: String, quiet: bool) -> Array:
 func _point(v: Variant, label: String, quiet: bool) -> Variant:
 	if v is Dictionary and (v as Dictionary).has("site"):
 		var d: Dictionary = v
-		var at := site_point(str(d["site"]), int(d.get("site_index", 0)), float(d.get("dx", 0.0)), float(d.get("dy", 0.0)), quiet)
+		var at := site_point(str(d["site"]), int(d.get("site_index", 0)), float(d.get("dx", 0.0)), float(d.get("dy", 0.0)), quiet, float(d.get("road_m", 0.0)))
 		return [at.x, at.y]
 	if v is Array and (v as Array).size() == 2:
 		return v
@@ -498,11 +566,15 @@ func _unit_spec(u: Dictionary, i: int, pools: Variant, taken: Dictionary, quiet:
 	var side := _str(u, "side", quiet, label)
 	var spec := {"type": type_id, "controller": _str(u, "controller", quiet, label)}
 	if u.has("site"):
-		var at := site_point(str(u["site"]), int(u.get("site_index", 0)), float(u.get("dx", 0.0)), float(u.get("dy", 0.0)), quiet)
+		var at := site_point(str(u["site"]), int(u.get("site_index", 0)), float(u.get("dx", 0.0)), float(u.get("dy", 0.0)), quiet, float(u.get("road_m", 0.0)))
 		spec["x"] = at.x
 		spec["y"] = at.y
 		if u.get("heading") is String and str(u["heading"]) == "site":
 			spec["heading"] = _site_heading(str(u["site"]), int(u.get("site_index", 0)), label, quiet)
+		elif u.get("heading") is String and str(u["heading"]) == "road_to_site":
+			spec["heading"] = _road_heading_to_site(str(u["site"]), float(u.get("road_m", 0.0)), label, quiet)
+		elif u.get("heading") is String and str(u["heading"]) == "road_from_site":   # (the other way: away from the site, along the road)
+			spec["heading"] = wrapf(_road_heading_to_site(str(u["site"]), float(u.get("road_m", 0.0)), label, quiet) + PI, -PI, PI)
 		else:
 			spec["heading"] = _num(u, "heading", quiet, label)
 	else:

@@ -35,6 +35,7 @@ var fall_turn_rate_dps: float = NAN
 var fall_turn_rate: float = NAN        # radians per second; the spiral, direction from the fate roll
 var fall_speed_gain: float = NAN       # m/s^2, up to the unit type's dive_speed_max_mps
 var fall_descent: float = NAN          # m/s of height lost
+var sink_descent: float = NAN          # m/s of height lost BELOW the surface of the water (Track BB, decision ship-sinks; the number is proposed)
 var errors: Array[String] = []
 
 func _init(source: Variant = PATH, quiet: bool = false) -> void:
@@ -61,6 +62,7 @@ func _init(source: Variant = PATH, quiet: bool = false) -> void:
 		fall_turn_rate = deg_to_rad(fall_turn_rate_dps)
 		fall_speed_gain = r.number(d, "fall_speed_gain_mps2", "fall_speed_gain_mps2", 0.0)
 		fall_descent = r.number(d, "fall_descent_mps", "fall_descent_mps", 0.001)
+		sink_descent = r.number(d, "sink_descent_mps", "sink_descent_mps", 0.001)
 	errors = r.errors
 
 func ok() -> bool:

@@ -1688,6 +1688,24 @@
       "notes": "Alex: 'Strike board - F2 Ragged Burst is the only open one I want to make right now'. The tower's ruin (R1) and the bombs' area of effect stay open."
     },
     {
+      "id": "general-ai",
+      "date": "2026-10-11",
+      "area": "AI",
+      "question": "A general player-side AI that can control any unit in any mission, or per-test scripts?",
+      "board": "none (said in chat)",
+      "options": [],
+      "chosen": "add it to the plans; do not flesh it out now",
+      "parameters": {
+        "today": "player side in tests: a hand-written, all-seeing script per mission; enemy: one role per unit (strike, escort, patrol, sail, drive, roam), no specials",
+        "uses": "headless playtests with honest numbers, an empty co-op seat, real enemy tactics"
+      },
+      "applied_to": [
+        "docs/status.md, Later"
+      ],
+      "status": "chosen by Alex; deferred",
+      "notes": "Alex: 'Do we have a full player AI which can control them or are we just faking it per test?' Then: 'Lets add it to our plans but not flesh it out right now.'"
+    },
+    {
       "id": "zoom-anchors",
       "date": "2026-10-11",
       "area": "Camera",
@@ -1748,7 +1766,7 @@
         "6 the look: today's W1 smoke as a stand-in, a column per burning tree, then a board of 3-4 options for a burning grove and a burnt-out tree",
         "7 tried first in Suppress, plus a sandbox switch"
       ],
-      "chosen": "a forest fire is smoke coming from the trees, no flame; it is started by bomb hits, shell hits and ground crashes (each tree within the blast catches at 50%), spreads tree to tree by distance once a turn (40% when canopies touch, falling to 0 at 30 m), and a tree burns 3 turns, then burns down to its trunk; ground and sea units near a burning tree may lose 1 pip, 10% a turn fading with distance to 0 at 25 m; a burnt-out tree gives no woods cover; built first with W1 smoke as the stand-in look, then a board for the burning grove and the burnt-out trunk; tried first in Suppress; its smoke makes things harder to see by cover (option a): a ground unit inside the smoke is seen only from close, as in woods. Open: hidden from view (as woods today) or visible but not trackable, and whether a followed bomb target that goes into the smoke is aimed at its last-seen place",
+      "chosen": "a forest fire is smoke coming from the trees, no flame; it is started by bomb hits, shell hits and ground crashes (each tree within the blast catches at 50%), spreads tree to tree by distance once a turn (40% when canopies touch, falling to 0 at 30 m), and a tree burns 3 turns, then burns down to its trunk; ground and sea units near a burning tree may lose 1 pip, 10% a turn fading with distance to 0 at 25 m; a burnt-out tree gives no woods cover; built first with W1 smoke as the stand-in look, then a board for the burning grove and the burnt-out trunk; tried first in Suppress; its smoke makes things harder to see (option a, refined): a ground or sea unit inside the smoke stays VISIBLE but cannot be TRACKED -- it cannot be taken as a unit target that follows it, and a special aimed at it (a bomb, the cruiser's guns) goes to the last place it was seen outside the smoke",
       "parameters": {
         "smoke_only": "burning trees draw smoke and no flame (consistent with decision fire-colour: 'No fire for now. Just smoke.')",
         "ignite.sources": "bomb_impact, shell_impact, crash",
@@ -1766,17 +1784,16 @@
         "damage.fade": "Alex: 'fade the change with distance as well'; PROPOSED: linear from 10% at a burning tree's canopy edge to 0 at 25 m, the trees combined as 1 - product(1 - p) and at most 1 pip a unit a turn, at the unit's closest approach in the turn",
         "damage.who": "ground and sea units; planes untouched",
         "cover_after_burn": "a burnt-out tree gives no woods cover; PROPOSED: the woods density at a point is scaled by the share of the trees within 20 m that are not burnt out",
-        "smoke_sight": "a, cover (Alex: 'a - but confirm what the implication of this is'): the concealment rule (scripts/sim/concealment.gd) applied to smoke, so the fog, the enemy AI and shared spotting agree; PROPOSED: ground and sea units inside the smoke, mobile and static, seen only within 150 m; planes not covered",
+        "smoke_sight": "a, refined (Alex: 'a', then '1 visible but untrackable and 2 last place you saw it'): smoke does not hide a unit (fog, the enemy AI's knowledge and woods cover are unchanged by it); it denies tracking: fire control (the cruiser's guns) does not count a target in smoke as spotted, so they fire the poorer shot at its last tracked place (decision outside-cone-release); a bomb following a unit that is in smoke at the release aims at the last place it was tracked; PROPOSED: ground and sea units, mobile and static, not planes; a click on an enemy in smoke sets a point target, not a unit target; leaving the smoke makes it trackable again",
         "smoke.reach_m": "PROPOSED: inside the smoke = within 20 m of a burning tree's canopy edge",
-        "smoke_sight.open": "1 hidden from view (the woods rule today: the marker is not drawn) or visible but not trackable (Alex's reading); 2 a followed bomb target that goes into the smoke: still followed (today, PROPOSED by the strike track) or aimed at its last-seen place (the lead recommends, matching decision outside-cone-release for guns)",
         "look": "W1 smoke (decision damage-smoke) as a stand-in column per burning tree; then a board for the burning grove and the burnt-out trunk",
         "first_scenario": "suppress (data/scenarios/suppress.json), plus a sandbox switch"
       },
       "applied_to": [
         "to be built (track 'Forest fire', docs/status.md): data/sim/fire.json and scripts/sim/fire*.gd, the World's resolve and its net state, the effects layer's smoke per burning tree, the map's burnt trunks, Suppress"
       ],
-      "status": "chosen by Alex; two details of the smoke cover open",
-      "notes": "Alex: 'I want to build a forest fire mechanic.' Then: 'I am thinking that the fire is actually just smoke coming from the trees. It spreads from tree to tree based on distance. It can inflict damage to nearby units with low power and low chance.' Then: 'It should generate smoke which makes it harder to see.' On the lead's seven proposals: '1 - yes 2 - yes 3 - lets fade the change with distance as well 4 - this is deeper then I was thinking. tell me more about this decision in a second. 5 - yes, lets burn down to the trunks? 6 - that is what I wanted 7 - suppress sounds good'. On the lead's explanation of question 4 (a cover, b sight lines, c aim): 'a - but confirm what the implication of this is.  the player might be able to visually see the unit on screen but won't be able to target it directly in a way that tracks it if it moves?' The numbers are starting values for a playtest (decision balance-uncalibrated); every detail marked PROPOSED is the lead's."
+      "status": "chosen by Alex",
+      "notes": "Alex: 'I want to build a forest fire mechanic.' Then: 'I am thinking that the fire is actually just smoke coming from the trees. It spreads from tree to tree based on distance. It can inflict damage to nearby units with low power and low chance.' Then: 'It should generate smoke which makes it harder to see.' On the lead's seven proposals: '1 - yes 2 - yes 3 - lets fade the change with distance as well 4 - this is deeper then I was thinking. tell me more about this decision in a second. 5 - yes, lets burn down to the trunks? 6 - that is what I wanted 7 - suppress sounds good'. On the lead's explanation of question 4 (a cover, b sight lines, c aim): 'a - but confirm what the implication of this is.  the player might be able to visually see the unit on screen but won't be able to target it directly in a way that tracks it if it moves?' The lead explained that woods cover hides the marker entirely, that bombs today keep following a hidden target, and asked: hidden or visible but not trackable; a bomb's target lost in smoke aimed at its last-seen place? Alex: '1 visible but untrackable and 2 last place you saw it'. The numbers are starting values for a playtest (decision balance-uncalibrated); every detail marked PROPOSED is the lead's."
     },
     {
       "id": "pan-right-drag-off",
@@ -1826,6 +1843,54 @@
       "notes": "Alex, to the camera session's question 'Zoom-out limit: keep whole map fits and stop panning past the edge (my pick), or make the map always fill the screen?': '4. your pick'. The 100 m band is PROPOSED (the map border board shows it). Trade-off: a plane more than 100 m outside the map cannot be centred or followed."
     },
     {
+      "id": "ship-sinks",
+      "date": "2026-10-11",
+      "area": "Units, Water",
+      "question": "How is a destroyed ship drawn, and what happens to a plane that comes down over water?",
+      "board": "none (said in chat)",
+      "options": [
+        "a broken wreck afloat (proposed by Track BB)",
+        "sunk to the bottom under the water"
+      ],
+      "chosen": "it sinks like a downed plane falls: its height drops through the water until it reaches the floor, drawn intact under the water's own wash for the depth above it; no damage drawn. A plane that comes down over water does the same.",
+      "parameters": {
+        "hull": "intact",
+        "height": "falls from the surface (0 m) to the floor (minus the water depth), like a downed plane's fall",
+        "cover": "the water layer's depth wash for the metres of water above it",
+        "damage": "none",
+        "planes": "a plane whose fall reaches the water keeps falling through it to the floor",
+        "sink_rate": "3 m/s (PROPOSED; data/sim/combat.json sink_descent_mps)",
+        "wash": "1 - exp(-metres / extinction_m), extinction_m 10 m (PROPOSED; data/world/boats.json game.sunk)"
+      },
+      "applied_to": [
+        "scripts/sim/world.gd (the fall)",
+        "scripts/sim/combat_resolver.gd (a sea unit's fate)",
+        "data/sim/combat.json (the sink rate)",
+        "scripts/ui/unit_marker_art_boats.gd (the sunk hull)",
+        "data/world/boats.json game.sunk",
+        "scripts/tests/test_boats_live.gd",
+        "scripts/ui/unit_sunk.gd (the sunk picture: kind, position, heading, depth)",
+        "scripts/tests/test_sinking.gd"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'For destroyed ships, ideally we just sink them to the bottom.' Then: 'We don't even need to show damage if we just height-appropriately flood them with water.' Then: 'Just like a downed plane it's altitude should decrease until it hits the floor. It just does so through the water.' And: 'In fact we could have planes do the same if they crash there.' PROPOSED (not Alex's): the sink rate; a splash ring in the water's ink where it goes under; the standard down flash stays and the ground crash's smoke is not drawn over water; it applies to every sea unit (cutter, barge, cruiser). The bridge's ruin is unchanged."
+    },
+    {
+      "id": "wreck-litter",
+      "date": "2026-10-11",
+      "area": "Water, Environment",
+      "question": "Sunken wrecks (boats and planes) placed in the water as environment, for character?",
+      "board": "not made yet",
+      "options": [],
+      "chosen": null,
+      "parameters": {
+        "reuse": "the sunk-hull drawing from ship-sinks, placed by seed"
+      },
+      "applied_to": [],
+      "status": "open",
+      "notes": "Alex: 'And consider some 'wreaked' litter just for visual interest. A sunken boat or plane in the water adds some character.' PROPOSED: a board after the sinking lands, with how many, where (shallows, where they show) and which kinds; the same art as a sunk unit, placed by seed."
+    },
+    {
       "id": "side-view-views",
       "date": "2026-10-11",
       "area": "Interface",
@@ -1853,6 +1918,114 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Next - I want to enhance the side view. I want to be able to select between top, front & side. I think this solves the 'cone but only upwards' problem. Maybe they fold instead of you selecting only one - so you could have all three. It would also make it easier to disable the cones on the main map which visually make it much harder to read.' Then, to the three questions: '1 B - but no limit on which are open at a time. I am testing on 4k 2 Yes, lets actually add a button to the panel to turn arcs on/off 3 self only'. How each view projects the cones, the strips' sizes and which are open at first are PROPOSED by the builder. Then, to 'the roster header also has an Arcs button... do you want the roster's one removed?': 'Yes, remove the extra'."
+    },
+    {
+      "id": "playtest-2",
+      "date": "2026-10-11",
+      "area": "Interface, Effects",
+      "question": "Alex's notes from the second playtest (played on build 2026-10-10.134839, the first playtest build)",
+      "board": "none (said in chat)",
+      "options": [],
+      "chosen": "tracers for machine guns; tails drawn from the start; the per-unit dot and dotted line removed; already fixed after that build: the roster line, the trail's thin line, the click X and its dotted line",
+      "parameters": {
+        "tracers": "machine guns only (proposed list); look on variants/tracers/, a working default proposed",
+        "start_tails": "a ribbon behind every moving unit at mission start, as if it had flown on at its normal speed; visual only",
+        "unit_dot": "the red/blue side badge and its tie, off for every unit (data/ui/ui.json marker.side_badge.drawn_for 'none'; 'non_air' and 'all' bring it back)"
+      },
+      "applied_to": [
+        "data/fx/fx.json tracers",
+        "scripts/ui/wingtip_trails.gd",
+        "data/ui/ui.json"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'We should show tracers for machine guns.' / 'There is still a line between the selected plane and the roster. Remove it.' / 'The plane motion tails don't render at the start. Create a tail for them assuming they are moving forward at normal speed.' / 'When the motion tail converts to a dotted red or blue solid thin line, remove that trail. Maybe we want that for 'post battle retrospective/replay' but not right now. It is visually distracting.' / 'Remove the indicator on where you clicked to set a units motion. A little X and dotted line. More visual noise and we don't care about the specific spot.' / 'The red/blue indicator dot for each unit (planes at least) with the dotted line. We can remove that. The tail serves this purpose well.' The roster line, the thin trail line and the click X were removed by cc76f61 after that build (leader_to_roster, whole_flight_line, clamp_marks: false); a replay may bring the whole-flight line back later. Asked whether tanks, ships and static units keep the badge (they have no ribbon, and tanks are about 10 px at the opening zoom): 'No badge on units. We can figure something else out of we need it.'"
+    },
+    {
+      "id": "motion-range-look",
+      "date": "2026-10-11",
+      "area": "Interface",
+      "question": "How is the range of motion (where the next node can go) drawn, in one style for every unit type?",
+      "board": "variants/motion-range/",
+      "options": [
+        "A ribs (today's: outline, wash, ribs, spokes)",
+        "B shade (Alex's idea: a flat shaded area, no outline)",
+        "C wash_rim (a light wash under one thin rim)",
+        "D stipple",
+        "E hatch",
+        "F rim_ticks (a quiet rim and a ruler with ticks at the slowest and fastest reach)"
+      ],
+      "chosen": null,
+      "parameters": {
+        "switch": "data/ui/ui.json planner.fan.mode (today's 'ribs' is the default)",
+        "recommendation": "C for every unit (PROPOSED)"
+      },
+      "applied_to": [],
+      "status": "open",
+      "notes": "Alex: 'I want to look at the design of the 'acceptable range of motion' indicator for planes. Is there a style that makes more sense across all unit types? Should we just have a little shaded area where you can set the node? Show me some options before commiting this.' PROPOSED by the board's builder: C, because B's tone alone vanishes at the start zoom (the fighter's fan is a 3 x 24 px streak) and one thin rim keeps it findable; D and E turn into a dotted line and a ladder on a 9 px band; F alone shows reach. Found: the cruiser's fan sits under its own hull (the markers draw over the planner), so no look shows it until that changes."
+    },
+    {
+      "id": "sun-time",
+      "date": "2026-10-11",
+      "area": "Style, Terrain",
+      "question": "Do shadows follow the time of day, and how is the time picked?",
+      "board": "variants/sun-time/",
+      "options": [],
+      "chosen": "picked once at mission start and fixed for the mission; every shadow follows the one sun",
+      "parameters": {
+        "when": "fixed at mission start",
+        "what_follows": "every shadow (trees, terrain, structures, planes' altitude shadows, effects)",
+        "still_open": "the look across the hours (the board), the clock source in co-op (proposed: the host's), night hours",
+        "model": "PROPOSED: bearing 90 at 06:00, 180 at noon, 270 at 18:00; elevation a sine arc peaking at 60 degrees; shadow length 1/tan(elevation), clamped at 3; data/params/sun.json, scripts/world/sun.gd",
+        "recommendations": "PROPOSED: (a) the host's clock, sent with mission start, and a scenario may pin an hour; (b) fold the 24 hours onto the day (clamp gives half of all real hours the longest shadows); planes' altitude-shadow gap held at today's length",
+        "rebake": "measured: about 37 to 45 s for all 100 chunks, the same as today's sun; fixed at start means one bake"
+      },
+      "applied_to": [],
+      "status": "chosen by Alex (in part); the look and the rest open",
+      "notes": "Alex: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.' PROPOSED: every shadow follows one sun, not the trees alone. Then: 'Fixed time at start' and 'Every shadow follows'."
+    },
+    {
+      "id": "tracers-mg",
+      "date": "2026-10-11",
+      "area": "Effects",
+      "question": "Which weapons draw tracers?",
+      "board": "variants/tracers/ (being made) for the look",
+      "options": [
+        "machine guns only",
+        "every direct-fire weapon"
+      ],
+      "chosen": "machine guns only, for now",
+      "parameters": {
+        "weapons": "machine guns (the list in data, so another weapon is a data edit)",
+        "revisit": "other direct-fire weapons, like the tank's gun"
+      },
+      "applied_to": [
+        "data/fx/fx.json tracers.weapons (wing_guns, nose_gun, dorsal_turret, tail_turret, rear_gunner, aa_guns; PROPOSED list)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. The tracers' look is still open (variants/tracers/). PROPOSED: aa_guns is also the cruiser's and the mobile AA's gun, so they draw tracers instead of flak puffs; a tracer shows only when its shooter is seen."
+    },
+    {
+      "id": "tracers-look",
+      "date": "2026-10-11",
+      "area": "Effects",
+      "question": "How does a machine-gun tracer look (variants/tracers/)?",
+      "board": "variants/tracers/",
+      "options": [
+        "T1 ink dashes on a paper halo",
+        "T2 a tapered light streak with an ink edge",
+        "T3 the streak in the shooter's side colour",
+        "T4 bunches of ink dots",
+        "T5 an ink streak with a dot for a hit and a tick for a miss"
+      ],
+      "chosen": null,
+      "parameters": {
+        "working_default": "T2 (PROPOSED)"
+      },
+      "applied_to": [
+        "data/fx/fx.json working_default.tracers"
+      ],
+      "status": "open",
+      "notes": "Alex asked for tracers in the second playtest; the look is open. T2 is the working default so the next playtest has them."
     },
     {
       "id": "map-border",

@@ -5,11 +5,12 @@ extends RefCounted
 #
 #   data/params/render_defaults.json   the map's palette (paper, ink, fills, the
 #                                      chosen shadow tint, the side accents, the
-#                                      shadow-mix fractions) and the light (sun
-#                                      direction and elevation, shadow strength,
-#                                      the aircraft shadow altitude scale), line
-#                                      weight and hand wobble -- read as DATA,
-#                                      not through another track's code
+#                                      shadow-mix fractions) and the light (shadow
+#                                      strength, the aircraft shadow altitude
+#                                      scale), line weight and hand wobble -- read
+#                                      as DATA, not through another track's code
+#   data/params/sun.json               the sun's direction and elevation (via
+#                                      scripts/world/sun.gd, the one source)
 #   data/ui/ui.json                    the UI's own roles, sizes and fonts, all
 #                                      proposed (Track U)
 #
@@ -25,6 +26,8 @@ extends RefCounted
 # does not hold is an ERROR (recorded in `errors` and pushed), never a default
 # in code; the getter returns a loud placeholder so the caller can go on and
 # every problem shows in one run.
+
+const Sun = preload("res://scripts/world/sun.gd")
 
 const UI_PATH := "res://data/ui/ui.json"
 const RENDER_PATH := "res://data/params/render_defaults.json"
@@ -131,6 +134,11 @@ func side_color(side: String) -> Color:
 
 # A render parameter's default as a float (render_defaults.json parameters).
 func param(name: String) -> float:
+	# THE SUN is data/params/sun.json's, read live (scripts/world/sun.gd): one source for every reader
+	if name == "sun_direction":
+		return Sun.current().azimuth_deg
+	if name == "sun_elevation":
+		return Sun.current().elevation_deg
 	var v: Variant = params.get(name)
 	if v is float or v is int:
 		return float(v)
@@ -141,12 +149,11 @@ func param(name: String) -> float:
 
 # shadowDir(): the direction shadows fall, unit vector, screen axes (y down).
 func shadow_dir() -> Vector2:
-	var az := deg_to_rad(param("sun_direction") + 90.0)
-	return Vector2(cos(az), sin(az))
+	return Sun.current().shadow_dir()
 
 # sunL(): shadow length per unit of height.
 func sun_len() -> float:
-	return 1.0 / tan(deg_to_rad(param("sun_elevation")))
+	return Sun.current().sun_len()
 
 # How far, in world metres, a plane's shadow sits from it when it flies
 # `height_m` above the surface under it: cast as if it flew at height x

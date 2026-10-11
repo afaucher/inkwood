@@ -39,6 +39,14 @@
     "alpha": 0.5, "weight": 0.7
   },
 
+  "game": {
+    "_about": "THE BRIDGE IN THE GAME (Track BB, 2026-10-11; scripts/ui/unit_marker_art_boats.gd draws it). ALEX'S: the stone arch with a flat deck (decision bridge-look), a river 26 m wide at the road (decision water-layer: river_width), a bridge that tank guns can damage but that takes a lot (decision bridge-durability, 14 pips). EVERYTHING ELSE IS PROPOSED by Track BB: that it is a MARKER (a static unit) and not baked into the map, and its ruin.",
+    "kind": { "value": "arch", "decision": "bridge-look", "_reason": "the stone arch's shape with a flat deck (arch.humped_deck false)" },
+    "river_w_fallback_m": { "value": 26, "decision": "water-layer", "_reason": "the river's width at the road when data/world/water.json cannot be read (crossing_half_width_m is 13: Alex's 26 m); the bridge is drawn over the river the generator makes, 26 m wide at the crossing wherever on its course that is" },
+    "marker_not_map": { "_proposed": true, "value": true, "_reason": "A MARKER, not a part of the baked map. The map is baked once and kept (map and fog baked once, 5eaa5ef) and a bridge can be destroyed: baked in, its ruin would have to be cut out of every chunk and baked again, and the map would show a standing bridge to a client that joined after it fell. As a static unit it is one marker in sight like the tower, its marker goes at its down event and the effects layer's ruin takes its place, and a late joiner's ruin comes back from the world (combat_feed.restore_wrecks). The cost: it is hidden by the fog when out of sight like the tower and the batteries, and drawn once it is in sight; the map under it shows the river and the road's gap" },
+    "effects_size_frac": { "value": 0.5, "_proposed": true, "_reason": "the ruin's flash and smoke are sized by this share of the unit's size_m (40 m): a 20 m blast at the middle of the span, not a 40 m ball" }
+  },
+
   "roles": {
     "_about": "Every colour the bridges draw, as a role. Hue is reserved for paper, ink, shadow and the side accents; lightness is the ramp off paper; material is linework. A bridge has no side accent: it belongs to nobody. The only role that is not on that rule is the PLACEHOLDER water, as in boats.json.",
     "ink": { "base": "ink" },

@@ -550,6 +550,8 @@ func snapshot() -> Dictionary:
 		"guns": world.net_guns(),
 		# The guns that gave themselves away by firing, and when (the second mission): a joiner must see them as the others do.
 		"reveal": Reveal.of(world).net_state(),
+		# The forest fire (the trees lit and when; empty while it is off): a joiner must see the same smoke and the same trunks.
+		"fire": world.net_fire(),
 	}
 
 # --- Client: messages from the host ----------------------------------------------------------------
@@ -693,6 +695,7 @@ func apply_snapshot(s: Dictionary) -> void:
 	world.apply_net_bombs(s.get("bombs", []))
 	world.apply_net_guns(s.get("guns", {}))
 	Reveal.of(world).apply_net_state(s.get("reveal", {}))
+	world.apply_net_fire(s.get("fire", {}))
 	var flags: Dictionary = s["ready"]
 	for p: Variant in flags:
 		_apply_ready(str(p), bool(flags[p]))

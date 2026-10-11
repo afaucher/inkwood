@@ -1,0 +1,60 @@
+{
+  "option": "h07",
+  "title": "07:00",
+  "sun": "clock_at_start sun: bearing 105.0, elevation 18.4, shadow x3.000 (hour 07:00, night clamp, scope all)",
+  "mode": "clock_at_start",
+  "scope": "all",
+  "hour": 7.0,
+  "azimuth_deg": 105.0,
+  "elevation_deg": 18.434948822922,
+  "sun_len": 3.0,
+  "tree_azimuth_deg": 105.0,
+  "tree_elevation_deg": 18.434948822922,
+  "shadow_dir": [
+    -0.965925812721252,
+    -0.258819043636322
+  ],
+  "load_ms": 32473,
+  "units": {
+    "tank": {
+      "id": "tank_sun",
+      "at": [
+        1436.23669433594,
+        1189.19311523438
+      ],
+      "error": ""
+    },
+    "plane": {
+      "id": "bomber_1",
+      "at": [
+        1560.0,
+        1250.0
+      ],
+      "band": "high"
+    }
+  },
+  "settle_ms": 418,
+  "camera": {
+    "centre_m": [
+      1654.0,
+      1308.0
+    ],
+    "zoom": 0.85,
+    "px_per_m": 1.7
+  },
+  "file": "h07.png",
+  "size": [
+    1280,
+    720
+  ],
+  "plan_settle_ms": 1012,
+  "plan_file": "h07_plan.png",
+  "plan_camera": {
+    "centre_m": [
+      1654.0,
+      1308.0
+    ],
+    "zoom": 0.35,
+    "px_per_m": 0.7
+  }
+}

@@ -67,6 +67,14 @@ extends "res://scripts/render/chunk_provider.gd"
 # SCALE: px_per_m comes from data/terrain/terrain.json (T's scale.px_per_m)
 # unless the MapView overrides it; set_px_per_m() regenerates from scratch
 # (the baker's clear() then rebakes).
+#
+# BURNT-OUT TREES (track 'Forest fire', decision forest-fire, 2026-10-11): set_burnt_trees() takes the places (metres) of the trees
+# that have burnt down to their trunks. A chunk's content then holds those trees in `trunks` instead of `trees`: no canopy sprite, no
+# canopy shadow; the linework stage inks each trunk and its scorch (fire_trunk.gd) and the tree-class shadow gets the trunk's own small
+# one. A tree is matched by PLACE (within burnt_tolerance_m, forest_fire.map.match_tolerance_m), never by an id, so the sim's id format
+# does not matter. set_burnt_trees() returns the chunks whose content changed -- every chunk whose reach_px()-grown rectangle holds the
+# tree, which is exactly where chunk_content() finds it -- for MapView to bake again. Pure in (seed, chunk, the burnt set); the set is
+# swapped whole under a mutex, so a worker never sees a half-made one, and each bake records the set's serial (burn_current()).
 
 const Terrain = preload("res://scripts/world/terrain.gd")
 const TerrainDraw = preload("res://scripts/render/terrain_draw.gd")
@@ -74,7 +82,9 @@ const TerrainShadows = preload("res://scripts/render/terrain_shadows.gd")
 const VillageDraw = preload("res://scripts/render/village_draw.gd")
 const WaterDraw = preload("res://scripts/render/water_draw.gd")
 const Geometry = preload("res://scripts/core/geometry.gd")
+const FireTrunk = preload("res://scripts/render/fire_trunk.gd")
 const TERRAIN_DATA_PATH := "res://data/terrain/terrain.json"
+const BURNT_CELL_M := 4.0      # the grid the burnt places are looked up in (metres; larger than the match tolerance)
 
 # One terrain with the drawing helpers bound to it and the lock its caches need.
 class Bundle:
@@ -99,6 +109,15 @@ var _rows := 1
 var _merge_mat_shader: Shader
 var water: RefCounted = null     # the WaterGen whose water the map shows (null: none; the stage list is then exactly what it was)
 var water_draw: WaterDraw = null
+var burnt_tolerance_m := 0.5     # forest_fire.map.match_tolerance_m (PROPOSED): a tree is the burnt one when its place is this near
+
+var _trunk_look: FireTrunk.Look = null
+var _burnt_mutex := Mutex.new()
+var _burnt_cells: Dictionary = {}       # Vector2i (BURNT_CELL_M cell) -> Array of Vector2: the places (metres) of the burnt-out trees
+var _burnt_keys: Dictionary = {}        # Vector2i (0.25 m) -> Vector2: the same places, for the diff
+var _burnt_serial := 0
+var _touched_serial: Dictionary = {}    # Vector2i chunk -> the serial of the last change that touched it (main thread)
+var _baked_serial: Dictionary = {}      # Vector2i chunk -> the serial its last bake read (main thread)
 
 func _init(seed_v: int, params: RenderParams, view_cfg: Dictionary, px_per_m: float = 0.0, water_gen: RefCounted = null) -> void:
 	seed_value = seed_v
@@ -176,6 +195,8 @@ func ok() -> bool:
 
 func prepare() -> void:
 	super.prepare()
+	_trunk_look = FireTrunk.look()
+	burnt_tolerance_m = _match_tolerance()
 	_merge_mat_shader = Shader.new()
 	_merge_mat_shader.code = TerrainShadows._MERGE_SHADER
 	# T's cut and fill shaders are made on their first (main-thread) use.
@@ -296,8 +317,10 @@ func stages() -> Array:
 func chunk_content(c: Vector2i) -> Dictionary:
 	var b := _bundle(c)
 	var grown := chunk_rect(c).grow(b.ts.reach_px())
+	var burnt := _burnt_snapshot()   # (before the trees: a set at least as new as the serial recorded)
 	b.mutex.lock()
 	var trees: Array = b.terrain.trees_in_rect_px(grown)
+	var ppm: float = b.terrain.px_per_m
 	var vil: RefCounted = b.terrain.village()
 	var hedges: Array = b.vd.hedge_trees(vil) if vil != null else []
 	b.mutex.unlock()
@@ -308,11 +331,127 @@ func chunk_content(c: Vector2i) -> Dictionary:
 		if grown.has_point(Vector2(t.x, t.y)):
 			copies.append(t.duplicate())
 	copies.sort_custom(tree_less)
+	# the burnt-out trees leave the canopy list and become trunks (same order): nothing changes while none has burnt
+	var live: Array = copies
+	var trunks: Array = []
+	if not (burnt.cells as Dictionary).is_empty():
+		live = []
+		for t: Dictionary in copies:
+			if _is_burnt(t, ppm, burnt):
+				trunks.append(t)
+			else:
+				live.append(t)
 	var structs: Array = []
 	if vil != null:
 		for s: Dictionary in vil.structs_in_rect(grown):
 			structs.append(s.duplicate())
-	return {"trees": copies, "structs": structs, "village": vil}
+	return {"trees": live, "trunks": trunks, "structs": structs, "village": vil, "burn_serial": burnt.serial}
+
+# --- The burnt-out trees (forest fire) -----------------------------------------------------------------
+
+# Takes the places of the trees that have burnt down to their trunks ([{x_m, y_m, ...}]; the whole set every time, so it can also
+# shrink). Returns the chunks whose content changed (Vector2i): every chunk that holds a tree added to or removed from the set.
+func set_burnt_trees(trees: Array) -> Array:
+	var keys: Dictionary = {}
+	for t: Variant in trees:
+		if not (t is Dictionary) or not (t as Dictionary).has("x_m") or not (t as Dictionary).has("y_m"):
+			continue
+		var p := Vector2(float((t as Dictionary)["x_m"]), float((t as Dictionary)["y_m"]))
+		keys[Vector2i(roundi(p.x * 4.0), roundi(p.y * 4.0))] = p
+	var changed: Array = []
+	for k: Vector2i in keys:
+		if not _burnt_keys.has(k):
+			changed.append(keys[k])
+	for k: Vector2i in _burnt_keys:
+		if not keys.has(k):
+			changed.append(_burnt_keys[k])
+	if changed.is_empty():
+		return []
+	var cells: Dictionary = {}
+	for p: Vector2 in keys.values():
+		var cell := Vector2i(floori(p.x / BURNT_CELL_M), floori(p.y / BURNT_CELL_M))
+		if not cells.has(cell):
+			cells[cell] = []
+		(cells[cell] as Array).append(p)
+	_burnt_mutex.lock()
+	_burnt_cells = cells
+	_burnt_keys = keys
+	_burnt_serial += 1
+	var serial := _burnt_serial
+	_burnt_mutex.unlock()
+	var hit: Dictionary = {}
+	for p: Vector2 in changed:
+		for c: Vector2i in chunks_touched_by(p):
+			hit[c] = true
+			_touched_serial[c] = serial
+	var out: Array = hit.keys()
+	out.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.y < b.y or (a.y == b.y and a.x < b.x))
+	return out
+
+func burnt_count() -> int:
+	return _burnt_keys.size()
+
+func burnt_serial() -> int:
+	return _burnt_serial
+
+# Every chunk whose content holds a tree standing at `p_m` (metres): the chunks whose rectangle grown by reach_px() (the canopy and
+# the shadow reach) has the tree's place, plus the match tolerance. A superset at the border, never a miss. Within the map.
+func chunks_touched_by(p_m: Vector2) -> Array:
+	var ppm: float = terrain.px_per_m
+	var reach: float = reach_px() + burnt_tolerance_m * ppm + 1.0
+	var x := p_m.x * ppm
+	var y := p_m.y * ppm
+	var mr := map_rect_px()
+	var m0x := floori(mr.position.x / chunk_px)
+	var m0y := floori(mr.position.y / chunk_px)
+	var m1x := ceili(mr.end.x / chunk_px) - 1
+	var m1y := ceili(mr.end.y / chunk_px) - 1
+	var out: Array = []
+	for cy in range(maxi(floori((y - reach) / chunk_px), m0y), mini(floori((y + reach) / chunk_px), m1y) + 1):
+		for cx in range(maxi(floori((x - reach) / chunk_px), m0x), mini(floori((x + reach) / chunk_px), m1x) + 1):
+			out.append(Vector2i(cx, cy))
+	return out
+
+# Did chunk c's last bake read the burnt set as it now stands for that chunk? (False: it was baked, or was being baked, before
+# a change that touched it, and MapView bakes it again.)
+func burn_current(c: Vector2i) -> bool:
+	return int(_baked_serial.get(c, 0)) >= int(_touched_serial.get(c, 0))
+
+func _burnt_snapshot() -> Dictionary:
+	_burnt_mutex.lock()
+	var out := {"cells": _burnt_cells, "serial": _burnt_serial, "tol": burnt_tolerance_m}
+	_burnt_mutex.unlock()
+	return out
+
+# Is the tree record (world px) at one of the burnt places? (The 3 x 3 cells round it, within the tolerance.)
+static func _is_burnt(t: Dictionary, ppm: float, burnt: Dictionary) -> bool:
+	var mx: float = float(t["x"]) / ppm
+	var my: float = float(t["y"]) / ppm
+	var cx := floori(mx / BURNT_CELL_M)
+	var cy := floori(my / BURNT_CELL_M)
+	var tol2: float = float(burnt.tol) * float(burnt.tol)
+	var cells: Dictionary = burnt.cells
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			var arr: Variant = cells.get(Vector2i(cx + dx, cy + dy))
+			if arr == null:
+				continue
+			for p: Vector2 in (arr as Array):
+				var ex := p.x - mx
+				var ey := p.y - my
+				if ex * ex + ey * ey <= tol2:
+					return true
+	return false
+
+func _match_tolerance() -> float:
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/fx/fx.json")) if FileAccess.file_exists("res://data/fx/fx.json") else null
+	if raw is Dictionary:
+		var ff: Variant = (raw as Dictionary).get("forest_fire")
+		if ff is Dictionary and ((ff as Dictionary).get("map") is Dictionary):
+			var rec: Variant = ((ff as Dictionary)["map"] as Dictionary).get("match_tolerance_m")
+			if rec is Dictionary and ((rec as Dictionary).get("value") is float or (rec as Dictionary).get("value") is int):
+				return float((rec as Dictionary)["value"])
+	return burnt_tolerance_m
 
 static func tree_less(a: Dictionary, b: Dictionary) -> bool:
 	var ha: float = a.base + a.h
@@ -341,8 +480,8 @@ func _gather(job: Dictionary) -> Dictionary:
 	b.mutex.unlock()
 	var sprite_objects: Array = (content.trees as Array).duplicate()
 	sprite_objects.append_array(content.structs)
-	return {"data": {"trees": content.trees, "structs": content.structs, "village": content.village,
-		"sprite_objects": sprite_objects}}
+	return {"data": {"trees": content.trees, "trunks": content.trunks, "burn_serial": content.burn_serial, "structs": content.structs,
+		"village": content.village, "sprite_objects": sprite_objects}}
 
 func _ground(job: Dictionary) -> Dictionary:
 	var g := record_ground(job.view, job.rect, job.size, job.c)
@@ -466,6 +605,9 @@ func _tree_sil(job: Dictionary) -> Dictionary:
 	for r in b.terrain.level_count():
 		var sp := ShadowPass.new(job.size)
 		var n := b.ts.add_tree_silhouettes(sp, job.data.trees, r, job.view)
+		var trunks: Array = job.data.get("trunks", [])
+		if not trunks.is_empty() and _trunk_look != null and _trunk_look.ok:
+			n += FireTrunk.add_shadows(sp, trunks, r, job.view, b.ts, _trunk_look)   # the burnt-out trees' own small shadows
 		parts.append([r, sp, n])
 	b.mutex.unlock()
 	return {"data": {"tree_sps": parts}}
@@ -536,9 +678,16 @@ func _linework(job: Dictionary) -> Array:
 		water_draw.draw_chunk_lines(job.data.g, b.terrain, water, geo, job.view, job.rect)   # (the water's ink goes down first: the terrain's contours and hachures cross it)
 	b.td.draw_linework(job.data.g, job.view, job.rect)
 	b.mutex.unlock()
+	# the burnt-out trees: the scorched ground round each trunk, in ink (fire_trunk.gd), under the shadows (the trunks are drawn in the frame stage)
+	var trunks: Array = job.data.get("trunks", [])
+	if not trunks.is_empty() and _trunk_look != null and _trunk_look.ok:
+		var tg: InkCanvas = job.data.g
+		tg.set_transform_matrix(job.view)
+		FireTrunk.draw_ground(tg, trunks, P, _trunk_look)
 	return []
 
 func _frame(job: Dictionary) -> Array:
+	_baked_serial[job.c] = int(job.data.get("burn_serial", 0))   # (main thread: MapView asks burn_current() on the same one)
 	var g: InkCanvas = job.data.g
 	var shade: Variant = job.data.get("terrain_merge")
 	if shade is Array and not (shade as Array).is_empty():
@@ -556,6 +705,9 @@ func _frame(job: Dictionary) -> Array:
 	if cls is Array and not (cls as Array).is_empty():
 		composite_mask(g, cls[0])
 	g.set_transform_matrix(job.view)
+	var trunks: Array = job.data.get("trunks", [])
+	if not trunks.is_empty() and _trunk_look != null and _trunk_look.ok:
+		FireTrunk.draw_trunks(g, trunks, P, _trunk_look)   # the burnt-out trees' charred trunks: over the shadows, under the canopies
 	if P.L.objects:
 		for t: Dictionary in job.data.trees:
 			var s: float = t.half * 2.0

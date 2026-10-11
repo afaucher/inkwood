@@ -1364,6 +1364,9 @@ func _draw_fan() -> void:
 	var poly := fan_outline_screen()
 	if poly.size() < 3:
 		return
+	# The fan's other looks (data planner.fan.mode, PROPOSED: the board is variants/motion-range/); 'ribs', today's, is the rest of this function.
+	if _draw_fan_mode(poly, style.text("planner.fan.mode")):
+		return
 	var n := poly.size() / 2
 	# The fan's apex: where the step starts (the unit, or the previous step's end).
 	var k := next_step_index()
@@ -1390,6 +1393,159 @@ func _draw_fan() -> void:
 	if not Geometry2D.triangulate_polygon(poly).is_empty():
 		draw_colored_polygon(poly, style.color("fan_fill"))
 	UiInk.ink_line(self, poly, true, edge, style.num("planner.fan_line_px"), 31, 0.4)
+
+# THE FAN'S OTHER LOOKS (Alex 2026-10-11, the second playtest: "Should we just have a little shaded area where you can set the node?"; the
+# board is variants/motion-range/; data planner.fan.mode and planner.fan.<mode>; EVERY MODE AND VALUE IS PROPOSED by builder BM). Every one
+# marks the same region, World.reachable's outline (the nodes the next step may be set at, clipped by the ground and sea rules for a tank or a
+# ship), in ink at lower alphas only (the fan_* roles): shade (a flat shaded area, no outline), wash_rim (the wash under a thin rim), stipple
+# (dots), hatch (45 degree strokes), rim_ticks (a quiet rim with a ruler along the centre line: a tick at the slowest and at the fastest
+# reach). True when `mode` was drawn; false for 'ribs' (today's look, drawn by _draw_fan itself) or a name this does not know.
+func _draw_fan_mode(poly: PackedVector2Array, mode: String) -> bool:
+	if not ["shade", "wash_rim", "stipple", "hatch", "rim_ticks"].has(mode):
+		return false
+	var cfg := "planner.fan.%s." % mode
+	var parts := _fan_parts(poly)
+	if parts.is_empty():
+		# No area (a ship dead in the water, a tank held at the shore): the faint rim alone, so the spot still shows.
+		UiInk.ink_line(self, poly, true, style.color("fan_rim_quiet"), style.num("planner.fan.rim_ticks.rim_px"), 31, 0.4)
+		return true
+	match mode:
+		"shade":
+			var shade := style.color(style.text(cfg + "fill_role"))
+			for part: PackedVector2Array in parts:
+				draw_colored_polygon(part, shade)
+		"wash_rim":
+			var wash := style.color(style.text(cfg + "fill_role"))
+			for part: PackedVector2Array in parts:
+				draw_colored_polygon(part, wash)
+			UiInk.ink_line(self, poly, true, style.color(style.text(cfg + "rim_role")), style.num(cfg + "rim_px"), 31, 0.4)
+		"stipple":
+			var dot := style.color(style.text(cfg + "dot_role"))
+			var r := style.num(cfg + "dot_px")
+			for p: Vector2 in _fan_dots(poly, parts, style.num(cfg + "cell_px"), int(style.num(cfg + "max_cells"))):
+				draw_circle(p, r, dot, true, -1.0, true)
+		"hatch":
+			var segs := _fan_hatch(poly, parts, style.num(cfg + "spacing_px"), deg_to_rad(style.num(cfg + "angle_deg")))
+			if segs.size() >= 2:
+				draw_multiline(segs, style.color(style.text(cfg + "line_role")), style.num(cfg + "line_px"), true)
+		"rim_ticks":
+			UiInk.ink_line(self, poly, true, style.color(style.text(cfg + "rim_role")), style.num(cfg + "rim_px"), 31, 0.4)
+			# The ruler: the centre sample's far point is the fastest reach straight ahead, its near point the slowest.
+			var mid := (poly.size() / 2) / 2
+			var far := poly[mid]
+			var near := poly[poly.size() - 1 - mid]
+			var apex := _fan_apex()
+			var dir := (far - apex).normalized() if far.distance_to(apex) > 0.5 else Vector2.RIGHT
+			var nrm := Vector2(-dir.y, dir.x) * style.num(cfg + "tick_px")
+			draw_line(apex, far, style.color(style.text(cfg + "centre_role")), style.num(cfg + "centre_px"), true)
+			var tick := style.color(style.text(cfg + "tick_role"))
+			var tw := style.num(cfg + "tick_line_px")
+			draw_line(far - nrm, far + nrm, tick, tw, true)
+			if near.distance_to(far) > 3.0 * tw:
+				draw_line(near - nrm, near + nrm, tick, tw, true)
+	return true
+
+# Where the next step starts on screen: the unit, or the previous planned step's end.
+func _fan_apex() -> Vector2:
+	var k := next_step_index()
+	var apex_w := Vector2(float(world.units[unit_id()].x), float(world.units[unit_id()].y))
+	if k > 0:
+		var prev: Dictionary = states()[k - 1]
+		apex_w = Vector2(float(prev["x"]), float(prev["y"]))
+	return mapping.world_to_screen(apex_w)
+
+# The fan's area as filled polygons: the outline itself when it triangulates, else its cleaned-up pieces; none for a fan with no area.
+func _fan_parts(poly: PackedVector2Array) -> Array:
+	var out: Array = []
+	if _fan_area(poly) < 0.5:
+		return out   # (the triangulator hands back triangles for a polygon of repeated points: the area says there is none)
+	if not Geometry2D.triangulate_polygon(poly).is_empty():
+		return [poly]
+	for part: PackedVector2Array in Geometry2D.offset_polygon(poly, 0.05):
+		if _fan_area(part) >= 0.5 and not Geometry2D.triangulate_polygon(part).is_empty():
+			out.append(part)
+	return out
+
+# A polygon's area by the shoelace formula (px2).
+static func _fan_area(poly: PackedVector2Array) -> float:
+	var s := 0.0
+	for i in poly.size():
+		var q := poly[(i + 1) % poly.size()]
+		s += poly[i].x * q.y - q.x * poly[i].y
+	return absf(s) * 0.5
+
+func _fan_bounds(parts: Array) -> Rect2:
+	var box := Rect2((parts[0] as PackedVector2Array)[0], Vector2.ZERO)
+	for part: PackedVector2Array in parts:
+		for p: Vector2 in part:
+			box = box.expand(p)
+	return box
+
+var _fan_key := ""                       # what _fan_pts was made for (the stipple's dots or the hatch's segments)
+var _fan_pts := PackedVector2Array()
+
+# 0..1 from integers: the same cell always draws the same dot.
+static func _fan_hash(i: int, j: int, salt: int) -> float:
+	var h := (i * 73856093) ^ (j * 19349663) ^ (salt * 83492791)
+	h = (h ^ (h >> 13)) * 1274126177
+	h = h ^ (h >> 16)
+	return float(h & 0xFFFFFF) / 16777216.0
+
+# The stipple: one dot in each cell of a screen-anchored grid (so a dot does not swim as the fan changes), kept when it lies inside the fan.
+# Made again only when the outline changes (the planner redraws every frame). `max_cells` bounds the work for a huge fan at the closest zoom.
+func _fan_dots(poly: PackedVector2Array, parts: Array, cell: float, max_cells: int) -> PackedVector2Array:
+	var key := "dots|%d|%.3f|%d" % [hash(poly), cell, max_cells]
+	if key == _fan_key:
+		return _fan_pts
+	var out := PackedVector2Array()
+	var box := _fan_bounds(parts)
+	var x0 := floori(box.position.x / cell)
+	var x1 := ceili(box.end.x / cell)
+	var y0 := floori(box.position.y / cell)
+	var y1 := ceili(box.end.y / cell)
+	if (x1 - x0 + 1) * (y1 - y0 + 1) <= max_cells:
+		for gx in range(x0, x1 + 1):
+			for gy in range(y0, y1 + 1):
+				var p := Vector2((float(gx) + 0.1 + 0.8 * _fan_hash(gx, gy, 1)) * cell, (float(gy) + 0.1 + 0.8 * _fan_hash(gx, gy, 2)) * cell)
+				for part: PackedVector2Array in parts:
+					if Geometry2D.is_point_in_polygon(p, part):
+						out.append(p)
+						break
+	_fan_key = key
+	_fan_pts = out
+	return out
+
+# The hatch: parallel strokes `spacing` apart at `angle`, anchored to the screen, cut to the inside of the fan; segment end points in pairs
+# for draw_multiline. Made again only when the outline changes.
+func _fan_hatch(poly: PackedVector2Array, parts: Array, spacing: float, angle: float) -> PackedVector2Array:
+	var key := "hatch|%d|%.3f|%.3f" % [hash(poly), spacing, angle]
+	if key == _fan_key:
+		return _fan_pts
+	var out := PackedVector2Array()
+	var t := Vector2.from_angle(angle)
+	var nrm := Vector2(-t.y, t.x)
+	var box := _fan_bounds(parts)
+	var lo := INF
+	var hi := -INF
+	for corner: Vector2 in [box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)]:
+		lo = minf(lo, corner.dot(nrm))
+		hi = maxf(hi, corner.dot(nrm))
+	var reach := box.size.length()
+	var along := box.get_center().dot(t)
+	var first := ceili(lo / spacing)
+	var last := floori(hi / spacing)
+	if last - first <= 600:
+		for i in range(first, last + 1):
+			var base := nrm * (float(i) * spacing) + t * along
+			var line := PackedVector2Array([base - t * reach, base + t * reach])
+			for part: PackedVector2Array in parts:
+				for seg: PackedVector2Array in Geometry2D.intersect_polyline_with_polygon(line, part):
+					for j in range(1, seg.size()):
+						out.append(seg[j - 1])
+						out.append(seg[j])
+	_fan_key = key
+	_fan_pts = out
+	return out
 
 # `quiet`: another unit's plan (data planner.others_*): thinner line, smaller dots.
 func _draw_curve(id: String, alpha: float, quiet: bool = false) -> void:

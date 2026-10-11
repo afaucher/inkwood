@@ -1,0 +1,174 @@
+{
+  "id": "sun-time",
+  "about": "Every frame of the sun-time board as its own PNG at native size (1280 x 720): the game's own pixels, one run of the real game per sun (the Strike, seed 20261009, water on, fog off, the camera on the same patch). board.png is the sheet: 1:1 crops of these frames and nearest-neighbour enlargements of the plane and the tank.",
+  "frames": [
+    {
+      "file": "fixed.png",
+      "option": "fixed",
+      "kind": "zoom_0.85",
+      "zoom": 0.85,
+      "px_per_m": 1.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "Today's sun (fixed): fixed sun: bearing 315.0, elevation 46.0, shadow x0.966"
+    },
+    {
+      "file": "fixed_plan.png",
+      "option": "fixed",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "Today's sun (fixed) at the planning zoom: fixed sun: bearing 315.0, elevation 46.0, shadow x0.966"
+    },
+    {
+      "file": "h07.png",
+      "option": "h07",
+      "kind": "zoom_0.85",
+      "zoom": 0.85,
+      "px_per_m": 1.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "07:00: clock_at_start sun: bearing 105.0, elevation 18.4, shadow x3.000 (hour 07:00, night clamp, scope all)"
+    },
+    {
+      "file": "h07_plan.png",
+      "option": "h07",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "07:00 at the planning zoom: clock_at_start sun: bearing 105.0, elevation 18.4, shadow x3.000 (hour 07:00, night clamp, scope all)"
+    },
+    {
+      "file": "h09.png",
+      "option": "h09",
+      "kind": "zoom_0.85",
+      "zoom": 0.85,
+      "px_per_m": 1.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "09:00: clock_at_start sun: bearing 135.0, elevation 42.4, shadow x1.094 (hour 09:00, night clamp, scope all)"
+    },
+    {
+      "file": "h09_plan.png",
+      "option": "h09",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "09:00 at the planning zoom: clock_at_start sun: bearing 135.0, elevation 42.4, shadow x1.094 (hour 09:00, night clamp, scope all)"
+    },
+    {
+      "file": "h12.png",
+      "option": "h12",
+      "kind": "zoom_0.85",
+      "zoom": 0.85,
+      "px_per_m": 1.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "12:00: clock_at_start sun: bearing 180.0, elevation 60.0, shadow x0.577 (hour 12:00, night clamp, scope all)"
+    },
+    {
+      "file": "h12_plan.png",
+      "option": "h12",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "12:00 at the planning zoom: clock_at_start sun: bearing 180.0, elevation 60.0, shadow x0.577 (hour 12:00, night clamp, scope all)"
+    },
+    {
+      "file": "h15.png",
+      "option": "h15",
+      "kind": "zoom_0.85",
+      "zoom": 0.85,
+      "px_per_m": 1.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "15:00: clock_at_start sun: bearing 225.0, elevation 42.4, shadow x1.094 (hour 15:00, night clamp, scope all)"
+    },
+    {
+      "file": "h15_plan.png",
+      "option": "h15",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "15:00 at the planning zoom: clock_at_start sun: bearing 225.0, elevation 42.4, shadow x1.094 (hour 15:00, night clamp, scope all)"
+    },
+    {
+      "file": "h18.png",
+      "option": "h18",
+      "kind": "zoom_0.85",
+      "zoom": 0.85,
+      "px_per_m": 1.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "18:00: clock_at_start sun: bearing 270.0, elevation 18.4, shadow x3.000 (hour 18:00, night clamp, scope all)"
+    },
+    {
+      "file": "h18_plan.png",
+      "option": "h18",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "18:00 at the planning zoom: clock_at_start sun: bearing 270.0, elevation 18.4, shadow x3.000 (hour 18:00, night clamp, scope all)"
+    },
+    {
+      "file": "trees09.png",
+      "option": "trees09",
+      "kind": "zoom_0.85",
+      "zoom": 0.85,
+      "px_per_m": 1.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "Why not: only the trees follow (09:00): clock_at_start sun: bearing 315.0, elevation 46.0, shadow x0.966 (hour 09:00, night clamp, scope trees)"
+    },
+    {
+      "file": "trees09_plan.png",
+      "option": "trees09",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "caption": "Why not: only the trees follow (09:00) at the planning zoom: clock_at_start sun: bearing 315.0, elevation 46.0, shadow x0.966 (hour 09:00, night clamp, scope trees)"
+    }
+  ]
+}

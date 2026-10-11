@@ -11,8 +11,12 @@ extends RefCounted
 #   P.treeSize, P.sizeVar, P.rings, P.height    parameters.canopy_size / size_variation /
 #                                                 inner_contour_rings / tree_height
 #   P.wallW, P.wallH, P.houseSize               parameters.wall_width / wall_height / house_size
-#   P.sunAz, P.elev, P.shadowStr, P.shadowCol   parameters.sun_direction / sun_elevation /
-#                                                 shadow_strength / shadow_tint (+ palette.shadow_tints)
+#   P.sunAz, P.elev, P.shadowStr, P.shadowCol   data/params/sun.json via scripts/world/sun.gd (Sun.current():
+#                                                 the compass bearing and the height of THE sun, one source for
+#                                                 every reader; 'fixed' is the prototype's 315 / 46) /
+#                                                 parameters.shadow_strength / shadow_tint (+ palette.shadow_tints)
+#   P.treeSunAz, P.treeElev                      the sun the trees' CAST SHADOWS follow: P.sunAz, P.elev unless
+#                                                 Sun's scope is "trees" (the board's two-suns frame, PROPOSED)
 #   P.lw, P.wob, P.grain                        parameters.line_weight / hand_wobble / paper_grain
 #   P.L.{paper,road,shadows,objects,grain,grid} render_passes.enabled (grid = debug_grid)
 #   CELL, ROAD_HALF                             constants.collision_cell_px / road_half_width_px
@@ -34,6 +38,8 @@ extends RefCounted
 # defaulted, so a broken data file cannot quietly fall back to a value that
 # lives in code. Construct, then check `ok()`.
 
+const Sun = preload("res://scripts/world/sun.gd")
+
 const DEFAULT_PATH := "res://data/params/render_defaults.json"
 
 # --- P.* -----------------------------------------------------------------------
@@ -46,6 +52,8 @@ var rings: int
 var height: float
 var sunAz: float
 var elev: float
+var treeSunAz: float   # the trees' cast shadows (terrain_shadows.gd): sunAz unless Sun's scope is "trees"
+var treeElev: float
 var shadowStr: float
 var shadowCol: Color
 var shadow_tint: String  # the tint's NAME ("steel"); P.shadowCol is its colour
@@ -103,8 +111,15 @@ func _init(path: String = DEFAULT_PATH) -> void:
 	wallW = _default(prm, "wall_width")
 	wallH = _default(prm, "wall_height")
 	houseSize = _default(prm, "house_size")
-	sunAz = _default(prm, "sun_direction")
-	elev = _default(prm, "sun_elevation")
+	# THE SUN is data/params/sun.json's (Sun.current(): fixed = the prototype's 315 and 46 unless a switch says clock)
+	var sun = Sun.current()
+	if not sun.ok():
+		for e: String in sun.errors:
+			_err(e)
+	sunAz = sun.azimuth_deg
+	elev = sun.elevation_deg
+	treeSunAz = sun.tree_azimuth_deg
+	treeElev = sun.tree_elevation_deg
 	shadowStr = _default(prm, "shadow_strength")
 	lw = _default(prm, "line_weight")
 	wob = _default(prm, "hand_wobble")

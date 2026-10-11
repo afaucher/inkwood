@@ -1,0 +1,48 @@
+{
+  "_about": "THE SUN: the one light that every shadow, shaded roof and slope, and the shadow-side pen follows. ONE SOURCE (2026-10-11): scripts/world/sun.gd (Sun.current()) reads this file, and RenderParams (P.sunAz, P.elev), UiStyle and FxStyle (shadow_dir, sun_len, the sun_direction and sun_elevation params) and InkCanvas's pen all ask it; nothing else holds a copy. Before this, the numbers lived in render_defaults.json parameters.sun_direction and sun_elevation and each reader parsed them itself. MODE 'fixed' IS TODAY'S SUN, unchanged: from the north-west (315), elevation 46, as the design doc's Style guide > Light and shadow says (the prototype's own values). MODE 'clock_at_start' IS THE DIRECTION ALEX HAS SET (decision sun-time, 2026-10-11: \"Fixed time at start\", and \"Every shadow follows\"): the sun comes from a time of day, is picked ONCE when the mission starts and does not move during it, and EVERY shadow follows that one sun. The model itself (the numbers of the 'clock' block) is a PROPOSAL (the builder BS, from Alex's playtest note: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.'): the sun takes its bearing and height from an hour. It is a BOARD'S SWITCH (variants/sun-time/) and nothing chooses it: the default stays 'fixed' until Alex picks. AZIMUTH IS A COMPASS BEARING with the map's north up: 0 north, 90 east, 180 south, 270 west; 315 is the north-west, so the shadows fall south-east (the prototype's shadowDir is (azimuth + 90) degrees on the screen). The knobs sun_mode, sun_hour and sun_scope in scripts/debug/debug_settings.gd (INKWOOD_SUN_MODE=clock INKWOOD_SUN_HOUR=9) override the three switches below at run time; 'data' there means this file. Keys that begin with an underscore are notes.",
+
+  "mode": {
+    "value": "fixed",
+    "choices": ["fixed", "clock_at_start"],
+    "_reason": "fixed = today's sun (the 'fixed' block below), the default and the only mode in the game until Alex picks. clock_at_start = the time-of-day model (the 'clock' block), the sun taken ONCE when the mission starts and held for the whole mission, so the map bakes once (Alex, decision sun-time: \"Fixed time at start\"). Which mode the game ships with is still the board's question; the default stays fixed until Alex picks."
+  },
+  "scope": {
+    "value": "all",
+    "choices": ["all", "trees"],
+    "_proposed": true,
+    "_reason": "clock_at_start only. all = every shadow follows the one sun (ALEX, decision sun-time: \"Every shadow follows\"). trees = ONLY the trees' cast shadows take the clock's sun and everything else (terrain scarps, structures, units, the shadow-side pen) keeps the fixed sun: it exists only to draw the board's 'why not' frame, that two suns on one map break the look. Not meant for play."
+  },
+  "hour": {
+    "value": 12.0,
+    "_proposed": true,
+    "_reason": "the local hour, 0 to 24 (9.5 is half past nine), the clock model is asked for when hour_source is 'data'. The board sets it; the game's source is the open question (a) of variants/sun-time/board.json."
+  },
+  "hour_source": {
+    "value": "data",
+    "choices": ["data", "system"],
+    "_proposed": true,
+    "_reason": "data = the 'hour' above. system = this machine's local time of day, read once when the sun is first asked for (Alex's suggestion: the current time of day). Open question (a): in a co-op game the host's hour (PROPOSED) would have to travel to the client, so that both see one map; that part is not built: 'system' is each machine's own."
+  },
+
+  "fixed": {
+    "_about": "Today's sun, copied from the prototype's parameters (design doc, Prototype > Parameters and defaults; Style guide > Light and shadow). Not a proposal.",
+    "azimuth_deg": { "value": 315 },
+    "elevation_deg": { "value": 46 }
+  },
+
+  "clock": {
+    "_about": "THE TIME-OF-DAY MODEL, every number PROPOSED. The sun rises in the east, goes through the south and sets in the west, the map's north up: the bearing runs from rise_azimuth_deg at sunrise_hour to set_azimuth_deg at sunset_hour in a straight line over the hours (90 -> 180 -> 270, so 180, due south, is at the middle of the day). The height follows a sine arc, noon_elevation_deg at the middle of the day and 0 at sunrise and sunset. THE SHADOW'S LENGTH, 1 / tan(elevation) times the height of the thing, is clamped to max_shadow_len so that dawn and dusk shadows stay readable (a 12 degree sun would throw a shadow 4.7 times as long as the tree is high); the elevation the readers see is the one that length belongs to, so every reader that works out 1 / tan(elevation) gets the clamped length. Today's fixed sun is 46 degrees (length 0.97). At 60 degrees noon the length is 0.58.",
+    "sunrise_hour": { "value": 6.0, "_proposed": true, "_reason": "equinox-simple: a 12-hour day. A season or a latitude is not modelled." },
+    "sunset_hour": { "value": 18.0, "_proposed": true },
+    "rise_azimuth_deg": { "value": 90, "_proposed": true, "_reason": "due east" },
+    "set_azimuth_deg": { "value": 270, "_proposed": true, "_reason": "due west" },
+    "noon_elevation_deg": { "value": 60, "_proposed": true, "_reason": "a mid-latitude spring or autumn noon. Higher than today's 46 so that the middle of the day has the shortest shadows, and not so high that they vanish under the trees." },
+    "max_shadow_len": { "value": 3.0, "_proposed": true, "_reason": "the longest shadow per unit of height, at an elevation of 18.4 degrees. The prototype's own slider stops at 12 degrees (length 4.7); 3.0 is where a tree's shadow is three times its height, a hill's reaches a long way across the next chunk and the lit side is still most of the picture." },
+    "night": {
+      "value": "clamp",
+      "choices": ["clamp", "fold"],
+      "_proposed": true,
+      "_reason": "an hour outside sunrise..sunset (open question (b) of the board). clamp = the nearest daytime hour (before 6:00 the 6:00 sun, after 18:00 the 18:00 sun): the shadows are the longest ones at night. fold = the 24 hours laid on the day arc (midnight is sunrise's sun, 6:00 is the 9:00 sun, 12:00 noon, 18:00 the 15:00 sun, 24:00 sunset's), so the sun always moves and no hour is left out."
+    }
+  }
+}

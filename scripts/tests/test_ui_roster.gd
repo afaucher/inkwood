@@ -166,8 +166,11 @@ func _check_style_keys(st: UiStyle) -> void:
 	for side: String in ["allies", "axis"]:
 		var key: Variant = st.lookup("sides.accent." + side)
 		check(key is String and st.palette.has(key), "side '%s' maps to a palette accent" % side)
-	for p: String in ["sun_direction", "sun_elevation", "shadow_strength", "line_weight", "hand_wobble", "aircraft_shadow_altitude_scale"]:
+	for p: String in ["shadow_strength", "line_weight", "hand_wobble", "aircraft_shadow_altitude_scale"]:
 		check(st.params.get(p) is float or st.params.get(p) is int, "render_defaults.json gives the UI '%s'" % p)
+	# the sun is data/params/sun.json's (scripts/world/sun.gd), asked live through param()
+	for p: String in ["sun_direction", "sun_elevation"]:
+		check(st.param(p) > 0.0, "sun.json gives the UI '%s' (%s)" % [p, str(st.param(p))])
 	near(st.color("unit_shadow").a, float(st.params["shadow_strength"]), 1e-6, "unit shadows are at the map's shadow strength")
 	eq(st.errors.size(), 0, "no style lookups failed: %s" % str(st.errors))
 

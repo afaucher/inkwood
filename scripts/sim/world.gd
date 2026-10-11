@@ -117,6 +117,14 @@ extends RefCounted
 # the AI's. And THE PLANNER sees the same rules: reachable() clips the fan of a ground unit by the ground rule and of a sea unit by the
 # water rule, so a player sees where a tank or a ship can go and cannot place a step it cannot make.
 #
+# THE FOREST FIRE (decision forest-fire, 2026-10-11; scripts/sim/fire.gd has the rules, data/sim/fire.json the numbers): when a scenario
+# turns it on (enable_fire) the World holds a FireState as `fire` (null: off, and nothing below changes anything). resolve() runs the fire's
+# step after the turn's combat and crashes are known (blasts and crashes light trees, fires spread, trees burn out, units near burning trees may
+# lose a pip: their health and downs land in the turn's final unit states and events); the state travels with the turn result and the
+# snapshot (net_fire / apply_net_fire); clients never roll. SMOKE DENIES TRACKING (Alex: "visible but untrackable ... last place you saw it"): a
+# ground or sea unit in the smoke is seen as before but is not SPOTTED for fire control (spotting.gd; _gun_analysis; a salvo at it is a poor shot
+# at the last place it was tracked) and a bomb that follows it aims at that place (_resolve_followed_drops). tracking_denied() answers it.
+#
 # LEAVING THE MAP is an event, not an error: the step state carries
 # out_of_bounds, a "left_bounds" / "returned_to_bounds" event goes into the
 # turn's events, and unit_left_bounds fires. What should happen to such a unit
@@ -145,6 +153,8 @@ const Guns = preload("res://scripts/sim/guns.gd")
 const GunRules = preload("res://scripts/sim/gun_rules.gd")
 const Spotting = preload("res://scripts/sim/spotting.gd")
 const GroundRules = preload("res://scripts/sim/ground_rules.gd")
+const FireRules = preload("res://scripts/sim/fire_rules.gd")
+const FireState = preload("res://scripts/sim/fire.gd")
 const JsMath = preload("res://scripts/core/js_math.gd")
 
 const PHASE_PLANNING := "planning"
@@ -192,6 +202,8 @@ var gun_memory: Array = []
 # The ground rule's numbers (data/sim/ground.json) and the queries a ground unit is kept on dry, level land by (set_ground), which
 # also holds the rule itself (ground_rules.gd). Without queries (and without water) ground units move as any unit does.
 var ground: GroundRules
+# THE FOREST FIRE (the header; enable_fire): null while it is off.
+var fire: FireState = null
 var _fan_cache: Dictionary = {}   # key -> PackedVector2Array: the ruled fans asked for lately (_ruled_outline)
 
 var _combat_resolver: CombatResolver
@@ -305,6 +317,56 @@ func _grounded_pose(def: UnitDef, px: float, py: float, heading: float) -> bool:
 	if not _ground_rule_on(def):
 		return true
 	return ground.pose_ok(def.size_m, px, py, heading, ground.spans(units), water_depth)
+
+# --- The forest fire (the header's THE FOREST FIRE; Alex's decision forest-fire) ---------------------------------------
+
+# Turn the fire on: the World holds a FireState over data/sim/fire.json that lights the trees of `trees` (a FireTrees, scripts/sim/fire_trees.gd,
+# over the terrain of the seed; null makes a state that only carries trees, which lights nothing). False, with the data's errors in `errors`, if the
+# data does not load.
+func enable_fire(trees: Object, rules_path: String = FireRules.PATH) -> bool:
+	var fr := FireRules.new(rules_path, quiet)
+	if not fr.ok():
+		errors.append_array(fr.errors)
+		return false
+	fire = FireState.new(fr, rules.turn_seconds)
+	fire.source = trees
+	return true
+
+# The fire's state for a joining client and the turn result (empty while the fire is off), and its twin. A World that has no fire and is handed
+# a non-empty one (a client whose fire knob differs from the host's) takes the host's, without the terrain: it shows and judges the smoke.
+func net_fire() -> Dictionary:
+	return fire.net_state() if fire != null else {}
+
+func apply_net_fire(d: Dictionary) -> void:
+	if d.is_empty():
+		return   # (a host with no fire sends none: a World that has one keeps its own)
+	if fire == null and not enable_fire(null):
+		return
+	fire.apply_net_state(d)
+
+# Is the unit IN THE SMOKE of a burning tree and so denied TRACKING (decision forest-fire: visible but untrackable)? `t` is seconds into the last
+# resolve (World.sample's clock); t < 0: as the world stands. False while the fire is off, for a unit the smoke does not hide from tracking (a
+# plane) and for one that is not in the smoke.
+func tracking_denied(unit_id: String, t: float = -1.0) -> bool:
+	if fire == null or not units.has(unit_id):
+		return false
+	var u: Unit = units[unit_id]
+	var p := _place_at(u, t)
+	return fire.denies_tracking(u.def, p.x, p.y, fire.moment(self, t))
+
+# Where a unit is at `t` seconds into the last resolve, or as it stands (t < 0).
+func _place_at(u: Unit, t: float) -> Vector2:
+	if t < 0.0:
+		return Vector2(u.x, u.y)
+	var s := sample(u.id, t, "history")
+	return Vector2(float(s["x"]), float(s["y"]))
+
+# The last place a unit in smoke at `t` was TRACKED: where it was at the latest moment, at or before t, that it was not in the smoke ("last place
+# you saw it"), or where it was at the start of the turn if it was in smoke all along.
+func _last_tracked_place(unit_id: String, t: float) -> Vector2:
+	var u: Unit = units[unit_id]
+	var pos_at := func(tt: float) -> Vector2: return _place_at(u, tt)
+	return pos_at.call(fire.last_clear_t(turn, t, pos_at))
 
 # --- Players and units -------------------------------------------------------
 
@@ -844,7 +906,11 @@ func _gun_analysis(u: Unit, spec: GunRules.Spec, tgt: Dictionary, step: int, pre
 	var spotters: Array[String] = []
 	if target_problem == "":
 		spotters = spotting.spotters_now(self, u.side, tgt)
-	var spotted := not spotters.is_empty()
+	# VISIBLE is not TRACKED (decision forest-fire): a unit in smoke is seen (spotters, by) but is not held for fire control, so the special cannot
+	# be switched on at it and a salvo already set is a poor shot at the last place it was tracked.
+	var visible := not spotters.is_empty()
+	var in_smoke := visible and tgt.has("unit") and tracking_denied(str(tgt["unit"]))
+	var spotted := visible and not in_smoke
 	if why == "" and not spotted:
 		why = Guns.WHY_UNSPOTTED
 	var carry := 0.0
@@ -863,7 +929,7 @@ func _gun_analysis(u: Unit, spec: GunRules.Spec, tgt: Dictionary, step: int, pre
 	return {
 		"ok": why == "", "reason": why, "poor_shot": poor, "special": spec.id, "step": step, "target": tgt, "target_pos": tpos, "from": from, "fire_t": fire_t,
 		"range_m": range_m, "range_min_m": spec.range_min_m, "range_max_m": spec.range_max_m,
-		"spotted": spotted, "by": spotters[0] if spotted else "", "spotters": spotters, "spotted_s": spotted_s, "salvos": salvos,
+		"spotted": spotted, "visible": visible, "in_smoke": in_smoke, "by": spotters[0] if visible else "", "spotters": spotters, "spotted_s": spotted_s, "salvos": salvos,
 		"spotter_ratio": spotter_ratio,
 		"spread_m": spread, "aim_factor": Guns.aim_factor(spotted_s, spec),
 		"flight_s": flight, "impact_t": impact_t, "lands_in_turn": turn + int(floorf(impact_t / rules.turn_seconds + 1e-9)),
@@ -1060,6 +1126,7 @@ func resolve() -> Dictionary:
 	_resolve_followed_drops(histories)
 	for id: String in units:
 		_apply_drop_limits(units[id], histories[id], 1)
+	_combat_resolver.ships_sink = water_depth.is_valid()   # (a destroyed sea unit sinks where there is water: _fall_step)
 	var fight := _combat_resolver.run(units, histories, turn, rng_seed, rules.turn_seconds,
 		func(uid: String, t: float) -> Dictionary: return sample(uid, t, "history"),
 		func(band: String) -> float: return band_height(band), bombs_in_flight, shells_in_flight,
@@ -1116,8 +1183,37 @@ func resolve() -> Dictionary:
 		crash_at[id] = tc
 		var at := sample(id, tc, "history")
 		crash_events.append({"type": "crash", "turn": turn, "unit": id, "t": tc, "x": at["x"], "y": at["y"]})
+	# A unit that goes UNDER the water this turn (a hull at the moment it went down, a plane at the surface): a splash.
+	for id: String in units:
+		var u: Unit = units[id]
+		if u.fate != Unit.FATE_OUT_OF_CONTROL:
+			continue
+		var ts := _surface_time(histories[id])
+		if is_nan(ts):
+			continue
+		var wat := sample(id, ts, "history")
+		crash_events.append({"type": "splash", "turn": turn, "unit": id, "t": ts, "x": wat["x"], "y": wat["y"]})
 	crash_events.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["t"]) < float(b["t"]))
 	events = CombatResolver.merge_events(CombatResolver.merge_events(events, fight["events"]), crash_events)
+
+	# THE FOREST FIRE (the header; scripts/sim/fire.gd), now that every impact and crash of the turn is known: trees catch, fires spread and burn
+	# out, and a ground or sea unit near a burning tree may lose a pip. A unit that loses its last pip is destroyed where it stood (the same
+	# machinery as a kill in combat: down_at, the fate "destroyed"), so the final states below stop it there.
+	if fire != null:
+		var burn := fire.resolve_turn(turn, rng_seed, units, events,
+			func(uid: String, t: float) -> Dictionary: return sample(uid, t, "history"))
+		var hurt: Dictionary = burn["hurt"]
+		for uid: String in hurt:
+			var hu: Unit = units[uid]
+			var rec: Dictionary = hurt[uid]
+			hu.health = int(rec["health"])
+			if hu.health <= 0 and not hu.down:
+				hu.down = true
+				hu.down_at = float(rec["t"])
+				hu.fate = Unit.FATE_DESTROYED
+				down_at[uid] = float(rec["t"])
+				fates[uid] = {"fate": Unit.FATE_DESTROYED, "spin": 0}
+		events = CombatResolver.merge_events(events, burn["events"])
 
 	for id: String in units:
 		var u: Unit = units[id]
@@ -1133,7 +1229,7 @@ func resolve() -> Dictionary:
 			u.out_of_bounds = not in_bounds(float(at["x"]), float(at["y"]))
 			if crash_at.has(id):
 				u.fate = Unit.FATE_CRASHED
-				u.fall_height_m = 0.0
+				u.fall_height_m = 0.0 - water_depth_at(float(at["x"]), float(at["y"]))   # on the ground (0 m), or on the water's floor (below the surface)
 				u.fall_dir = 0
 		else:
 			u.apply_state(last)
@@ -1149,6 +1245,8 @@ func resolve() -> Dictionary:
 	turn_resolved.emit(turn, histories, events)
 	var result := {"turn": turn, "histories": histories, "events": events, "units": _net_states(), "bombs": bombs_in_flight.duplicate(true)}
 	result.merge(net_guns())
+	if fire != null:
+		result["fire"] = net_fire()   # (a World with no fire adds nothing to its result)
 	return result
 
 # THE NETWORK CONTRACT (proposed by the lead for the first fight, 2026-10-09;
@@ -1188,6 +1286,8 @@ func apply_resolution(result: Dictionary) -> bool:
 	# The bombs still falling after this turn (a result without them has none).
 	bombs_in_flight = (result.get("bombs", []) as Array).duplicate(true)
 	apply_net_guns(result)
+	if result.has("fire"):
+		apply_net_fire(result["fire"])
 	spotting.forget()
 	_set_phase(PHASE_RESOLVED)
 	var events: Array = (result["events"] as Array).duplicate(true)
@@ -1262,12 +1362,12 @@ func sample(unit_id: String, t: float, source: String = "history") -> Dictionary
 	var band_b := str(b["altitude_band"])
 	p["altitude_band"] = band_b if f >= 0.5 else band_a
 	# Height: the band heights, or for a falling unit (its states carry
-	# fall_height_m) the continuous fall height, never below the ground.
+	# fall_height_m) the continuous fall height, never below the ground (or the water's floor).
 	var ha := _state_height(a)
 	var hb := _state_height(b)
 	p["height_m"] = ha + (hb - ha) * f
 	if a.has("fall_height_m") or b.has("fall_height_m"):
-		p["height_m"] = maxf(float(p["height_m"]), 0.0)
+		p["height_m"] = maxf(float(p["height_m"]), float(b.get("floor_m", a.get("floor_m", 0.0))))   # (the floor: 0 m, or the water's)
 	return p
 
 # --- Internals ---------------------------------------------------------------
@@ -1421,7 +1521,13 @@ func _resolve_followed_drops(histories: Dictionary) -> void:
 			var followed_id := str(target["unit"])
 			var aim_at := func(t: float) -> Vector2:
 				var bomber := Bombs.sample_at(samples, t)
-				return Bombs.followed_aim(sample(followed_id, t, "history"), float(bomber["height_m"]), bombs)
+				var pose := sample(followed_id, t, "history")
+				# A unit IN SMOKE cannot be tracked (decision forest-fire; Alex: "last place you saw it"): the aim is where it was last tracked,
+				# with no lead; out of the smoke again by the release it is followed as usual.
+				var lost: Variant = null
+				if fire != null and fire.denies_tracking((units[followed_id] as Unit).def, float(pose["x"]), float(pose["y"]), fire.game_time(turn, t)):
+					lost = _last_tracked_place(followed_id, t)
+				return Bombs.tracked_aim(pose, float(bomber["height_m"]), bombs, lost)
 			var rec := Bombs.release_rule(Bombs.plan_drop_moving(samples, aim_at, bombs), bombs)
 			rec["target"] = target
 			rec["followed"] = true
@@ -1480,6 +1586,10 @@ func _start_state(u: Unit) -> Dictionary:
 	s["out_of_bounds"] = u.out_of_bounds
 	if is_finite(u.fall_height_m):
 		s["fall_height_m"] = u.fall_height_m
+		if u.fall_height_m <= 0.0 and water_depth.is_valid():
+			var depth := water_depth_at(u.x, u.y)
+			if depth > 0.0:
+				s["floor_m"] = -depth   # a hull going down, a wreck on the floor
 	return s
 
 # --- A unit going down out of control (Track C; combat.gd, WHAT A KILL DOES) -----
@@ -1490,23 +1600,79 @@ func _start_state(u: Unit) -> Dictionary:
 # fall_height_m, metres above the ground (0 m; no terrain), unclamped: it goes
 # negative in the step that reaches the ground, and sample() clamps at 0. The
 # crash is the moment the height crosses 0 (_crash_time).
+#
+# THROUGH THE WATER (Track BB, 2026-10-11; Alex, decision ship-sinks: "ideally we just sink them to the
+# bottom", "just like a downed plane its altitude should decrease until it hits the floor. It just does so
+# through the water", "we could have planes do the same if they crash there"). The water's surface is 0 m and
+# its floor is MINUS THE WATER'S DEPTH at the unit's place (water_depth_at, the very query the water rule uses):
+#   - a destroyed SEA unit (the resolver gives it fate out_of_control, spin 0, when the World has water) falls
+#     from 0 m: it stays where it went down (the way it had carries it a few metres, its speed gone within the
+#     step) and loses height at combat.json sink_descent_mps (_sink_step);
+#   - a plane whose fall reaches 0 m over water does not crash there: it stops moving along (the water takes
+#     its speed) and sinks straight down at the same rate (_fall_step); over land nothing changes;
+#   - either reaches the floor, where it is CRASHED, with fall_height_m = the floor (negative: below the
+#     surface), and stays there for the rest of the game.
+# The states below the surface carry floor_m (the floor's height, negative): the crash is the moment the height
+# reaches it (_crash_time), sample() clamps at it, and a "splash" event marks the moment a unit goes under
+# (_surface_time). Nothing here is drawn: the interface draws the water over it (scripts/ui/unit_sunk.gd).
+# The rate and the stop-dead-on-entry are PROPOSED (Track BB); what is Alex's is that it falls through the water to the floor.
 
 # The state `d` seconds on from `prev` (a falling unit's state with fall_height_m),
 # as an arc like any step: the caller sets step and t.
 func _fall_step(u: Unit, prev: Dictionary, d: float, spin: int) -> Dictionary:
+	var h0 := float(prev["fall_height_m"])
+	if u.def.domain == "sea" or h0 <= 0.0:
+		return _sink_step(u, prev, d)   # a hull going down, or anything already under the surface
 	var v0 := float(prev["speed"])
 	var v1 := minf(v0 + combat.fall_speed_gain * d, maxf(v0, u.def.envelope.dive_speed_max))
 	var turn := float(spin) * combat.fall_turn_rate * d
-	var h0 := float(prev["heading"])
-	var end := Envelope.advance(float(prev["x"]), float(prev["y"]), h0, turn, (v0 + v1) * 0.5 * d)
-	var h1 := float(prev["fall_height_m"]) - combat.fall_descent * d
+	var heading0 := float(prev["heading"])
+	var h1 := h0 - combat.fall_descent * d
+	# Over water the fall does not end at 0 m: the plane goes under and the water takes its speed. The step it reaches
+	# the surface in ends with it stopped (its speed 0 at the end of the step, so the arc the states are read by,
+	# which averages the two end speeds, brings it to rest at this state's place) and the rest of the step is below the
+	# surface, at the sink rate; the water's floor is the depth where it stops.
+	if h1 <= 0.0 and water_depth.is_valid():
+		var stop := Envelope.advance(float(prev["x"]), float(prev["y"]), heading0, turn, v0 * 0.5 * d)
+		var depth := water_depth_at(float(stop[0]), float(stop[1]))
+		if depth > 0.0:
+			var f := h0 / (h0 - h1)   # the share of the step in the air
+			return {
+				"x": stop[0], "y": stop[1], "heading": Envelope.wrap_angle(heading0 + turn), "speed": 0.0,
+				"altitude_band": _nearest_band(u, 0.0),
+				"turn": turn, "clamped": false, "limits": [], "planned": false,
+				"out_of_bounds": not in_bounds(float(stop[0]), float(stop[1])),
+				"fall_height_m": -combat.sink_descent * d * (1.0 - f), "floor_m": -depth,
+			}
+	var end := Envelope.advance(float(prev["x"]), float(prev["y"]), heading0, turn, (v0 + v1) * 0.5 * d)
 	return {
-		"x": end[0], "y": end[1], "heading": Envelope.wrap_angle(h0 + turn), "speed": v1,
+		"x": end[0], "y": end[1], "heading": Envelope.wrap_angle(heading0 + turn), "speed": v1,
 		"altitude_band": _nearest_band(u, maxf(h1, 0.0)),
 		"turn": turn, "clamped": false, "limits": [], "planned": false,
 		"out_of_bounds": not in_bounds(float(end[0]), float(end[1])),
 		"fall_height_m": h1,
 	}
+
+# The state `d` seconds on from `prev` for a unit going down THROUGH THE WATER: it stays where it is (a hull that
+# was under way carries on for the few metres its way takes, its speed gone by the end of the step: a slow drift,
+# proposed), loses height at combat.json sink_descent_mps and does not turn. Like the fall, the height is
+# unclamped (it goes below the floor in the step that reaches it; sample() clamps and _crash_time finds the moment).
+func _sink_step(u: Unit, prev: Dictionary, d: float) -> Dictionary:
+	var h0 := float(prev["fall_height_m"])
+	var heading0 := float(prev["heading"])
+	var end := Envelope.advance(float(prev["x"]), float(prev["y"]), heading0, 0.0, float(prev["speed"]) * 0.5 * d)
+	var floor_m := float(prev["floor_m"]) if prev.has("floor_m") else -water_depth_at(float(end[0]), float(end[1]))
+	var h1 := h0 - combat.sink_descent * d
+	var s := {
+		"x": end[0], "y": end[1], "heading": heading0, "speed": 0.0,
+		"altitude_band": _nearest_band(u, maxf(h1, 0.0)),
+		"turn": 0.0, "clamped": false, "limits": [], "planned": false,
+		"out_of_bounds": not in_bounds(float(end[0]), float(end[1])),
+		"fall_height_m": h1,
+	}
+	if floor_m < 0.0:
+		s["floor_m"] = floor_m
+	return s
 
 # `hist` (a unit's history this turn, as motion built it) with the unit set to
 # fall from t_d: the states before t_d stay as they are, a state AT t_d is
@@ -1540,6 +1706,10 @@ func _begin_fall(u: Unit, hist: Array, t_d: float) -> Array:
 			"out_of_bounds": not in_bounds(float(at["x"]), float(at["y"])),
 		}
 	c["fall_height_m"] = float(at["height_m"])
+	if water_depth.is_valid():   # over water the state knows its floor (a hull going down, a plane that will reach the surface)
+		var depth := water_depth_at(float(c["x"]), float(c["y"]))
+		if depth > 0.0:
+			c["floor_m"] = -depth
 	out.append(c)
 	var prev := c
 	for i in range(first_after, hist.size()):
@@ -1551,20 +1721,35 @@ func _begin_fall(u: Unit, hist: Array, t_d: float) -> Array:
 		prev = s
 	return out
 
-# When, in seconds into the turn, a falling unit's path reaches the ground: the
-# height is linear between states, so the crossing is exact. NAN if it does not
-# this turn.
+# When, in seconds into the turn, a falling unit's path reaches the ground (or, over water, the water's
+# floor: a state's floor_m, negative; none means 0 m): the height is linear between states, so the crossing is
+# exact. NAN if it does not this turn.
 func _crash_time(path: Array) -> float:
 	for i in range(1, path.size()):
 		var a: Dictionary = path[i - 1]
 		var b: Dictionary = path[i]
 		if not a.has("fall_height_m") or not b.has("fall_height_m"):
 			continue
+		var ca := float(a["fall_height_m"]) - float(a.get("floor_m", 0.0))   # the clearance above the floor
+		var cb := float(b["fall_height_m"]) - float(b.get("floor_m", 0.0))
+		if ca <= 0.0:
+			return float(a["t"])
+		if cb <= 0.0:
+			return float(a["t"]) + (float(b["t"]) - float(a["t"])) * ca / (ca - cb)
+	return NAN
+
+# When, in seconds into the turn, a falling unit's path goes UNDER the water's surface (its height crossing 0 m
+# downward into a state with a floor, so over water): where the interface draws the splash. NAN if it does not
+# this turn (a unit already under the surface, or over land).
+func _surface_time(path: Array) -> float:
+	for i in range(1, path.size()):
+		var a: Dictionary = path[i - 1]
+		var b: Dictionary = path[i]
+		if not a.has("fall_height_m") or not b.has("fall_height_m") or not b.has("floor_m"):
+			continue
 		var ha := float(a["fall_height_m"])
 		var hb := float(b["fall_height_m"])
-		if ha <= 0.0:
-			return float(a["t"])
-		if hb <= 0.0:
+		if ha >= 0.0 and hb < 0.0:
 			return float(a["t"]) + (float(b["t"]) - float(a["t"])) * ha / (ha - hb)
 	return NAN
 

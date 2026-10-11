@@ -1,0 +1,940 @@
+{
+  "id": "tracers",
+  "options": [
+    {
+      "option": "T1",
+      "label": "T1 · Ink dashes",
+      "note": "PROPOSED. Short ink dashes along the line of fire, from the gun to where the round ended, on a paper halo so they read over forest and hatching. They sweep out in a tenth of a second, drift outward a little, thin toward the far end and fade over half a second. The simplest mark in the map's own material (ink): a dotted line, not a light. Seen on the board: it reads at every zoom and is the heaviest ink of the five, and a dashed line is already the planner's and the drop's mark.",
+      "rows": [
+        {
+          "title": "a. A MISS: the fighter's twin guns and the bomber's tail turret fire; every round goes by (the roll is at 0.5 s)",
+          "key": "miss",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T1_miss_0.png",
+              "caption": "0.02 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T1_miss_1.png",
+              "caption": "0.05 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T1_miss_2.png",
+              "caption": "0.10 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T1_miss_3.png",
+              "caption": "0.20 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T1_miss_4.png",
+              "caption": "0.32 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T1_miss_5.png",
+              "caption": "0.44 s after the roll  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. A HIT AND A MISS: one of the fighter's guns misses, the other lands on the bomber (the roll is at 1.0 s); its damage smoke (W1) starts",
+          "key": "hit",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T1_hit_0.png",
+              "caption": "0.02 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T1_hit_1.png",
+              "caption": "0.05 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T1_hit_2.png",
+              "caption": "0.10 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T1_hit_3.png",
+              "caption": "0.20 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T1_hit_4.png",
+              "caption": "0.32 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T1_hit_5.png",
+              "caption": "0.44 s after the roll  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. CLOSE IN (zoom 2.0): the bomber's tail, its turret firing back, the fighter's rounds arriving",
+          "key": "close",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T1_close_0.png",
+              "caption": "0.06 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T1_close_1.png",
+              "caption": "0.10 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T1_close_2.png",
+              "caption": "0.14 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T1_close_3.png",
+              "caption": "0.24 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            }
+          ]
+        },
+        {
+          "title": "d. THE PASS AT PLAY (zoom 0.6): the whole turn's fire, flak F2 from the village, the bomber's smoke W1, the wingtip ribbons",
+          "key": "pass",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T1_pass_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T1_pass_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T1_pass_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T1_pass_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T1_pass_4.png",
+              "caption": "5.0 s into the turn  (zoom 0.60)"
+            }
+          ]
+        },
+        {
+          "title": "e. THE PLANNING VIEW (zoom 0.35): the same turn; the planes are 14 px",
+          "key": "plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T1_plan_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T1_plan_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T1_plan_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T1_plan_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T1_plan_4.png",
+              "caption": "5.0 s into the turn  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "f. THE REAL RATE (zoom 0.6): two fighters on the bomber, as the sim rolls them, with the flak, the smoke and the ribbons",
+          "key": "fight",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T1_fight_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T1_fight_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T1_fight_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T1_fight_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.60)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "T2",
+      "label": "T2 · Paper-light streak, ink edge",
+      "note": "PROPOSED. A bright round flies out along the line: a short tapered streak in the palette's lightest step (the knock-out, 'light is the paper') with a fine ink edge on both sides, and a hairline of ink where it passed. It reads as light without a glow or a new hue; the ink edge is what keeps it visible on the pale fills. Seen on the board: it reads on forest, hatching and the ribbons alike, and at the planning zoom its streak is the most visible of the thin marks.",
+      "rows": [
+        {
+          "title": "a. A MISS: the fighter's twin guns and the bomber's tail turret fire; every round goes by (the roll is at 0.5 s)",
+          "key": "miss",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T2_miss_0.png",
+              "caption": "0.02 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T2_miss_1.png",
+              "caption": "0.05 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T2_miss_2.png",
+              "caption": "0.10 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T2_miss_3.png",
+              "caption": "0.20 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T2_miss_4.png",
+              "caption": "0.32 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T2_miss_5.png",
+              "caption": "0.44 s after the roll  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. A HIT AND A MISS: one of the fighter's guns misses, the other lands on the bomber (the roll is at 1.0 s); its damage smoke (W1) starts",
+          "key": "hit",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T2_hit_0.png",
+              "caption": "0.02 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T2_hit_1.png",
+              "caption": "0.05 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T2_hit_2.png",
+              "caption": "0.10 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T2_hit_3.png",
+              "caption": "0.20 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T2_hit_4.png",
+              "caption": "0.32 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T2_hit_5.png",
+              "caption": "0.44 s after the roll  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. CLOSE IN (zoom 2.0): the bomber's tail, its turret firing back, the fighter's rounds arriving",
+          "key": "close",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T2_close_0.png",
+              "caption": "0.06 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T2_close_1.png",
+              "caption": "0.10 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T2_close_2.png",
+              "caption": "0.14 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T2_close_3.png",
+              "caption": "0.24 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            }
+          ]
+        },
+        {
+          "title": "d. THE PASS AT PLAY (zoom 0.6): the whole turn's fire, flak F2 from the village, the bomber's smoke W1, the wingtip ribbons",
+          "key": "pass",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T2_pass_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T2_pass_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T2_pass_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T2_pass_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T2_pass_4.png",
+              "caption": "5.0 s into the turn  (zoom 0.60)"
+            }
+          ]
+        },
+        {
+          "title": "e. THE PLANNING VIEW (zoom 0.35): the same turn; the planes are 14 px",
+          "key": "plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T2_plan_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T2_plan_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T2_plan_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T2_plan_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T2_plan_4.png",
+              "caption": "5.0 s into the turn  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "f. THE REAL RATE (zoom 0.6): two fighters on the bomber, as the sim rolls them, with the flak, the smoke and the ribbons",
+          "key": "fight",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T2_fight_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T2_fight_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T2_fight_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T2_fight_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.60)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "T3",
+      "label": "T3 · Side-colour streak",
+      "note": "PROPOSED. The same flying streak in the shooter's own side accent (brick red for the players, slate blue for the enemy), on a paper halo, with a fainter line of the same colour where it passed. It says who is firing at a glance and uses only a colour the palette already has (the two accents); no new accent is proposed. A thin line, so it is not mistaken for the wingtip ribbon, a broad band. Seen on the board: thin and low in contrast; the slate blue over the blue shadows and the ribbon nearly vanishes.",
+      "rows": [
+        {
+          "title": "a. A MISS: the fighter's twin guns and the bomber's tail turret fire; every round goes by (the roll is at 0.5 s)",
+          "key": "miss",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T3_miss_0.png",
+              "caption": "0.02 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T3_miss_1.png",
+              "caption": "0.05 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T3_miss_2.png",
+              "caption": "0.10 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T3_miss_3.png",
+              "caption": "0.20 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T3_miss_4.png",
+              "caption": "0.32 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T3_miss_5.png",
+              "caption": "0.44 s after the roll  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. A HIT AND A MISS: one of the fighter's guns misses, the other lands on the bomber (the roll is at 1.0 s); its damage smoke (W1) starts",
+          "key": "hit",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T3_hit_0.png",
+              "caption": "0.02 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T3_hit_1.png",
+              "caption": "0.05 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T3_hit_2.png",
+              "caption": "0.10 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T3_hit_3.png",
+              "caption": "0.20 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T3_hit_4.png",
+              "caption": "0.32 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T3_hit_5.png",
+              "caption": "0.44 s after the roll  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. CLOSE IN (zoom 2.0): the bomber's tail, its turret firing back, the fighter's rounds arriving",
+          "key": "close",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T3_close_0.png",
+              "caption": "0.06 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T3_close_1.png",
+              "caption": "0.10 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T3_close_2.png",
+              "caption": "0.14 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T3_close_3.png",
+              "caption": "0.24 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            }
+          ]
+        },
+        {
+          "title": "d. THE PASS AT PLAY (zoom 0.6): the whole turn's fire, flak F2 from the village, the bomber's smoke W1, the wingtip ribbons",
+          "key": "pass",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T3_pass_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T3_pass_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T3_pass_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T3_pass_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T3_pass_4.png",
+              "caption": "5.0 s into the turn  (zoom 0.60)"
+            }
+          ]
+        },
+        {
+          "title": "e. THE PLANNING VIEW (zoom 0.35): the same turn; the planes are 14 px",
+          "key": "plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T3_plan_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T3_plan_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T3_plan_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T3_plan_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T3_plan_4.png",
+              "caption": "5.0 s into the turn  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "f. THE REAL RATE (zoom 0.6): two fighters on the bomber, as the sim rolls them, with the flak, the smoke and the ribbons",
+          "key": "fight",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T3_fight_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T3_fight_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T3_fight_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T3_fight_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.60)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "T4",
+      "label": "T4 · Dotted burst",
+      "note": "PROPOSED. A burst as a stipple: bunches of ink dots along the line (four to a bunch, a gap, the next bunch), the dots shrinking toward the far end, appearing out to the target at once and fading from the gun end outward, like the tree stipple and the damage smoke's dots. It needs no line at all. Seen on the board: the most ink-like of the five close in, but at the planning zoom the bunches of a dogfight run together into a smear.",
+      "rows": [
+        {
+          "title": "a. A MISS: the fighter's twin guns and the bomber's tail turret fire; every round goes by (the roll is at 0.5 s)",
+          "key": "miss",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T4_miss_0.png",
+              "caption": "0.02 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T4_miss_1.png",
+              "caption": "0.05 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T4_miss_2.png",
+              "caption": "0.10 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T4_miss_3.png",
+              "caption": "0.20 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T4_miss_4.png",
+              "caption": "0.32 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T4_miss_5.png",
+              "caption": "0.44 s after the roll  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. A HIT AND A MISS: one of the fighter's guns misses, the other lands on the bomber (the roll is at 1.0 s); its damage smoke (W1) starts",
+          "key": "hit",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T4_hit_0.png",
+              "caption": "0.02 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T4_hit_1.png",
+              "caption": "0.05 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T4_hit_2.png",
+              "caption": "0.10 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T4_hit_3.png",
+              "caption": "0.20 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T4_hit_4.png",
+              "caption": "0.32 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T4_hit_5.png",
+              "caption": "0.44 s after the roll  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. CLOSE IN (zoom 2.0): the bomber's tail, its turret firing back, the fighter's rounds arriving",
+          "key": "close",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T4_close_0.png",
+              "caption": "0.06 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T4_close_1.png",
+              "caption": "0.10 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T4_close_2.png",
+              "caption": "0.14 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T4_close_3.png",
+              "caption": "0.24 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            }
+          ]
+        },
+        {
+          "title": "d. THE PASS AT PLAY (zoom 0.6): the whole turn's fire, flak F2 from the village, the bomber's smoke W1, the wingtip ribbons",
+          "key": "pass",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T4_pass_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T4_pass_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T4_pass_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T4_pass_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T4_pass_4.png",
+              "caption": "5.0 s into the turn  (zoom 0.60)"
+            }
+          ]
+        },
+        {
+          "title": "e. THE PLANNING VIEW (zoom 0.35): the same turn; the planes are 14 px",
+          "key": "plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T4_plan_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T4_plan_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T4_plan_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T4_plan_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T4_plan_4.png",
+              "caption": "5.0 s into the turn  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "f. THE REAL RATE (zoom 0.6): two fighters on the bomber, as the sim rolls them, with the flak, the smoke and the ribbons",
+          "key": "fight",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T4_fight_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T4_fight_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T4_fight_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T4_fight_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.60)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "T5",
+      "label": "T5 · Ink streak, hit and miss marks",
+      "note": "PROPOSED. A flying streak in ink with a hairline behind it, and a small mark where the round ended: a dot on the airframe for a hit, a short cross-tick for a miss. Most rolls miss (the odds are 5 to 30 percent), so the tick says 'that one went by' without a hit mark's burst; the hit marks of the interface (pips, the ink on the plane) still say 'that one landed'. Seen on the board: cleaner than T2's pale streak, but the marks are small.",
+      "rows": [
+        {
+          "title": "a. A MISS: the fighter's twin guns and the bomber's tail turret fire; every round goes by (the roll is at 0.5 s)",
+          "key": "miss",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T5_miss_0.png",
+              "caption": "0.02 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T5_miss_1.png",
+              "caption": "0.05 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T5_miss_2.png",
+              "caption": "0.10 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T5_miss_3.png",
+              "caption": "0.20 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T5_miss_4.png",
+              "caption": "0.32 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T5_miss_5.png",
+              "caption": "0.44 s after the roll  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "b. A HIT AND A MISS: one of the fighter's guns misses, the other lands on the bomber (the roll is at 1.0 s); its damage smoke (W1) starts",
+          "key": "hit",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T5_hit_0.png",
+              "caption": "0.02 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T5_hit_1.png",
+              "caption": "0.05 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T5_hit_2.png",
+              "caption": "0.10 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T5_hit_3.png",
+              "caption": "0.20 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T5_hit_4.png",
+              "caption": "0.32 s after the roll  (zoom 1.00)"
+            },
+            {
+              "file": "frames/T5_hit_5.png",
+              "caption": "0.44 s after the roll  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. CLOSE IN (zoom 2.0): the bomber's tail, its turret firing back, the fighter's rounds arriving",
+          "key": "close",
+          "size_px": [
+            560,
+            380
+          ],
+          "frames": [
+            {
+              "file": "frames/T5_close_0.png",
+              "caption": "0.06 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T5_close_1.png",
+              "caption": "0.10 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T5_close_2.png",
+              "caption": "0.14 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            },
+            {
+              "file": "frames/T5_close_3.png",
+              "caption": "0.24 s, zoom 2 (the closest the camera goes)  (zoom 2.00)"
+            }
+          ]
+        },
+        {
+          "title": "d. THE PASS AT PLAY (zoom 0.6): the whole turn's fire, flak F2 from the village, the bomber's smoke W1, the wingtip ribbons",
+          "key": "pass",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T5_pass_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T5_pass_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T5_pass_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T5_pass_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T5_pass_4.png",
+              "caption": "5.0 s into the turn  (zoom 0.60)"
+            }
+          ]
+        },
+        {
+          "title": "e. THE PLANNING VIEW (zoom 0.35): the same turn; the planes are 14 px",
+          "key": "plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T5_plan_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T5_plan_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T5_plan_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T5_plan_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.35)"
+            },
+            {
+              "file": "frames/T5_plan_4.png",
+              "caption": "5.0 s into the turn  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "f. THE REAL RATE (zoom 0.6): two fighters on the bomber, as the sim rolls them, with the flak, the smoke and the ribbons",
+          "key": "fight",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/T5_fight_0.png",
+              "caption": "1.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T5_fight_1.png",
+              "caption": "2.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T5_fight_2.png",
+              "caption": "3.1 s into the turn  (zoom 0.60)"
+            },
+            {
+              "file": "frames/T5_fight_3.png",
+              "caption": "4.1 s into the turn  (zoom 0.60)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

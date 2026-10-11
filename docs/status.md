@@ -9,28 +9,25 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| Draw the boats and the bridge in the game (item 1 below) | lead session (builder) | scripts/ui/unit_marker_art*.gd (boat and bridge dispatch only), new scripts/ui/unit_marker_art_boats.gd, scripts/fx/ (the bridge's ruin), data/ui/ui.json unit_art keys | 2026-10-11 |
-| Build Hold the bridge (item 2 below) | lead session (builder) | data/scenarios/bridge.json, scripts/sim/mission.gd, scripts/app/main.gd selector, scripts/debug/debug_settings.gd scenario choices, scripts/test_support/bridge_*.gd, scripts/tests/test_bridge_mission.gd | 2026-10-11 |
-| Forest fire (decision forest-fire): trees burn as smoke, spread by distance, low damage nearby, smoke cover, burnt down to trunks; tried in Suppress | fire session (nice-dewdney worktree) | new data/sim/fire.json, scripts/sim/fire*.gd, scripts/tests/test_fire*.gd; the fire step and its net state in scripts/sim/world.gd (and the snapshot in scripts/net/world_sync.gd); smoke cover and burnt cover in scripts/sim/concealment.gd, data/sim/concealment.json; new scripts/fx/fx_fire*.gd and its hook in fx_field.gd/fx_layer.gd; per-chunk rebake in scripts/render/map_view.gd, chunk_terrain_provider.gd; data/scenarios/suppress.json (fire on); a fire knob in scripts/debug/debug_settings.gd | 2026-10-11 |
+| Forest fire (decision forest-fire): the mechanic has landed (below); next the board for a burning grove and a burnt-out trunk, then playtesting in Suppress | fire session (nice-dewdney worktree) | new data/sim/fire.json, scripts/sim/fire*.gd, scripts/tests/test_fire*.gd; the fire step and its net state in scripts/sim/world.gd (and the snapshot in scripts/net/world_sync.gd); burnt cover in scripts/sim/concealment.gd, data/sim/concealment.json; smoke denies tracking in scripts/sim/spotting.gd, bombs.gd (followed aim), scripts/ui/ui_target.gd and the enemy-click lines of scripts/ui/unit_ui.gd; new scripts/fx/fx_fire*.gd and its hook in fx_field.gd/fx_layer.gd; per-chunk rebake in scripts/render/map_view.gd, chunk_terrain_provider.gd; data/scenarios/suppress.json (fire on); a fire knob in scripts/debug/debug_settings.gd | 2026-10-11 |
 
 ## Next, free to take
 
-1. **Draw the boats and the bridge in the game**, replacing the stand-in arrows:
-   the P1 cutter and S2 barge with the ink V wake at the planes' scale, the stone
-   arch with a flat deck spanning the river at the road, and its ruin. The art
-   already exists as board code: `scripts/render/boat_art.gd`, `bridge_art.gd`,
-   `data/world/boats.json`, `bridges.json` (decisions boat-looks, boat-wake,
-   bridge-look). Wire them into the marker layer (`scripts/ui/unit_marker_art*.gd`)
-   and the effects layer's ruin.
-2. **Build "Hold the bridge"** (decision bridge-mission): a seed search for a road
-   bridge near the edge of the cruiser's gun range, `data/scenarios/bridge.json`
-   (2 player tanks at the bridge, the cruiser offshore, enemy tank waves on the
-   "drive" role with start turns), a "hold until turn N" win and an "enemy past this
-   point" loss, a menu entry, a test. Needs the bridge drawn (item 1).
-3. **A playtest build** with Strike, Suppress and (when built) Hold the bridge.
+1. **A playtest build** with Strike, Suppress and Hold the bridge.
    build.ps1 closes a running game: ask Alex first.
-4. **Terrain variety board** (decision water-layer): beaches, coastal cliffs, marsh,
+2. **Terrain variety board** (decision water-layer): beaches, coastal cliffs, marsh,
    rock, orchards, wood density.
+3. **Wreck litter board** (decision wreck-litter, open): sunken boats and planes in the
+   water as environment, for character. After sinking lands: reuse the sunk-hull art,
+   placed by seed; the board picks how many, where and which kinds.
+
+## Later (planned, not fleshed out)
+
+- **A general player-side AI** (decision general-ai, deferred): plans any unit in any mission from what its
+  side can see, specials included. Uses: headless playtests with honest numbers, an empty co-op seat, real
+  enemy tactics. Today the player side in tests is a hand-written, all-seeing script per mission
+  (strike_play.gd, suppress_play.gd, ...), and the enemy AI plays one role per unit and never uses specials.
+  Revisit after the Hold the bridge playtest.
 
 ## Waiting on Alex (looks with working defaults)
 
@@ -43,6 +40,30 @@ Decisions and open questions live in the Decision Ledger
 ## Recently landed
 
 - 2026-10-11: the camera and the map's edge: wheel zoom in toward the cursor and out about the centre, left-drag on empty map pans, no right-drag pan, panning stops 100 m past the edge, and past the edge a hatched band onto blank paper with a distance legend (decisions zoom-anchors, pan-left-drag, pan-right-drag-off, pan-stops-at-edge, map-border); the side view's top, front and side strips, with the map's cones off by default and the panel's Arcs button (side-view-views).
+- 2026-10-11: two boards for Alex, nothing live changed. The range-of-motion indicator for every unit type (variants/motion-range/,
+  decision motion-range-look, open; `planner.fan.mode`, today's 'ribs' the default; test_fan_modes). Shadows from the time of day
+  (variants/sun-time/, decision sun-time: fixed at start and every shadow follows, Alex's; the look, the co-op clock and night hours open):
+  the sun now has one source, `data/params/sun.json` read through `scripts/world/sun.gd`, bit-identical in 'fixed' mode (test_sun).
+- 2026-10-11: the boats and the bridge are drawn in the game (P1 cutter, S2 barge, ink V wake, the flat-deck arch and its ruin;
+  `scripts/ui/unit_marker_art_boats.gd`), and sinking (decision ship-sinks): a destroyed ship, and a plane that comes down over water,
+  falls through the water to the floor at 3 m/s (proposed), drawn intact under the water's own depth wash (`scripts/ui/unit_sunk.gd`),
+  with a splash of ink rings; no damage drawn (test_sinking, test_boats_live).
+- 2026-10-11: machine-gun tracers (decision tracers-mg: machine guns only, for now; the weapon list is data). The look is a board,
+  variants/tracers/ (decision tracers-look, open); T2, a light streak with an ink edge, is the working default (test_tracers).
+- 2026-10-11: the second playtest's fixes (decision playtest-2). Every moving unit starts with a tail, as if it had flown on at its normal speed
+  (`scripts/ui/wingtip_trails.gd` start_tail_record; visual only, from the initial state; data `marker.trails.start_tail`, proposed). The side
+  badge (the red/blue roundel and its tie) is off for every unit (Alex: 'No badge on units. We can figure something else out of we need it.';
+  data `marker.side_badge.drawn_for` none; non_air and all bring it back). Tanks and ships still draw no ribbon (half_span_m 0): open.
+- 2026-10-11: HOLD THE BRIDGE plays (decision bridge-mission; every number proposed, reasons in the data). The menu's scenario selector and
+  `INKWOOD_SCENARIO=bridge` start `data/scenarios/bridge.json` on seed 55 (found by `scripts/test_support/bridge_seed_search.gd`): two player tanks
+  on the village side of a river bridge, the cruiser 2.7 km away in the bay (the far end of its 3 km range; the tanks are its only spotters),
+  three waves of two enemy tanks on the drive role (start turns 2 / 7 / 12), relief at turn 26. Win: `turn_reached` (the bridge held to relief);
+  lose: `side_past` (an enemy tank across the bridge), both tanks down, or the bridge destroyed (own shells included). The two new mission
+  conditions are in `scripts/sim/mission.gd`. Test: `test_bridge_mission` (port 28786); the scripted defence is `scripts/test_support/bridge_play.gd`;
+  shots: `scripts/app/bridge_shot.gd`. Not balanced: it is the first build for Alex's playtest.
+- 2026-10-11: the forest fire (decision forest-fire): trees burn as smoke, spread tree to tree by distance,
+  burn down to trunks re-baked into the map; units near a fire may lose a pip; a unit in smoke is visible but
+  untrackable; on in Suppress and behind the `fire` knob (test_fire, test_fire_track, test_fire_net, test_fire_render).
 - 2026-10-11: combat answers (Alex's four). Bridge: 14 pips, about 20 turns of one tank's gun (bridge-durability, number proposed). Cruiser
   shell blast: 6 / 12 / 20 m at 4 / 3 / 2 pips (shell-blast, pips proposed). A bomb whose target left its cone and a gun salvo whose
   target is no longer spotted or in reach now fire a POOR shot instead of holding (outside-cone-release): `data/sim/bombs.json`

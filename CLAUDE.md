@@ -143,6 +143,32 @@ mixed-warfare): water is generated per seed (`scripts/world/water_gen.gd`,
 - Suppress, the second mission profile (`data/scenarios/suppress.json`): guns
   hide in woods (`concealment.gd`), give themselves away when they fire
   (`reveal.gd`) and shoot and scoot (`ai_roam.gd`) (`test_suppress`).
+- Hold the bridge, the first mixed mission (`data/scenarios/bridge.json`, seed 55
+  from `scripts/test_support/bridge_seed_search.gd`): two tanks hold a road bridge
+  against three waves of tanks on the "drive" role, spotting for the cruiser's
+  Main Guns, until relief at turn 26. Mission conditions `turn_reached` and
+  `side_past` (`scripts/sim/mission.gd`); the scripted defence is
+  `scripts/test_support/bridge_play.gd` (`test_bridge_mission`; shots:
+  `scripts/app/bridge_shot.gd`).
+- **Forest fire** (2026-10-11; decision forest-fire): a fire is smoke from the
+  trees, no flame. `World.fire` (`scripts/sim/fire.gd`, rules
+  `fire_rules.gd`, trees `fire_trees.gd` over the map's own terrain, numbers
+  `data/sim/fire.json`) is null unless a scenario's `"fire"` switch (Suppress)
+  or the `fire` knob (`INKWOOD_FIRE`) turns it on: bomb and shell hits and
+  crashes light trees, fires spread tree to tree by distance and burn out to
+  trunks after three turns, ground and sea units near one may lose a pip, a
+  burnt-out tree takes its woods cover with it (`concealment.gd`). **Smoke is
+  not cover**: a unit in smoke stays visible but cannot be tracked (spotting
+  for the cruiser's guns, a followed bomb's aim, a click sets a point). The
+  drawing reads `world.fire.feed()`: W1 smoke columns per burning tree
+  (`scripts/fx/fx_fire.gd`, `fx_fire_view.gd`; a stand-in look until a board)
+  and burnt trees re-baked as trunks, only the chunks they touch
+  (`MapView.set_burnt_trees`, `scripts/render/fire_trunk.gd`). Tests:
+  `test_fire`, `test_fire_track`, `test_fire_net`, `test_fire_render`; a look:
+  `scripts/render/fire_shot.gd`.
+- The sun has ONE source: `data/params/sun.json`, read through `scripts/world/sun.gd`
+  (`Sun.current()`) by RenderParams, UiStyle, FxStyle, InkCanvas's pen and the demo
+  frame. Never read a sun direction anywhere else (`test_sun`).
 - The Style guide is the design doc's "Style guide" tab: read it before drawing
   anything new.
 Work on a track stays inside the folders it owns and reads other tracks' data
@@ -461,7 +487,7 @@ is made in BOTH twins; `tar_pack.ps1` is the one Windows-only helper, because
   networking bug. Allocated: `test_enet_loopback` 28777,
   `test_network_session` 28778, `test_world_sync` 28779, `test_net_sandbox`
   28780; the manual two-window check (`tmp/net/run_check.ps1`, not in the
-  gate) uses 28790. `test_net_join_ready` 28781, `test_intercept` 28782, `test_strike` 28783, `test_net_target` 28784, `test_suppress` 28785. Pick
+  gate) uses 28790. `test_net_join_ready` 28781, `test_intercept` 28782, `test_strike` 28783, `test_net_target` 28784, `test_suppress` 28785, `test_bridge_mission` 28786, `test_fire_net` 28787. Pick
   the next free one and add it here.
 - **Only `scripts/net/steam_manager.gd` calls `Steam.*`.** Everything else asks
   `NetworkManager`, because the gate may have no Steam client and anything that

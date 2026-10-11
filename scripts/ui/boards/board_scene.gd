@@ -40,7 +40,7 @@ func frames(n: int) -> void:
 		await tree.process_frame
 
 # Builds the sandbox in the root window and waits until it is playable.
-func start(max_s: float = 240.0) -> bool:
+func start(max_s: float = 240.0, scenario_id: String = "") -> bool:
 	if DisplayServer.get_name() == "headless":
 		errors.append("a board needs a windowed run: under --headless nothing is drawn")
 		return false
@@ -52,7 +52,7 @@ func start(max_s: float = 240.0) -> bool:
 	if script == null or not script.can_instantiate():
 		errors.append("%s did not compile -- see the Parse Error above" % SANDBOX)
 		return false
-	sb = script.new()
+	sb = script.new(scenario_id)   # "": the scenario knob's (the sandbox); a board may name its own (the motion-range board's, under variants/)
 	tree.root.add_child(sb)
 	if not sb.ok():
 		errors.append("the sandbox did not build: %s" % str(sb.errors))

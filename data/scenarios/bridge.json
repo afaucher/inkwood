@@ -1,0 +1,318 @@
+{
+  "_about": "HOLD THE BRIDGE (Track BM, 2026-10-11): the first MIXED mission, built as ALEX asked (decision bridge-mission, 'Build it like that. I want to do play testing to figure out how to make it more engaging. But as an initial test of all the units involved that should be fantastic.'), from his idea (decision mixed-warfare): 'Capture and hold a bridge, but you are at the far end of ship range so your shots need to be really on point to hit.' THE LEAD'S PLAN, which Alex approved: two player tanks at a river bridge and the player's cruiser offshore at the far end of its gun range, the TANKS THE ONLY SPOTTERS for the cruiser's Main Guns Fire (shared spotting); enemy tanks come down the road to the bridge in waves of two a few turns apart; WIN by holding until relief (a turn count) with the bridge standing and no enemy across; LOSE if an enemy tank gets across the bridge, both player tanks are lost, or the bridge is destroyed (the cruiser's own shells included). EVERYTHING ELSE IS PROPOSED (Alex: 'ground objectives can just start closer'; 'engagement ranges are not settled'; the balance is not calibrated, this is a playtest, the attackers have the advantage). THE MAP is seed 55, FOUND BY SEARCH (scripts/test_support/bridge_seed_search.gd, which test_bridge_mission re-runs): the river crosses the road at (3845, 714), the sea the cruiser can sail in (deep enough for its 6 m draught at the hull's ends: the shallows keep it out) comes no nearer than 2,512 m, and from a station 2,700 m off the whole road from the bridge's middle to 300 m beyond it is in the guns' reach by their own rules (range 3,000 m, and the coastal strip: the river counts as the water within 600 m of the target). The road beyond the bridge runs straight and open for 480 m to the map's edge, away from the ship (the shell's range is 2.7 km at the bridge's middle and 3.0 km at 300 m beyond it): the waves are in reach only for the last 300 m of their drive. The geometry that decides it: the ship is on the PLAYER's side of the river, so the line of fire to an enemy tank on the far side crosses the river within 600 m (the strip's rule), and to the player's own bank it does not (an enemy there has crossed, and the game is lost). The village behind is the player's.",
+  "id": "bridge",
+  "seed": 55,
+  "_seed_note": "PROPOSED, and found, not chosen: scripts/test_support/bridge_seed_search.gd asked 80 seeds for a road bridge with the cruiser's sea no nearer than 2,300 m and a station in reach of the whole road from the bridge to 300 m beyond it. Seven fit (4, 32, 45, 55, 61, 66, 75); 55 has the straightest, emptiest enemy road (no bend, 2 woods in 25 samples, no upland), the ship on the player's side of the river, and the largest sea (2,946 cells of 50 m). The Strike's own seed (20261009) does not fit: the ship could sail to 1,570 m of its bridge. NOT the fixed scene seed of the browser comparisons: this map is only this mission's.",
+  "rng_seed": 7,
+  "_rng_seed_note": "The World's combat seed (hit, flak, bomb and shell-scatter rolls; only the host's World rolls). PROPOSED, and nothing depends on it: the tests search for a seed at run time.",
+  "local_player": "local",
+  "briefing": "HOLD THE BRIDGE  -  three waves of enemy tanks come down the road. Your tanks are the cruiser's only eyes: spot them, then fire the Main Guns from the far end of their range, and keep the shells off the bridge. Hold it until relief arrives at turn {turn_limit}.",
+  "sides": {
+    "_about": "Scenario side -> the World's side name and the callsign pool (data/names/callsigns.json). side_a is brick red, side_b slate blue (Alex). The players are side_a: the two tanks, the cruiser and the bridge they hold; the waves are side_b.",
+    "side_a": {
+      "world_side": "allies",
+      "callsign_pool": "side_a"
+    },
+    "side_b": {
+      "world_side": "axis",
+      "callsign_pool": "side_b"
+    }
+  },
+  "units": [
+    {
+      "id": "tank_1",
+      "type": "tank",
+      "side": "side_a",
+      "controller": "player",
+      "callsign": "pool",
+      "site": "water.bridge",
+      "road_m": -45.0,
+      "heading": "road_to_site",
+      "speed": 0.0,
+      "_proposed": true,
+      "_reason": "Player tank 1: ON THE ROAD 45 m short of the bridge's middle, on the player's side (both tanks stand on the near side, the village's: PROPOSED; 'one each side' would put a tank across the river in the waves' way and out of the cruiser's strip). 25 m from the span's end, so a tank's gun (350 m) reaches the far end of the road to 300 m beyond the bridge, and its sight (600 m) the whole of it and 100 m more: it SPOTS every wave from the moment it forms, which is what lets the guns fire at all. Facing the bridge, at rest (a unit that starts at its cruise would roll a few metres in turn 1)."
+    },
+    {
+      "id": "tank_2",
+      "type": "tank",
+      "side": "side_a",
+      "controller": "player",
+      "callsign": "pool",
+      "site": "water.bridge",
+      "road_m": -80.0,
+      "heading": "road_to_site",
+      "speed": 0.0,
+      "_proposed": true,
+      "_reason": "Player tank 2: 35 m behind the first, on the same road (the road is 16 m wide; the player can move it beside the road; PROPOSED). Also at rest, facing the bridge. 80 m from the bridge's middle: still 380 m from a wave at its start 300 m out."
+    },
+    {
+      "id": "cruiser_1",
+      "type": "cruiser",
+      "side": "side_a",
+      "controller": "player",
+      "callsign": "Old Smoky",
+      "x": 4525.0,
+      "y": 3325.0,
+      "heading": -1.8277,
+      "speed": 0.0,
+      "_proposed": true,
+      "_reason": "The player's cruiser (data/units/cruiser.json, 120 m, 6 m draught; its Main Guns reach 3,000 m): at the STATION the seed search found, (4525, 3325), 2,699 m from the bridge's middle, on the sea's northern edge, deep enough for the hull's ends. It cannot come nearer than 2,512 m (the shallows), and from here the road from the bridge to 300 m beyond is at 2,699 to 2,988 m: the waves can be shelled only for their last 300 m (the guns reach 3,000 m). Heading at the bridge (-1.8277 rad: a ship has no turn rate at rest, so a ship that is to creep nearer must already face where it creeps), at rest, so the player's first plan is to sail nearer or to fire. The name is from Alex's pool for the small cruiser (callsigns.json small_cruiser; the pool is keyed by that silhouette, not by the unit type 'cruiser', so it is given here by hand)."
+    },
+    {
+      "id": "tank_e1",
+      "type": "tank",
+      "side": "side_b",
+      "controller": "ai",
+      "site": "water.bridge",
+      "road_m": 300.0,
+      "heading": "road_to_site",
+      "speed": 0.0,
+      "_proposed": true,
+      "_reason": "Wave 1, tank 1 of 2: 300 m along the road from the bridge's middle, toward the map's edge (Alex: 'Ground objectives can just start closer'; the lead's plan says the waves start 300 to 400 m out), the pair 15 m apart, at rest, facing the bridge; it waits for turn 2, then drives (the AI's drive role). No callsign: the side's pool has two tank names."
+    },
+    {
+      "id": "tank_e2",
+      "type": "tank",
+      "side": "side_b",
+      "controller": "ai",
+      "site": "water.bridge",
+      "road_m": 315.0,
+      "heading": "road_to_site",
+      "speed": 0.0,
+      "_proposed": true,
+      "_reason": "Wave 1, tank 2 of 2: 315 m along the road from the bridge's middle, toward the map's edge (Alex: 'Ground objectives can just start closer'; the lead's plan says the waves start 300 to 400 m out), the pair 15 m apart, at rest, facing the bridge; it waits for turn 2, then drives (the AI's drive role). No callsign: the side's pool has two tank names."
+    },
+    {
+      "id": "tank_e3",
+      "type": "tank",
+      "side": "side_b",
+      "controller": "ai",
+      "site": "water.bridge",
+      "road_m": 350.0,
+      "heading": "road_to_site",
+      "speed": 0.0,
+      "_proposed": true,
+      "_reason": "Wave 2, tank 1 of 2: 350 m along the road from the bridge's middle, toward the map's edge (Alex: 'Ground objectives can just start closer'; the lead's plan says the waves start 300 to 400 m out), the pair 15 m apart, at rest, facing the bridge; it waits for turn 7, then drives (the AI's drive role). No callsign: the side's pool has two tank names."
+    },
+    {
+      "id": "tank_e4",
+      "type": "tank",
+      "side": "side_b",
+      "controller": "ai",
+      "site": "water.bridge",
+      "road_m": 365.0,
+      "heading": "road_to_site",
+      "speed": 0.0,
+      "_proposed": true,
+      "_reason": "Wave 2, tank 2 of 2: 365 m along the road from the bridge's middle, toward the map's edge (Alex: 'Ground objectives can just start closer'; the lead's plan says the waves start 300 to 400 m out), the pair 15 m apart, at rest, facing the bridge; it waits for turn 7, then drives (the AI's drive role). No callsign: the side's pool has two tank names."
+    },
+    {
+      "id": "tank_e5",
+      "type": "tank",
+      "side": "side_b",
+      "controller": "ai",
+      "site": "water.bridge",
+      "road_m": 400.0,
+      "heading": "road_to_site",
+      "speed": 0.0,
+      "_proposed": true,
+      "_reason": "Wave 3, tank 1 of 2: 400 m along the road from the bridge's middle, toward the map's edge (Alex: 'Ground objectives can just start closer'; the lead's plan says the waves start 300 to 400 m out), the pair 15 m apart, at rest, facing the bridge; it waits for turn 12, then drives (the AI's drive role). No callsign: the side's pool has two tank names."
+    },
+    {
+      "id": "tank_e6",
+      "type": "tank",
+      "side": "side_b",
+      "controller": "ai",
+      "site": "water.bridge",
+      "road_m": 415.0,
+      "heading": "road_to_site",
+      "speed": 0.0,
+      "_proposed": true,
+      "_reason": "Wave 3, tank 2 of 2: 415 m along the road from the bridge's middle, toward the map's edge (Alex: 'Ground objectives can just start closer'; the lead's plan says the waves start 300 to 400 m out), the pair 15 m apart, at rest, facing the bridge; it waits for turn 12, then drives (the AI's drive role). No callsign: the side's pool has two tank names."
+    }
+  ],
+  "water": true,
+  "_water_note": "THE WATER SWITCH (see data/scenarios/strike.json): ON, because the river is what the mission is about and the sea is the cruiser's. The bridge is the water's own site; there are no boats ('each mission has only a few elements', Alex).",
+  "water_units": [
+    {
+      "id": "bridge_1",
+      "type": "bridge",
+      "side": "side_a",
+      "controller": "ai",
+      "site": "water.bridge",
+      "heading": "site",
+      "_proposed": true,
+      "_reason": "The bridge: at the water's crossing site with the road's heading, on the PLAYER's side (the waves' tank guns shoot at it, and so do the cruiser's own shells if they fall near: data/units/bridge.json, 14 pips, Alex's bridge-durability: 'it should take a lot'). Its being destroyed is a LOSS."
+    }
+  ],
+  "water_assignments": {},
+  "ai": {
+    "kind": "pilot",
+    "_proposed": true,
+    "_reason": "The same AI as the other missions (scripts/sim/ai_pilot.gd): the enemy tanks take the DRIVE role (scripts/sim/ai_drive.gd, Track TK2) with a start turn; the player's units and the static bridge take no assignment.",
+    "assignments": {
+      "tank_e1": {
+        "role": "drive",
+        "to": {
+          "site": "water.bridge",
+          "road_m": -90.0
+        },
+        "start_turn": 2,
+        "_reason": "Drives down the road (the AI's drive role: pure pursuit along the road to a point 90 m past the bridge on the player's side, so it does not stop at the bridge: crossing is what it is for) from turn 2. Waves of two start at turns 2, 7 and 12, five turns apart (PROPOSED: a wave takes about 6 to 7 turns to reach the bridge from 300 m at 10 m/s, so they arrive about 5 turns apart and the cruiser, which reloads in 2 and so fires every third turn, has the time for about two salvos a wave; the scripted run's win rate was 7 of 24 dice seeds with the waves at turns 2, 6 and 10 and 10 of 24 with these). It fires its gun at what is in reach on the way, the bridge included."
+      },
+      "tank_e2": {
+        "role": "drive",
+        "to": {
+          "site": "water.bridge",
+          "road_m": -90.0
+        },
+        "start_turn": 2,
+        "_reason": "Drives down the road (the AI's drive role: pure pursuit along the road to a point 90 m past the bridge on the player's side, so it does not stop at the bridge: crossing is what it is for) from turn 2. Waves of two start at turns 2, 7 and 12, five turns apart (PROPOSED: a wave takes about 6 to 7 turns to reach the bridge from 300 m at 10 m/s, so they arrive about 5 turns apart and the cruiser, which reloads in 2 and so fires every third turn, has the time for about two salvos a wave; the scripted run's win rate was 7 of 24 dice seeds with the waves at turns 2, 6 and 10 and 10 of 24 with these). It fires its gun at what is in reach on the way, the bridge included."
+      },
+      "tank_e3": {
+        "role": "drive",
+        "to": {
+          "site": "water.bridge",
+          "road_m": -90.0
+        },
+        "start_turn": 7,
+        "_reason": "Drives down the road (the AI's drive role: pure pursuit along the road to a point 90 m past the bridge on the player's side, so it does not stop at the bridge: crossing is what it is for) from turn 7. Waves of two start at turns 2, 7 and 12, five turns apart (PROPOSED: a wave takes about 6 to 7 turns to reach the bridge from 300 m at 10 m/s, so they arrive about 5 turns apart and the cruiser, which reloads in 2 and so fires every third turn, has the time for about two salvos a wave; the scripted run's win rate was 7 of 24 dice seeds with the waves at turns 2, 6 and 10 and 10 of 24 with these). It fires its gun at what is in reach on the way, the bridge included."
+      },
+      "tank_e4": {
+        "role": "drive",
+        "to": {
+          "site": "water.bridge",
+          "road_m": -90.0
+        },
+        "start_turn": 7,
+        "_reason": "Drives down the road (the AI's drive role: pure pursuit along the road to a point 90 m past the bridge on the player's side, so it does not stop at the bridge: crossing is what it is for) from turn 7. Waves of two start at turns 2, 7 and 12, five turns apart (PROPOSED: a wave takes about 6 to 7 turns to reach the bridge from 300 m at 10 m/s, so they arrive about 5 turns apart and the cruiser, which reloads in 2 and so fires every third turn, has the time for about two salvos a wave; the scripted run's win rate was 7 of 24 dice seeds with the waves at turns 2, 6 and 10 and 10 of 24 with these). It fires its gun at what is in reach on the way, the bridge included."
+      },
+      "tank_e5": {
+        "role": "drive",
+        "to": {
+          "site": "water.bridge",
+          "road_m": -90.0
+        },
+        "start_turn": 12,
+        "_reason": "Drives down the road (the AI's drive role: pure pursuit along the road to a point 90 m past the bridge on the player's side, so it does not stop at the bridge: crossing is what it is for) from turn 12. Waves of two start at turns 2, 7 and 12, five turns apart (PROPOSED: a wave takes about 6 to 7 turns to reach the bridge from 300 m at 10 m/s, so they arrive about 5 turns apart and the cruiser, which reloads in 2 and so fires every third turn, has the time for about two salvos a wave; the scripted run's win rate was 7 of 24 dice seeds with the waves at turns 2, 6 and 10 and 10 of 24 with these). It fires its gun at what is in reach on the way, the bridge included."
+      },
+      "tank_e6": {
+        "role": "drive",
+        "to": {
+          "site": "water.bridge",
+          "road_m": -90.0
+        },
+        "start_turn": 12,
+        "_reason": "Drives down the road (the AI's drive role: pure pursuit along the road to a point 90 m past the bridge on the player's side, so it does not stop at the bridge: crossing is what it is for) from turn 12. Waves of two start at turns 2, 7 and 12, five turns apart (PROPOSED: a wave takes about 6 to 7 turns to reach the bridge from 300 m at 10 m/s, so they arrive about 5 turns apart and the cruiser, which reloads in 2 and so fires every third turn, has the time for about two salvos a wave; the scripted run's win rate was 7 of 24 dice seeds with the waves at turns 2, 6 and 10 and 10 of 24 with these). It fires its gun at what is in reach on the way, the bridge included."
+      }
+    }
+  },
+  "mission": {
+    "id": "bridge",
+    "_proposed": true,
+    "_reason": "Hold the bridge as data (scripts/sim/mission.gd; two new condition types, turn_reached and side_past, Track BM): WON when turn 26 has been played with none of the losses below having held (relief arrives); LOST when an enemy tank gets past the bridge, both player tanks are down, or the bridge is destroyed. These are the lead's plan, approved by Alex (decision bridge-mission); the NUMBERS are proposed. A result is sticky and whichever held earlier in a turn decides, so a bridge that falls in turn 24 before its last second is a loss, not a win.",
+    "win": [
+      {
+        "type": "turn_reached",
+        "turn": 26,
+        "reason": "relief arrives: the bridge held through turn 26",
+        "_reason": "PROPOSED: relief arrives at the end of turn 26 (two minutes and ten seconds of game time). The last wave starts at turn 12 and, unopposed, is at the bridge at about turn 19; seven more turns to hold and to finish it off if the first two waves did not. A dial, not a finding: the first playtest moves it."
+      }
+    ],
+    "lose": [
+      {
+        "type": "side_past",
+        "side": "axis",
+        "point_site": {
+          "site": "water.bridge",
+          "road_m": -30.0
+        },
+        "toward_site": {
+          "site": "water.bridge",
+          "road_m": -60.0
+        },
+        "label": "the bridge",
+        "_reason": "An enemy tank is PAST THE BRIDGE: its centre is on the player's side of the line square to the road 30 m from the bridge's middle toward the village (10 m beyond the span's end, which is 20 m from the middle). Looked at every quarter second of the turn, so a tank that drives across and is shot after still counts. PROPOSED: Alex said 'hold a bridge'; where 'held' ends is the lead's."
+      },
+      {
+        "type": "all_down",
+        "units": [
+          "tank_1",
+          "tank_2"
+        ],
+        "_reason": "Both player tanks are lost: nothing is left to spot for the cruiser or to hold the road (the lead's plan)."
+      },
+      {
+        "type": "unit_down",
+        "unit": "bridge_1",
+        "_reason": "The bridge is destroyed: nothing is left to hold. The enemy's tanks can do it (14 pips: about 20 tank-turns of fire) and so can the cruiser's own shells (a shell within 6 m of its middle does 4 pips): Alex, bridge-mission, 'own shells included'."
+      }
+    ]
+  },
+  "objective": {
+    "unit": "bridge_1",
+    "radius_m": 60.0,
+    "frame_m": 450.0,
+    "label": "BRIDGE",
+    "_proposed": true,
+    "_reason": "The ring round the bridge (design doc, Fog of war: map indicators for mission-critical targets may sit on top of both layers): 60 m, the span and its approaches; frame_m 450: the opening view reaches 450 m round it, enough for the road to where the first wave forms."
+  },
+  "view": {
+    "_about": "How the sandbox shows this scenario. Each can be flipped at run time from the knob panel (F2) or INKWOOD_<KEY> (scripts/debug/debug_settings.gd); these are the values the knobs call \"data\".",
+    "fog": {
+      "value": true,
+      "_proposed": true,
+      "_reason": "Fog of war is how the waves are SEEN: the cruiser sees 1,000 m and the tanks 600 m, and the guns can only be fired at what a unit of the side sees (shared spotting); on by default"
+    },
+    "plane_px": {
+      "value": 24,
+      "_proposed": true,
+      "_reason": "The reference unit here is the TANK (the smallest mobile unit, 6 m): it is drawn this many px long at zoom 1 whatever the map scale (the marker rule's 'plane_px', which is a light fighter's 36 in the planes' missions: here a tank's, and the 120 m cruiser follows in proportion). PROPOSED, to be looked at."
+    },
+    "plane_min_px": {
+      "value": 12,
+      "_proposed": true,
+      "_reason": "A tank never draws smaller than this on screen, so the tanks stay findable when the view is zoomed out"
+    },
+    "start_zoom_max": {
+      "value": 1.0,
+      "_proposed": true,
+      "_reason": "The opening view frames the players' units and the bridge's ring; it does not zoom in past zoom 1"
+    },
+    "start_pad_m": {
+      "value": 60,
+      "_proposed": true,
+      "_reason": "A margin round every player unit in the opening view"
+    },
+    "start_look_ahead_turns": {
+      "value": 1,
+      "_proposed": true,
+      "_reason": "The opening view frames this many turns of carry-on flight beyond each PLAYER plane (the enemy's plan is never framed: it would leak it)"
+    },
+    "start_frame_objective": {
+      "value": true,
+      "_proposed": true,
+      "_reason": "The opening view also frames the bridge's ring and the road round it"
+    },
+    "track_sample_s": {
+      "value": 0.25,
+      "_proposed": true,
+      "_reason": "Tracks (the flown path of each plane, drawn for the whole game) are sampled from each turn's history this often"
+    },
+    "track_line_px": {
+      "value": 1.6,
+      "_proposed": true,
+      "_reason": "Track line width on screen; ink in the unit's side colour"
+    },
+    "bake_pause_overview": {
+      "value": 0.5,
+      "_proposed": true,
+      "_reason": "The map view stops drawing new chunks once the topographic overview covers this much of the full render (see sandbox.json)"
+    },
+    "result_card_delay_s": {
+      "value": 1.5,
+      "_proposed": true,
+      "_reason": "The result card appears this long after the playback of the deciding turn ends, so the last of the smoke and the ruin are seen before the card covers them"
+    }
+  }
+}
