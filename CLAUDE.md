@@ -250,6 +250,12 @@ Properties of Godot and PowerShell, not of that game. Entries marked
 - **`Array.sort_custom` is not stable** (observed 2026-10-09): equal keys can
   swap. Where order must be deterministic (the combat events), merge sorted
   lists or break ties on an index.
+- **`Geometry2D.clip_polyline_with_polygon` is a DIFFERENCE**: it keeps the
+  parts of the line OUTSIDE the polygon (2026-10-11: the tank's track links
+  and grilles, the mobile AA's, the complex's and the tower ruin's hatching
+  were all drawn outside their shapes and none inside). The inside is
+  `intersect_polyline_with_polygon`; likewise `clip_polygons` is A minus B.
+  `test_hatch_inside` holds the hatch inside its outline.
 - **Never delete a unit from `World.units` mid-game**: combat seeds every
   roll from the shooter's index in that Dictionary, so removing one reshuffles
   every later unit's dice. A destroyed unit stays, with `down` and `fate`.
