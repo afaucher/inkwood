@@ -77,6 +77,12 @@ extends RefCounted
 #                                          the terrain the map is drawn from, GroundMap.shared(seed, water)); Suppress has it on. A test or the
 #                                          sandbox's 'fire' knob may switch it without editing the file: SandboxScenario.new("strike", true, {"fire": true}).
 #
+# THE HOUR OF THE DAY (decision sun-time, 2026-10-11; PROPOSED): a scenario may pin the time the sun is taken at --
+#
+#   "sun_hour": 7.5                        (optional; absent is -1, none) the hour, 0 to 24, the mission's sun is taken at (7.5 is half past
+#                                          seven): a Strike at dawn, a Bridge at noon. Without it the sun takes the host's clock at the mission's
+#                                          start (scripts/world/sun.gd). main.gd hands it to Sun.begin_mission; a client gets the host's.
+#
 # `sc.water_on`, `sc.water()` (the shared WaterGen, or null with the switch off) and `sc.water_site(name)` are what the
 # drawing asks. A test may switch it without editing the file: SandboxScenario.new("strike", true, {"water": true}) --
 # the third argument is a Dictionary of top-level keys that replace the file's.
@@ -102,6 +108,7 @@ var path: String = ""
 var seed_value: int = 0
 var rng_seed: int = 0                 # the World's combat seed
 var briefing: String = ""             # (optional) the line shown at the start
+var sun_hour := -1.0                  # (optional) the hour of the day the mission's sun is taken at; -1 = none (the clock decides)
 var ai_kind: String = ""              # AI_DUMB or AI_PILOT
 var ai_assignments: Dictionary = {}   # unit id -> orders, for AI_PILOT
 var mission_spec: Dictionary = {}     # scripts/sim/mission.gd's spec; {} = no mission
@@ -135,6 +142,12 @@ func _init(scenario_id: String = "sandbox", quiet: bool = false, overrides: Dict
 	local_player = _str(d, "local_player", quiet)
 	if d.has("briefing"):
 		briefing = _str(d, "briefing", quiet)
+	if d.has("sun_hour"):
+		var sh := _num(d, "sun_hour", quiet)
+		if is_nan(sh) or sh < 0.0 or sh > 24.0:
+			_err("sun_hour must be an hour of the day, 0 to 24", quiet)
+		else:
+			sun_hour = sh
 	var sd: Variant = d.get("sides")
 	if sd is Dictionary:
 		for k: String in sd:

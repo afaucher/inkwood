@@ -176,7 +176,12 @@ mixed-warfare): water is generated per seed (`scripts/world/water_gen.gd`,
   `World._target_lost`; `test_fire_lost`.
 - The sun has ONE source: `data/params/sun.json`, read through `scripts/world/sun.gd`
   (`Sun.current()`) by RenderParams, UiStyle, FxStyle, InkCanvas's pen and the demo
-  frame. Never read a sun direction anywhere else (`test_sun`).
+  frame. Never read a sun direction anywhere else (`test_sun`). It is the time of day
+  (decision sun-time): taken once at mission start from the host's clock (a scenario may
+  pin `sun_hour`), sent to clients by `scripts/net/mission_start.gd`
+  (`Sun.start_message()` / `Sun.apply_start()`), read as `Sun.current().asked_hour`.
+  Only sun.gd reads the machine clock; every test runs on the fixed sun
+  (`test_case.gd` calls `Sun.enter_test_harness()`, and a test that reaches the clock fails).
 - The Style guide is the design doc's "Style guide" tab: read it before drawing
   anything new.
 Work on a track stays inside the folders it owns and reads other tracks' data
@@ -495,7 +500,7 @@ is made in BOTH twins; `tar_pack.ps1` is the one Windows-only helper, because
   networking bug. Allocated: `test_enet_loopback` 28777,
   `test_network_session` 28778, `test_world_sync` 28779, `test_net_sandbox`
   28780; the manual two-window check (`tmp/net/run_check.ps1`, not in the
-  gate) uses 28790. `test_net_join_ready` 28781, `test_intercept` 28782, `test_strike` 28783, `test_net_target` 28784, `test_suppress` 28785, `test_bridge_mission` 28786, `test_fire_net` 28787. Pick
+  gate) uses 28790. `test_net_join_ready` 28781, `test_intercept` 28782, `test_strike` 28783, `test_net_target` 28784, `test_suppress` 28785, `test_bridge_mission` 28786, `test_fire_net` 28787, `test_sun` 28788. Pick
   the next free one and add it here.
 - **Only `scripts/net/steam_manager.gd` calls `Steam.*`.** Everything else asks
   `NetworkManager`, because the gate may have no Steam client and anything that

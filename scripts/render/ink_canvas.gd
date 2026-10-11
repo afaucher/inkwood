@@ -643,14 +643,18 @@ static func pen_mode() -> String:
 static func data_pen_mode() -> String:
 	return str(_load_pen().get("mode", "even"))
 
-# What a cached sprite drawn with the pen depends on: "" for the even pen, else
-# the mode and the shadow direction. Sprite caches add it to their keys.
+# What a cached sprite drawn with the pen depends on: the mode and the shadow
+# direction (nothing for the even pen) and THE SUN (scripts/world/sun.gd cache_key: its
+# bearing and height, which the shadows baked into a sprite take their side and length
+# from -- a mission with another sun must not be handed the last one's art). Sprite
+# caches add it to their keys.
 static func pen_key() -> String:
 	var cfg := pen_config()
+	var sun_key: String = "~" + str(Sun.current().cache_key)
 	if str(cfg.get("mode", "even")) == "even":
-		return ""
+		return sun_key
 	var sd: Vector2 = cfg.get("shadow_dir", Vector2.ZERO)
-	return "%s@%.4f,%.4f" % [cfg.get("mode"), sd.x, sd.y]
+	return "%s@%.4f,%.4f%s" % [cfg.get("mode"), sd.x, sd.y, sun_key]
 
 # Follows a RenderParams: its ink colour and its sun (the shadow direction is
 # the prototype's shadowDir(): (sunAz + 90) degrees). Duck-typed: any object

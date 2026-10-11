@@ -30,11 +30,13 @@ extends SceneTree
 
 const MapView = preload("res://scripts/render/map_view.gd")
 const RenderParams = preload("res://scripts/world/render_params.gd")
+const Sun = preload("res://scripts/world/sun.gd")   # (the hashes are compared run to run: the sun is pinned, not the clock's)
 
 var opts: Dictionary = {}
 var out: Dictionary = {}
 
 func _initialize() -> void:
+	Sun.set_override({"mode": "fixed"})   # today's sun, so a hash does not change with the time of day
 	for a: String in OS.get_cmdline_user_args():
 		var kv := a.split("=", true, 1)
 		if kv.size() == 2:

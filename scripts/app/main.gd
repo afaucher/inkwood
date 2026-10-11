@@ -19,6 +19,13 @@ extends Node2D
 # (scripts/app/sandbox_session.gd) -- and Menu (menu_requested) is Esc.
 
 const BuildVersion = preload("res://scripts/ui/build_version.gd")
+const Sun = preload("res://scripts/world/sun.gd")
+
+# THE MISSION'S SUN (decision sun-time; scripts/world/sun.gd): a mission picks its sun once when it starts. Local and a
+# host take the machine's clock (or the scenario's "sun_hour"); a host sends it to a client with the start
+# (scripts/net/mission_start.gd) and the client builds its game from the host's, never its own clock. How long a client
+# waits for the host's start before it gives up (an older host has no answer).
+const START_WAIT_S := 15.0
 
 # The menu's scenario selector: the knob's choices in the order the menu lists them, and their words.
 const SCENARIO_ORDER: Array[String] = ["strike", "intercept", "suppress", "bridge", "sandbox"]
@@ -37,6 +44,7 @@ const SCENARIO_WORDS := {
 var sandbox: Node = null
 var scenario_select: OptionButton = null   # the menu's selector (built by setup_menu, not in the .tscn)
 var _menu_ready := false
+var _waiting_start := false   # a client has asked the host for the mission's start and has no answer yet
 var _local_pressed_ms := 0
 var _prewarm_ok := false   # set by _ready for a real launch; a test that stands the menu up never starts the water's thread
 
@@ -73,6 +81,7 @@ func setup_menu() -> void:
 	# builds a Label it will not look at.
 	$CanvasLayer.add_child(BuildVersion.make_label())
 	_add_scenario_selector()
+	_add_mission_start()
 
 	$CanvasLayer/Menu/HostButton.pressed.connect(_on_host_pressed)
 	$CanvasLayer/Menu/JoinButton.pressed.connect(_on_join_pressed)
@@ -225,6 +234,9 @@ func start_sandbox(role: String = "", replacing: bool = false) -> bool:
 	var sb: Node = script.new()
 	sb.set("net_role", role)
 	sb.set("announce_restart", replacing and role == "host")
+	# The sun is picked before anything is built, once per mission (Play again keeps it: the same scenario, the same map).
+	if not replacing:
+		_begin_mission_sun(sb, role)
 	add_child(sb)
 	if not bool(sb.call("ok")):
 		_set_status("The sandbox did not start: %s" % str(sb.get("errors")))
@@ -246,6 +258,7 @@ func stop_sandbox() -> void:
 	sandbox.call("shutdown")
 	sandbox.queue_free()
 	sandbox = null
+	Sun.end_mission()   # the next mission picks its own sun
 	menu.show()
 	_set_status("Back at the menu.")
 	# Out of the game is out of the session (NetworkManager.leave() ends it for the others too).
@@ -395,11 +408,80 @@ func _on_session_started(is_host: bool) -> void:
 		"Hosting" if is_host else "Joined",
 		"steam" if NetworkManager.transport == NetworkManager.Transport.STEAM else "enet",
 		NetworkManager.local_id()])
-	if not start_sandbox("host" if is_host else "client"):
+	if is_host:
+		if not start_sandbox("host"):
+			NetworkManager.leave()
+		return
+	# A client does not build anything yet: the map is baked under the host's sun, so the host's start comes first.
+	_ask_for_start()
+
+# --- The mission's sun (decision sun-time) ---------------------------------------------------
+
+# The node that carries the mission's start from the host to a client (scripts/net/mission_start.gd), made at the menu.
+func _add_mission_start() -> void:
+	if mission_start_node() != null:
+		return
+	var script: Resource = load("res://scripts/net/mission_start.gd")
+	if script == null or not (script as Script).can_instantiate():
+		printerr("[Main] scripts/net/mission_start.gd did not compile: a client cannot be given the host's sun")
+		return
+	var ms: Node = script.new()
+	ms.name = "MissionStart"
+	add_child(ms)
+
+func mission_start_node() -> Node:
+	return get_node_or_null("MissionStart")
+
+# Local and a host pick the mission's sun (the scenario's "sun_hour", else this machine's clock: the one read) and a host
+# fills in what a client is sent. A client never picks: its sun was applied from the host's start before this.
+func _begin_mission_sun(sb: Node, role: String) -> void:
+	if role == "client":
+		return
+	var pin := -1.0
+	var sc: Variant = sb.get("scenario")
+	if sc != null and "sun_hour" in sc:
+		pin = float(sc.sun_hour)
+	var start: Dictionary = Sun.begin_mission(pin)
+	print("[Main] the mission's sun: ", Sun.current().describe())
+	if role == "host":
+		var ms := mission_start_node()
+		if ms != null:
+			ms.set("start", {"sun": start})
+
+func _ask_for_start() -> void:
+	var ms := mission_start_node()
+	if ms == null or not bool(ms.call("request")):
+		_set_status("Could not ask the host for the mission's start.")
 		NetworkManager.leave()
+		return
+	if not ms.is_connected("received", _on_mission_start):
+		ms.connect("received", _on_mission_start)
+	_waiting_start = true
+	_set_status("Joined: waiting for the host's mission.")
+	get_tree().create_timer(START_WAIT_S).timeout.connect(_on_start_wait_over)
+
+func _on_mission_start(start: Dictionary) -> void:
+	if not _waiting_start:
+		return
+	_waiting_start = false
+	if not Sun.apply_start(start.get("sun")):
+		_set_status("The host's start was refused: %s." % Sun.last_start_error)
+		NetworkManager.leave()
+		return
+	print("[Main] the host's sun: ", Sun.current().describe())
+	if not start_sandbox("client"):
+		NetworkManager.leave()
+
+func _on_start_wait_over() -> void:
+	if not _waiting_start:
+		return
+	_waiting_start = false
+	_set_status("The host sent no mission start (is it the same version?). Leaving.")
+	NetworkManager.leave()
 
 # The session is over (the host went away, or we left): out of the game.
 func _on_session_ended() -> void:
+	_waiting_start = false
 	if sandbox != null:
 		stop_sandbox()
 	menu.show()
@@ -432,6 +514,7 @@ func _render_shot(out_path: String) -> void:
 	var path := out_path
 	if path.is_relative_path():
 		path = ProjectSettings.globalize_path("res://").path_join(path)
+	Sun.set_override({"mode": "fixed"})   # the demo frame is one fixed look (the prototype's sun), not the time of day's
 	var script: Resource = load("res://scripts/render/demo_frame.gd")
 	if script == null or not (script as Script).can_instantiate():
 		printerr("[render-shot] scripts/render/demo_frame.gd did not compile -- see the Parse Error above")
@@ -485,6 +568,8 @@ func _render_scene(args: PackedStringArray, at: int) -> void:
 		path = ProjectSettings.globalize_path("res://").path_join(path)
 	var options := {"grain": not args.has("--no-grain"), "parity": args.has("--parity"),
 		"paper_shader": args.has("--paper-shader")}
+	if args.has("--parity"):
+		Sun.set_override({"mode": "fixed"})   # the prototype's own sun (315, 46), whatever time it is
 	var script: Resource = load("res://scripts/render/ink_renderer.gd")
 	if script == null or not (script as Script).can_instantiate():
 		printerr("[render-scene] scripts/render/ink_renderer.gd did not compile -- see the Parse Error above")

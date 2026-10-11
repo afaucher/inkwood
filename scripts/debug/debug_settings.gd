@@ -165,16 +165,16 @@ const OPTIONS := {
 		"view_only": true,
 		"help": "Turn-seconds played per real second when a turn resolves. data = data/ui/ui.json marker.playback_speed.",
 	},
-	# --- The sun (builder BS, 2026-10-11, PROPOSED: the board variants/sun-time/; nothing changes until Alex picks) ---
-	# Read ONCE, when scripts/world/sun.gd first builds the shared sun (Sun.current()), so set them before the game is built
-	# (INKWOOD_SUN_MODE=clock INKWOOD_SUN_HOUR=9). Not live knobs: a new sun is a rebake of the whole map.
+	# --- The sun (decision sun-time, 2026-10-11: the game takes the time of day; the model numbers PROPOSED) ---
+	# Read when the mission starts (Sun.begin_mission) or when scripts/world/sun.gd first builds the shared sun (Sun.current()), so set them before the game is built
+	# (INKWOOD_SUN_MODE=clock_at_start INKWOOD_SUN_HOUR=9). Not live knobs: a new sun is a rebake of the whole map. In co-op a client takes the HOST's sun, whatever its own knobs say.
 	"sun_mode": {
 		"section": "Sandbox",
 		"label": "Sun",
 		"choices": ["data", "fixed", "clock_at_start"],
 		"default": 0,
 		"view_only": true,
-		"help": "fixed = today's sun (north-west, elevation 46); clock_at_start = the time-of-day sun, taken once at the mission's start and held (Alex, decision sun-time; the hour from sun_hour: the bearing and the height follow the day, the model's numbers PROPOSED). data = data/params/sun.json mode (fixed). Read when the game is built; the map is NOT redrawn after a change here.",
+		"help": "fixed = today's sun (north-west, elevation 46); clock_at_start = the time-of-day sun, taken once at the mission's start and held (Alex, decision sun-time; the hour from sun_hour: the bearing and the height follow the day, the model's numbers PROPOSED). data = data/params/sun.json mode (clock_at_start). Read when the mission starts; the map is NOT redrawn after a change here. A client takes the host's sun.",
 	},
 	"sun_hour": {
 		"section": "Sandbox",
@@ -184,7 +184,7 @@ const OPTIONS := {
 		"min": -1.0,
 		"max": 24.0,
 		"view_only": true,
-		"help": "The hour, 0 to 24, the clock_at_start sun is asked for (9.5 is half past nine). -1 = data/params/sun.json hour (or the machine's clock when its hour_source is system). Read when the game is built.",
+		"help": "The hour, 0 to 24, the clock_at_start sun is asked for (9.5 is half past nine). -1 = the scenario's sun_hour, else the machine's clock at the mission's start (data/params/sun.json hour_source system; its hour when that is data). Read when the mission starts. A client takes the host's hour.",
 	},
 	"sun_scope": {
 		"section": "Sandbox",

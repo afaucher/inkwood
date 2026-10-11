@@ -3,7 +3,8 @@
   "date": "2026-10-11",
   "area": "Light and shadow, World",
   "question": "Should the shadow angles follow the time of day? Alex (playtest): 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.'",
-  "source": "scripts/ui/boards/sun_time_board_shot.gd: one run of the real game per sun (the Strike on seed 20261009, water on, fog off, one patch of map between the bridge and the radio tower at zoom 0.85 and at the planning zoom 0.35; the same units in the same places), through the sun source scripts/world/sun.gd and data/params/sun.json. Nothing in the live game changes: the default mode is 'fixed' (today's sun).",
+  "_note": "HAND-EDITED 2026-10-11, after Alex's answers on this board (the records only: decided, model_proposed, parameter, questions, recommendation_proposed, chosen). The FRAMES are the board's first model as drawn that day (bearing 90 to 270 through the south, clamp 3.0) and are NOT re-rendered (Alex: 'No need to rerender'); the live model, with the north-side sun and the 2.0 clamp, is in model_proposed and data/params/sun.json. scripts/ui/boards/sun_time_board_shot.gd regenerates the older records of this file and would overwrite these edits.",
+  "source": "scripts/ui/boards/sun_time_board_shot.gd: one run of the real game per sun (the Strike on seed 20261009, water on, fog off, one patch of map between the bridge and the radio tower at zoom 0.85 and at the planning zoom 0.35; the same units in the same places), through the sun source scripts/world/sun.gd and data/params/sun.json. The frames were drawn when the default mode was 'fixed'; since Alex's answers the live default is 'clock_at_start' (see _note).",
   "seed": 20261009,
   "held_constant": {
     "map": "the Strike's map and units on seed 20261009, water on (a river, the bridge, the sea); the same camera on the patch centred at (1654, 1308) m",
@@ -28,15 +29,51 @@
       "alex_words": "Every shadow follows",
       "status": "chosen by Alex",
       "meaning": "Every shadow follows the one sun: the trees', the terrain's, the structures', the planes' altitude shadows, the effects' and the shadow-side pen. The trees-only frame is kept as a why-not note."
+    },
+    {
+      "decision": "sun-time",
+      "id": "night_fold",
+      "by": "Alex",
+      "alex_words": "he chose fold, the board's own proposal: \"with clamp, a game played at any hour from 18:00 to 06:00, half of all hours, gets the dawn-or-dusk sun with the longest shadows the model has; fold spreads them\"",
+      "status": "chosen by Alex",
+      "meaning": "An hour outside 06:00 to 18:00 is laid on the day's arc (midnight is the sunrise sun, noon is noon): the 24 hours of the real day all give a sun. data/params/sun.json clock.night is fold."
+    },
+    {
+      "decision": "sun-time",
+      "id": "north_side_sun",
+      "by": "Alex",
+      "alex_words": "But let's reduce the distance a bit and the sun should be coming from north side to keep shadows below the objects not above",
+      "status": "chosen by Alex; the numbers are PROPOSED",
+      "meaning": "The sun is on the north side of the map at every hour, so every shadow falls below (south of) its object on the map, with a southward part at every hour. Alex gave the direction; the bearings (45 north-east at sunrise, 0 north at noon, 315 north-west at sunset) are the builder's proposal."
+    },
+    {
+      "decision": "sun-time",
+      "id": "shorter_shadows",
+      "by": "Alex",
+      "alex_words": "But let's reduce the distance a bit and the sun should be coming from north side to keep shadows below the objects not above",
+      "status": "chosen by Alex; the number is PROPOSED",
+      "meaning": "The shadows are shorter than the board's. Alex gave the direction ('reduce the distance a bit'); the clamp 2.0 instead of 3.0 is the builder's proposal."
+    },
+    {
+      "decision": "sun-time",
+      "id": "plane_gap_accurate",
+      "by": "Alex",
+      "alex_words": "No, make them accurate",
+      "status": "chosen by Alex",
+      "meaning": "On the proposal to hold a plane's gap to its altitude shadow at today's length: no. The gap follows the sun's length like every other shadow (UiStyle and FxStyle plane_shadow_offset_m = height x 1% x the sun's length)."
     }
   ],
-  "parameter": "data/params/sun.json: mode ('fixed' | 'clock_at_start'), hour, hour_source, scope, the 'clock' block (sunrise 6, sunset 18, bearings 90 to 270, noon elevation 60, max shadow length 3.0, night rule); DebugSettings knobs sun_mode, sun_hour, sun_scope (INKWOOD_SUN_MODE=clock_at_start INKWOOD_SUN_HOUR=9)",
+  "parameter": "data/params/sun.json: mode ('clock_at_start' by default | 'fixed'), hour, hour_source ('system': the host's clock at the mission's start), scope (all), the 'clock' block (sunrise 6, sunset 18, bearings 45 -> 0 -> 315, noon elevation 60, max shadow length 2.0, night fold); a scenario's 'sun_hour' (optional) pins the hour; DebugSettings knobs sun_mode, sun_hour, sun_scope (INKWOOD_SUN_MODE=fixed INKWOOD_SUN_HOUR=9)",
   "model_proposed": {
-    "bearing": "90 (east) at 06:00 through 180 (south) at noon to 270 (west) at 18:00, straight over the hours; 0 is north, the map's north is up",
-    "elevation": "60 * sin(pi * t), t = 0 at sunrise, 1 at sunset",
-    "shadow_length": "1 / tan(elevation) per unit of height, clamped at 3.0 (an 18.4 degree sun); today's fixed sun is 46 degrees, 0.97",
-    "night": "clamp (the nearest daytime hour) or fold (24 hours on the arc): open question (b)",
-    "note": "ALL PROPOSED by the builder BS except today's sun, which is the design doc's."
+    "_about": "THE LIVE MODEL (2026-10-11), after Alex's answers. Alex's: fixed at the mission's start, every shadow follows, night hours fold, the sun on the north side, shorter shadows, the planes' gap accurate. PROPOSED by the builder BS2: the numbers below and the co-op clock. The board's FRAMES show the first model (bearing 90 -> 180 -> 270, clamp 3.0), see _note.",
+    "bearing": "PROPOSED numbers on Alex's direction: 45 (north-east) at 06:00, 0 (north) at noon, 315 (north-west, today's fixed sun) at 18:00, straight over the hours; 0 is north, the map's north is up. Every shadow then has cos(bearing) >= 0.71 of its length going down the map. 45 is today's slant mirrored: no hour throws a shadow more sideways than the game already shows.",
+    "elevation": "60 * sin(pi * t), t = 0 at sunrise, 1 at sunset (unchanged from the board; PROPOSED)",
+    "shadow_length": "1 / tan(elevation) per unit of height, clamped at 2.0 (a 26.6 degree sun) instead of the board's 3.0: PROPOSED number on Alex's 'reduce the distance a bit'. Today's fixed sun is 46 degrees, 0.97; noon is 0.58",
+    "night": "fold (ALEX): the 24 hours on the arc, t = hour / 24. At the clamp for seven hours of the real day (20:30 to 03:30; the whole hours 21:00 to 03:00), between 1.0 and 2.0 for 03:30 to 06:08 and 17:52 to 20:30, shorter than today's from 06:08 to 17:52. If every night hour should differ, the arc needs a floor (not built).",
+    "when": "ALEX: picked once at the mission's start and held; Play again keeps it; the menu ends it",
+    "hour_source": "PROPOSED: the hour is the HOST's clock at the mission's start (a Local game's own), read once (Sun.begin_mission) and sent to a client with the start (scripts/net/mission_start.gd: rpc_request / rpc_answer, the start's key 'sun': {mode, hour, scope, night}); the client takes it with Sun.apply_start BEFORE it builds anything and never reads its own clock. A scenario may pin an hour ('sun_hour' in its JSON), which outranks the clock; the sun_hour knob outranks the pin.",
+    "tests": "PROPOSED: every test starts with the sun pinned to 'fixed' and the machine's clock replaced by a stand-in (scripts/test_support/test_case.gd -> Sun.enter_test_harness); a test that reaches the real clock fails (test_sun).",
+    "note": "The numbers are PROPOSED by the builder BS2 (the board was by BS) except today's sun, which is the design doc's, and what Alex said above."
   },
   "options": [
     {
@@ -218,7 +255,8 @@
   "questions": [
     {
       "id": "a_time_source",
-      "status": "open",
+      "status": "proposed, built (Alex has not answered (a) itself; he did answer fixed-at-start and the night hours)",
+      "built": "2026-10-11, builder BS2: the host's clock at the mission's start, sent to the client with the start, a scenario may pin an hour ('sun_hour'), the tests never read the clock. See model_proposed.hour_source and model_proposed.tests.",
       "question": "(a) Where does the hour come from, and in co-op whose clock?",
       "options": [
         {
@@ -238,7 +276,8 @@
     },
     {
       "id": "b_night",
-      "status": "open",
+      "status": "decided",
+      "alex": "fold (he chose the board's proposal, quoted in the recommendation below)",
       "question": "(b) What does an hour outside the day (before 06:00, after 18:00) mean?",
       "options": [
         {
@@ -250,7 +289,8 @@
           "text": "Fold the 24 hours onto the day arc: midnight is the sunrise sun, 06:00 the 09:00 sun, noon is noon, 18:00 the 15:00 sun. The sun always moves with the clock, every hour of the real day gives a different map, and no part of the day piles up on the clamp."
         }
       ],
-      "recommendation_proposed": "fold (PROPOSED by the builder BS): with clamp, a game played at any hour from 18:00 to 06:00, half of all hours, gets the dawn-or-dusk sun with the longest shadows the model has; fold spreads them. sun.json 'night' holds the switch."
+      "recommendation_proposed": "fold (PROPOSED by the builder BS): with clamp, a game played at any hour from 18:00 to 06:00, half of all hours, gets the dawn-or-dusk sun with the longest shadows the model has; fold spreads them. sun.json 'night' holds the switch.",
+      "note": "DECIDED by Alex (decision sun-time): fold. data/params/sun.json clock.night is fold; clamp stays as the other setting."
     },
     {
       "id": "c_when",
@@ -261,7 +301,9 @@
     },
     {
       "id": "d_look",
-      "status": "open",
+      "status": "decided in part (direction and length by Alex, the numbers PROPOSED)",
+      "alex": "\"But let's reduce the distance a bit and the sun should be coming from north side to keep shadows below the objects not above\"; on holding the planes' gap at today's length: \"No, make them accurate\"",
+      "answered": "Not 'as shown': shorter shadows (the clamp 2.0, the 'gentler' option's number) and the sun on the north side (bearing 45 -> 0 -> 315, a new option Alex asked for). The planes' gap follows the sun's length ('plane_gap' answered no, accurate). 'narrower_day' not chosen. Numbers PROPOSED by the builder BS2.",
       "question": "(d) The look across the hours: what the model's numbers should be.",
       "options": [
         {
@@ -281,7 +323,8 @@
           "text": "The planes' altitude shadow (1% of the height, decision unit-sheet-choices) is scaled by the sun's length, so at the 07:00 and 18:00 clamp the gap is 3.1 times today's (see the detail rows). Either leave that, or hold the gap at today's length so a plane's shadow never strays far from it."
         }
       ],
-      "recommendation_proposed": "as_shown for the model, and the planes' gap held at today's length (PROPOSED by the builder BS): the long shadows are the point of the board, but a plane's shadow that drifts 100 px from it reads as a second plane. Alex looks at the frames and decides."
+      "recommendation_proposed": "as_shown for the model, and the planes' gap held at today's length (PROPOSED by the builder BS): the long shadows are the point of the board, but a plane's shadow that drifts 100 px from it reads as a second plane. Alex looks at the frames and decides.",
+      "answer_to_recommendation": "Alex took the model with shorter shadows and the north-side sun, and declined to hold the planes' gap at today's length (\"No, make them accurate\")."
     }
   ],
   "measured": {
@@ -318,9 +361,10 @@
     "text": "THE WHOLE MAP (scripts/render/map_bake_bench.gd, the real baker on all 100 chunks of the 5 km map with the tree set and the water, nothing else running): 42.0 s under today's sun, 44.5 s under the 07:00 sun (the longest shadows the model makes) and 36.7 s at noon, the first chunk after 5 s: the spread is the machine's (about 10% run to run), the sun is not what moves it. The part of the work that depends on the sun, the trees' shadow silhouettes, is 2.2 s of worker time under today's sun and 5.1 s under 07:00, in about 140 s of worker time in all. So a clock sun costs a map no more to bake than today's. A change of sun in the middle of a mission would mean dropping every chunk, the tree set, the unit art and the fog's contour layer and baking them again, the same redraw as the pen knob's (the first view in about 5 s, the whole map in about 40 s, the contour map showing meanwhile); Alex's answer, a fixed sun at the start, avoids it."
   },
   "palette_check": "The sun adds no colour: every shadow is the one steel tint at the same strength, a shadow over a lit roof the roof-shaded chip. The hours change the share of the ground in shadow (mean lightness of the zoom 0.85 patch by hour in each option), not the lightness ramp. No dawn or dusk colour cast is proposed (it would add a hue). The trees' interior detail light does not follow the sun.",
-  "recommendation_proposed": "PROPOSED by the builder BS (Alex decides): the model as shown (06:00 to 18:00, noon 60 degrees, shadow length clamped at 3.0), the host's clock at mission start with a scenario able to name its own hour, the night hours FOLDED, and the planes' altitude shadow held at today's length. See 'questions'.",
+  "recommendation_proposed": "WHAT THE BUILDER BS PROPOSED (2026-10-11, before Alex's answers): the model as shown (06:00 to 18:00, noon 60 degrees, shadow length clamped at 3.0), the host's clock at mission start with a scenario able to name its own hour, the night hours FOLDED, and the planes' altitude shadow held at today's length. Alex took fold; he asked for shorter shadows and a sun on the north side; he declined the held gap. The host's clock with a scenario's pinned hour is still PROPOSED and is built. See 'decided' and 'questions'.",
   "frames": "frames.json (every frame, native 1280 x 720)",
   "sheet": "board.png (1:1 crops of every frame, enlarged plane and tank details, the measured cost, the questions, the palette strip)",
-  "chosen": null,
-  "chosen_by": null
+  "chosen": "fixed at the mission's start; every shadow follows; night hours fold; the sun from the north side (shadows fall below their objects); shorter shadows; the planes' gap accurate",
+  "chosen_by": "Alex, 2026-10-11: 'Fixed time at start', 'Every shadow follows', fold, 'But let's reduce the distance a bit and the sun should be coming from north side to keep shadows below the objects not above', 'No, make them accurate'. The numbers (bearing 45 -> 0 -> 315, clamp 2.0) and the co-op clock (the host's) are PROPOSED.",
+  "status": "chosen by Alex; the numbers proposed; the co-op clock proposed"
 }
