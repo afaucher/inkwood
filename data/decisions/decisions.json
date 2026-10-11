@@ -1846,25 +1846,138 @@
       "id": "ship-sinks",
       "date": "2026-10-11",
       "area": "Units, Water",
-      "question": "How is a destroyed ship drawn?",
+      "question": "How is a destroyed ship drawn, and what happens to a plane that comes down over water?",
       "board": "none (said in chat)",
       "options": [
         "a broken wreck afloat (proposed by Track BB)",
         "sunk to the bottom under the water"
       ],
-      "chosen": "sunk to the bottom: the intact hull on the bottom, flooded with the water's own wash for that depth; no damage drawn",
+      "chosen": "it sinks like a downed plane falls: its height drops through the water until it reaches the floor, drawn intact under the water's own wash for the depth above it; no damage drawn. A plane that comes down over water does the same.",
       "parameters": {
-        "hull": "intact, on the bottom",
-        "cover": "the water layer's depth wash at its position",
-        "damage": "none"
+        "hull": "intact",
+        "height": "falls from the surface (0 m) to the floor (minus the water depth), like a downed plane's fall",
+        "cover": "the water layer's depth wash for the metres of water above it",
+        "damage": "none",
+        "planes": "a plane whose fall reaches the water keeps falling through it to the floor"
       },
       "applied_to": [
-        "scripts/ui/unit_marker_art_boats.gd (the wreck)",
+        "scripts/sim/world.gd (the fall)",
+        "scripts/sim/combat_resolver.gd (a sea unit's fate)",
+        "data/sim/combat.json (the sink rate)",
+        "scripts/ui/unit_marker_art_boats.gd (the sunk hull)",
         "data/world/boats.json game.wreck",
         "scripts/tests/test_boats_live.gd"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'For destroyed ships, ideally we just sink them to the bottom.' Then: 'We don't even need to show damage if we just height-appropriately flood them with water.' PROPOSED (not Alex's): the flood rises from the waterline to full depth over the resolve after the down event; the standard down flash stays, the boat's smoke column goes; it applies to every sea unit (cutter, barge, cruiser). The bridge's ruin is unchanged."
+      "notes": "Alex: 'For destroyed ships, ideally we just sink them to the bottom.' Then: 'We don't even need to show damage if we just height-appropriately flood them with water.' Then: 'Just like a downed plane it's altitude should decrease until it hits the floor. It just does so through the water.' And: 'In fact we could have planes do the same if they crash there.' PROPOSED (not Alex's): the sink rate; a splash ring in the water's ink where it goes under; the standard down flash stays and the ground crash's smoke is not drawn over water; it applies to every sea unit (cutter, barge, cruiser). The bridge's ruin is unchanged."
+    },
+    {
+      "id": "wreck-litter",
+      "date": "2026-10-11",
+      "area": "Water, Environment",
+      "question": "Sunken wrecks (boats and planes) placed in the water as environment, for character?",
+      "board": "not made yet",
+      "options": [],
+      "chosen": null,
+      "parameters": {
+        "reuse": "the sunk-hull drawing from ship-sinks, placed by seed"
+      },
+      "applied_to": [],
+      "status": "open",
+      "notes": "Alex: 'And consider some 'wreaked' litter just for visual interest. A sunken boat or plane in the water adds some character.' PROPOSED: a board after the sinking lands, with how many, where (shallows, where they show) and which kinds; the same art as a sunk unit, placed by seed."
+    },
+    {
+      "id": "side-view-views",
+      "date": "2026-10-11",
+      "area": "Interface",
+      "question": "The side view: top, front and side views of the selected unit's weapon cones (it solves the turret that only covers above), in what layout; do the map's cones stay on; whose cones?",
+      "board": "none (said in chat; the camera session's options A tabs, B folding strips, C a drafting sheet of all three)",
+      "options": [
+        "A tabs: one picture, Top / Front / Side",
+        "B folding strips: three strips folded or unfolded each on its own",
+        "C a drafting sheet: all three always shown small"
+      ],
+      "chosen": "B folding strips, with no limit on how many are open at once; the map's cone wash off by default with an arcs on/off button in the panel; the views show the selected unit's own cones only",
+      "parameters": {
+        "planner.cones.shown": false
+      },
+      "applied_to": [
+        "being built: scripts/ui/side_view*.gd, data/ui/ui.json side_view and planner.cones.shown"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Next - I want to enhance the side view. I want to be able to select between top, front & side. I think this solves the 'cone but only upwards' problem. Maybe they fold instead of you selecting only one - so you could have all three. It would also make it easier to disable the cones on the main map which visually make it much harder to read.' Then, to the three questions: '1 B - but no limit on which are open at a time. I am testing on 4k 2 Yes, lets actually add a button to the panel to turn arcs on/off 3 self only'. How each view projects the cones, the strips' sizes and which are open at first are PROPOSED by the builder."
+    },
+    {
+      "id": "playtest-2",
+      "date": "2026-10-11",
+      "area": "Interface, Effects",
+      "question": "Alex's notes from the second playtest (played on build 2026-10-10.134839, the first playtest build)",
+      "board": "none (said in chat)",
+      "options": [],
+      "chosen": "tracers for machine guns; tails drawn from the start; the per-unit dot and dotted line removed; already fixed after that build: the roster line, the trail's thin line, the click X and its dotted line",
+      "parameters": {
+        "tracers": "machine guns only (proposed list); look on variants/tracers/, a working default proposed",
+        "start_tails": "a ribbon behind every moving unit at mission start, as if it had flown on at its normal speed; visual only",
+        "unit_dot": "removed behind a data switch"
+      },
+      "applied_to": [
+        "data/fx/fx.json tracers",
+        "scripts/ui/wingtip_trails.gd",
+        "data/ui/ui.json"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'We should show tracers for machine guns.' / 'There is still a line between the selected plane and the roster. Remove it.' / 'The plane motion tails don't render at the start. Create a tail for them assuming they are moving forward at normal speed.' / 'When the motion tail converts to a dotted red or blue solid thin line, remove that trail. Maybe we want that for 'post battle retrospective/replay' but not right now. It is visually distracting.' / 'Remove the indicator on where you clicked to set a units motion. A little X and dotted line. More visual noise and we don't care about the specific spot.' / 'The red/blue indicator dot for each unit (planes at least) with the dotted line. We can remove that. The tail serves this purpose well.' The roster line, the thin trail line and the click X were removed by cc76f61 after that build (leader_to_roster, whole_flight_line, clamp_marks: false); a replay may bring the whole-flight line back later."
+    },
+    {
+      "id": "motion-range-look",
+      "date": "2026-10-11",
+      "area": "Interface",
+      "question": "How is the range of motion (where the next node can go) drawn, in one style for every unit type?",
+      "board": "variants/motion-range/ (being made)",
+      "options": [],
+      "chosen": null,
+      "parameters": {},
+      "applied_to": [],
+      "status": "open",
+      "notes": "Alex: 'I want to look at the design of the 'acceptable range of motion' indicator for planes. Is there a style that makes more sense across all unit types? Should we just have a little shaded area where you can set the node? Show me some options before commiting this.'"
+    },
+    {
+      "id": "sun-time",
+      "date": "2026-10-11",
+      "area": "Style, Terrain",
+      "question": "Do shadows follow the time of day, and how is the time picked?",
+      "board": "variants/sun-time/ (being made)",
+      "options": [],
+      "chosen": "picked once at mission start and fixed for the mission; every shadow follows the one sun",
+      "parameters": {
+        "when": "fixed at mission start",
+        "what_follows": "every shadow (trees, terrain, structures, planes' altitude shadows, effects)",
+        "still_open": "the look across the hours (the board), the clock source in co-op (proposed: the host's), night hours"
+      },
+      "applied_to": [],
+      "status": "chosen by Alex (in part); the look and the rest open",
+      "notes": "Alex: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.' PROPOSED: every shadow follows one sun, not the trees alone. Then: 'Fixed time at start' and 'Every shadow follows'."
+    },
+    {
+      "id": "tracers-mg",
+      "date": "2026-10-11",
+      "area": "Effects",
+      "question": "Which weapons draw tracers?",
+      "board": "variants/tracers/ (being made) for the look",
+      "options": [
+        "machine guns only",
+        "every direct-fire weapon"
+      ],
+      "chosen": "machine guns only, for now",
+      "parameters": {
+        "weapons": "machine guns (the list in data, so another weapon is a data edit)",
+        "revisit": "other direct-fire weapons, like the tank's gun"
+      },
+      "applied_to": [
+        "data/fx/fx.json tracers"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. The tracers' look is still open (variants/tracers/)."
     }
   ]
 }

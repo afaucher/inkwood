@@ -9,10 +9,15 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| Draw the boats and the bridge in the game (item 1 below) | lead session (builder) | scripts/ui/unit_marker_art*.gd (boat and bridge dispatch only), new scripts/ui/unit_marker_art_boats.gd, scripts/fx/ (the bridge's ruin), data/ui/ui.json unit_art keys | 2026-10-11 |
+| Draw the boats and the bridge in the game (item 1 below), and sinking (decision ship-sinks: a destroyed ship, and a plane that comes down over water, fall through the water to the floor) | lead session (builder) | scripts/ui/unit_marker_art*.gd (boat and bridge dispatch only), new scripts/ui/unit_marker_art_boats.gd, scripts/fx/ (the bridge's ruin, the splash), data/ui/ui.json unit_art keys; for sinking: the fall functions in scripts/sim/world.gd, the sea-unit fate in scripts/sim/combat_resolver.gd, sink keys in data/sim/combat.json | 2026-10-11 |
 | Build Hold the bridge (item 2 below) | lead session (builder) | data/scenarios/bridge.json, scripts/sim/mission.gd, scripts/app/main.gd selector, scripts/debug/debug_settings.gd scenario choices, scripts/test_support/bridge_*.gd, scripts/tests/test_bridge_mission.gd | 2026-10-11 |
+| Playtest 2 fixes: tails at the start (a ribbon behind every moving unit as if it had flown on at its normal speed); the per-unit dot and dotted line removed | lead session (builder PT2) | scripts/ui/wingtip_trails.gd; the per-unit dot and dashed line's drawing (scripts/ui/motion_planner.gd and/or unit_marker_layer.gd, that function only); data/ui/ui.json trails and planner keys; scripts/tests/test_tails_start.gd, test_declutter.gd | 2026-10-11 |
+| Machine-gun tracers: a board and a working default (proposed) | lead session (builder TR) | new scripts/fx/fx_tracer*.gd and its hook in fx_layer.gd/fx_field.gd; data/fx/fx.json tracers; variants/tracers/; scripts/tests/test_tracers.gd | 2026-10-11 |
+| Board: the range-of-motion indicator for every unit type (no live change until Alex picks) | lead session (builder BM) | variants/motion-range/; scripts/ui/boards/motion_range_board_shot.gd; a mode switch in the fan's drawing in scripts/ui/motion_planner.gd (today's look the default); data/ui/ui.json planner.fan keys | 2026-10-11 |
+| Board: shadows from the time of day (no live change until Alex picks) | lead session (builder BS) | variants/sun-time/; a new board shot script; the sun's direction and length in data and their readers (ui_style.gd, fx_style.gd, scripts/render/ink_structs.gd shadow_dir), today's sun the default | 2026-10-11 |
 | Forest fire (decision forest-fire): the mechanic has landed (below); next the board for a burning grove and a burnt-out trunk, then playtesting in Suppress | fire session (nice-dewdney worktree) | new data/sim/fire.json, scripts/sim/fire*.gd, scripts/tests/test_fire*.gd; the fire step and its net state in scripts/sim/world.gd (and the snapshot in scripts/net/world_sync.gd); burnt cover in scripts/sim/concealment.gd, data/sim/concealment.json; smoke denies tracking in scripts/sim/spotting.gd, bombs.gd (followed aim), scripts/ui/ui_target.gd and the enemy-click lines of scripts/ui/unit_ui.gd; new scripts/fx/fx_fire*.gd and its hook in fx_field.gd/fx_layer.gd; per-chunk rebake in scripts/render/map_view.gd, chunk_terrain_provider.gd; data/scenarios/suppress.json (fire on); a fire knob in scripts/debug/debug_settings.gd | 2026-10-11 |
 | Camera controls: wheel zoom anchors and left-drag pan (landed); right-drag pan removed, panning stops at the map's edge (Alex); the map's border board (builder) | camera session (beautiful-lumiere worktree) | scripts/world/camera_controller.gd, data/view/camera.json, scripts/tests/test_camera.gd; the board: scripts/render/map_border*.gd, data/view/map_border.json, scripts/ui/boards/map_border_board_shot.gd, variants/map-border/, scripts/tests/test_map_border.gd, and a one-line hook in scripts/render/map_view.gd | 2026-10-11 |
+| Side view: top, front and side as folding strips, an arcs button in the panel, map cones off by default (Alex, decision side-view-views) | camera session (builder) | scripts/ui/side_view*.gd, scripts/tests/test_side_view.gd, data/ui/ui.json side_view keys and planner.cones.shown; the arcs default's knock-on in tests that expect cones (test_cone_overlay, test_ui_*) | 2026-10-11 |
 
 ## Next, free to take
 
@@ -32,6 +37,9 @@ Decisions and open questions live in the Decision Ledger
    build.ps1 closes a running game: ask Alex first.
 4. **Terrain variety board** (decision water-layer): beaches, coastal cliffs, marsh,
    rock, orchards, wood density.
+5. **Wreck litter board** (decision wreck-litter, open): sunken boats and planes in the
+   water as environment, for character. After sinking lands: reuse the sunk-hull art,
+   placed by seed; the board picks how many, where and which kinds.
 
 ## Later (planned, not fleshed out)
 
