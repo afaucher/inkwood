@@ -293,8 +293,13 @@ func _accuracy() -> void:
 	var out := w.drop_spread("b", 0, ideal + Vector2(0.0, 600.0))
 	check(out["clamped"], "an aim 600 m off the track is moved")
 	near(float(out["r"]), 1.0, 0.002, "to the rim of the cone")
-	near(float(out["accuracy"]), r.rim_accuracy_factor, 0.002, "where the accuracy is the rim factor (%.4f)" % out["accuracy"])
-	near(float(out["spread_m"]), sigma0 / r.rim_accuracy_factor, sigma0 * 0.03, "and the scatter is the ideal one over it (%.1f m)" % out["spread_m"])
+	# ... where the accuracy is the rim's; under outside_cone_mode "poor_shot" (the default since Alex's answer to outside-cone-release,
+	# 2026-10-11: "Fire a poorer one") it is the POOR SHOT's, the rim's scaled down by how far outside the cone the aim was, never under the floor.
+	var want_accuracy: float = r.rim_accuracy_factor
+	if r.outside_cone_mode == "poor_shot":
+		want_accuracy = Bombs.poor_shot_accuracy(float(out["requested_r"]), r)
+	near(float(out["accuracy"]), want_accuracy, 0.002, "where the accuracy is the rim factor, or the poor shot's (%.4f, mode %s)" % [out["accuracy"], r.outside_cone_mode])
+	near(float(out["spread_m"]), sigma0 / want_accuracy, sigma0 / want_accuracy * 0.03, "and the scatter is the ideal one over it (%.1f m)" % out["spread_m"])
 	var moved: Vector2 = out["aim"]
 	check(moved.y < ideal.y + 600.0 and moved.y > ideal.y, "the moved aim is between the ideal point and the request (y %.0f)" % moved.y)
 	check(Geometry2D.is_point_in_polygon(moved.lerp(ideal, 0.08), cone["polygon"]), "and it is at the polygon's edge")

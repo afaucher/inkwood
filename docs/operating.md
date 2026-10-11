@@ -40,7 +40,10 @@ agent starting on Inkwood reads both, then `docs/status.md` for what is in fligh
    deferred or proposed; its `links` collection lists the boards and documents. Add
    or update a row with the `ArtifactData` tool (pin `if_version`). Row shape:
    `{title, area, status: decided|open|deferred|proposed, what, date, links: [link
-   ids], source: "<decisions.json id>"}`. The seed script is `tmp/ledger/seed.py`.
+   ids], source: "<decisions.json id>"}`. The page reads ONLY these live records (no copy is
+   built into the page), so a row written with `ArtifactData` shows at once and the
+   page never needs republishing for a data change. The first seed came from
+   `tmp/ledger/seed.py`.
 
 ## The lead and the builders
 

@@ -11,8 +11,12 @@ extends "res://scripts/test_support/test_case.gd"
 #   - shared spotting: a friendly tower, tank or plane spots for the ship; a downed spotter does not; the line of sight is a seam
 #   - a salvo fires at its moment, its shells fly for a time set by the range, land (in a later turn) near the target and damage it
 #   - the scatter grows with the range, tightens with the time spotted and with successive salvos; a break in sight starts it again
-#   - a target no longer spotted at the moment of fire is not fired at and nothing is spent
+#   - a target no longer spotted at the moment of fire (or out of reach) is fired at POORLY, the reload spent: Alex, decision
+#     outside-cone-release, 2026-10-11: "Fire a poorer one" -- at its last spotted place, the scatter doubled, clamped to the reach;
+#     gun_unspotted_mode "hold" keeps the old answer (not fired, nothing spent); a target already down is held either way
 #   - the reload; a shell in flight across a turn end lands identically on a client and on a joiner; the blast hurts a friend
+#   - the blast: Alex (decision shell-blast, 2026-10-11): "for the smaller ship lets do high damage smaller range" -- 6 / 12 / 20 m, 4 / 3 / 2
+#     pips; a fresh direct salvo cannot one-shot a bridge (Alex, bridge-durability: "it should take a lot"), one with the range found can
 #   - what a request may be (plan_step), the special's words
 
 const World = preload("res://scripts/sim/world.gd")
@@ -22,6 +26,7 @@ const GunRules = preload("res://scripts/sim/gun_rules.gd")
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 const GunWorlds = preload("res://scripts/test_support/gun_worlds.gd")
 const Spotting = preload("res://scripts/sim/spotting.gd")
+const CombatResolver = preload("res://scripts/sim/combat_resolver.gd")
 
 # A stand-in for the fog's FogVision: the three calls Spotting.los_from_vision makes.
 class FakeVision:
@@ -55,10 +60,12 @@ func setup(_main) -> void:
 	_scatter()
 	_bracketing()
 	_hold()
+	_poor_shot()
 	_reload()
 	_carried()
 	_friendly_fire()
-	check(_sentinel == 14, "every part of the test ran (%d of 14)" % _sentinel)
+	_blast_and_bridge()
+	check(_sentinel == 16, "every part of the test ran (%d of 16)" % _sentinel)
 	finish()
 
 # Equality that treats NaN as equal to NaN.
@@ -600,16 +607,22 @@ func _bracketing() -> void:
 	eq(Guns.bracket_salvos(pm, "allies", {"point": [1000.0 + spec.bracket_point_m * 1.5, 1000.0]}, 3, spec), 0, "one farther is a new one")
 	_sentinel += 1
 
-# --- Held at resolve ------------------------------------------------------------------------------------------------------------------
+# --- Held at resolve (the switch on "hold", and what is held in any mode) -------------------------------------------------------------
+
+# The World's guns with gun_unspotted_mode set to `mode` (data/sim/guns.json). The resolver holds the same GunRules object.
+func _guns_mode(w: World, mode: String) -> void:
+	w.guns.unspotted_mode = mode
 
 func _hold() -> void:
-	# Planned while spotted; the spotter is gone by the time the guns fire.
+	# gun_unspotted_mode "hold": the strict answer, how the guns were first built. Planned while spotted; the spotter is gone by the time
+	# the guns fire.
 	var w := GunWorlds.world(3)
+	_guns_mode(w, "hold")
 	GunWorlds.fire(w, "aa")
 	w.units["spotter"].x = 4500.0
 	var res := GunWorlds.turn(w)
 	var holds := GunWorlds.events_of(res, "gun_hold", "cruiser")
-	eq(holds.size(), 1, "a target no longer spotted at the moment of fire is not fired at")
+	eq(holds.size(), 1, "hold: a target no longer spotted at the moment of fire is not fired at")
 	if holds.size() == 1:
 		eq(str(holds[0]["reason"]), "unspotted", "...and the event says why")
 		eq(holds[0]["target"], {"unit": "aa"}, "...and at what")
@@ -618,23 +631,184 @@ func _hold() -> void:
 	eq(w.units["cruiser"].gun_ready_turn("main_guns"), 0, "NOTHING IS SPENT: the guns are still loaded")
 	# Planned in range; by the moment of fire the target is out of reach.
 	var w2 := GunWorlds.world(3)
+	_guns_mode(w2, "hold")
 	GunWorlds.fire(w2, "aa")
 	w2.units["aa"].x = 4800.0
 	var r2 := GunWorlds.turn(w2)
 	var h2 := GunWorlds.events_of(r2, "gun_hold", "cruiser")
-	eq(h2.size(), 1, "a target out of reach at the moment of fire is held")
+	eq(h2.size(), 1, "hold: a target out of reach at the moment of fire is held")
 	if h2.size() == 1:
 		eq(str(h2[0]["reason"]), "out_of_range", "...out of range")
 	eq(w2.units["cruiser"].gun_ready_turn("main_guns"), 0, "...and nothing is spent")
-	# A target that has been destroyed by then.
+	# A target that has been destroyed by then: held in EVERY mode (there is nothing to aim at).
+	for mode: String in ["hold", "poor_shot"]:
+		var w3 := GunWorlds.world(3)
+		_guns_mode(w3, mode)
+		GunWorlds.fire(w3, "aa")
+		w3.units["aa"].health = 0
+		w3.units["aa"].down = true
+		w3.units["aa"].fate = "destroyed"
+		var r3 := GunWorlds.turn(w3)
+		var h3 := GunWorlds.events_of(r3, "gun_hold", "cruiser")
+		check(h3.size() == 1 and str(h3[0]["reason"]) == "target_down", "%s: a target already down: held (target_down)" % mode)
+		eq(GunWorlds.events_of(r3, "shell_fire").size(), 0, "%s: ... and no salvo" % mode)
+		eq(w3.units["cruiser"].gun_ready_turn("main_guns"), 0, "%s: ... and nothing spent" % mode)
+	_sentinel += 1
+
+# --- The poor shot ------------------------------------------------------------------------------------------------------------------------
+#
+# ALEX (decision outside-cone-release, 2026-10-11): "Fire a poorer one. Maybe in the future we have an engagement mode but for now that is
+# extra complexity we are not ready for." A salvo whose target is no longer spotted, or out of reach, when it fires goes anyway, the
+# reload spent, at where the target was last spotted, the scatter widened (data/sim/guns.json gun_unspotted_mode, poor_shot_factor).
+
+# The mean distance from `aim` of the shells a salvo has in the air at the end of the turn, over many seeds of the same set-up.
+func _mean_miss(poor: bool, aim: Vector2, seeds: int = 10) -> float:
+	var total := 0.0
+	var n := 0
+	for sd in range(1, seeds + 1):
+		var w := GunWorlds.world(sd)
+		GunWorlds.fire(w, "aa")
+		if poor:
+			w.units["spotter"].x = 4500.0
+		GunWorlds.turn(w)
+		for sh: Dictionary in w.shells_in_flight:
+			total += Vector2(float(sh["x"]), float(sh["y"])).distance_to(aim)
+			n += 1
+	return total / float(maxi(n, 1))
+
+func _poor_shot() -> void:
+	var spec := _spec()
+	var rules := GunRules.new()
+	eq(rules.unspotted_mode, "poor_shot", "0. the default is a poor shot (Alex, outside-cone-release: 'Fire a poorer one')")
+	eq(JSON.parse_string(FileAccess.get_file_as_string(GunRules.PATH))["gun_unspotted_mode"].get("decision", ""), "outside-cone-release", "0. and the record cites the decision")
+	check(spec.poor_shot_factor > 1.0 and spec.poor_shot_min_sigma_m > 0.0, "0. the poor shot's numbers are data: x%.1f, least %.0f m" % [spec.poor_shot_factor, spec.poor_shot_min_sigma_m])
+	check(Guns.poor_shot_reason("unspotted") and Guns.poor_shot_reason("out_of_range") and Guns.poor_shot_reason("too_close") and Guns.poor_shot_reason("inland"), "0. unspotted and out of reach are poor shots")
+	check(not Guns.poor_shot_reason("reloading") and not Guns.poor_shot_reason("target_down") and not Guns.poor_shot_reason("own_side") and not Guns.poor_shot_reason("no_target"), "0. a reload, a dead target, a friend and no target are not")
+	# The scatter is the unranged, unbracketed one with the spotter at the edge of its sight, times the factor, never under the floor.
+	near(Guns.poor_sigma_m(1200.0, 0.0, spec), maxf(Guns.sigma_m(1200.0, 0.0, spec, 0, 1.0) * spec.poor_shot_factor, spec.poor_shot_min_sigma_m), 1e-9, "0. poor_sigma_m")
+	check(Guns.poor_sigma_m(100.0, 0.0, spec) >= spec.poor_shot_min_sigma_m, "0. a short poor shot is not tighter than the floor: %.1f m" % Guns.poor_sigma_m(100.0, 0.0, spec))
+	check(Guns.poor_sigma_m(1200.0, 20.0, spec, 2, 0.0) > Guns.sigma_m(1200.0, 20.0, spec, 2, 0.0) * 1.5, "0. and far wider than a ranged-in shot")
+
+	# 1. NOT SPOTTED at the moment of fire (planned while spotted; the spotter is gone). Nothing in sight this turn and no aim stored with
+	# the fire: the place the target stood at the start of the turn.
+	var w := GunWorlds.world(3)
+	check(not GunWorlds.fire(w, "aa").is_empty(), "1. planned while spotted")
+	w.units["spotter"].x = 4500.0
+	var res := GunWorlds.turn(w)
+	eq(GunWorlds.events_of(res, "gun_hold", "cruiser").size(), 0, "1. NOT held")
+	var fe := GunWorlds.events_of(res, "shell_fire", "cruiser")
+	if not check(fe.size() == 1, "1. the salvo is fired"):
+		return
+	check(bool(fe[0].get("poor_shot", false)), "1. and the event says it is a poor shot")
+	eq(str(fe[0].get("poor_why", "")), "unspotted", "1. ... because the target was not spotted")
+	eq(bool(fe[0]["followed"]), false, "1. a poor shot does not follow the unit (it has nothing to follow)")
+	eq(int(fe[0]["shells"]), spec.shells, "1. all %d shells" % spec.shells)
+	eq(w.shells_in_flight.size(), spec.shells, "1. in the air")
+	near(float(fe[0]["aim"][0]), GunWorlds.TARGET.x, 1e-6, "1. aimed at where the battery stood (x)")
+	near(float(fe[0]["aim"][1]), GunWorlds.TARGET.y, 1e-6, "1. ... (y)")
+	eq(bool(fe[0].get("clamped", true)), false, "1. (in reach: not pulled back)")
+	near(float(fe[0]["spread_m"]), Guns.poor_sigma_m(float(fe[0]["range_m"]), 0.0, spec, 0, 1.0), 1e-6, "1. the scatter is the poor one: %.1f m" % float(fe[0]["spread_m"]))
+	eq(int(w.units["cruiser"].gun_ready["main_guns"]), 1 + spec.reload_turns + 1, "1. THE RELOAD IS SPENT: the guns are reloading until turn %d" % (1 + spec.reload_turns + 1))
+	eq(w.gun_memory.size(), 0, "1. and a poor shot is not a bracketing salvo")
+	# The same salvo with the target in sight, for the comparison.
+	var wn := GunWorlds.world(3)
+	GunWorlds.fire(wn, "aa")
+	var fn := GunWorlds.events_of(GunWorlds.turn(wn), "shell_fire", "cruiser")
+	if check(fn.size() == 1, "1. (the salvo with the target in sight fires too)"):
+		check(not fn[0].has("poor_shot"), "1. which is not a poor shot")
+		check(float(fe[0]["spread_m"]) >= 2.0 * float(fn[0]["spread_m"]), "1. the poor shot's scatter is at least twice the good one's: %.1f against %.1f m" % [float(fe[0]["spread_m"]), float(fn[0]["spread_m"])])
+	var miss_poor := _mean_miss(true, GunWorlds.TARGET)
+	var miss_good := _mean_miss(false, GunWorlds.TARGET)
+	print("  poor shot: the shells land %.0f m from the battery on average, against %.0f m with it in sight" % [miss_poor, miss_good])
+	check(miss_poor > 1.8 * miss_good, "1. the shells LAND wider: %.0f m against %.0f m (10 seeds)" % [miss_poor, miss_good])
+	# Next turn the shells land (the poor shot is a real salvo), identically on a client.
+	var client := GunWorlds.world(3)
+	client.units["spotter"].x = 4500.0
+	check(client.apply_resolution(res), "1. the client applies the host's result: %s" % client.last_error)
+	check(_same(client.shells_in_flight, w.shells_in_flight), "1. and has the same shells in the air")
+	check(int(client.units["cruiser"].gun_ready["main_guns"]) == int(w.units["cruiser"].gun_ready["main_guns"]), "1. and the same reload")
+	w.begin_turn()
+	var res2 := GunWorlds.turn(w)
+	eq(GunWorlds.events_of(res2, "shell_impact", "cruiser").size(), spec.shells, "1. the shells land in the next turn")
+
+	# 2. LAST SPOTTED. An enemy plane flies out of the tower's sight just before the guns fire: they aim where it was at the last moment
+	# it was seen, not where it is, not where it will be.
+	var w2 := GunWorlds.world(11)
+	w2.units["spotter"].x = 4500.0
+	w2.add_unit({"id": "spot2", "type": "radio_tower", "side": "allies", "controller": "player", "x": 1700.0, "y": 2500.0, "heading": 0.0})
+	check(w2.add_unit({"id": "runner", "type": "light_fighter", "side": "axis", "controller": "player", "x": 2150.0, "y": 2500.0, "heading": 0.0,
+			"altitude_band": "medium", "speed": 45.0}) != "", "2. an enemy plane near the tower: %s" % w2.last_error)
+	for k in w2.steps_per_turn("runner"):
+		w2.plan_step("runner", k, {"turn": 0.0, "speed": 45.0})
+	check(w2.spotted_now("allies", {"unit": "runner"}), "2. the tower sees it at the start of the turn")
+	var st2 := GunWorlds.fire(w2, "runner")
+	check(not st2.is_empty() and st2["fire"]["ok"] == true, "2. the salvo is planned: %s" % str(st2.get("fire", w2.last_error)))
+	var r2 := GunWorlds.turn(w2)
+	var f2 := GunWorlds.events_of(r2, "shell_fire", "cruiser")
+	if check(f2.size() == 1, "2. fired"):
+		check(bool(f2[0].get("poor_shot", false)) and str(f2[0].get("poor_why", "")) == "unspotted", "2. as a poor shot, the plane having left the tower's sight")
+		var seen: Dictionary = w2.sample("runner", 1.0, "history")
+		var at_fire: Dictionary = w2.sample("runner", float(f2[0]["t"]), "history")
+		check(Vector2(float(seen["x"]), float(seen["y"])).distance_to(Vector2(float(at_fire["x"]), float(at_fire["y"]))) > 5.0, "2. (it moved %.1f m between the last sighting and the shot)" % Vector2(float(seen["x"]), float(seen["y"])).distance_to(Vector2(float(at_fire["x"]), float(at_fire["y"]))))
+		near(float(f2[0]["known"][0]), float(seen["x"]), 0.01, "2. the guns take it to be where it was LAST SEEN (x)")
+		near(float(f2[0]["known"][1]), float(seen["y"]), 0.01, "2. ... (y)")
+		near(float(f2[0]["aim"][0]), float(seen["x"]), 0.01, "2. and aim there, no lead: the aim is the last seen place")
+
+	# 3. SHOWN: the fire carries the aim the target was shown at when it was set; with the target never in sight this turn, that is the place.
 	var w3 := GunWorlds.world(3)
-	GunWorlds.fire(w3, "aa")
-	w3.units["aa"].health = 0
-	w3.units["aa"].down = true
-	w3.units["aa"].fate = "destroyed"
-	var r3 := GunWorlds.turn(w3)
-	var h3 := GunWorlds.events_of(r3, "gun_hold", "cruiser")
-	check(h3.size() == 1 and str(h3[0]["reason"]) == "target_down", "a target already down: held (target_down)")
+	w3.plan_step("cruiser", 0, {"fire": {"special": "main_guns", "target": {"unit": "aa"}, "aim": [1750.0, 2510.0]}})
+	w3.units["spotter"].x = 4500.0
+	var f3 := GunWorlds.events_of(GunWorlds.turn(w3), "shell_fire", "cruiser")
+	if check(f3.size() == 1, "3. fired"):
+		near(float(f3[0]["aim"][0]), 1750.0, 1e-6, "3. aimed at the place the target was SHOWN at when the fire was set (x)")
+		near(float(f3[0]["aim"][1]), 2510.0, 1e-6, "3. ... (y)")
+
+	# 4. OUT OF RANGE at the moment of fire: pulled back along the line to the edge of the reach (and the coastal strip, which is nearer).
+	var w4 := GunWorlds.world(3)
+	GunWorlds.fire(w4, "aa")
+	w4.units["aa"].x = 4800.0
+	var f4 := GunWorlds.events_of(GunWorlds.turn(w4), "shell_fire", "cruiser")
+	if check(f4.size() == 1, "4. a target out of reach is fired at"):
+		eq(str(f4[0].get("poor_why", "")), "out_of_range", "4. ... a poor shot, out of range")
+		check(bool(f4[0].get("clamped", false)), "4. pulled back to the edge of the reach")
+		check(float(f4[0]["range_m"]) <= spec.range_max_m and float(f4[0]["range_m"]) >= spec.range_min_m, "4. inside the guns' reach: %.0f m" % float(f4[0]["range_m"]))
+		var ax: float = float(f4[0]["aim"][0])
+		check(ax > GunWorlds.COAST_X and ax <= GunWorlds.COAST_X + spec.inland_max_m + 1e-6, "4. and on the coastal strip, the shore at x %.0f and the aim at %.0f" % [GunWorlds.COAST_X, ax])
+		near(float(f4[0]["aim"][1]), 2500.0, 1e-6, "4. on the line from the ship to the target")
+	eq(w4.units["cruiser"].gun_ready_turn("main_guns"), 1 + spec.reload_turns + 1, "4. the reload is spent")
+	# Without water the range alone clamps it.
+	var w4b := GunWorlds.world(3, false)
+	GunWorlds.fire(w4b, "aa")
+	w4b.units["aa"].x = 4800.0
+	var f4b := GunWorlds.events_of(GunWorlds.turn(w4b), "shell_fire", "cruiser")
+	if check(f4b.size() == 1, "4. (with no water in the world either)"):
+		near(float(f4b[0]["range_m"]), spec.range_max_m, 0.01, "4. the aim is the guns' longest range, %.0f m" % float(f4b[0]["range_m"]))
+		near(float(f4b[0]["aim"][0]), GunWorlds.SHIP.x + spec.range_max_m, 0.01, "4. along the line to the target")
+
+	# 5. TOO CLOSE (a point alongside the ship) and INLAND (a point behind the strip).
+	var w5 := GunWorlds.world(3)
+	var st5 := GunWorlds.fire(w5, Vector2(700.0, 2500.0))
+	check(not st5.is_empty() and st5["fire"]["ok"] == false and st5["fire"]["reason"] == "too_close" and bool(st5["fire"]["poor_shot"]), "5. a point alongside: the step says too_close, and that it is a poor shot")
+	var f5 := GunWorlds.events_of(GunWorlds.turn(w5), "shell_fire", "cruiser")
+	if check(f5.size() == 1, "5. fired"):
+		eq(str(f5[0].get("poor_why", "")), "too_close", "5. a poor shot, too close")
+		near(float(f5[0]["range_m"]), spec.range_min_m, 0.01, "5. pushed out to the guns' shortest range: %.1f m" % float(f5[0]["range_m"]))
+	var w6 := GunWorlds.world(3)
+	var st6 := GunWorlds.fire(w6, Vector2(2500.0, 2500.0))
+	check(not st6.is_empty() and st6["fire"]["reason"] == "inland" and bool(st6["fire"]["poor_shot"]), "6. a point 800 m inland: the step says inland, and that it is a poor shot (%s)" % str(st6.get("fire", w6.last_error)))
+	var f6 := GunWorlds.events_of(GunWorlds.turn(w6), "shell_fire", "cruiser")
+	if check(f6.size() == 1, "6. fired"):
+		eq(str(f6[0].get("poor_why", "")), "inland", "6. a poor shot, inland")
+		check(bool(f6[0].get("clamped", false)) and float(f6[0]["aim"][0]) < GunWorlds.COAST_X + spec.inland_max_m + 1e-6, "6. pulled back onto the coastal strip: x %.0f" % float(f6[0]["aim"][0]))
+	# The planning rule stands: the special still cannot be switched on for a target nobody sees, and the answer says it would be a poor shot.
+	var c7 := GunWorlds.world(3).gun_check("cruiser", 0, {"point": [1800.0, 3500.0]})
+	check(c7["ok"] == false and c7["reason"] == "unspotted" and bool(c7["poor_shot"]), "7. a point in the fog: cannot be activated (unspotted), and it would be a poor shot")
+	check(float(c7["spread_m"]) >= spec.poor_shot_min_sigma_m, "7. the scatter it shows is the poor one: %.1f m" % float(c7["spread_m"]))
+	var c8 := GunWorlds.world(3).gun_check("cruiser", 0, {"unit": "aa"})
+	check(c8["ok"] == true and not bool(c8["poor_shot"]), "7. a spotted target in reach is not")
+	var wh := GunWorlds.world(3)
+	_guns_mode(wh, "hold")
+	check(not bool(wh.gun_check("cruiser", 0, {"point": [1800.0, 3500.0]})["poor_shot"]), "7. with the switch on hold, nothing is a poor shot")
 	_sentinel += 1
 
 # --- The reload -------------------------------------------------------------------------------------------------------------------------------
@@ -773,3 +947,44 @@ func _friendly_fire() -> void:
 	eq(spec.blast_damage(spec.blast_radius_m() + 1.0), 0, "nothing past the last tier")
 	check(spec.blast_damage(1.0) >= spec.blast_damage(spec.blast_radius_m()), "more pips closer in")
 	_sentinel += 1
+
+# --- The blast, and what it does to a bridge -------------------------------------------------------------------------------------
+
+func _blast_and_bridge() -> void:
+	var spec := _spec()
+	# ALEX (decision shell-blast, 2026-10-11): "for the smaller ship lets do high damage smaller range." Small radii, big pips (4 / 3 / 2
+	# at 6 / 12 / 20 m; the pips are proposed, data/sim/guns.json).
+	eq(Array(spec.blast_distances), [6.0, 12.0, 20.0], "the radii stay small: 6, 12 and 20 m (not the bombs' 12, 25 and 45)")
+	eq(Array(spec.blast_pips), [4.0, 3.0, 2.0], "...and the damage is high: 4, 3 and 2 pips")
+	eq([spec.blast_damage(0.0), spec.blast_damage(6.0), spec.blast_damage(6.5), spec.blast_damage(12.0), spec.blast_damage(19.9), spec.blast_damage(20.5)], [4, 4, 3, 3, 2, 0], "a hit near the target is decisive: 4 pips within 6 m, 3 within 12, 2 within 20, nothing beyond")
+	check(spec.blast_damage(1.0) >= w_battery_health(), "one shell on a battery takes all of it (%d pips of %d)" % [spec.blast_damage(1.0), w_battery_health()])
+	# The bridge (data/units/bridge.json): a FRESH direct salvo (nothing ranged, nothing bracketed) cannot one-shot it, at any range;
+	# one ranged in for the full ranging time can, and one with salvos already on the target all but surely does. (Alex, bridge-durability:
+	# "it should take a lot." scripts/test_support/bridge_tuning.gd prints the whole table.)
+	var w := GunWorlds.world(1)
+	var health: int = w.unit_def("bridge").health
+	var aim := Vector2(2000.0, 2500.0)
+	var most := {}
+	for cfg: Array in [[1200.0, 0.0, 0], [3000.0, 0.0, 0], [600.0, 0.0, 0], [1200.0, 20.0, 2], [600.0, 20.0, 2]]:
+		var sigma := Guns.sigma_m(float(cfg[0]), float(cfg[1]), spec, int(cfg[2]), 0.4)
+		var top := 0
+		var total := 0
+		for sd in range(1, 301):
+			var shells := Guns.make_salvo({"unit": "cruiser", "special": "main_guns", "step": 0, "t": 1.0, "from": aim - Vector2(float(cfg[0]), 0.0), "aim": aim,
+				"range_m": cfg[0], "flight_s": Guns.flight_time(float(cfg[0]), spec), "sigma_m": sigma}, spec, sd, 1, 0)
+			var pips := 0
+			for sh: Dictionary in shells:
+				pips += spec.blast_damage(Vector2(float(sh["x"]), float(sh["y"])).distance_to(aim))
+			top = maxi(top, pips)
+			if pips >= health:
+				total += 1
+		most[str(cfg)] = [top, total]
+	print("  bridge %d pips vs one salvo (most pips in 300 salvos, how many drop it): %s" % [health, str(most)])
+	for key: String in ["[1200.0, 0.0, 0]", "[3000.0, 0.0, 0]", "[600.0, 0.0, 0]"]:
+		check(int(most[key][0]) < health, "a fresh direct salvo %s never drops the bridge: the most it did was %d of %d pips" % [key, int(most[key][0]), health])
+	check(int(most["[1200.0, 20.0, 2]"][1]) > 150, "but guns that have found the range do it in a salvo or two: %d of 300 at 1200 m with two salvos already on it" % int(most["[1200.0, 20.0, 2]"][1]))
+	check(health > 10, "the bridge takes more than the old 10 pips (%d)" % health)
+	_sentinel += 1
+
+func w_battery_health() -> int:
+	return GunWorlds.world(1).unit_def("anti_aircraft_battery").health

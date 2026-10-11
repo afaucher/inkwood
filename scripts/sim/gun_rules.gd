@@ -8,7 +8,9 @@ extends RefCounted
 #   if not rules.ok(): ...                       # rules.errors says what is wrong
 #   rules.has_special("main_guns")               # is this special id a gun special (else it is the bomb drop, or unknown)
 #   var g: GunRules.Spec = rules.special("main_guns")
-#   g.range_max_m, g.shells, g.reload_turns, g.blast_damage(distance_m), ...
+#   g.range_max_m, g.shells, g.reload_turns, g.blast_damage(distance_m), g.poor_shot_factor, ...
+#   rules.unspotted_mode                         # "poor_shot" (the default; Alex, outside-cone-release) | "hold": a salvo whose target is
+#                                                # no longer spotted or in reach when it fires (data/sim/guns.json gun_unspotted_mode)
 #
 # A Spec also answers the four questions the combat resolver's blast asks of a bomb's rules (blast_damage,
 # blast_radius_m, blast_height_m, blast_hits_own_side), so a landing shell goes through the very code a landing bomb does.
@@ -40,6 +42,8 @@ class Spec:
 	var ranged_factor: float = NAN
 	var ranging_s: float = NAN
 	var salvo_error_fraction: float = NAN
+	var poor_shot_factor: float = NAN     # a POOR SHOT's scatter is multiplied by this (Alex, outside-cone-release: 'Fire a poorer one')
+	var poor_shot_min_sigma_m: float = NAN   # ... and is never tighter than this (one shell, one standard deviation per ground axis)
 	var spotter_far_factor: float = NAN   # the scatter's multiplier for a target at the very edge of its nearest spotter's sight (1 at the spotter)
 	var bracket_factor: float = NAN       # the scatter's multiplier for each earlier salvo at the same spotted target
 	var bracket_floor: float = NAN        # ... never below this
@@ -65,12 +69,15 @@ class Spec:
 		return blast_distances[blast_distances.size() - 1]
 
 var spot_step_s: float = NAN         # spotting is judged this far apart through a resolve
+var unspotted_mode: String = ""      # "hold" | "poor_shot": what a salvo does when its target is no longer spotted or in reach at the fire moment
 var specials: Dictionary = {}        # special id -> Spec
 var errors: Array[String] = []
 
+const UNSPOTTED_MODES := ["hold", "poor_shot"]
 const SPEC_KEYS := ["range_max_m", "range_min_m", "inland_max_m", "inland_step_m", "shells", "salvo_interval_s", "reload_turns", "fire_at", "shell_speed_mps", "min_flight_s",
 	"apex_per_range", "lead_target", "spread_base_m", "spread_per_range", "unranged_factor", "ranged_factor", "ranging_s", "salvo_error_fraction",
-	"spotter_far_factor", "bracket_factor", "bracket_floor", "bracket_turns", "bracket_point_m", "blast_pips_by_distance", "blast_height_m", "blast_hits_own_side"]
+	"spotter_far_factor", "bracket_factor", "bracket_floor", "bracket_turns", "bracket_point_m", "poor_shot_factor", "poor_shot_min_sigma_m",
+	"blast_pips_by_distance", "blast_height_m", "blast_hits_own_side"]
 
 func _init(source: Variant = PATH, quiet: bool = false) -> void:
 	var label := str(source) if source is String else "<guns dictionary>"
@@ -86,6 +93,7 @@ func _init(source: Variant = PATH, quiet: bool = false) -> void:
 		var d: Dictionary = data
 		var spot := r.section(d, "spot", "spot")
 		spot_step_s = r.number(spot, "step_s", "spot.step_s", 0.05, 5.0)
+		unspotted_mode = r.id_value(d, "gun_unspotted_mode", "gun_unspotted_mode", UNSPOTTED_MODES)
 		var all := r.section(d, "specials", "specials")
 		if all.is_empty():
 			r.err("'specials' has no gun special")
@@ -99,7 +107,7 @@ func _init(source: Variant = PATH, quiet: bool = false) -> void:
 			specials[key] = _read_spec(r, key, all[sid])
 		for key: Variant in d:
 			var k := str(key)
-			if not k.begins_with("_") and k != "spot" and k != "specials":
+			if not k.begins_with("_") and k != "spot" and k != "specials" and k != "gun_unspotted_mode":
 				r.err("unknown field '%s' (misspelt?)" % k)
 	errors = r.errors
 
@@ -127,6 +135,8 @@ func _read_spec(r: Records, sid: String, d: Dictionary) -> Spec:
 	s.ranged_factor = r.number(d, "ranged_factor", p + "ranged_factor", 0.01)
 	s.ranging_s = r.number(d, "ranging_s", p + "ranging_s", 0.1)
 	s.salvo_error_fraction = r.number(d, "salvo_error_fraction", p + "salvo_error_fraction", 0.0, 1.0)
+	s.poor_shot_factor = r.number(d, "poor_shot_factor", p + "poor_shot_factor", 1.0)
+	s.poor_shot_min_sigma_m = r.number(d, "poor_shot_min_sigma_m", p + "poor_shot_min_sigma_m", 0.0)
 	s.spotter_far_factor = r.number(d, "spotter_far_factor", p + "spotter_far_factor", 1.0)
 	s.bracket_factor = r.number(d, "bracket_factor", p + "bracket_factor", 0.01, 1.0)
 	s.bracket_floor = r.number(d, "bracket_floor", p + "bracket_floor", 0.01, 1.0)

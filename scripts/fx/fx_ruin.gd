@@ -347,7 +347,8 @@ static func _px(pts: PackedVector2Array, at: Vector2, ppm: float) -> PackedVecto
 	return out
 
 static func _hatch_in(g: InkCanvas, k: Ink, poly: PackedVector2Array, spacing: float, alpha: float, weight: float) -> void:
-	# parallel strokes across a polygon, clipped to it (the platform's hatch)
+	# parallel strokes across a polygon, clipped to it (the platform's hatch). Kept INSIDE with
+	# intersect_polyline_with_polygon: clip_polyline_with_polygon is a DIFFERENCE (it keeps what lies outside).
 	if spacing < 0.6 or poly.size() < 3:
 		return
 	var lo := Vector2(1e9, 1e9)
@@ -364,7 +365,7 @@ static func _hatch_in(g: InkCanvas, k: Ink, poly: PackedVector2Array, spacing: f
 	var d := -R
 	while d <= R:
 		var seg := PackedVector2Array([Vector2(c.x - R, c.y + d), Vector2(c.x + R, c.y + d)])
-		for part: PackedVector2Array in Geometry2D.clip_polyline_with_polygon(seg, poly):
+		for part: PackedVector2Array in Geometry2D.intersect_polyline_with_polygon(seg, poly):
 			if part.size() < 2:
 				continue
 			g.move_to(part[0].x, part[0].y)

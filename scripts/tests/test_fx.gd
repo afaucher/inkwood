@@ -1279,8 +1279,8 @@ func _check_strike_boards() -> void:
 		var d: Dictionary = j
 		eq(d.get("id"), id, "%s: its id" % id)
 		eq(int(d.get("seed", 0)), 20261009, "%s: seed 20261009" % id)
-		# Alex chose B3 on the bomb-impact board (decision bomb-impact); the other two are still open.
-		var want: Variant = "B3" if id == "bomb-impact" else null
+		# Alex chose B3 on the bomb-impact board (decision bomb-impact) and F2 on the flak board (flak-look); the ruin is still open.
+		var want: Variant = "B3" if id == "bomb-impact" else ("F2" if id == "flak" else null)   # Alex: bomb-impact B3, flak F2 (decision flak-look)
 		check(d.has("chosen") and d["chosen"] == want, "%s: chosen is %s" % [id, str(want)])
 		var rec: Variant = d.get("recommendation")
 		check(rec is Dictionary and (rec as Dictionary).get("_proposed") == true and str((rec as Dictionary).get("option", "")) != "", "%s: the recommendation is labelled proposed" % id)

@@ -9,7 +9,8 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| Combat answers: bridge durability, the cruiser's shell blast, poor shots for bombs and guns | lead session (builder) | data/units/bridge.json, data/sim/guns.json, data/sim/bombs.json, scripts/sim/guns.gd, gun_rules.gd, combat_resolver.gd (the held-salvo path), their tests | 2026-10-11 |
+| Draw the boats and the bridge in the game (item 1 below) | lead session (builder) | scripts/ui/unit_marker_art*.gd (boat and bridge dispatch only), new scripts/ui/unit_marker_art_boats.gd, scripts/fx/ (the bridge's ruin), data/ui/ui.json unit_art keys | 2026-10-11 |
+| Build Hold the bridge (item 2 below) | lead session (builder) | data/scenarios/bridge.json, scripts/sim/mission.gd, scripts/app/main.gd selector, scripts/debug/debug_settings.gd scenario choices, scripts/test_support/bridge_*.gd, scripts/tests/test_bridge_mission.gd | 2026-10-11 |
 | Camera controls: wheel zoom in toward the cursor and out about the centre (Alex); left-drag on empty map pans (Alex); then the map's border at full zoom-out (board) | camera session (beautiful-lumiere worktree) | scripts/world/camera_controller.gd, data/view/camera.json, scripts/tests/test_camera.gd; the left-press hand-over: a signal in scripts/ui/unit_ui.gd, one line in scripts/app/sandbox.gd, their checks in test_ui_target and test_sandbox | 2026-10-11 |
 
 ## Next, free to take
@@ -33,7 +34,7 @@ Decisions and open questions live in the Decision Ledger
 
 ## Waiting on Alex (looks with working defaults)
 
-- Flak bursts (F1) and the tower's ruin (R1): Strike Boards.
+- The tower's ruin (R1): Strike Boards. (Flak is decided: F2, the ragged burst.)
 - Bombs' area of effect (D, tiers): Strike Boards.
 - Fields (D, mixed).
 - The drop picture and target marks, and static units at twice the plane scale:
@@ -41,6 +42,13 @@ Decisions and open questions live in the Decision Ledger
 
 ## Recently landed
 
+- 2026-10-11: combat answers (Alex's four). Bridge: 14 pips, about 20 turns of one tank's gun (bridge-durability, number proposed). Cruiser
+  shell blast: 6 / 12 / 20 m at 4 / 3 / 2 pips (shell-blast, pips proposed). A bomb whose target left its cone and a gun salvo whose
+  target is no longer spotted or in reach now fire a POOR shot instead of holding (outside-cone-release): `data/sim/bombs.json`
+  outside_cone_mode and `data/sim/guns.json` gun_unspotted_mode are both `poor_shot`, `hold` stays as the switch's other setting; the
+  salvo goes at the target's last spotted place, scatter x2, reload spent. Strafing stays deferred (strafe-later). Tables:
+  `scripts/test_support/bridge_tuning.gd`, `gun_tuning.gd`.
+- 2026-10-11: hatching stays inside its outline (6c01b7c, the hatch-clipping session; test_hatch_inside).
 - 2026-10-11: tanks and ground movement, the cruiser and Main Guns Fire, shared
   spotting, Suppress with concealment and reveal-on-fire (4f1b820); water in the
   live map (839caaf); map and fog baked once and kept (5eaa5ef).

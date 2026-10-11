@@ -1213,6 +1213,8 @@ static func build_tank(p: Dictionary) -> Dictionary:
 
 # hatchLines(g, o, dir, sp, opt): parallel lines across an outline, clipped to it
 # (track links, grilles). `o` is in pixels, dir a unit vector in pixels.
+# (Geometry2D.clip_polyline_with_polygon is a DIFFERENCE: it keeps what lies
+# outside the polygon; intersect_polyline_with_polygon is the inside.)
 static func hatch_lines(g, ink: Ink, o: PackedVector2Array, dir: Vector2, sp: float, opt: Dictionary) -> void:
 	var rng: Mulberry32 = opt["rng"] if opt.has("rng") else Mulberry32.new(1)
 	if sp < 0.6:
@@ -1237,7 +1239,7 @@ static func hatch_lines(g, ink: Ink, o: PackedVector2Array, dir: Vector2, sp: fl
 		var px := c.x + nx * (d + j)
 		var py := c.y + ny * (d + j)
 		var seg := PackedVector2Array([Vector2(px - dir.x * R, py - dir.y * R), Vector2(px + dir.x * R, py + dir.y * R)])
-		for part: PackedVector2Array in Geometry2D.clip_polyline_with_polygon(seg, o):
+		for part: PackedVector2Array in Geometry2D.intersect_polyline_with_polygon(seg, o):
 			if part.size() < 2:
 				continue
 			g.move_to(part[0].x, part[0].y)

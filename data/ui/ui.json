@@ -515,7 +515,13 @@
       "free": "step %d: press %s  ·  loaded",
       "on": "step %d: %s  ·  spread %d m  ·  %d m",
       "wont_fire": "will not fire: %s",
-      "step_tag_blocked": "will not fire"
+      "step_tag_blocked": "will not fire",
+      "_poor": "Track CA, 2026-10-11, PROPOSED wording. Alex (decision outside-cone-release): 'Fire a poorer one.' A fire already set whose target is no longer spotted, or is out of reach, goes off as a POOR SHOT (data/sim/guns.json gun_unspotted_mode), so the card says it as it says a poor bomb (bombs.text.poor_shot): 'poor shot: ...'. With the mode on 'hold' the old 'will not fire: ...' lines apply. The lines are kept under ~40 characters.",
+      "poor_unspotted": "poor shot: target is not spotted",
+      "poor_out_of_range": "poor shot: out of range (%d of %d m)",
+      "poor_too_close": "poor shot: target is too close (under %d m)",
+      "poor_inland": "poor shot: target is inland",
+      "step_tag_poor": "poor shot"
     },
     "marks": {
       "_about": "What the map draws for a step whose fire is on (MotionPlanner._draw_fire_marks), in the planner's own ink and paper (no new colour): a dashed line from the step's node to the target, a ring at the scatter's two sigma (the shells' 86 percent), a small shell beside the node, the target's mark. While the pointer is on the special's button the guns' reach shows as two thin rings round the step (min and max range). PROPOSED.",

@@ -39,11 +39,13 @@ extends RefCounted
 # still followed (PROPOSED: the sim has no fog rule).
 #
 # WHEN THE TARGET IS OUTSIDE THE CONE (Track T; Alex: "That means it might leave the cone and completely not fire" and
-# then "Or just be a bad shot" -- he has not picked, so data/sim/bombs.json outside_cone_mode is a switch; the planning
-# rule stands either way: a special cannot be activated on a step whose cone does not hold the target). It covers a
-# followed unit that leaves the cone during the resolve and a step moved after its drop was set:
-#     "hold"       the drop does not release: {"ok": false, "reason": "outside_cone"} and no bomb is spent (PROPOSED default)
-#     "poor_shot"  the stick IS released and the bombs ARE spent, at the moment the target is closest to the cone, aimed at the
+# then "Or just be a bad shot". DECIDED 2026-10-11 (decision outside-cone-release): "Fire a poorer one. Maybe in the future we
+# have an engagement mode but for now that is extra complexity we are not ready for." So data/sim/bombs.json outside_cone_mode
+# is "poor_shot" and stays a switch; the planning rule stands either way: a special cannot be activated on a step whose cone
+# does not hold the target. It covers a followed unit that leaves the cone during the resolve and a step moved after its drop
+# was set:
+#     "hold"       the drop does not release: {"ok": false, "reason": "outside_cone"} and no bomb is spent (the strict reading)
+#     "poor_shot"  (the default) the stick IS released and the bombs ARE spent, at the moment the target is closest to the cone, aimed at the
 #                  cone's nearest point to the target (the old clamp, clamp_aim), with the rim's accuracy scaled down by how far
 #                  outside the cone the target is, never below poor_shot_floor (release_rule, poor_shot_accuracy)
 # "Outside" is a release error r above 1 plus inside_tolerance. plan_drop() itself still only ANALYSES: it reports the

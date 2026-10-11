@@ -92,19 +92,21 @@ func _hidden_behind_high_ground() -> void:
 	# The switch back.
 	vision.set_line_of_sight(FogVision.LOS_NONE)
 	check(w.spotted_now("allies", tgt), "line of sight switched OFF again: spotted")
-	# A salvo planned while it was spotted is held when the line of sight is on at the moment of fire.
+	# A salvo planned while it was spotted is fired POORLY when the line of sight is on at the moment of fire (Alex, decision
+	# outside-cone-release, 2026-10-11: "Fire a poorer one"; data/sim/guns.json gun_unspotted_mode).
 	var st := w.plan_step("cruiser", 0, {"fire": {"special": "main_guns", "target": tgt}})
 	check(not st.is_empty() and st["fire"]["ok"] == true, "planned while spotted: %s" % str(st.get("fire", w.last_error)))
 	vision.set_line_of_sight(FogVision.LOS_TERRAIN)
 	w.commit("local")
 	var res := w.resolve()
 	check(not res.is_empty(), "the turn resolves: %s" % w.last_error)
-	var holds := GunWorlds.events_of(res, "gun_hold", "cruiser")
-	eq(holds.size(), 1, "line of sight on at the moment of fire: the salvo is held")
-	if holds.size() == 1:
-		eq(str(holds[0]["reason"]), "unspotted", "...unspotted")
-	eq(w.shells_in_flight.size(), 0, "no shell flew")
-	eq(w.units["cruiser"].gun_ready_turn("main_guns"), 0, "nothing was spent")
+	eq(GunWorlds.events_of(res, "gun_hold", "cruiser").size(), 0, "line of sight on at the moment of fire: the salvo is not held")
+	var poor := GunWorlds.events_of(res, "shell_fire", "cruiser")
+	eq(poor.size(), 1, "...it is fired")
+	if poor.size() == 1:
+		check(bool(poor[0].get("poor_shot", false)) and str(poor[0].get("poor_why", "")) == "unspotted", "...as a poor shot, unspotted")
+	check(w.shells_in_flight.size() > 0, "shells flew")
+	check(w.units["cruiser"].gun_ready_turn("main_guns") > 0, "and the reload was spent")
 	_sentinel += 1
 
 # --- 2 ------------------------------------------------------------------------------------------------

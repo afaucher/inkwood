@@ -60,9 +60,9 @@
   },
 
   "outside_cone_mode": {
-    "value": "hold",
-    "_proposed": true,
-    "_reason": "Track T, 2026-10-10. WHAT HAPPENS WHEN A DROP'S TARGET IS OUTSIDE ITS STEP'S CONE AT RELEASE -- Alex has not picked, so it is a switch. It covers both ways it can happen: a followed unit that leaves the cone during the resolve, and a step moved after its drop was set (the planning rule stands either way: a special cannot be activated on a step whose cone does not hold the target). Alex: 'That means it might leave the cone and completely not fire' and then 'Or just be a bad shot'. 'hold': nothing is released and no bombs are spent (the strict rule). 'poor_shot': the stick IS released and the bombs are spent, at the moment the target is closest to the cone, aimed at the cone's nearest point to the target (the old clamp, bombs.gd clamp_aim), with the rim's accuracy scaled down by how far outside the cone the target is (poor_shot_floor is the least). 'hold' is the working default (PROPOSED) -- the strict reading of Alex's first line"
+    "value": "poor_shot",
+    "decision": "outside-cone-release",
+    "_reason": "ALEX (decision outside-cone-release): first 'That means it might leave the cone and completely not fire' and then 'Or just be a bad shot'; DECIDED 2026-10-11: 'Fire a poorer one. Maybe in the future we have an engagement mode but for now that is extra complexity we are not ready for.' So the default is 'poor_shot' (was 'hold', the working default while it was open). WHAT HAPPENS WHEN A DROP'S TARGET IS OUTSIDE ITS STEP'S CONE AT RELEASE; it covers both ways it can happen: a followed unit that leaves the cone during the resolve, and a step moved after its drop was set (the planning rule stands either way: a special cannot be activated on a step whose cone does not hold the target). 'poor_shot': the stick IS released and the bombs are spent, at the moment the target is closest to the cone, aimed at the cone's nearest point to the target (the old clamp, bombs.gd clamp_aim), with the rim's accuracy scaled down by how far outside the cone the target is (poor_shot_floor is the least). 'hold' (nothing is released, no bombs are spent: the strict reading of his first line) is kept as the switch's other setting, tested and not the default. The guns' twin is data/sim/guns.json gun_unspotted_mode"
   },
   "poor_shot_floor": {
     "value": 0.15,

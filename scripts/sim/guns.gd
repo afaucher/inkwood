@@ -34,11 +34,21 @@ extends RefCounted
 #
 # FIRING (combat_resolver.gd, on the combat tick the moment falls in). At the moment fire_at of the step:
 #   - the unit must be up (as the guns and the bombs: simultaneous within a tick) and loaded;
-#   - the target must STILL be spotted by the side and in range. If not the salvo is not fired and nothing is spent (event
-#     "gun_hold", with the reason): PROPOSED. This is the same answer data/sim/bombs.json outside_cone_mode "hold" gives a bomb
-#     whose target left its cone. Alex's open question outside-cone-release (hold, or poor_shot: a bad shot) therefore covers
-#     the guns too, and is not decided; the poor-shot answer for a gun would be to fire at where the target was last
-#     spotted, with the widest scatter. It is not built;
+#   - the target should STILL be spotted by the side and in reach (range, the coastal strip). If it is not, the salvo is a POOR SHOT.
+#     ALEX (decision outside-cone-release, 2026-10-11), on a bomb whose target leaves its cone and a gun whose target drops out of
+#     sight: "Fire a poorer one. Maybe in the future we have an engagement mode but for now that is extra complexity we are not
+#     ready for." So (data/sim/guns.json gun_unspotted_mode "poor_shot", the default; the bombs' twin is data/sim/bombs.json
+#     outside_cone_mode): the salvo IS fired and the reload is spent, at where the target was LAST SPOTTED (poor_aim; the resolver
+#     finds it: the target's place at the last walked moment the side saw it this turn, else the place it was shown at when the fire
+#     was set, else its place at the start of the turn; a point target is where it is), pulled back along the line from the guns to the
+#     edge of their reach when that place is out of it (beyond range_max_m: to range_max_m; inside range_min_m: out to range_min_m; off the
+#     coastal strip: back toward the guns until it is on it), with no lead, and each shell's scatter widened by the special's
+#     poor_shot_factor and never below poor_shot_min_sigma_m (poor_sigma_m): the target has been out of sight, so there is no
+#     ranging and no bracketing, and the nearest spotter counts as at the edge of its sight. The event is a "shell_fire" that says
+#     "poor_shot": true and why ("poor_why": unspotted | out_of_range | too_close | inland); a poor shot does not count as a
+#     bracketing salvo (World._gun_memory_after). With gun_unspotted_mode "hold" the old answer stands: not fired, nothing spent,
+#     a "gun_hold" event with the reason. Only these four reasons make a poor shot (poor_shot_reason); the guns reloading, a target
+#     that is down, a friend or gone are held in either mode: there is nothing to aim at;
 #   - a unit target is followed: the salvo is aimed where the unit would be when the shells land if it keeps its heading
 #     and speed from the moment of fire (lead_target; the bombs' followed_aim);
 #   - the salvo is `shells` shells leaving salvo_interval_s apart, each flying range / shell_speed_mps seconds (at least
@@ -73,6 +83,8 @@ extends RefCounted
 #    turn_seconds means a later turn), "spread_m" (sigma), "spotted_s", "salvos_before", "spotter_ratio", "followed": bool}
 #   {"type": "shell_impact", "turn" (the turn it LANDS in), "unit", "special", "shell", "step", "t", "x", "y", "blast_m", "released_turn",
 #    "released_t"}
+#       and, only for a POOR SHOT (target not spotted or out of reach at the moment of fire): "poor_shot": true, "poor_why" (the reason),
+#       "known": [x, y] (where the guns took the target to be), "clamped": bool (the aim was pulled back to the edge of the reach)
 #   {"type": "gun_hold", "turn", "unit", "special", "t", "step", "target", "reason"}      the salvo that was planned and not fired
 #   {"type": "hit", ..., "weapon": "main_guns"} / {"type": "down", ...}                      after a shell_impact that did it
 
@@ -297,6 +309,45 @@ static func _bracket_index(memory: Array, side: String, target: Dictionary, spec
 			if Vector2(tx - float(rec["point"][0]), ty - float(rec["point"][1])).length() <= spec.bracket_point_m:
 				return i
 	return -1
+
+# --- The poor shot ----------------------------------------------------------------------------------
+
+# Whether a reason a salvo cannot be fired as planned still gets a POOR SHOT (Alex, decision outside-cone-release; data/sim/guns.json
+# gun_unspotted_mode): the target is out of sight or out of reach by the moment of fire. Every other reason (reloading, a target that is
+# down, a friend, gone, a unit that is down) holds the salvo in either mode.
+static func poor_shot_reason(why: String) -> bool:
+	return why == WHY_UNSPOTTED or why == WHY_OUT_OF_RANGE or why == WHY_TOO_CLOSE or why == WHY_INLAND
+
+# One shell's scatter, metres, for a poor shot: the ordinary scatter for a target that is not spotted (no ranging, no bracketing, the
+# nearest spotter at the edge of its sight: the defaults below) times the special's poor_shot_factor, never below poor_shot_min_sigma_m.
+static func poor_sigma_m(range_m: float, spotted_s: float, spec: GunRules.Spec, salvos_before: int = 0, spotter_ratio: float = 1.0) -> float:
+	return maxf(sigma_m(range_m, spotted_s, spec, salvos_before, spotter_ratio) * spec.poor_shot_factor, spec.poor_shot_min_sigma_m)
+
+# Where a poor shot at `known` (where the guns take the target to be) is aimed from `from`: that place, or the nearest place on the line
+# from the guns to it that is inside the reach: the range clamped into [range_min_m, range_max_m] and, with a `reach` query
+# (from: Vector2, to: Vector2) -> String ("" or Guns.WHY_INLAND ...: the World's coastal strip), walked back toward the guns, a step at a
+# time, until it is on the strip. {ok: true, aim: Vector2, range_m, flight_s, clamped: bool}, or {ok: false} when the guns are on the
+# target or no place on the line is in reach.
+static func poor_aim(from: Vector2, known: Vector2, spec: GunRules.Spec, reach: Callable = Callable()) -> Dictionary:
+	var line := known - from
+	var dist := line.length()
+	if dist < 1e-6:
+		return {"ok": false}
+	var dir := line / dist
+	var lo := spec.range_min_m + 1e-3     # (a hair inside the edges, so the range test on the aim itself passes)
+	var hi := spec.range_max_m - 1e-3
+	var r := clampf(dist, lo, hi)
+	var clamped := absf(r - dist) > 1e-6
+	if reach.is_valid():
+		var step := maxf(spec.inland_step_m, 1.0)
+		var guard := int(ceil(spec.range_max_m / step)) + 2
+		while guard > 0 and r - step >= lo and str(reach.call(from, from + dir * r)) == WHY_INLAND:
+			r -= step
+			clamped = true
+			guard -= 1
+		if str(reach.call(from, from + dir * r)) != "":
+			return {"ok": false}
+	return {"ok": true, "aim": from + dir * r, "range_m": r, "flight_s": flight_time(r, spec), "clamped": clamped}
 
 # --- The salvo ----------------------------------------------------------------------------------
 

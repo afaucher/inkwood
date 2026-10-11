@@ -64,8 +64,9 @@ extends RefCounted
 #              (Alex: "Targeting a moving unit like a tank should follow the unit. We need to pick the release
 #              point for bombs and things dynamically."): at resolve the aim is the unit's position at the
 #              release, led by its velocity (_resolve_followed_drops); a point target is fixed. A drop whose
-#              target is outside its step's cone does what data/sim/bombs.json outside_cone_mode says: "hold"
-#              releases nothing and spends no bombs, "poor_shot" releases a poor stick (bombs.gd).
+#              target is outside its step's cone does what data/sim/bombs.json outside_cone_mode says: "poor_shot"
+#              (the default; Alex, outside-cone-release: "Fire a poorer one") releases a poor stick, "hold" releases
+#              nothing and spends no bombs (bombs.gd).
 #              drop_expected() answers the expected-damage line.
 #
 # THE GUNS (Track SH, the warship, proposed 2026-10-10; Alex's decision mixed-warfare: the warship's big guns are specials,
@@ -74,8 +75,10 @@ extends RefCounted
 # {"fire": {"special": "main_guns", "target": {"unit": id} | {"point": [x, y]}}} (guns.gd has the model, gun_rules.gd the numbers
 # in data/sim/guns.json, spotting.gd the sight). gun_check() answers the interface: whether the special can be switched on in a step
 # for a target and why not (reloading, out of range, unspotted, ...); plan_step() accepts any well-formed fire and the step's
-# "fire" analysis says whether it would go off. At resolve the salvo is fired at the moment fire_at of its step IF the target is
-# still spotted and in range then (else a gun_hold event and nothing is spent); its shells fly for seconds, may land in a LATER turn
+# "fire" analysis says whether it would go off. At resolve the salvo is fired at the moment fire_at of its step; if the target is
+# no longer spotted or is out of reach then it is a POOR SHOT (Alex, outside-cone-release: "Fire a poorer one"; data/sim/guns.json
+# gun_unspotted_mode: fired at the target's last spotted place with a wider scatter and the reload spent; "hold" is a gun_hold event
+# and nothing spent); its shells fly for seconds, may land in a LATER turn
 # (shells_in_flight, carried like the bombs and handed to a client by apply_resolution) and hurt ANY unit at the surface near the
 # impact by the blast table of data/sim/guns.json. The scatter grows with the range and shrinks with the time the target has been
 # spotted (spot_memory) and the salvos already fired at it (gun_memory, the bracketing). The sight rules are the fog's and the AI's;
@@ -744,6 +747,9 @@ func spotters_now(side: String, target: Dictionary) -> Array[String]:
 # "reloading", "already_planned" (another step fires this special: one salvo a turn), "no_target", "target_down", "own_side",
 # "too_close", "out_of_range", "unspotted", "not_a_gun", "unit_down"; checked in that order. The rest is what the card and the map
 # show, always filled in when it can be:
+#   poor_shot (bool: "ok" is false, and the special still cannot be switched on, but a fire already set on the step would be fired as a
+#   POOR SHOT at resolve -- the reason is unspotted, out_of_range, too_close or inland and gun_unspotted_mode is "poor_shot"; spread_m is then
+#   the poor shot's scatter),
 #   special, step, target (normalised), target_pos Vector2 (where the target is now), from Vector2 (the guns at the moment of
 #   fire), fire_t (seconds into the turn), range_m, range_min_m, range_max_m, spotted (bool), by (the first unit that sees it, or ""),
 #   spotters (all of them), spotted_s (the seconds it will have been spotted at the moment of fire if it stays so: the ranging),
@@ -790,6 +796,7 @@ func _fire_state(u: Unit, k: int, prev: Dictionary, cur: Dictionary, req: Dictio
 	var a := _gun_analysis(u, guns.special(sid), tgt, k, prev, cur)
 	out["ok"] = a["ok"]
 	out["reason"] = a["reason"]
+	out["poor_shot"] = a["poor_shot"]
 	out["fire_t"] = a["fire_t"]
 	out["range_m"] = a["range_m"]
 	out["spotted"] = a["spotted"]
@@ -848,12 +855,17 @@ func _gun_analysis(u: Unit, spec: GunRules.Spec, tgt: Dictionary, step: int, pre
 	var spotter_ratio := spotting.closeness_in(self, u.side, tgt, spotting.frame_at(self, -1.0)) if spotted else 1.0
 	var flight := Guns.flight_time(range_m, spec)
 	var impact_t := fire_t + flight
+	# A salvo that cannot be switched on because its target is out of sight or out of reach is, once it IS set (a plan whose target moved, a
+	# step moved), a POOR SHOT at resolve (data/sim/guns.json gun_unspotted_mode; Alex, outside-cone-release): the card words it so, and
+	# the scatter shown is the poor one. The planning rule stands: "ok" is still false and the special still cannot be switched on.
+	var poor := why != "" and guns.unspotted_mode == "poor_shot" and Guns.poor_shot_reason(why)
+	var spread := Guns.poor_sigma_m(range_m, spotted_s, spec, salvos, spotter_ratio) if poor else Guns.sigma_m(range_m, spotted_s, spec, salvos, spotter_ratio)
 	return {
-		"ok": why == "", "reason": why, "special": spec.id, "step": step, "target": tgt, "target_pos": tpos, "from": from, "fire_t": fire_t,
+		"ok": why == "", "reason": why, "poor_shot": poor, "special": spec.id, "step": step, "target": tgt, "target_pos": tpos, "from": from, "fire_t": fire_t,
 		"range_m": range_m, "range_min_m": spec.range_min_m, "range_max_m": spec.range_max_m,
 		"spotted": spotted, "by": spotters[0] if spotted else "", "spotters": spotters, "spotted_s": spotted_s, "salvos": salvos,
 		"spotter_ratio": spotter_ratio,
-		"spread_m": Guns.sigma_m(range_m, spotted_s, spec, salvos, spotter_ratio), "aim_factor": Guns.aim_factor(spotted_s, spec),
+		"spread_m": spread, "aim_factor": Guns.aim_factor(spotted_s, spec),
 		"flight_s": flight, "impact_t": impact_t, "lands_in_turn": turn + int(floorf(impact_t / rules.turn_seconds + 1e-9)),
 		"reload_left": maxi(0, ready_turn - turn), "ready_turn": ready_turn,
 	}
@@ -901,6 +913,8 @@ func _gun_memory_after(events: Array, downs: Dictionary) -> Array:
 	for ev: Dictionary in events:
 		if str(ev.get("type", "")) != "shell_fire" or not units.has(str(ev["unit"])):
 			continue
+		if bool(ev.get("poor_shot", false)):
+			continue   # a salvo fired at a place the target may have left walks no fall of shot onto it (guns.gd, the poor shot)
 		var spec := guns.special(str(ev["special"]))
 		if spec == null:
 			continue

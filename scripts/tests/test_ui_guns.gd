@@ -84,7 +84,7 @@ func _btn(name: String) -> Dictionary:
 
 func _check_data(st: UiStyle) -> void:
 	for n: String in ["place_first", "no_target", "reloading", "reloading_one", "already_planned", "target_down", "own_side", "too_close", "out_of_range",
-			"inland", "unspotted", "unit_down", "not_a_gun", "free", "on", "wont_fire", "step_tag_blocked"]:
+			"inland", "unspotted", "unit_down", "not_a_gun", "free", "on", "wont_fire", "step_tag_blocked", "poor_unspotted", "poor_out_of_range", "poor_too_close", "poor_inland", "step_tag_poor"]:
 		check(st.lookup("guns.text." + n) is String, "ui.json has a string at 'guns.text.%s'" % n)
 	for n: String in ["line_alpha", "ring_alpha", "ring_line_px", "sigma_k", "ring_min_px", "target_cross_px", "reach_alpha", "reach_dash_px", "reach_gap_px"]:
 		check(st.lookup("guns.marks." + n) is float or st.lookup("guns.marks." + n) is int, "ui.json has a number at 'guns.marks.%s'" % n)
@@ -196,16 +196,36 @@ func _sim_agrees() -> bool:
 	var st: Dictionary = _w.planned_states("cruiser")[0]
 	eq(st["fire"]["ok"], true, "4. the step's analysis: it will fire")
 	eq(_pl.fire_blocked(0), false, "4. nothing marks it")
-	# The spotter leaves the sight: the fire is marked and the card and the lettering say so.
+	# The spotter leaves the sight: the fire is marked and the card and the lettering say so. Alex (decision outside-cone-release,
+	# 2026-10-11): "Fire a poorer one" -- the default (data/sim/guns.json gun_unspotted_mode) is a poor shot, worded as a poor bomb is.
 	_w.units["spotter"].x = 4500.0
 	_w.plan_changed.emit("cruiser")
-	eq(_pl.fire_blocked(0), true, "4. the target is no longer spotted: the fire is MARKED")
+	eq(_w.guns.unspotted_mode, "poor_shot", "4. (the default mode)")
+	eq(_pl.fire_blocked(0), false, "4. the target is no longer spotted: the salvo is NOT blocked, it goes off poorly")
+	eq(_pl.fire_poor(0), true, "4. ... the fire is MARKED as a poor shot")
+	eq(_ui.orders.bomb_caption(), _st.text("guns.text.poor_unspotted"), "4. the card: '%s'" % _ui.orders.bomb_caption())
+	check(_ui.orders.bomb_caption().begins_with("poor shot: "), "4. in the words of a poor bomb")
+	check((_pl.step_labels()[0] as PackedStringArray).has(_st.text("guns.text.step_tag_poor")), "4. and the lettering: %s" % str(_pl.step_labels()[0]))
+	check(not (_pl.step_labels()[0] as PackedStringArray).has(_st.text("guns.text.step_tag_blocked")), "4. (not 'will not fire')")
+	eq(_w.planned_states("cruiser")[0]["fire"]["reason"], "unspotted", "4. the sim's own reason")
+	eq(_w.planned_states("cruiser")[0]["fire"]["poor_shot"], true, "4. and that it is a poor shot")
+	near(float(_pl.fire_info(0)["spread_m"]), Guns.poor_sigma_m(float(_pl.fire_info(0)["range_m"]), 0.0, _w.guns.special("main_guns")), 1e-6, "4. the scatter the map shows is the poor one: %.1f m" % float(_pl.fire_info(0)["spread_m"]))
+	# The words for each way out of reach.
+	check(_pl.gun_poor_text({"reason": "out_of_range", "range_m": 3500.0, "range_max_m": 3000.0}).begins_with("poor shot: out of range"), "4. poor shot, out of range: '%s'" % _pl.gun_poor_text({"reason": "out_of_range", "range_m": 3500.0, "range_max_m": 3000.0}))
+	check(_pl.gun_poor_text({"reason": "too_close", "range_min_m": 150.0}).begins_with("poor shot: "), "4. poor shot, too close")
+	check(_pl.gun_poor_text({"reason": "inland"}).begins_with("poor shot: "), "4. poor shot, inland")
+	# With the sim's switch on hold the old words stand: it will not fire.
+	_w.guns.unspotted_mode = "hold"
+	_w.plan_changed.emit("cruiser")
+	eq(_pl.fire_blocked(0), true, "4. hold: the target is no longer spotted: the fire is MARKED as blocked")
+	eq(_pl.fire_poor(0), false, "4. ... and not as a poor shot")
 	check(_ui.orders.bomb_caption().begins_with("will not fire: "), "4. the card: '%s'" % _ui.orders.bomb_caption())
 	check((_pl.step_labels()[0] as PackedStringArray).has(_st.text("guns.text.step_tag_blocked")), "4. and the lettering: %s" % str(_pl.step_labels()[0]))
-	eq(_w.planned_states("cruiser")[0]["fire"]["reason"], "unspotted", "4. the sim's own reason")
+	_w.guns.unspotted_mode = "poor_shot"
 	_w.units["spotter"].x = 2000.0
 	_w.plan_changed.emit("cruiser")
 	eq(_pl.fire_blocked(0), false, "4. back in sight: unmarked")
+	eq(_pl.fire_poor(0), false, "4. ... either way")
 	_pl.clear()
 	return true
 
@@ -333,7 +353,12 @@ func _side_view() -> bool:
 	_w.units["spotter"].x = 4500.0
 	_w.plan_changed.emit("cruiser")
 	sv.refresh()
-	check(not bool((sv.model()["drop"] as Dictionary)["releases"]), "9. unspotted: the flight is drawn faint")
+	check(bool((sv.model()["drop"] as Dictionary)["releases"]) and bool((sv.model()["drop"] as Dictionary)["poor_shot"]), "9. unspotted: a poor shot still flies, drawn full and marked poor")
+	_w.guns.unspotted_mode = "hold"
+	_w.plan_changed.emit("cruiser")
+	sv.refresh()
+	check(not bool((sv.model()["drop"] as Dictionary)["releases"]), "9. unspotted with the switch on hold: the flight is drawn faint")
+	_w.guns.unspotted_mode = "poor_shot"
 	_w.units["spotter"].x = 2000.0
 	_w.plan_changed.emit("cruiser")
 	# The card's picture draws (a runtime error in a sub-draw is counted).
