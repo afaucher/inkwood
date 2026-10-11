@@ -68,6 +68,7 @@ extends Control
 signal unit_selected(unit_id: String)
 signal down_unit_picked(unit_id: String)
 signal group_changed(mode: String)
+signal arcs_pressed
 
 const World = preload("res://scripts/sim/world.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
@@ -89,6 +90,11 @@ var bombs: BombSource = null
 
 # The grouping this player chose: an id of ui.json roster.group.modes.
 var group_by: String = "none"
+# THE WEAPON-ARCS BUTTON (Track C, 2026-10-10; Alex: "We need to be able to toggle off the weapon arcs" and "Lets prioritize
+# onscreen buttons. No keyboard mapping."): in the group-by bar, "Arcs: on" (pressed) / "Arcs: off". UnitUI points arcs_state
+# at the cone overlay's switch (a Callable returning whether the map shows the cones) and connects arcs_pressed to it; with no
+# arcs_state (a roster alone) there is no button. Data: roster.arcs.
+var arcs_state: Callable = Callable()
 
 var _hover := false                 # the pointer is over the roster
 var _pending := false               # a regroup was held back (hover)
@@ -441,6 +447,38 @@ func group_button_rect() -> Rect2:
 	var bar: float = style.num("roster.group.bar_px")
 	return Rect2(Vector2(size.x - pad - w, style.num("roster.header_px") + (bar - h) * 0.5), Vector2(w, h))
 
+# The weapon-arcs button, in this control's space: at the left of the group-by bar (the "group by" label moves to sit against its
+# own button, so the two controls do not read as one).
+func arcs_button_rect() -> Rect2:
+	var g := group_button_rect()
+	var w: float = style.num("roster.arcs.w_px")
+	var h: float = style.num("roster.arcs.h_px")
+	return Rect2(Vector2(style.num("card.pad_px"), g.position.y + (g.size.y - h) * 0.5), Vector2(w, h))
+
+func has_arcs_button() -> bool:
+	return arcs_state.is_valid()
+
+# Whether the map shows the arcs (the button reads pressed); false with no button.
+func arcs_on() -> bool:
+	return arcs_state.is_valid() and bool(arcs_state.call())
+
+# The button's word: "Arcs: on" or "Arcs: off".
+func arcs_label() -> String:
+	return style.text("roster.arcs.label_on" if arcs_on() else "roster.arcs.label_off")
+
+# The button, as a click does it. False when there is none.
+func press_arcs() -> bool:
+	if not has_arcs_button():
+		return false
+	arcs_pressed.emit()
+	queue_redraw()
+	return true
+
+func _get_tooltip(at_position: Vector2) -> String:
+	if has_arcs_button() and arcs_button_rect().has_point(at_position):
+		return style.text("roster.arcs.tooltip")
+	return ""
+
 # The headings of the layout as data: [{group, text, count, y}].
 func headings() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
@@ -495,6 +533,10 @@ func _gui_input(event: InputEvent) -> void:
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
 			if group_button_rect().has_point(mb.position):
 				cycle_group()
+				accept_event()
+				return
+			if has_arcs_button() and arcs_button_rect().has_point(mb.position):
+				press_arcs()
 				accept_event()
 				return
 			var i := row_at(mb.position)
@@ -555,16 +597,32 @@ func _draw_group_bar(ink: Color, soft: Color, _serif: Font, italic: Font) -> voi
 	var st := style
 	var b := group_button_rect()
 	var detail: float = st.num("fonts.detail_px")
-	UiInk.text(self, italic, Vector2(st.num("card.pad_px"), b.position.y + b.size.y * 0.5 + detail * 0.34), st.text("roster.group.label"), detail, soft)
+	var label_x: float = st.num("card.pad_px")
+	if has_arcs_button():
+		label_x = b.position.x - st.num("roster.arcs.gap_px") - UiInk.text_width(italic, st.text("roster.group.label"), detail)
+	UiInk.text(self, italic, Vector2(label_x, b.position.y + b.size.y * 0.5 + detail * 0.34), st.text("roster.group.label"), detail, soft)
 	draw_rect(b, st.color("button_fill"), true)
 	UiInk.ink_line(self, UiInk.rect_pts(b), true, ink, 1.0, 11, 0.35)
 	UiInk.text(self, italic, Vector2(b.position.x, b.position.y + b.size.y * 0.5 + detail * 0.34), group_label(), detail, ink,
 		HORIZONTAL_ALIGNMENT_CENTER, b.size.x - 12.0)
+	if has_arcs_button():
+		_draw_arcs_button(ink)
 	# Two small chevrons at the right: it cycles.
 	var cx := b.end.x - 9.0
 	var cy := b.position.y + b.size.y * 0.5
 	draw_polyline(PackedVector2Array([Vector2(cx - 3.0, cy - 1.5), Vector2(cx, cy - 4.5), Vector2(cx + 3.0, cy - 1.5)]), ink, 1.0, true)
 	draw_polyline(PackedVector2Array([Vector2(cx - 3.0, cy + 1.5), Vector2(cx, cy + 4.5), Vector2(cx + 3.0, cy + 1.5)]), ink, 1.0, true)
+
+# "Arcs: on" in ink (pressed, as the orders card's buttons are) or "Arcs: off" raised: the same pair of roles.
+func _draw_arcs_button(ink: Color) -> void:
+	var st := style
+	var r := arcs_button_rect()
+	var on := arcs_on()
+	draw_rect(r, st.color("button_on_fill") if on else st.color("button_fill"), true)
+	UiInk.ink_line(self, UiInk.rect_pts(r), true, ink, 1.0, 13, 0.35)
+	var px: float = st.num("fonts.button_px")
+	UiInk.text(self, st.font(false), Vector2(r.position.x, r.position.y + r.size.y * 0.5 + px * 0.34), arcs_label(), px,
+		st.color("button_on_text") if on else ink, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 
 func _draw_heading(e: Dictionary, soft: Color, faint: Color, italic: Font) -> void:
 	var st := style

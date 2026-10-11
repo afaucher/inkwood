@@ -43,6 +43,7 @@ const UiFate = preload("res://scripts/ui/ui_fate.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
 
 const PPM := 0.5
+const LABEL := "Bomb Drop"   # the bomber's special as its data words it (data/units/bomber.json specials: name + action)
 
 var _w: World
 var _ui: UnitUI
@@ -98,16 +99,29 @@ func _check_data(st: UiStyle) -> void:
 			"bombs.aim.stipple.cell_px", "bombs.aim.stipple.dot_px", "bombs.aim.stipple.alpha", "bombs.aim.stipple.gamma",
 			"bombs.aim.stipple.scatter_dots", "bombs.aim.stipple.scatter_dot_px", "bombs.aim.rings.ring_every_m", "bombs.aim.rings.dash_px",
 			"bombs.aim.rings.gap_px", "bombs.aim.rings.line_px", "bombs.aim.rings.alpha", "bombs.aim.rings.fill_alpha",
-			"orders.drop_line_px", "roster.bombs.mark_w_px", "roster.bombs.mark_h_px", "roster.bombs.mark_gap_px", "roster.bombs.per_drop_gap_px"]:
+			"orders.drop_line_px", "roster.bombs.mark_w_px", "roster.bombs.mark_h_px", "roster.bombs.mark_gap_px", "roster.bombs.per_drop_gap_px",
+			# Track B (the drop pinned to its step, step selection): every number the new picture and the selected node read
+			"orders.drop_w_px", "orders.text.min_px", "planner.select.slop_px", "planner.select.node_px", "planner.select.paper_px",
+			"planner.select.ring_gap_px", "planner.select.ring_px", "planner.select.number_px", "planner.select.drop_mark.size_px",
+			"planner.select.drop_mark.offset_px", "planner.select.drop_mark.line_px", "planner.select.drop_mark.halo_px",
+			"bombs.pin.line_px", "bombs.pin.halo_px", "bombs.pin.dash_px", "bombs.pin.gap_px", "bombs.pin.start_gap_px", "bombs.pin.arrow_px",
+			"bombs.pin.unselected_alpha", "bombs.pin.crosshair_k", "bombs.pin.tag.r_px", "bombs.pin.tag.px", "bombs.pin.tag.line_px", "bombs.pin.cone.line_px"]:
 		check(st.lookup(n) is float or st.lookup(n) is int, "ui.json has a number at '%s'" % n)
-	for n: String in ["bombs.text.label", "bombs.text.place_first", "bombs.text.none_left", "bombs.text.free", "bombs.text.on", "bombs.text.step_tag",
+	for n: String in ["bombs.text.label", "bombs.text.place_first", "bombs.text.none_left", "bombs.text.free", "bombs.text.on", "bombs.text.target_none",
+			"bombs.text.target_unit", "bombs.text.target_point", "bombs.text.target_accuracy", "orders.text.selected", "orders.text.hint_more", "orders.text.hint_full",
 			"roster.bombs.per_drop_text", "bombs.aim.mode", "keys.drop", "planner.hover.cursor.aim"]:
 		check(st.lookup(n) is String, "ui.json has a string at '%s'" % n)
 	check(st.lookup("bombs.text.no_bombs") is String, "bombs.text.no_bombs exists (it may be empty)")
 	eq(st.lookup("bombs.aim.modes"), BombAimArt.MODES, "the four looks the board shows are the four the art draws")
 	check(BombAimArt.MODES.has(st.text("bombs.aim.mode")), "the data names one of them as the working look")
 	check(st.flag("bombs.aim.label.enabled"), "the label switch is a flag")
-	eq(st.text("keys.drop"), "B", "the Drop key")
+	eq(st.text("keys.drop"), "B", "the Drop key (Alex: on-screen buttons first, no new keys; the existing B is left alone)")
+	eq(st.flag("bombs.pin.enabled"), true, "the drop is pinned to its step by default (Track B, proposed)")
+	eq(st.flag("bombs.pin.press_in_cone"), false, "and a press in the (undrawn) cone does not move the target")
+	eq(st.flag("bombs.aim.preview_cone"), false, "the faint preview cone Track T added is OFF by default (the code is kept behind the flag)")
+	eq(st.flag("bombs.pin.release_dot"), false, "no second release marker beside the connector")
+	check(st.lookup("bombs.pin.line_role") is Dictionary and st.lookup("bombs.pin.halo_role") is Dictionary, "the pin's line and halo are palette roles (no hex in draw code)")
+	check(not (st.lookup("bombs.text.step_tag") is String), "the bare 'drop' tag is gone: a step says the special's own words (data/units specials)")
 	for n: String in ["rim_role", "halo_role", "mark.role", "ideal.role", "release.role", "spread.fill_role", "spread.edge_role", "label.role"]:
 		check(st.lookup("bombs.aim." + n) is Dictionary, "bombs.aim.%s is a palette role" % n)
 	eq(st.errors.size(), 0, "no style lookups failed: %s" % str(st.errors))
@@ -135,19 +149,24 @@ func _check_control() -> void:
 	_pl.place_point(Vector2(1800.0, 1900.0))
 	eq(_btn("drop")["enabled"], false, "2. a fighter with a step placed: Drop is off (no bombs)")
 	eq(_ui.orders.bomb_caption(), "", "2. and the card says nothing about bombs")
+	eq(_ui.orders.target_caption(), "", "2. nor of a target (a fighter has no special to aim)")
+	eq(_btn("drop")["label"], _st.text("bombs.text.label"), "2. its special's button wears the neutral word (it has no special of its own)")
 	_ui.select("b1")
+	eq(_btn("drop")["label"], LABEL, "2. the bomber's button wears its special's words from data: 'Bomb Drop'")
+	eq(_pl.special_label(), LABEL, "2. (planner.special_label reads data/units/bomber.json specials)")
+	eq(_ui.orders.target_caption(), _st.text("bombs.text.target_none"), "2. the target line is there with no step placed and no target: '%s'" % _ui.orders.target_caption())
 	eq(_btn("drop")["enabled"], false, "2. a bomber with no step placed: Drop is off")
-	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.place_first"), "2. and the card says to place a step first")
+	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.place_first") % LABEL, "2. and the card says to place a step first")
 	var s0 := _pl.place_point(Vector2(1650.0, 2400.0))
 	check(not s0.is_empty(), "2. a first step is placed")
 	eq(_btn("drop")["enabled"], false, "2. with a step placed but NO TARGET the Drop control is off (Alex: no target, no activation)")
-	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.no_target"), "2. and the card says to set a target")
+	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.no_target") % LABEL, "2. and the card says Bomb Drop needs a target")
 	_ui.target.set_point(_pl.bombs.cone("b1", 0)["ideal_aim"])
 	eq(_btn("drop")["enabled"], true, "2. with a target in the step's cone it is on offer")
 	eq(_btn("drop")["on"], false, "2. and not yet on")
 	var carried := _pl.bombs.bombs_left("b1")
 	eq([carried["drops_left"], carried["drops_max"], carried["per_drop"]], [3, 3, 4], "2. the bomber carries 3 drops of 4 (data/units/bomber.json)")
-	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.free") % [3, 3, 4], "2. the card says the drops free")
+	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.free") % [1, LABEL, 3, 3], "2. the card says the drops free")
 	eq(_pl.drop_options()["available"], true, "2. drop_options agrees")
 	var cone := _pl.bombs.cone("b1", 0)
 	check(bool(cone["ok"]) and (cone["polygon"] as PackedVector2Array).size() >= 3, "2. the step has a bomb cone (%d points)" % (cone["polygon"] as PackedVector2Array).size())
@@ -162,7 +181,7 @@ func _check_control() -> void:
 	check((plan0["drop"]["aim"] as Array).size() == 2, "2. and is an [x, y] pair")
 	var ps: Dictionary = _w.planned_states("b1")[0]
 	check(ps.has("drop") and bool((ps["drop"] as Dictionary).get("ok", false)), "2. the sim takes the drop (planned_states says ok): %s" % str((ps.get("drop", {}) as Dictionary).get("reason", "")))
-	check(_ui.orders.bomb_caption().begins_with("drop, step 1:"), "2. the card says what it does: '%s'" % _ui.orders.bomb_caption())
+	check(_ui.orders.bomb_caption().begins_with("step 1: " + LABEL), "2. the card says what it does: '%s'" % _ui.orders.bomb_caption())
 	eq(_pl.bombs.drops_free("b1"), 2, "2. two drops remain to plan")
 	# Off again.
 	check(_ui.orders.press_button("drop"), "2. pressed again")
@@ -185,7 +204,7 @@ func _check_control() -> void:
 	_ui.target.set_point(_pl.bombs.cone("b1", 1)["ideal_aim"])
 	_pl.set_focus_step(1)
 	eq(_btn("drop")["enabled"], false, "2. the one drop is planned: Drop is off for step 2")
-	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.none_left"), "2. and the card says none is left")
+	eq(_ui.orders.bomb_caption(), _st.text("bombs.text.none_left") % LABEL, "2. and the card says none is left")
 	eq(_pl.toggle_drop(), {}, "2. toggling it does nothing")
 	_pl.set_focus_step(0)
 	eq(_btn("drop")["enabled"], true, "2. step 1 can still take its own drop off")
@@ -292,15 +311,29 @@ func _check_handle() -> void:
 	check(_ui.map_release(mid + Vector2(5000.0, 0.0)), "4. a release far outside")
 	check(BombSource.inside(_poly(0), _pl.step_aim(0)), "4. leaves the aim inside the cone")
 	check(not _pl.is_dragging(), "4. and the drag over")
-	# Inside the cone, away from every handle: a press there moves the aim (the fan is far away).
+	# Inside the cone, away from every handle: a press there moves nothing now (Track B: the cone is not drawn -- an outline on the
+	# button's hover -- so a press in it must not move the target out of sight). The old press-to-aim is behind bombs.pin.press_in_cone.
 	var elsewhere := mid + Vector2(10.0, -6.0)
-	eq(_pl.press_action(elsewhere), "aim", "4. a press in the cone, off every handle, would move the aim")
+	eq(_pl.press_action(elsewhere), "", "4. a press in the (undrawn) cone, off every handle, does nothing")
 	_pl.set_pointer(elsewhere)
-	eq(_pl.hover()["action"], "aim", "4. and the hover says so")
-	eq(_pl.cursor_shape, Input.CURSOR_CROSS, "4. with a cross")
-	check(_ui.map_press(elsewhere), "4. the press is taken")
+	eq(_pl.hover()["action"], "", "4. and the hover says so")
+	eq(_pl.cursor_shape, Input.CURSOR_ARROW, "4. with the arrow")
+	var aim_before_press := _pl.step_aim(0)
+	check(not _ui.map_press(elsewhere), "4. the press is not taken")
 	_ui.map_release(elsewhere)
-	check(_pl.step_aim(0).distance_to(_xf.affine_inverse() * elsewhere) < 1.0, "4. the aim is there")
+	check(_pl.step_aim(0).distance_to(aim_before_press) < 1e-6, "4. and the landing has not moved")
+	# (the old behaviour, switched on in the data for this check)
+	var shared := UiStyle.shared() as UiStyle
+	var pin_cfg: Dictionary = (shared.ui["bombs"] as Dictionary)["pin"]
+	pin_cfg["press_in_cone"] = true
+	eq(_pl.press_action(elsewhere), "aim", "4. [press_in_cone on] a press in the cone, off every handle, would move the aim")
+	_pl.set_pointer(elsewhere)
+	eq(_pl.hover()["action"], "aim", "4. [press_in_cone on] and the hover says so")
+	eq(_pl.cursor_shape, Input.CURSOR_CROSS, "4. [press_in_cone on] with a cross")
+	check(_ui.map_press(elsewhere), "4. [press_in_cone on] the press is taken")
+	_ui.map_release(elsewhere)
+	check(_pl.step_aim(0).distance_to(_xf.affine_inverse() * elsewhere) < 1.0, "4. [press_in_cone on] the aim is there")
+	pin_cfg["press_in_cone"] = false
 	# A step handle still wins where it is nearest.
 	var h0 := _xf * Vector2(float(_pl.states()[0]["x"]), float(_pl.states()[0]["y"]))
 	eq(_pl.grab_at(h0)["kind"], "step", "4. a step's handle is still a step's")
@@ -318,7 +351,7 @@ func _check_focus() -> void:
 	eq(_pl.focus_step(), 1, "5. the card is about the last placed step")
 	_arm(0)
 	eq(_pl.focus_step(), 0, "5. a drop set on step 1 puts the card on step 1")
-	check(_ui.orders.bomb_caption().begins_with("drop, step 1:"), "5. the card says step 1")
+	check(_ui.orders.bomb_caption().begins_with("step 1: " + LABEL), "5. the card says step 1")
 	eq(_btn("drop")["on"], true, "5. Drop is on for the step the card is about")
 	_pl.begin_edit(1, Vector2(1800.0, 2400.0))
 	_pl.end_step()
@@ -368,8 +401,10 @@ func _check_edit_keeps() -> void:
 	check(_pl.step_has_drop(1) and _pl.step_aim(1).distance_to(aim_before) < 1e-3, "6. the drop stays and so does its aim")
 	check(_poly(1) != cone_before, "6. a dive changes the cone (the throw shortens as the bomber comes down)")
 	eq(_pl.drop_blocked(1), not BombSource.inside(_poly(1), _pl.step_aim(1)), "6. and the step is marked exactly when the cone left the aim")
-	var tag: String = _st.text("bombs.text.step_tag")
-	eq(_pl.step_labels()[1].has(tag), true, "6. the step's lettering says 'drop'")
+	var tag: String = LABEL
+	eq(_pl.step_labels()[1].has(tag), true, "6. the step's lettering says 'Bomb Drop' (the special's name and action, from data)")
+	eq(_pl.step_labels()[0].has(tag), true, "6. and so does step 1's, which has its drop too")
+	eq(_pl.step_labels()[2].has(tag), false, "6. and a carry-on step with no drop says nothing about it")
 	eq(_pl.step_labels()[1].has(_st.text("bombs.text.step_tag_blocked")), _pl.drop_blocked(1) and _pl.bombs.outside_mode() == "hold", "6. and 'will not release' when it is marked (hold)")
 	_pl.clear()
 
@@ -386,9 +421,17 @@ func _check_marks() -> void:
 	if marks.size() != 1:
 		return
 	var m: Dictionary = marks[0]
-	eq(m["quiet"], false, "7. a full one (cone and aim)")
-	check((m["cone"] as PackedVector2Array).size() >= 3, "7. with the cone in screen px")
-	check((m["cone"] as PackedVector2Array)[0].distance_to(_xf * _poly(0)[0]) < 1e-3, "7. through the host's mapping")
+	eq(m["quiet"], false, "7. a full one (the pinned picture)")
+	eq([m["pin"], m["selected"], m["num"]], [true, true, 1], "7. pinned to step 1, which is the selected step")
+	check((m["node"] as Vector2).distance_to(_pl.node_screen(0)) < 1e-3 and (m["node"] as Vector2).is_finite(), "7. with the step's node on the screen as the line's start")
+	eq((m["cone"] as PackedVector2Array).size(), 0, "7. NO cone in the mark: it is not drawn while the pointer is elsewhere (Alex: no big red blob)")
+	# The cone is a thin outline from the SELECTED step, only while the pointer is over the special's button (or a landing is dragged).
+	_pl.set_drop_hover(true)
+	var hovered: Array = _pl.bomb_marks()
+	check((hovered[0]["cone"] as PackedVector2Array).size() >= 3, "7. with the pointer on the button the mark carries the cone in screen px")
+	check((hovered[0]["cone"] as PackedVector2Array)[0].distance_to(_xf * _poly(0)[0]) < 1e-3, "7. through the host's mapping")
+	_pl.set_drop_hover(false)
+	eq((_pl.bomb_marks()[0]["cone"] as PackedVector2Array).size(), 0, "7. and gone when the pointer leaves it")
 	check((m["aim"] as Vector2).distance_to(_aim_screen(0)) < 1e-3, "7. the aim in screen px")
 	var sp: Dictionary = m["spread"]
 	check(float(sp["a"]) > 0.0 and float(sp["b"]) > 0.0, "7. a spread to draw (%.1f x %.1f px)" % [float(sp["a"]), float(sp["b"])])

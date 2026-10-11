@@ -51,6 +51,9 @@ var weapon_values: Array = []     # the validated weapons section as plain value
 # bombs in a drop. 0 and 0 for a unit that carries no bombs.
 var bomb_drops: int = 0
 var bomb_per_drop: int = 0
+# The unit's specials (data/units/_schema.json "specials"; Alex 2026-10-10: a step says "Bomb Drop", "Radio On", "Turret Fire"):
+# an Array of {id, name, action}. Empty for a unit with none, and when the file is not ok().
+var specials: Array = []
 var errors: Array[String] = []
 
 static func path_for(type_id: String, units_dir: String = UNITS_DIR) -> String:
@@ -92,6 +95,7 @@ func _init(unit_source: Variant, band_order: Array, quiet: bool = false, label: 
 		var bomb_section: Dictionary = v.get("bomb_load", {})
 		bomb_drops = int(bomb_section.get("drops", 0))
 		bomb_per_drop = int(bomb_section.get("per_drop", 0))
+		specials = v.get("specials", [])
 		_check(r, stem)
 	errors = r.errors
 	if errors.is_empty():
@@ -110,6 +114,20 @@ func is_static() -> bool:
 # Does the unit carry bombs (a bomb_load with drops)?
 func carries_bombs() -> bool:
 	return bomb_drops > 0
+
+# The special with this id ({id, name, action}), or {} when the unit has none.
+func special(special_id: String) -> Dictionary:
+	for sp: Variant in specials:
+		if str((sp as Dictionary).get("id", "")) == special_id:
+			return (sp as Dictionary).duplicate()
+	return {}
+
+# What the player reads for a special: its name and its action, "Bomb Drop". "" when the unit has no such special.
+func special_label(special_id: String) -> String:
+	var sp := special(special_id)
+	if sp.is_empty():
+		return ""
+	return "%s %s" % [str(sp["name"]), str(sp["action"])]
 
 # Walk one level of the schema: read every listed field by its kind, then
 # reject keys the schema does not list. Returns the plain values.
@@ -215,6 +233,18 @@ func _check(r: Records, stem: String) -> void:
 		r.err("bomb_load.drops = 1: a bomber has at least two drops (Alex 2026-10-10: multiple passes, everything gets at least two)")
 	if (bomb_drops > 0) != (bomb_per_drop > 0):
 		r.err("bomb_load: drops (%d) and per_drop (%d) are both 0 or both above 0" % [bomb_drops, bomb_per_drop])
+	# Specials (Track B, 2026-10-10): ids unique, and the bomb drop is a special exactly when the unit carries bombs, so the
+	# words for a step's drop always exist and a unit with no bombs does not claim the special.
+	var special_ids: Array[String] = []
+	for sp: Variant in specials:
+		var sid := str((sp as Dictionary).get("id", ""))
+		if sid != "" and special_ids.has(sid):
+			r.err("specials: id '%s' is used twice" % sid)
+		special_ids.append(sid)
+	if carries_bombs() and not special_ids.has("bomb"):
+		r.err("specials: a unit that carries bombs has the special 'bomb' (its step says what it does)")
+	if not carries_bombs() and special_ids.has("bomb"):
+		r.err("specials: the special 'bomb' needs a bomb_load (this unit carries none)")
 	var bands: Array = e.get("altitude_bands", [])
 	var start := str(e.get("start_band", ""))
 	if start != "" and not bands.has(start):

@@ -52,13 +52,15 @@ func setup(_main) -> void:
 # --- 1 -------------------------------------------------------------------------
 
 func _check_data() -> void:
-	for n: String in ["labels.hide_below_px_per_m", "labels.below_px", "labels.halo_px"]:
+	for n: String in ["labels.hide_below_px_per_m", "labels.below_px", "labels.halo_px", "labels.px", "labels.line_gap_px", "labels.font.weight"]:
 		check(_st.lookup(n) is float or _st.lookup(n) is int, "ui.json has a number at '%s'" % n)
 	for n: String in ["labels.unit", "labels.unit_static", "labels.node_suffix", "labels.node_carry", "labels.height_ref"]:
 		check(_st.lookup(n) is String, "ui.json has a string at '%s'" % n)
 	check(_st.flag("labels.enabled"), "the labels are on in the data")
 	check(["sim", "ground"].has(_st.text("labels.height_ref")), "the height reference is one the code knows")
 	check(_st.has_role("label_ink") and _st.has_role("label_carry") and _st.has_role("label_halo"), "the label roles exist")
+	check(_st.lookup("labels.font.serif") is Array and not (_st.lookup("labels.font.serif") as Array).is_empty(), "the label face names its families (readable lettering, Track C)")
+	check(_st.lookup("labels.font.italic") is bool, "and says whether it is italic")
 	eq(_st.errors.size(), 0, "no style lookups failed: %s" % str(_st.errors))
 
 # --- 2 -------------------------------------------------------------------------

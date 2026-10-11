@@ -18,6 +18,17 @@ extends RefCounted
 # "player_controlled" -- only those units. Radius = the unit type's
 # sight_range_m (data/units/<type>.json, Track S's) x vision.sight_range_scale.
 #
+# SIGHT FOLLOWS THE PILOT (Alex, playtest of the Strike, 2026-10-10: "A destroyed plane keeps
+# the fog away. Ideally we have this track the pilot. So a destroyed plane should loose the
+# fog. One disabled and falling should keep it but with reduced distance until it hits. (take
+# height into account too)"). A unit that is down reveals by scripts/sim/sight_rules.gd
+# (data/sim/sight.json, values proposed), at the playback time t: an exploded plane or a
+# destroyed tower/battery stops revealing at the moment it goes down (down_at; none at all if it
+# went down in an earlier turn); a plane disabled and falling keeps a reduced circle that shrinks
+# with its height above the ground (World.sample's height_m) until it hits; a crashed one reveals
+# nothing. A unit that sees nothing has no circle. The enemy AI's knowledge (ai_sense.gd) asks
+# the same rule. A live unit is untouched.
+#
 # LINE OF SIGHT (Alex: "terrain, trees and buildings block sight"; data
 # vision.line_of_sight, a switch):
 #   "none"           a radius per unit, nothing more (the first option)
@@ -28,7 +39,11 @@ extends RefCounted
 # layer does it in setup). Each unit gets an EYE: a ground unit's eye_height_m of
 # its domain above the ground, an aircraft's altitude band height (absolute, so
 # the terrain is mostly below it). A unit's shed is cached and reused until the
-# unit moves recompute_move_m or its eye height changes recompute_height_m.
+# unit moves recompute_move_m or its eye height changes recompute_height_m, or its radius
+# changes by recompute_move_m (a plane falling: its radius shrinks with its height, so the
+# shed is not swept again every frame; is_visible still clips to the circle's own radius).
+# A falling plane's eye is its CURRENT height (World.sample's height_m, or its fall_height_m
+# as it stands), so as it drops behind a hill the ground beyond closes.
 #   is_visible(p)            GROUND: inside a shed (or a circle, without line of sight)
 #   target_visible(x, y, h)  a TARGET h metres above the ground there: visible_from
 #                            from each revealing eye in range -- a plane overhead
@@ -49,6 +64,7 @@ extends RefCounted
 
 const CameraData = preload("res://scripts/world/camera_data.gd")
 const FogViewshed = preload("res://scripts/render/fog_viewshed.gd")
+const SightRules = preload("res://scripts/sim/sight_rules.gd")
 
 const REVEAL_PLAYER_SIDES := "player_sides"
 const REVEAL_PLAYER_CONTROLLED := "player_controlled"
@@ -81,6 +97,7 @@ var recompute_height_m: float
 var budget_ms: float                    # per update_from_world, all units; 0: whole sheds at once
 var errors: Array[String] = []
 
+var sight: SightRules = SightRules.new()   # what a downed unit still sees (data/sim/sight.json)
 var terrain: Object = null              # the height source, set by attach_terrain
 var viewshed: FogViewshed = null        # built the first time line of sight is on
 
@@ -128,7 +145,7 @@ func _init(fog_data: CameraData = null) -> void:
 	budget_ms = data.num("viewshed.budget_ms")
 
 func ok() -> bool:
-	return errors.is_empty() and data.ok() and (viewshed == null or viewshed.ok())
+	return errors.is_empty() and data.ok() and sight.ok() and (viewshed == null or viewshed.ok())
 
 func _err(message: String) -> void:
 	errors.append(message)
@@ -203,6 +220,13 @@ func reveals(u: Object, sides: Dictionary) -> bool:
 func sight_radius_m(u: Object) -> float:
 	return float(u.def.sight_range_m) * sight_scale
 
+# What the unit sees to at `t` (World.sample's clock; < 0: as it stands now), `height_m` its
+# sampled height there: its full radius while it is up, none once it has exploded, been
+# destroyed or crashed, a reduced one that shrinks with height while it falls
+# (sight_rules.gd). Zero means it reveals nothing.
+func revealing_radius_m(u: Object, t: float = -1.0, height_m: float = NAN) -> float:
+	return sight.radius_m(u, sight_radius_m(u), t, height_m)
+
 # --- eye heights ----------------------------------------------------------------------------
 
 # A unit's eye (and own top, as a target) in metres ABOVE THE GROUND at (x, y):
@@ -233,7 +257,10 @@ func _state(world: Object, u: Object, t: float, source: String) -> Dictionary:
 		if s.has("x"):
 			return {"x": float(s["x"]), "y": float(s["y"]), "band": str(s.get("altitude_band", u.altitude_band)),
 				"height_m": float(s.get("height_m", NAN))}
-	return {"x": float(u.x), "y": float(u.y), "band": str(u.altitude_band), "height_m": NAN}
+	# As it stands now a plane that is falling is at its fall height, not at its band's (the band is
+	# only the nearest of its own to that height): the eye of a falling plane is its CURRENT height.
+	var fall_h := float(u.fall_height_m)
+	return {"x": float(u.x), "y": float(u.y), "band": str(u.altitude_band), "height_m": fall_h if is_finite(fall_h) else NAN}
 
 # --- circles ---------------------------------------------------------------------------
 
@@ -251,8 +278,13 @@ func update_from_world(world: Object, t: float = -1.0, source: String = "history
 		if not reveals(u, sides):
 			continue
 		var st := _state(world, u, t, source)
+		# The sight of a unit that is down: the plan preview (source "plan") has no down moment
+		# to compare with, so it judges a down unit as it stands now.
+		var r := revealing_radius_m(u, t if source == "history" else -1.0, st.height_m)
+		if r <= 0.0:
+			continue
 		var agl := unit_agl(world, u, st.x, st.y, st.band, st.height_m) if los else float(eye_heights.get(str(u.def.domain), eye_heights["ground"]))
-		circles.append({"id": str(u.id), "x": st.x, "y": st.y, "r": sight_radius_m(u), "eye_agl": agl})
+		circles.append({"id": str(u.id), "x": st.x, "y": st.y, "r": r, "eye_agl": agl})
 	if circles.size() > max_circles:
 		push_warning("FogVision: %d revealing units, the mask draws the first %d (mask.max_circles)" % [circles.size(), max_circles])
 	_attach_sheds()
@@ -299,7 +331,7 @@ func _shed_for(key: String, c: Dictionary, vs: FogViewshed) -> FogViewshed.Shed:
 	var entry: Dictionary = _sheds.get(key, {})
 	var shed: FogViewshed.Shed = entry.get("shed")
 	var job: FogViewshed.Shed = entry.get("job")
-	if job == null and shed != null and entry.r == c.r and absf(entry.abs - abs_eye) <= recompute_height_m and shed.eye.distance_to(eye) <= recompute_move_m:
+	if job == null and shed != null and absf(float(entry.r) - float(c.r)) <= recompute_move_m and absf(entry.abs - abs_eye) <= recompute_height_m and shed.eye.distance_to(eye) <= recompute_move_m:
 		stats.reused += 1
 		return shed
 	var t0 := Time.get_ticks_usec()
@@ -342,13 +374,15 @@ func is_visible(p: Vector2) -> bool:
 func is_visible_xy(x: float, y: float) -> bool:
 	for c: Dictionary in circles:
 		var shed: Variant = c.get("shed")
-		if shed != null:
-			if (shed as FogViewshed.Shed).visible_ground(x, y):
-				return true
-			continue
 		var dx: float = x - c.x
 		var dy: float = y - c.y
 		var r: float = c.r
+		if shed != null:
+			# The shed is reused while the radius drifts by less than recompute_move_m (a plane
+			# coming down), so the circle's own radius is the exact limit.
+			if dx * dx + dy * dy <= r * r and (shed as FogViewshed.Shed).visible_ground(x, y):
+				return true
+			continue
 		if dx * dx + dy * dy <= r * r and not _sight_blocked(c, x, y):
 			return true
 	return false

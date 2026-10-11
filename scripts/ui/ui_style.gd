@@ -174,6 +174,29 @@ func font(italic: bool = false) -> Font:
 	_fonts[key] = f
 	return f
 
+# The face of the map's lettering (the height and speed labels, the plan nodes' lettering): ui.json labels.font. Upright and
+# semibold with lining figures, unlike font() (Track C, 2026-10-10: the thin italic was unreadable). Cached by what the data says,
+# so a host that changes labels.font.* at run time gets the new face on the next call.
+func label_font() -> Font:
+	var italic := flag("labels.font.italic")
+	var weight := int(num("labels.font.weight"))
+	var key := "label:%s:%d" % [str(italic), weight]
+	if _fonts.has(key):
+		return _fonts[key]
+	var f := SystemFont.new()
+	var names := PackedStringArray()
+	var list: Variant = lookup("labels.font.serif")
+	if list is Array:
+		for n: Variant in list:
+			names.append(str(n))
+	else:
+		_err_once("labels.font", "ui.json labels.font.serif must be a list of font names")
+	f.font_names = names
+	f.font_italic = italic
+	f.font_weight = weight
+	_fonts[key] = f
+	return f
+
 # --- Loading -------------------------------------------------------------------
 
 func _load_render(d: Dictionary) -> void:

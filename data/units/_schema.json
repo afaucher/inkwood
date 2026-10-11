@@ -84,6 +84,15 @@
         "drops": { "kind": "integer", "min": 0, "about": "How many separate drops (passes) the unit can make. 0 for a unit that carries no bombs; otherwise at least 2 (Alex), which unit_def.gd checks." },
         "per_drop": { "kind": "integer", "min": 0, "about": "Bombs in one drop (a stick). 0 exactly when drops is 0." }
       }
+    },
+    "specials": {
+      "kind": "list",
+      "about": "The unit's SPECIALS: what a step can switch on that is not a gun that fires on its own (Alex 2026-10-10: 'it should SAY in the step metadata the name of the special and the action. So Radio On, Bomb Drop, Turret Fire.'). One record per special; an empty list is a unit with none. PROPOSED shape (Track B, 2026-10-10; the words are Alex's): `id` is what the code calls it ('bomb' is the bomb drop of bomb_load, the plan request 'drop'; unit_def.gd checks a unit carries one exactly when it carries bombs), `name` is the thing ('Bomb', 'Radio') and `action` what is done with it ('Drop', 'On', 'Fire'). Everything the player reads about a special is these two words printed together ('Bomb Drop'): a step's lettering, the orders card's lines and the special's button. Identity, not tuning, so plain text.",
+      "item_fields": {
+        "id": { "kind": "text", "about": "The special's id, unique within the unit." },
+        "name": { "kind": "text", "about": "The name the player reads, capitalised ('Bomb')." },
+        "action": { "kind": "text", "about": "The action the player reads after the name, capitalised ('Drop')." }
+      }
     }
   }
 }

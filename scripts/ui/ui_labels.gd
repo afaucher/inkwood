@@ -3,7 +3,8 @@ extends RefCounted
 # HEIGHT AND SPEED LABELS (Track U3, 2026-10-10; Alex: height is hard to read from above, "make sure that every
 # unit and every node has a height and speed label"). One place for what a label SAYS, when it shows and how it is
 # inked, so the unit markers (unit_marker_layer.gd) and the plan's nodes (motion_planner.gd) cannot disagree.
-# Every number and string is data/ui/ui.json labels (all PROPOSED; its _reason has the rules):
+# Every number and string is data/ui/ui.json labels (all PROPOSED; its _reason has the rules; the size, the face and the ink are
+# the readable-lettering values of Track C, 2026-10-10):
 #
 #   a unit (own or enemy, whenever it is in sight)   "400 m · 100"   height in metres, speed in m/s (unit left off);
 #                                                    a STATIC unit (the radio tower, a battery) "0 m": its height
@@ -47,6 +48,19 @@ static func height_of(st: RefCounted, world: Object, pose: Dictionary, ground_fn
 	if st.text("labels.height_ref") == "ground" and ground_fn.is_valid():
 		return maxf(float(ground_fn.call({"x": pose.get("x", 0.0), "y": pose.get("y", 0.0), "height_m": h, "altitude_band": pose.get("altitude_band", "")})), 0.0)
 	return h
+
+# READABLE LETTERING (Track C, 2026-10-10; Alex: "The text next to each plane is unreadable using the small thin font - these MUST
+# be read to be useful"): one size, one face and one line height for every label the map carries, from data (labels.px,
+# labels.font.*, labels.line_gap_px). The planner's node lettering and the markers' labels both ask here.
+static func px(st: RefCounted) -> float:
+	return st.num("labels.px")
+
+static func font(st: RefCounted) -> Font:
+	return st.label_font()
+
+# The distance between the baselines of two lines of one label.
+static func line_h(st: RefCounted) -> float:
+	return st.num("labels.px") + st.num("labels.line_gap_px")
 
 # Lettering with the paper under-stroke the hover uses: `pos` is the baseline start; centred over `width` when given.
 static func draw(ci: CanvasItem, st: RefCounted, font: Font, pos: Vector2, s: String, px: float, ink: Color, width: float = -1.0,

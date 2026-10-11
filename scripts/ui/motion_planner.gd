@@ -13,7 +13,10 @@ extends Node2D
 #                (World.planned_states), heading as it will be
 #   CLAMPS       where a step was asked for outside the envelope, a fine dashed
 #                tie from the point asked for to where the envelope put it --
-#                what is drawn is always the CLAMPED result
+#                what is drawn is always the CLAMPED result. OFF (data
+#                planner.clamp_marks false): Alex 2026-10-10, "The little X is where
+#                I left the mouse when dragging the point. We don't care about that
+#                at all." -- clamp_marks() then returns nothing and nothing is drawn
 #
 # Other player units' plans show as thin, quiet curves ALL THE TIME while the
 # turn is planned (Alex 2026-10-09, co-op: last edit wins, with a full preview
@@ -95,11 +98,23 @@ extends Node2D
 #   drop_info(k)                {cone, aim, spread, quality, release, free, ...} for the card
 #   bomb_marks()                the marks the cone node (bomb_aim.gd) draws, in screen px
 #
-# THE STEP THE CARD IS ABOUT (focus_step): Dive / Level / Climb and Drop act on one step, the
-# LAST PLACED STEP until a step's handle (or its aim) is grabbed, then THAT step, until the plan
-# changes shape (a step placed, undone, cleared) or another unit is selected. PROPOSED by U3: the
-# Drop control needs a way to reach the earlier steps of a bomber that makes more than one
-# drop, and the band buttons share it so the card is about one step at a time.
+# THE SELECTED STEP (focus_step; Track B, 2026-10-10; Alex, decision step-selection: "I actually want to be able to set my
+# motion and come back to step 2/3 and tell it to drop the bomb then." "Selecting the node should select that step in the
+# plan."): the orders card is about ONE step -- Dive / Level / Climb and the special (Drop) act on it, its header names it --
+# and that step is SELECTED on the map: its node stays filled, ringed and numbered (planner.select, node-hover's grow and fill
+# made permanent). A press and release on a step's node, without dragging, selects it (press() grabs with the slop: nothing
+# moves until the pointer has left planner.select.slop_px); dragging a node moves it and selects it; placing a step selects the
+# new step; a landing point (the aim handle) pressed selects its step too. The selection lasts until another node is clicked,
+# the plan changes shape (a step placed, undone, cleared: the last placed step is selected again) or the unit changes
+# (PROPOSED: no per-unit memory). It works for every unit. Before this the card followed the LAST PLACED step until a handle was
+# grabbed (U3's proposal), which the player could not see.
+#
+# THE DROP, PINNED TO ITS STEP (Track B, PROPOSED; data bombs.pin): every step of the selected unit with its special on is ONE
+# picture -- a line from the step's node to where the bombs land, ending in the area of effect at the target, the target's mark and
+# the step's number -- that no other step's placing or moving shifts. The bomb cone is only a thin outline from the selected
+# step, while the pointer is over the special's button (set_drop_hover; the card tells us) or a landing point is dragged. The
+# step's node carries a small bomb, and its lettering says the special's own words ("Bomb Drop", the unit's data: Alex, "it
+# should SAY in the step metadata the name of the special and the action").
 #
 # Editing a step keeps its drop AND its target (Track T): a step moved or re-banded whose cone no longer holds the
 # target is MARKED (drop_blocked, the map's slash, the card's line) and what the sim then does is its switch
@@ -167,7 +182,13 @@ var _drag_index: int = -1
 var _drag_aim: int = -1             # the step whose aim handle is being dragged (-1: none)
 var _aim_grab := Vector2.INF        # where the aim handle was grabbed (metres): the drag moves nothing until it leaves the slop
 var _aim_moved: bool = false        # whether the aim drag has left the slop (and so the target has become a point)
-var _focus: int = -1                # the step the card is about; -1: the last placed (see focus_step)
+const PLACING := -2                 # _focus when the NEXT step, not a placed one, is the selected step (select_next_step)
+var _focus: int = -1                # the SELECTED step; -1: the last placed (see focus_step); PLACING: the next one
+var _focus_n: int = -1              # the number of planned steps when it was selected: the plan changing shape drops the selection
+var _edit_grab := Vector2.INF       # where a node was pressed (metres): the drag moves nothing until the pointer leaves the slop
+var _edit_moved: bool = true        # whether the node drag has left the slop (false: a press that may still turn out a click)
+var _edit_last_moved: bool = true   # the same for the drag that ended last (a click is false)
+var _drop_hover: bool = false       # the pointer is over the special's button on the card (set_drop_hover)
 # The last aim refused for lying outside its cone (metres) and when: drawn for a moment, like the
 # map rule's cross.
 var refused_aim := Vector2.INF
@@ -254,23 +275,52 @@ func planned_count(id: String = "") -> int:
 		n -= 1
 	return n
 
-# The step the orders card is about (Dive / Level / Climb, Drop): the last placed step, or the
-# step whose handle or aim was grabbed last while that is still a placed step of the selected
-# unit's plan. -1 with nothing placed.
+# The SELECTED step, the one the orders card is about (Dive / Level / Climb, the special): the step
+# clicked or dragged last or the one just placed, while the plan still has the shape it had then,
+# else the last placed step. -1 with nothing placed.
 func focus_step(id: String = "") -> int:
 	if id == "":
 		id = unit_id()
 	var n := planned_count(id)
 	if n <= 0:
 		return -1
-	if id == unit_id() and _focus >= 0 and _focus < n:
+	if id == unit_id() and _focus == PLACING and _focus_n == n:
+		return -1   # the NEXT step is the selected one (the card's step strip): nothing placed is
+	if id == unit_id() and _focus >= 0 and _focus < n and _focus_n == n:
 		return _focus
 	return n - 1
 
+# Selects step k of the selected unit's plan (-1, or a step that is not placed: the last placed one).
 func set_focus_step(k: int) -> void:
 	var n := planned_count()
 	_focus = k if k >= 0 and k < n else -1
+	_focus_n = n
 	queue_redraw()
+
+# Selects the NEXT step, the one the fan places (Alex, the orders card's step strip: "You can only click an already planned step or
+# the next unplanned."): no placed step is selected -- the card says "step 3 of 3 next", Dive / Level / Climb and the special have
+# no step to act on -- and the next click in the fan places it, which selects it. False when there is no next step (the plan is
+# full, or the unit takes no orders).
+func select_next_step() -> bool:
+	if next_step_index() < 0:
+		return false
+	_focus = PLACING
+	_focus_n = planned_count()
+	queue_redraw()
+	return true
+
+# Whether the next step is the selected one (see select_next_step); true too with nothing placed, where it is the only step there is.
+func is_placing() -> bool:
+	if next_step_index() < 0:
+		return false
+	return focus_step() < 0
+
+# (the same, under the name the selection now has)
+func select_step(k: int) -> void:
+	set_focus_step(k)
+
+func selected_step(id: String = "") -> int:
+	return focus_step(id)
 
 # The step the next click places, or -1 when the plan is full or closed.
 func next_step_index(id: String = "") -> int:
@@ -320,7 +370,7 @@ func place_point(world_pt: Vector2) -> Dictionary:
 	var k := next_step_index()
 	if k < 0:
 		return {}
-	_focus = -1   # a new step is the last placed: the card is about it
+	_focus = -1   # a new step is the last placed: it is the selected one
 	return _plan_point(k, world_pt)
 
 func begin_step(world_pt: Vector2) -> Dictionary:
@@ -331,20 +381,37 @@ func begin_step(world_pt: Vector2) -> Dictionary:
 	_set_drag(k)
 	return _plan_point(k, world_pt)
 
-func begin_edit(k: int, world_pt: Vector2) -> Dictionary:
+# Takes hold of planned step k's node and SELECTS the step. `grab` (a press on the node itself, press() does it): nothing moves
+# until the pointer has left planner.select.slop_px, so a press and release is a CLICK that only selects; without it the step
+# steers for `world_pt` at once, as a drag from a point (the calls a test makes) always did.
+func begin_edit(k: int, world_pt: Vector2, grab: bool = false) -> Dictionary:
 	if not can_plan() or k < 0 or k >= planned_count():
 		return {}
-	_focus = k   # the card is about the step whose handle was grabbed
+	set_focus_step(k)   # the card is about the step whose node was pressed
 	_set_drag(k)
+	_edit_grab = world_pt
+	_edit_moved = not grab
+	if grab:
+		return states()[k]
 	return _plan_point(k, world_pt)
 
 func drag_step(world_pt: Vector2) -> Dictionary:
 	if _drag_index < 0 or not can_plan():
 		return {}
+	if not _edit_moved:
+		var slop: float = style.num("planner.select.slop_px") / maxf(mapping.px_per_m(world_pt), 1e-6)
+		if world_pt.distance_to(_edit_grab) <= slop:
+			return states()[_drag_index]
+		_edit_moved = true
 	return _plan_point(_drag_index, world_pt)
+
+# Whether the node drag last begun has moved the step (left the slop): false for a plain click on a node.
+func edit_was_moved() -> bool:
+	return _edit_moved if _drag_index >= 0 else _edit_last_moved
 
 func end_step() -> Dictionary:
 	var k := _drag_index
+	_edit_last_moved = _edit_moved
 	_set_drag(-1)
 	if k < 0 or not can_plan():
 		return {}
@@ -488,8 +555,9 @@ func drop_options(k: int = -2) -> Dictionary:
 	if not bombs.has_bombs(id):
 		out["why"] = style.text("bombs.text.no_bombs")
 		return out
+	var label := special_label(id)
 	if k < 0:
-		out["why"] = style.text("bombs.text.place_first")
+		out["why"] = style.text("bombs.text.place_first") % label
 		return out
 	var on := step_has_drop(k, id)
 	out["on"] = on
@@ -497,19 +565,73 @@ func drop_options(k: int = -2) -> Dictionary:
 		out["available"] = true   # switching a drop off is always allowed
 		return out
 	if bombs.drops_free(id, k) <= 0:
-		out["why"] = style.text("bombs.text.none_left")
+		out["why"] = style.text("bombs.text.none_left") % label
 		return out
 	if not bool(bombs.cone(id, k)["ok"]):
-		out["why"] = style.text("bombs.text.none_left")
+		out["why"] = style.text("bombs.text.none_left") % label
 		return out
 	if not target.is_set():
-		out["why"] = style.text("bombs.text.no_target")
+		out["why"] = style.text("bombs.text.no_target") % label
 		return out
 	if not target_in_cone(k):
 		out["why"] = style.text("bombs.text.target_outside") % (k + 1)
 		return out
 	out["available"] = true
 	return out
+
+# THE WORDS OF THE SPECIAL (Alex: "it should SAY in the step metadata the name of the special and the action. So Radio On, Bomb
+# Drop, Turret Fire."): the bomb drop of a unit as its own data names it, "Bomb Drop" (data/units/<id>.json specials, read through
+# UnitDef.special_label). A unit with no special gets the neutral word of bombs.text.label (its button is off).
+func special_label(id: String = "") -> String:
+	if id == "":
+		id = unit_id()
+	if world != null and world.units.has(id):
+		var words: String = world.units[id].def.special_label("bomb")
+		if words != "":
+			return words
+	return style.text("bombs.text.label")
+
+# Whether the unit has a special of its own to name (the bomb drop, today).
+func has_special(id: String = "") -> bool:
+	if id == "":
+		id = unit_id()
+	return world != null and world.units.has(id) and world.units[id].def.special_label("bomb") != ""
+
+# THE TARGET IN WORDS, for the orders card; always on offer while the selected unit carries a special ("" for a unit with none, or
+# one whose plan may not be shown): "target: radio tower" / "target: a point on the map" -- the SELECTED step's own target when its
+# special is on, else the target selection the special would take -- or "no target: click an enemy or right-click the map".
+func target_line() -> String:
+	var id := unit_id()
+	if world == null or not can_plan(id) or not bombs.has_bombs(id):
+		return ""
+	var k := focus_step(id)
+	var tgt := step_target(k, id) if k >= 0 else {}
+	if not tgt.is_empty():
+		return _target_words(str(tgt.get("unit", "")))
+	if target != null and target.is_set():
+		return _target_words(target.unit_id if target.is_unit() else "")
+	return style.text("bombs.text.target_none")
+
+func _target_words(unit: String) -> String:
+	if unit != "" and world.units.has(unit):
+		return style.text("bombs.text.target_unit") % str(world.units[unit].def.name).to_lower()
+	return style.text("bombs.text.target_point")
+
+# The pointer is over the special's button on the card (the card tells us): the selected step's bomb cone shows as a thin outline.
+func set_drop_hover(on: bool) -> void:
+	if _drop_hover != on:
+		_drop_hover = on
+		queue_redraw()
+
+func drop_hover() -> bool:
+	return _drop_hover
+
+# Whether the selected step's bomb cone is drawn (data bombs.pin.cone): only as a thin outline, only while the pointer is over the
+# special's button or a landing point is being dragged. (With bombs.pin.enabled off the old looks decide, bomb_marks.)
+func cone_outline_shown() -> bool:
+	if not style.flag("bombs.pin.cone.enabled"):
+		return false
+	return (_drop_hover and style.flag("bombs.pin.cone.on_button_hover")) or (_drag_aim >= 0 and style.flag("bombs.pin.cone.on_aim_drag"))
 
 # Whether the target selection lies inside step k's bomb cone (false with no target or no cone).
 func target_in_cone(k: int) -> bool:
@@ -585,7 +707,7 @@ func set_step_drop(k: int, on: bool) -> Dictionary:
 		var aim := target.position_m(world)
 		var stored: Dictionary = {"unit": target.unit_id} if target.is_unit() else {"point": [aim.x, aim.y]}
 		req["drop"] = {"aim": [aim.x, aim.y], "target": stored}
-	_focus = k
+	set_focus_step(k)
 	var u = world.units[id]
 	var s := _commit_step(id, k, req, Vector2(float(u.x), float(u.y)))
 	queue_redraw()
@@ -612,7 +734,7 @@ func _write_aim(id: String, k: int, world_pt: Vector2) -> Dictionary:
 	var req: Dictionary = (plan[k] as Dictionary).duplicate(true)
 	req["drop"] = {"aim": [world_pt.x, world_pt.y], "target": {"point": [world_pt.x, world_pt.y]}}
 	var u = world.units[id]
-	_focus = k
+	set_focus_step(k)
 	return _commit_step(id, k, req, Vector2(float(u.x), float(u.y)))
 
 # The aim handle dragged: begin_aim takes hold of step k's aim (grab: the handle itself was pressed, so nothing moves
@@ -622,7 +744,7 @@ func begin_aim(k: int, world_pt: Vector2, grab: bool = false) -> Dictionary:
 	var id := unit_id()
 	if not can_plan(id) or not step_has_drop(k, id):
 		return {}
-	_focus = k
+	set_focus_step(k)
 	_set_drag_aim(k)
 	_aim_grab = world_pt
 	_aim_moved = not grab
@@ -718,23 +840,39 @@ func expected_damage(k: int = -2) -> Dictionary:
 			return {"unit": target_unit, "name": str(t.def.name).to_lower(), "mean": 0.0, "health": int(t.health), "p_destroy": 0.0}
 	return {}
 
-# The marks for the bomb node, in screen px (the record bomb_aim_art.gd documents): the full
-# cone and aim of the step the card is about (while its drop is on), a small mark for every
-# other drop of the selected unit and of any other player unit. NOTHING for a unit whose plan
-# may not be shown (plan_shown): an AI unit's drops are never drawn.
+# The marks for the bomb node, in screen px (the record bomb_aim_art.gd documents). With bombs.pin.enabled (the default):
+# ONE PINNED PICTURE for every drop of the selected unit (a line from the step's node to the landing, the area of effect, the
+# target, the step's number; `selected` for the step the card is about, whose cone shows as a thin outline while the pointer is
+# over the special's button or a landing point is dragged, and then also for that step with no drop, as an outline alone), a
+# small mark for any other player unit's drop. With it off, the old looks: the full cone and aim of the step the card is about
+# and a small mark for every other drop. NOTHING for a unit whose plan may not be shown (plan_shown): an AI unit's drops are
+# never drawn.
 func bomb_marks() -> Array:
 	var out: Array = []
 	if world == null or bombs == null or world.phase != World.PHASE_PLANNING:
 		return out
 	var sel := unit_id()
+	var pin_on := style.flag("bombs.pin.enabled")
 	for id: String in world.units:
 		if not plan_shown(id) or not bombs.has_bombs(id):
 			continue
 		var focus_k := focus_step(id) if id == sel else -1
 		for k in bombs.drop_steps(id):
-			var rec := _bomb_mark(id, k, k == focus_k)
+			var rec := _bomb_mark(id, k, k == focus_k, pin_on and id == sel)
 			if not rec.is_empty():
 				out.append(rec)
+	# The selected step has no drop yet and the pointer is on the special's button: where its cone is, as an outline alone.
+	if pin_on and sel != "" and plan_shown(sel) and bombs.has_bombs(sel) and cone_outline_shown():
+		var ck := focus_step(sel)
+		if ck >= 0 and not step_has_drop(ck, sel):
+			var ccone: Dictionary = bombs.cone(sel, ck)
+			if bool(ccone["ok"]):
+				var cpoly := PackedVector2Array()
+				for q: Vector2 in ccone["polygon"]:
+					cpoly.append(mapping.world_to_screen(q))
+				out.append({"unit": sel, "step": ck, "quiet": false, "preview": true, "outline": true, "side": str(world.units[sel].side), "cone": cpoly,
+					"aim": mapping.world_to_screen(ccone["ideal_aim"]) if (ccone["ideal_aim"] as Vector2).is_finite() else Vector2.INF,
+					"spread": {"a": 0.0, "b": 0.0, "angle": 0.0}, "quality": 0.0, "seed": ck, "ppm": 1.0, "label": ""})
 	# Track T (PROPOSED, bombs.aim.preview_cone): a target is set and the step the card is about has no drop yet -- its cone, faintly.
 	if sel != "" and target != null and target.is_set() and plan_shown(sel) and bombs.has_bombs(sel) and style.flag("bombs.aim.preview_cone"):
 		var pk := focus_step(sel)
@@ -749,7 +887,7 @@ func bomb_marks() -> Array:
 					"seed": pk, "ppm": mapping.px_per_m(target.position_m(world)), "label": ""})
 	return out
 
-func _bomb_mark(id: String, k: int, full: bool) -> Dictionary:
+func _bomb_mark(id: String, k: int, full: bool, pinned: bool = false) -> Dictionary:
 	var cone: Dictionary = bombs.cone(id, k)
 	var plan: Array = world.units[id].plan
 	var aim := BombSource._v2(((plan[k] as Dictionary)["drop"] as Dictionary).get("aim"))
@@ -759,9 +897,16 @@ func _bomb_mark(id: String, k: int, full: bool) -> Dictionary:
 	var ppm: float = mapping.px_per_m(aim)
 	var sp: Dictionary = info["spread"]
 	var poly := PackedVector2Array()
-	if full:
+	# The cone: the card's step, in the old looks always; pinned, only as the outline the pointer or a drag asks for.
+	if full and (not pinned or cone_outline_shown()):
 		for q: Vector2 in cone["polygon"]:
 			poly.append(mapping.world_to_screen(q))
+	# Where the step's node is on the screen: where the line of a pinned drop starts.
+	var node := Vector2.INF
+	if pinned:
+		var sts := states(id)
+		if k < sts.size():
+			node = mapping.world_to_screen(Vector2(float((sts[k] as Dictionary)["x"]), float((sts[k] as Dictionary)["y"])))
 	var rel: Vector2 = info["release"]
 	var u = world.units[id]
 	var quality := float(info["quality"])
@@ -785,7 +930,8 @@ func _bomb_mark(id: String, k: int, full: bool) -> Dictionary:
 	for t: Array in bombs.blast_tiers():
 		tiers.append([float(t[0]) * ppm, float(t[1])])
 	return {
-		"unit": id, "step": k, "quiet": not full, "side": str(u.side),
+		"unit": id, "step": k, "quiet": not (full or pinned), "side": str(u.side),
+		"pin": pinned, "selected": full, "node": node, "num": k + 1, "outline": pinned,
 		"cone": poly, "aim": mapping.world_to_screen(aim),
 		"lands": mapping.world_to_screen(lands) if lands.is_finite() else Vector2.INF,
 		"ideal": mapping.world_to_screen(cone["ideal_aim"]) if (cone["ideal_aim"] as Vector2).is_finite() else Vector2.INF,
@@ -903,6 +1049,9 @@ func in_bomb_cone(screen_pt: Vector2) -> bool:
 	var k := focus_step(id)
 	if not can_plan(id) or k < 0 or not step_has_drop(k, id):
 		return false
+	# The cone is not drawn now (it is an outline on the button's hover): a press in it would move the target out of sight.
+	if style.flag("bombs.pin.enabled") and not style.flag("bombs.pin.press_in_cone"):
+		return false
 	var cone: Dictionary = bombs.cone(id, k)
 	return bool(cone["ok"]) and BombSource.inside(cone["polygon"], mapping.screen_to_world(screen_pt))
 
@@ -928,7 +1077,7 @@ func press(screen_pt: Vector2) -> bool:
 		if str(g["kind"]) == "aim":
 			begin_aim(int(g["step"]), wp, true)   # the handle itself: nothing moves until the pointer leaves the slop
 		else:
-			begin_edit(int(g["step"]), wp)
+			begin_edit(int(g["step"]), wp, true)   # the node itself: a click selects the step, a drag moves it (past the slop)
 		return true
 	if in_fan(screen_pt):
 		begin_step(wp)
@@ -962,6 +1111,7 @@ func release(screen_pt: Vector2) -> bool:
 
 func _set_drag(k: int) -> void:
 	_drag_index = k
+	_edit_moved = true   # (begin_edit with a grab says otherwise, after this)
 	if k >= 0:
 		_drag_aim = -1
 	_update_hover()
@@ -1159,10 +1309,13 @@ func _draw() -> void:
 		_draw_refused()
 		return
 	_draw_hover_under()
+	_draw_selected_disc(sel)
 	_draw_ghosts(sel)
 	if can_plan(sel):
 		_draw_fan()
 	_draw_curve(sel, 1.0)
+	_draw_selected_number(sel)
+	_draw_drop_marks(sel)
 	_draw_clamps(sel)
 	_draw_hover()
 	_draw_refused()
@@ -1246,7 +1399,7 @@ func step_labels(id: String = "") -> Array:
 		elif with_height:
 			lines.append(UiLabels.carry_text(style, float(s["speed"]), node_height_m(s)))   # a carry-on node: speed and height
 		if step_has_drop(k, id):
-			lines.append(style.text("bombs.text.step_tag"))   # a drop on this step (Track U3)
+			lines.append(special_label(id))   # the special on this step, in the unit's own words: "Bomb Drop" (Alex: name and action, from data)
 			if drop_blocked(k, id):   # its target outside its cone (Track T): "will not release" / "poor shot", by the sim's switch
 				lines.append(style.text("bombs.text.step_tag_blocked" if bombs.outside_mode() == "hold" else "bombs.text.step_tag_poor"))
 		var band := str(s["altitude_band"])
@@ -1287,9 +1440,72 @@ func _draw_hover_under() -> void:
 		var r := r_full + soft * (1.0 - float(i) / 4.0)
 		draw_circle(c, r, Color(paper.r, paper.g, paper.b, paper.a * amt * 0.34), true, -1.0, true)
 
+# Where step k's node is on the screen (INF with no such step).
+func node_screen(k: int, id: String = "") -> Vector2:
+	var st := states(id)
+	if k < 0 or k >= st.size():
+		return Vector2.INF
+	return mapping.world_to_screen(Vector2(float((st[k] as Dictionary)["x"]), float((st[k] as Dictionary)["y"])))
+
+# THE SELECTED NODE (data planner.select): node-hover's grow and fill made permanent -- an ink disc with a paper rim, a ring
+# round it, the step's number in paper inside. Drawn for every unit (the selection works for all). While the selected node is
+# dragged, or the pointer is on it, the hover look takes over (_draw_hover); the number comes back when it is let go.
+func _draw_selected_node(id: String) -> void:
+	_draw_selected_disc(id)
+	_draw_selected_number(id)
+
+# The disc and the ring, drawn UNDER the ghosts' lettering (so the words "2 · 85 m/s · 400 m", "Bomb Drop" stay readable over it) ...
+func _draw_selected_disc(id: String) -> void:
+	var k := focus_step(id)
+	if k < 0 or not can_plan(id):
+		return
+	if _drag_index == k and _drag_index >= 0:
+		return   # dragged: the hover's drag look is the node
+	var c := node_screen(k, id)
+	if not c.is_finite():
+		return
+	var ink: Color = style.color("hover_ink")
+	var paper: Color = style.color("hover_paper")
+	var r: float = style.num("planner.select.node_px")
+	draw_circle(c, r + style.num("planner.select.paper_px"), paper, true, -1.0, true)
+	draw_circle(c, r, ink, true, -1.0, true)
+	draw_arc(c, r + style.num("planner.select.ring_gap_px"), 0.0, TAU, 40, ink, style.num("planner.select.ring_px"), true)
+
+# ... and its number in paper, over the path line that runs through the node.
+func _draw_selected_number(id: String) -> void:
+	var k := focus_step(id)
+	if k < 0 or not can_plan(id) or (_drag_index == k and _drag_index >= 0):
+		return
+	var c := node_screen(k, id)
+	if not c.is_finite():
+		return
+	var font: Font = UiLabels.font(style)
+	var px: float = style.num("planner.select.number_px")
+	var txt := str(k + 1)
+	var w := UiInk.text_width(font, txt, px)
+	UiInk.text(self, font, c + Vector2(-w * 0.5, px * 0.36), txt, px, style.color("hover_paper"))
+
+# A small bomb beside the node of every step whose special is on, on the shadow side (the lettering is on the sun side).
+func _draw_drop_marks(id: String) -> void:
+	if not bombs.has_bombs(id):
+		return
+	var ink: Color = style.color("hover_ink")
+	var paper: Color = style.color("hover_paper")
+	var s: float = style.num("planner.select.drop_mark.size_px")
+	var off: float = style.num("planner.select.node_px") + style.num("planner.select.drop_mark.offset_px")
+	var w: float = style.num("planner.select.drop_mark.line_px")
+	var halo: float = style.num("planner.select.drop_mark.halo_px")
+	for k in bombs.drop_steps(id):
+		var n := node_screen(k, id)
+		if not n.is_finite():
+			continue
+		UiInk.bomb_glyph(self, n + style.shadow_dir() * off, s, ink, paper, w, halo)
+
 func _draw_hover() -> void:
 	var state := str(_hover.get("state", "none"))
-	if state != "none" and str(_hover.get("kind", "step")) != "aim":   # (an aim handle's hover is the bomb node's: over the planes)
+	# (the selected node is already at its strongest: only a drag takes it over; an aim handle's hover is the bomb node's, over the planes)
+	var on_selected: bool = state != "drag" and int(_hover.get("step", -1)) == focus_step() and str(_hover.get("kind", "step")) == "step"
+	if state != "none" and str(_hover.get("kind", "step")) != "aim" and not on_selected:
 		var c: Vector2 = _hover["handle_screen"]
 		var a := float(_hover["approach"])
 		for fx: String in _hover_effects():
@@ -1419,8 +1635,9 @@ func _draw_ghosts(id: String) -> void:
 	var u = world.units[id]
 	var st := states(id)
 	var labels := step_labels(id)
-	var font: Font = style.font(true)
-	var small: float = style.num("fonts.small_px")
+	var font: Font = UiLabels.font(style)   # readable lettering (Track C, 2026-10-10): labels.px, the semibold face of labels.font
+	var small: float = UiLabels.px(style)
+	var line_h: float = UiLabels.line_h(style)
 	var ink: Color = style.color("label_ink")
 	var carry_ink: Color = style.color("label_carry")
 	var hl_k := _hover_label_step()
@@ -1450,15 +1667,15 @@ func _draw_ghosts(id: String) -> void:
 					wmax = maxf(wmax, UiInk.text_width(font, ln, small))
 				var pad: float = style.num("planner.hover.label.pad_px")
 				var plate := Rect2(base + Vector2(-pad, -small * 0.9 - pad * 0.5),
-					Vector2(wmax + pad * 2.0, (small + 1.0) * float(lines.size()) + pad))
+					Vector2(wmax + pad * 2.0, line_h * float(lines.size()) + pad))
 				draw_rect(plate, style.color("hover_paper"), true)
 				UiInk.ink_line(self, UiInk.rect_pts(plate), true, style.color("hover_ink"), 0.9, 41, 0.3)
 				for li in lines.size():
-					UiInk.text(self, font, base + Vector2(0.0, (small + 1.0) * float(li)), lines[li], small, style.color("hover_ink"))
+					UiInk.text(self, font, base + Vector2(0.0, line_h * float(li)), lines[li], small, style.color("hover_ink"))
 			else:
 				for li in lines.size():
 					# the paper under-stroke the hover uses, so the lettering reads over the grove; a carry-on node's is fainter
-					UiLabels.draw(self, style, font, base + Vector2(0.0, (small + 1.0) * float(li)), lines[li], small, ink if planned else carry_ink)
+					UiLabels.draw(self, style, font, base + Vector2(0.0, line_h * float(li)), lines[li], small, ink if planned else carry_ink)
 
 # The art a ghost of unit `id` is drawn with, scaled by the caller to the ghost's
 # own screen scale. It is the art the unit's MARKER holds (no bake at all, and
@@ -1502,10 +1719,20 @@ func _draw_refused() -> void:
 	draw_line(p + Vector2(-x, x), p + Vector2(x, -x), col, 1.6, true)
 	UiInk.text(self, style.font(true), p + Vector2(9.0, 4.0), "off the map", style.num("fonts.small_px"), col)
 
-func _draw_clamps(id: String) -> void:
+# The clamp marks of a unit's plan, in screen px: [{step, asked, put}] -- the point the pointer was left at (`asked`, where the
+# little X was) and where the envelope put the step (`put`), for each clamped step more than 3 px apart. EMPTY while the data's
+# planner.clamp_marks is false (Alex 2026-10-10: "The little X is where I left the mouse when dragging the point. We don't care
+# about that at all."), which is what _draw_clamps draws from, so the off state draws nothing.
+func clamp_marks(id: String = "") -> Array:
+	var out: Array = []
+	if not style.flag("planner.clamp_marks"):
+		return out
+	if id == "":
+		id = unit_id()
+	if not plan_shown(id):
+		return out
 	var st := states(id)
 	var plan: Array = world.units[id].plan
-	var col: Color = style.color("clamp")
 	for k in mini(plan.size(), st.size()):
 		var req: Dictionary = plan[k]
 		var s: Dictionary = st[k]
@@ -1518,7 +1745,14 @@ func _draw_clamps(id: String) -> void:
 		var b: Vector2 = mapping.world_to_screen(Vector2(float(s["x"]), float(s["y"])))
 		if a.distance_to(b) < 3.0:
 			continue
-		UiInk.dashed(self, PackedVector2Array([a, b]), col, 0.9, 3.0, 3.0)
+		out.append({"step": k, "asked": a, "put": b})
+	return out
+
+func _draw_clamps(id: String) -> void:
+	var col: Color = style.color("clamp")
+	for m: Dictionary in clamp_marks(id):
+		var a: Vector2 = m["asked"]
+		UiInk.dashed(self, PackedVector2Array([a, m["put"]]), col, 0.9, 3.0, 3.0)
 		var x := 3.5
 		draw_line(a + Vector2(-x, -x), a + Vector2(x, x), col, 1.1, true)
 		draw_line(a + Vector2(-x, x), a + Vector2(x, -x), col, 1.1, true)

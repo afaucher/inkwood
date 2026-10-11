@@ -35,8 +35,11 @@ func setup(_main) -> void:
 		finish()
 		return
 	var fields: Dictionary = (schema as Dictionary)["fields"]
-	for f: String in ["id", "name", "domain", "mobility", "size_m", "actions_per_turn", "health", "sight_range_m", "drawing", "envelope", "weapons", "bomb_load"]:
+	for f: String in ["id", "name", "domain", "mobility", "size_m", "actions_per_turn", "health", "sight_range_m", "drawing", "envelope", "weapons", "bomb_load", "specials"]:
 		check(fields.has(f), "schema lists '%s'" % f)
+	var special_fields: Dictionary = (fields.get("specials", {}) as Dictionary).get("item_fields", {})
+	for f: String in ["id", "name", "action"]:
+		check(special_fields.has(f), "schema lists specials[].%s" % f)
 	var weapon_fields: Dictionary = (fields.get("weapons", {}) as Dictionary).get("item_fields", {})
 	for f: String in ["id", "name", "kind", "hardpoints", "mount_deg", "half_across_deg", "elevation_deg", "half_height_deg", "effective_range_m", "base_hit_chance", "rim_odds_factor", "falloff_exponent", "tracking_dps", "damage_pips", "rolls_per_second"]:
 		check(weapon_fields.has(f), "schema lists weapons[].%s" % f)
@@ -114,6 +117,12 @@ func setup(_main) -> void:
 		["drops without bombs", "bomb_load: drops (3) and per_drop (0)"],
 		["bombs without drops", "bomb_load: drops (0) and per_drop (4)"],
 		["a negative bomb count", "'bomb_load.per_drop' = -1 is below 0"],
+		["no specials list", "missing list 'specials'"],
+		["a special with no action", "missing text 'specials[0].action'"],
+		["a misspelt special key", "unknown field 'specials[0].acton'"],
+		["two specials with one id", "specials: id 'bomb' is used twice"],
+		["a bomb load with no bomb special", "specials: a unit that carries bombs has the special 'bomb'"],
+		["the bomb special on a unit with no bombs", "specials: the special 'bomb' needs a bomb_load"],
 	]
 	for c: Array in cases:
 		var what: String = c[0]
@@ -240,6 +249,18 @@ func _break(d: Dictionary, what: String) -> void:
 			d["bomb_load"] = {"drops": {"value": 0, "_proposed": true, "_reason": "x"}, "per_drop": {"value": 4, "_proposed": true, "_reason": "x"}}
 		"a negative bomb count":
 			d["bomb_load"] = {"drops": {"value": 3, "_proposed": true, "_reason": "x"}, "per_drop": {"value": -1, "_proposed": true, "_reason": "x"}}
+		"no specials list":
+			d.erase("specials")
+		"a special with no action":
+			d["specials"] = [{"id": "bomb", "name": "Bomb"}]
+		"a misspelt special key":
+			d["specials"] = [{"id": "bomb", "name": "Bomb", "action": "Drop", "acton": "x"}]
+		"two specials with one id":
+			d["specials"] = [{"id": "bomb", "name": "Bomb", "action": "Drop"}, {"id": "bomb", "name": "Bomb", "action": "Again"}]
+		"a bomb load with no bomb special":
+			d["bomb_load"] = {"drops": {"value": 3, "_proposed": true, "_reason": "x"}, "per_drop": {"value": 4, "_proposed": true, "_reason": "x"}}
+		"the bomb special on a unit with no bombs":
+			d["specials"] = [{"id": "bomb", "name": "Bomb", "action": "Drop"}]
 		_:
 			fail("no such breakage: " + what)
 
@@ -300,8 +321,15 @@ func _check_load_and_mobility(def: UnitDef) -> void:
 	check(def.bomb_drops == 0 or def.bomb_drops >= 2, "%s: a bomb load is at least two drops, or none (%d)" % [def.id, def.bomb_drops])
 	check((def.bomb_drops > 0) == (def.bomb_per_drop > 0), "%s: drops and bombs per drop are both there or both absent" % def.id)
 	eq(def.carries_bombs(), def.bomb_drops > 0, "%s: carries_bombs() follows the load" % def.id)
+	# Specials (Track B, 2026-10-10; Alex: a step says "Bomb Drop"): the bomb drop is a special exactly when the unit carries bombs.
+	eq(not def.special("bomb").is_empty(), def.carries_bombs(), "%s: the special 'bomb' is there exactly when it carries bombs" % def.id)
+	eq(def.special_label("bomb") != "", def.carries_bombs(), "%s: and so are its words" % def.id)
+	eq(def.special("radio"), {}, "%s: a special it does not have is {}" % def.id)
+	eq(def.special_label("radio"), "", "%s: and has no words" % def.id)
 	if def.id == "bomber":
 		check(def.carries_bombs(), "the bomber carries bombs (%d drops of %d)" % [def.bomb_drops, def.bomb_per_drop])
+		eq(def.special_label("bomb"), "Bomb Drop", "the bomber's special reads 'Bomb Drop' (name + action, from data)")
+		eq([def.special("bomb")["name"], def.special("bomb")["action"]], ["Bomb", "Drop"], "its name and its action are data")
 	if def.domain == "air" and def.id != "bomber":
 		check(not def.carries_bombs(), "%s carries none" % def.id)
 	if is_ground_static:

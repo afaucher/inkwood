@@ -48,5 +48,6 @@
   "bomb_load": {
     "drops": { "value": 0, "_proposed": true, "_reason": "Track S2 (2026-10-10): a fighter carries no bombs; the strike's bomb drop is a bomber's special" },
     "per_drop": { "value": 0, "_proposed": true, "_reason": "a fighter drops nothing: 0 bombs a drop, to match 0 drops" }
-  }
+  },
+  "specials": []
 }

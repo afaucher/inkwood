@@ -62,9 +62,12 @@ extends Node
 #              spread and release for the step the card is about (planner.bomb_marks()), in the look data
 #              bombs.aim.mode names (variants/bomb-aim/); its "Marks" child draws the crosshair and the aim
 #              handle's hover over the planes
-#   the orders card has a Drop control beside Dive / Level / Climb (key B): a drop on the step the card is
-#   about (planner.focus_step(): the last placed step, or the step whose handle was grabbed last); the aim is
-#   a handle like a step's (planner.grab_at / begin_aim), held inside the cone, refused outside it
+#   the orders card has a special's button beside Dive / Level / Climb ("Bomb Drop", the unit's own words; key B stays): the
+#   special on the SELECTED step (planner.focus_step(): the step whose node was clicked, dragged or just placed; Track B,
+#   Alex's step-selection), pinned to that step on the map as one picture (a line from its node to the landing, the area of
+#   effect, the target) -- the cone is only an outline while the pointer is on the button or a landing point is dragged
+#   (orders.hover_changed -> planner.set_drop_hover); the landing is a handle like a step's (planner.grab_at / begin_aim), held
+#   inside the cone, refused outside it
 #   the roster row of a unit with bombs shows its drops left and the bombs in each; during a playback the
 #   marks are the turn's start and one empties as its bomb_release event passes
 #   ground units: the radio tower and the anti-aircraft batteries are markers like the planes (unit_marker_art
@@ -326,6 +329,11 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	roster.unit_selected.connect(_on_roster_pick)
 	roster.down_unit_picked.connect(_on_roster_pick)
 	roster.playback = marker_layer
+	# The weapon-arcs button in the roster's header (Track C; Alex: on-screen buttons, no key): it reads the cone overlay's switch
+	# and presses it.
+	roster.arcs_state = arcs_shown
+	roster.arcs_pressed.connect(toggle_arcs)
+	cones.arcs_changed.connect(func(_on: bool) -> void: roster.queue_redraw())
 	health = roster.health
 	selection.allow = _may_select
 	# The overlay layer, above the markers: the health arc first, then whatever part 2 adds.
@@ -353,6 +361,8 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	orders.setup(world, planner, selection, local_player, style)
 	orders.ready_action = press_ready
 	orders.playback = marker_layer
+	# The pointer over the special's button outlines the selected step's bomb cone on the map (Track B; bombs.pin.cone).
+	orders.hover_changed.connect(func(button: String) -> void: planner.set_drop_hover(button == "drop"))
 	orders.player_name = func(id: String) -> String: return str(player_name.call(id))
 	# --- side view (Track V) ---
 	# The side view (scripts/ui/side_view.gd): a section at the bottom of the orders card for the selected
@@ -418,6 +428,21 @@ func _mount_combat(map_parent: Node, host_mapping: Variant) -> void:
 	trails.setup(world, host_mapping, marker_layer, style)
 	trails.unit_visible = _unit_in_sight
 	apply_trail_order()
+
+# --- The weapon arcs (Track C, 2026-10-10) -----------------------------------------------------
+
+# Whether the map shows the weapon cones (the roster's "Arcs: on / off" button; ConeOverlay.arcs_shown has the rules).
+func arcs_shown() -> bool:
+	return cones != null and cones.arcs_shown()
+
+func set_arcs(on: bool) -> void:
+	if cones != null:
+		cones.set_arcs_shown(on)
+
+# What the roster's button does: every cone on the map goes, or comes back. There is no key for it (Alex: "No keyboard mapping").
+func toggle_arcs() -> void:
+	if cones != null:
+		cones.toggle_arcs()
 
 # Puts the wingtip ribbon under the smoke (data marker.trails.under_smoke true: before the effects
 # layer) or just under the planes (false: after the cones). Idempotent; setup() calls it, and a host
