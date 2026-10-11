@@ -32,8 +32,11 @@ extends Node2D
 # it is the selected unit, and path_world / step_labels give nothing for it.
 # test_ui_coop fails if any of it is ever drawn.
 #
-# SPEED PER STEP: the lettering at a planned step's ghost is "n · 120 m/s", the
-# speed the step ends at (step_labels, data planner.speed_labels).
+# THE STEP LABEL (Track L, 2026-10-10; Alex: "2 lines. Remove the step # as well"): the lettering at a step's ghost is two lines,
+# the speed the step ends at over its height ("120 m/s" over "400 m"), no step number; a step with its special on adds the
+# special's own words ("Bomb Drop") as a line of its own; a carry-on step has the same two lines, fainter (step_labels, data
+# planner.speed_labels and labels.*). The block stands on the sun side of the ghost with its LAST line nearest the node, so a
+# longer block grows away from the path (_draw_ghosts).
 #
 # INPUT IS THIN. Every action is a public method a test calls directly; the
 # mouse handlers (press / drag / release, screen points) only decide which one:
@@ -1370,10 +1373,12 @@ func _draw_curve(id: String, alpha: float, quiet: bool = false) -> void:
 			UiInk.dashed(self, pts, carry, wc, style.num("planner.dash_px"), style.num("planner.gap_px"))
 			draw_circle(pts[pts.size() - 1], dot * 0.8, carry, false, 1.0, true)
 
-# The lettering at every step's ghost, as lines (empty for a step with none):
-# a planned step's number and the speed it ends at ("2 · 120 m/s", data
-# planner.speed_labels), and under it a change of altitude band ("climb to
-# high"). Nothing for a unit whose plan may not be shown.
+# The lettering at every step's ghost, as lines (empty for a step with none): the speed the step ends at ("120 m/s", data
+# planner.speed_labels) over its height ("400 m", labels.enabled) -- the same two lines for a planned step and a carry-on one,
+# no step number (Track L, Alex: "2 lines. Remove the step # as well") -- then, for a step with its special on, the special's
+# own words ("Bomb Drop") and, when the drop is marked, "will not release" / "poor shot"; and, only while the data's
+# labels.band_change_line is on (proposed off), a change of altitude band ("climb to high"). Nothing for a unit whose plan may
+# not be shown.
 func step_labels(id: String = "") -> Array:
 	if id == "":
 		id = unit_id()
@@ -1383,27 +1388,22 @@ func step_labels(id: String = "") -> Array:
 	var u = world.units[id]
 	var st := states(id)
 	var prev_band: String = u.altitude_band
-	var unit_txt: String = style.text("roster.speed_unit")
 	var with_speed: bool = style.flag("planner.speed_labels")
+	var with_height: bool = style.flag("labels.enabled")
+	var with_band: bool = style.flag("labels.band_change_line")
 	for k in st.size():
 		var s: Dictionary = st[k]
 		var lines := PackedStringArray()
-		var with_height: bool = style.flag("labels.enabled")
-		if bool(s["planned"]):
-			var head := str(k + 1)
-			if with_speed:
-				head += " · %d %s" % [roundi(float(s["speed"])), unit_txt]
-			if with_height:
-				head += UiLabels.node_suffix(style, node_height_m(s))   # (Track U3: every node has a height and a speed)
-			lines.append(head)
-		elif with_height:
-			lines.append(UiLabels.carry_text(style, float(s["speed"]), node_height_m(s)))   # a carry-on node: speed and height
+		if with_speed:
+			lines.append(UiLabels.node_speed_text(style, float(s["speed"])))
+		if with_height:
+			lines.append(UiLabels.node_height_text(style, node_height_m(s)))   # (Track U3: every node has a height and a speed)
 		if step_has_drop(k, id):
 			lines.append(special_label(id))   # the special on this step, in the unit's own words: "Bomb Drop" (Alex: name and action, from data)
 			if drop_blocked(k, id):   # its target outside its cone (Track T): "will not release" / "poor shot", by the sim's switch
 				lines.append(style.text("bombs.text.step_tag_blocked" if bombs.outside_mode() == "hold" else "bombs.text.step_tag_poor"))
 		var band := str(s["altitude_band"])
-		if band != prev_band:
+		if with_band and band != prev_band:
 			var up: bool = u.def.envelope.bands.find(band) > u.def.envelope.bands.find(prev_band)
 			lines.append(("climb to " if up else "dive to ") + band)
 		out.append(lines)
@@ -1454,7 +1454,7 @@ func _draw_selected_node(id: String) -> void:
 	_draw_selected_disc(id)
 	_draw_selected_number(id)
 
-# The disc and the ring, drawn UNDER the ghosts' lettering (so the words "2 · 85 m/s · 400 m", "Bomb Drop" stay readable over it) ...
+# The disc and the ring, drawn UNDER the ghosts' lettering (so the words "85 m/s", "400 m", "Bomb Drop" stay readable over it) ...
 func _draw_selected_disc(id: String) -> void:
 	var k := focus_step(id)
 	if k < 0 or not can_plan(id):
@@ -1483,7 +1483,7 @@ func _draw_selected_number(id: String) -> void:
 	var px: float = style.num("planner.select.number_px")
 	var txt := str(k + 1)
 	var w := UiInk.text_width(font, txt, px)
-	UiInk.text(self, font, c + Vector2(-w * 0.5, px * 0.36), txt, px, style.color("hover_paper"))
+	UiInk.text(self, font, c + Vector2(-w * 0.5, px * 0.36), txt, px, style.color("hover_paper"), HORIZONTAL_ALIGNMENT_LEFT, -1.0, "mark_number")
 
 # A small bomb beside the node of every step whose special is on, on the shadow side (the lettering is on the sun side).
 func _draw_drop_marks(id: String) -> void:
@@ -1657,25 +1657,28 @@ func _draw_ghosts(id: String) -> void:
 			draw_set_transform_matrix(Transform2D.IDENTITY)
 		var lines: PackedStringArray = labels[k]
 		if not lines.is_empty() and UiLabels.shown(style, ppm):   # (the far zoom hides the labels: ui.json labels.hide_below_px_per_m)
-			# Lettering on the sun side of the ghost, clear of the curve's own shadow side.
+			# Lettering on the sun side of the ghost, clear of the curve's own shadow side. The LAST line stands nearest the node
+			# and the block grows away from it (Track L: two lines, three with the special; the path and the node's own marks
+			# are on the node's side, so a longer block never reaches over them).
 			var off: Vector2 = -style.shadow_dir() * (art.extent_m * ppm * scale_k + 6.0 if art != null else 14.0)
 			var base := sp + off + Vector2(-4.0, 0.0)
+			var top := base - Vector2(0.0, line_h * float(lines.size() - 1))
 			if k == hl_k:
 				# The grabbed step's lettering on a paper plate, in full ink (hover effect "label").
 				var wmax := 0.0
 				for ln: String in lines:
 					wmax = maxf(wmax, UiInk.text_width(font, ln, small))
 				var pad: float = style.num("planner.hover.label.pad_px")
-				var plate := Rect2(base + Vector2(-pad, -small * 0.9 - pad * 0.5),
+				var plate := Rect2(top + Vector2(-pad, -small * 0.9 - pad * 0.5),
 					Vector2(wmax + pad * 2.0, line_h * float(lines.size()) + pad))
 				draw_rect(plate, style.color("hover_paper"), true)
 				UiInk.ink_line(self, UiInk.rect_pts(plate), true, style.color("hover_ink"), 0.9, 41, 0.3)
 				for li in lines.size():
-					UiInk.text(self, font, base + Vector2(0.0, line_h * float(li)), lines[li], small, style.color("hover_ink"))
+					UiInk.text(self, font, top + Vector2(0.0, line_h * float(li)), lines[li], small, style.color("hover_ink"))
 			else:
 				for li in lines.size():
 					# the paper under-stroke the hover uses, so the lettering reads over the grove; a carry-on node's is fainter
-					UiLabels.draw(self, style, font, base + Vector2(0.0, line_h * float(li)), lines[li], small, ink if planned else carry_ink)
+					UiLabels.draw(self, style, font, top + Vector2(0.0, line_h * float(li)), lines[li], small, ink if planned else carry_ink)
 
 # The art a ghost of unit `id` is drawn with, scaled by the caller to the ghost's
 # own screen scale. It is the art the unit's MARKER holds (no bake at all, and
@@ -1710,14 +1713,14 @@ func _draw_refused() -> void:
 		var xa := 5.0
 		draw_line(pa + Vector2(-xa, -xa), pa + Vector2(xa, xa), col, 1.6, true)
 		draw_line(pa + Vector2(-xa, xa), pa + Vector2(xa, -xa), col, 1.6, true)
-		UiInk.text(self, style.font(true), pa + Vector2(9.0, 4.0), "outside the cone", style.num("fonts.small_px"), col)
+		UiLabels.draw(self, style, UiLabels.font(style), pa + Vector2(9.0, 5.0), "outside the cone", UiLabels.px(style), style.color("label_ink"))
 	if not refused_world.is_finite() or Time.get_ticks_msec() - refused_ms > REFUSED_SHOW_MS:
 		return
 	var p: Vector2 = mapping.world_to_screen(refused_world)
 	var x := 5.0
 	draw_line(p + Vector2(-x, -x), p + Vector2(x, x), col, 1.6, true)
 	draw_line(p + Vector2(-x, x), p + Vector2(x, -x), col, 1.6, true)
-	UiInk.text(self, style.font(true), p + Vector2(9.0, 4.0), "off the map", style.num("fonts.small_px"), col)
+	UiLabels.draw(self, style, UiLabels.font(style), p + Vector2(9.0, 5.0), "off the map", UiLabels.px(style), style.color("label_ink"))
 
 # The clamp marks of a unit's plan, in screen px: [{step, asked, put}] -- the point the pointer was left at (`asked`, where the
 # little X was) and where the envelope put the step (`put`), for each clamped step more than 3 px apart. EMPTY while the data's

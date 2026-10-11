@@ -72,6 +72,7 @@ const World = preload("res://scripts/sim/world.gd")
 const UiMapping = preload("res://scripts/ui/ui_mapping.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
+const UiLabels = preload("res://scripts/ui/ui_labels.gd")
 const UiRoles = preload("res://scripts/ui/ui_roles.gd")
 const Combat = preload("res://scripts/sim/combat.gd")
 
@@ -611,7 +612,7 @@ static func _draw_label(ci: CanvasItem, c: Dictionary, all: Array, st: UiStyle, 
 		# turned off the weapon's axis so it does not land on a neighbour's.
 		dir = Vector2.from_angle(float(c["phi"]) + 0.45 * float((c["weapon"] as Object).half_across))
 	var px := st.num("planner.cones.label_px")
-	var font: Font = st.font(true)
+	var font: Font = st.text_font()   # (Track L: the label face, never the thin italic)
 	var text := "%s · %d m" % [str(w.name), int(round(float(w.range_m)))]    # the EFFECTIVE range
 	if float(c["half"]) <= 0.0:
 		text = "%s · overhead" % str(w.name)
@@ -644,8 +645,6 @@ static func _draw_label(ci: CanvasItem, c: Dictionary, all: Array, st: UiStyle, 
 			pos = trial
 			break
 	placed.append(Rect2(pos.x - 2.0, pos.y - px, width + 4.0, px + 4.0))
-	var halo: Color = UiRoles.resolve(st, st.lookup("planner.cones.label_halo_role"), "planner.cones.label_halo_role")
 	var ink: Color = UiRoles.resolve(st, st.lookup("planner.cones.label_role"), "planner.cones.label_role")
-	ci.draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(round(px)), int(st.num("planner.cones.label_halo_px")), halo)
-	ci.draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(round(px)), ink)
+	UiLabels.draw(ci, st, font, pos, text, px, ink)
 	return true

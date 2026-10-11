@@ -41,23 +41,36 @@ func _draw() -> void:
 	if style == null or _t < 0.0 or _t > show_s:
 		return
 	var a := clampf((show_s - _t) / FADE_S, 0.0, 1.0)
-	var ink: Color = style.color("ink_soft")
+	var ink: Color = style.color("ink")   # (Track L, readable lettering: the keys are full ink in the label face at 14 px, not the soft thin italic)
 	ink.a *= a
-	var font: Font = style.font(true)
+	var font: Font = style.text_font()
+	var serif: Font = style.font(false)
 	var px: float = style.num("fonts.detail_px")
-	var w := UiInk.text_width(font, text, px)
 	var m: float = style.num("card.margin_px")
 	var head_px: float = px + 2.0
-	var head_w := UiInk.text_width(style.font(false), headline, head_px) if headline != "" else 0.0
-	var h := px + 14.0 + (head_px + 8.0 if headline != "" else 0.0)
-	var r := Rect2(Vector2(m, size.y - m - h), Vector2(maxf(w, head_w) + 20.0, h))
+	# At the size the words are read at the briefing and the keys are longer than the map's free width: they wrap, and the card
+	# stays clear of the sidebar column on the right.
+	var max_w: float = maxf(size.x - 2.0 * m - (style.num("roster.width_px") + 2.0 * m) - 20.0, 320.0)
+	var keys := UiInk.wrap(font, text, px, max_w)
+	var heads := UiInk.wrap(serif, headline, head_px, max_w) if headline != "" else PackedStringArray()
+	var key_h := px + 5.0
+	var head_h := head_px + 6.0
+	var w := 0.0
+	for ln: String in keys:
+		w = maxf(w, UiInk.text_width(font, ln, px))
+	for ln: String in heads:
+		w = maxf(w, UiInk.text_width(serif, ln, head_px))
+	var h := 12.0 + key_h * float(keys.size()) + head_h * float(heads.size())
+	var r := Rect2(Vector2(m, size.y - m - style.num("lettering.stamp.clear_px") - h), Vector2(w + 20.0, h))
 	var fill: Color = style.color("card_fill")
 	fill.a *= a * 0.9
 	draw_rect(r, fill, true)
-	var y := r.position.y
-	if headline != "":
-		var head_ink: Color = style.color("ink")
-		head_ink.a *= a
-		UiInk.text(self, style.font(false), Vector2(r.position.x + 10.0, y + head_px + 4.0), headline, head_px, head_ink)
-		y += head_px + 8.0
-	UiInk.text(self, font, Vector2(r.position.x + 10.0, y + px + 3.0), text, px, ink)
+	var y := r.position.y + 4.0
+	var head_ink: Color = style.color("ink")
+	head_ink.a *= a
+	for ln: String in heads:
+		UiInk.text(self, serif, Vector2(r.position.x + 10.0, y + head_px), ln, head_px, head_ink)
+		y += head_h
+	for ln: String in keys:
+		UiInk.text(self, font, Vector2(r.position.x + 10.0, y + px), ln, px, ink)
+		y += key_h

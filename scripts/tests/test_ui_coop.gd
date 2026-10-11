@@ -293,18 +293,21 @@ func _check_speed_labels(w: World, ui: UnitUI) -> void:
 	var labels := pl.step_labels("p1")
 	eq(labels.size(), 5, "8. a label slot per step")
 	for k in 2:
-		# (Track U3, 2026-10-10: every node has a height too -- the band's metres, folded into the line; ui.json labels)
-		var want: String = "%d · %d m/s" % [k + 1, roundi(float(st[k]["speed"]))] + UiStyle.shared().text("labels.node_suffix") % roundi(w.band_height(str(st[k]["altitude_band"])))
-		eq((labels[k] as PackedStringArray)[0] if not (labels[k] as PackedStringArray).is_empty() else "", want, "8. step %d's label is its number and the speed it ends at" % (k + 1))
+		# (Track L, 2026-10-10: two lines, the speed the step ends at over its height -- the band's metres -- and NO step number;
+		# ui.json labels. Track U3: every node has a height too.)
+		var lines: PackedStringArray = labels[k]
+		eq(lines.size(), 2, "8. step %d's label is two lines" % (k + 1))
+		eq(lines[0], "%d m/s" % roundi(float(st[k]["speed"])), "8. step %d's first line is the speed it ends at, no number" % (k + 1))
+		eq(lines[1], UiStyle.shared().text("labels.node_height") % roundi(w.band_height(str(st[k]["altitude_band"]))), "8. and its second the height")
 	check(roundi(float(st[0]["speed"])) != roundi(float(st[1]["speed"])), "8. the two steps end at different speeds (%d, %d)" % [roundi(float(st[0]["speed"])), roundi(float(st[1]["speed"]))])
 	var carry: PackedStringArray = labels[2]
-	eq(carry.size(), 1, "8. a carry-on step has a label of its own now: its speed and its height")
-	eq(carry[0], UiStyle.shared().text("labels.node_carry") % [roundi(float(st[2]["speed"])), roundi(w.band_height(str(st[2]["altitude_band"])))], "8. in the data's format")
+	eq(carry.size(), 2, "8. a carry-on step has the same two lines (its speed and its height)")
+	eq(carry[0], "%d m/s" % roundi(float(st[2]["speed"])), "8. in the data's format")
+	eq(carry[1], UiStyle.shared().text("labels.node_height") % roundi(w.band_height(str(st[2]["altitude_band"]))), "8. and the height")
 	var up := pl.change_band(1)
 	check(not up.is_empty(), "8. step 2 climbs")
 	var l2: PackedStringArray = pl.step_labels("p1")[1]
-	eq(l2.size(), 2, "8. a climbing step has its speed line and a band line")
-	eq(l2[1], "climb to high", "8. the band line")
+	eq(l2.size(), 2, "8. a climbing step still has its two lines (the band line is off by default: labels.band_change_line)")
 	var spd: Variant = UiStyle.shared().lookup("planner.speed_labels")
 	eq(spd, true, "8. speed labels are on in the data")
 	pl.clear()

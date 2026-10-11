@@ -98,7 +98,7 @@ func _check_data() -> void:
 	for k: String in keys:
 		check(not (k.contains("arc") or k.contains("cone") or str(keys[k]) == "C"), "1. keys.%s is not a key for the arcs" % k)
 	# The lettering.
-	check(UiLabels.px(_st) >= 13.0 and UiLabels.px(_st) > _st.num("fonts.small_px"), "1. the labels are larger than the card's small print (%s px)" % str(UiLabels.px(_st)))
+	check(UiLabels.px(_st) >= 13.0 and UiLabels.px(_st) >= _st.num("fonts.small_px"), "1. the labels are at least as large as the card's small print (%s px; Track L: it is 14 now, not the 11 it was)" % str(UiLabels.px(_st)))
 	var f := _st.label_font() as SystemFont
 	if check(f != null, "1. the label face is a system font"):
 		eq(f.font_italic, false, "1. an upright face, not the thin italic")
@@ -295,9 +295,9 @@ func _check_lettering() -> void:
 	eq(ml.unit_label("p1"), "400 m · 100", "7. a unit's label is as it was")
 	_ui.planner.clear()
 	_w.plan_step("p1", 0, {"turn": 0.0, "speed": 100.0})
-	eq(((_ui.planner.step_labels("p1")[0]) as PackedStringArray)[0], "1 · 100 m/s · 400 m", "7. and a node's")
+	eq(_ui.planner.step_labels("p1")[0], PackedStringArray(["100 m/s", "400 m"]), "7. and a node's: two lines, the speed over the height, no step number (Track L)")
 	# A wider face for a wider label: the label's width follows the data's size.
-	var w_big := UiLabels.font(_st).get_string_size("1 · 100 m/s · 400 m", HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
-	var w_old := UiLabels.font(_st).get_string_size("1 · 100 m/s · 400 m", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+	var w_big := UiLabels.font(_st).get_string_size("100 m/s", HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
+	var w_old := UiLabels.font(_st).get_string_size("100 m/s", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
 	check(w_big > w_old, "7. at the data's size the lettering is wider than at the old 11 px (%.0f against %.0f px)" % [w_big, w_old])
 	_ui.planner.clear()

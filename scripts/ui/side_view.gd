@@ -254,9 +254,9 @@ func _draw() -> void:
 	if not bool(_model.get("active", false)):
 		return
 	var st := style
-	var soft: Color = st.color("ink_soft")
+	var soft: Color = st.color("ink")   # (Track L, readable lettering: the heading and the caption are full ink in the label face, 14 px)
 	var faint: Color = st.color("ink_faint")
-	var italic: Font = st.font(true)
+	var italic: Font = st.text_font()
 	var detail: float = st.num("fonts.detail_px")
 	var gap: float = st.num("side_view.section.gap_px")
 	var head: float = st.num("side_view.section.head_px")

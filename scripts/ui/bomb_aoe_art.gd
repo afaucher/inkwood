@@ -25,6 +25,7 @@ extends RefCounted
 # This file does not preload bomb_aim_art.gd (which calls it): a preload cycle hangs the run.
 
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
+const UiLabels = preload("res://scripts/ui/ui_labels.gd")
 const UiRoles = preload("res://scripts/ui/ui_roles.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 
@@ -104,9 +105,8 @@ static func _fill(ci: CanvasItem, poly: PackedVector2Array, col: Color) -> void:
 # Rings round the aim: the sim's blast table, the nearest tier solid and the others dashed, numbered with their pips.
 static func _rings(ci: CanvasItem, c: Vector2, tiers: Array, st: UiStyle) -> bool:
 	var w: float = st.num("bombs.aoe.line_px")
-	var label_px: int = int(st.num("bombs.aoe.rings.label_px"))
-	var font: Font = st.font(true)
-	var halo := _role(st, "bombs.aim.halo_role")
+	var label_px: float = st.num("bombs.aoe.rings.label_px")
+	var font: Font = st.text_font()   # (Track L: the label face at the label size, under the paper halo)
 	for i in tiers.size():
 		var r := float((tiers[i] as Array)[0])
 		var pips := int(round(float((tiers[i] as Array)[1])))
@@ -119,8 +119,7 @@ static func _rings(ci: CanvasItem, c: Vector2, tiers: Array, st: UiStyle) -> boo
 			UiInk.dashed(ci, pts, _ink(st, st.num("bombs.aoe.rings.dash_alpha")), w, st.num("bombs.aoe.dash_px"), st.num("bombs.aoe.dash_px"))
 		if label_px > 0 and r >= st.num("bombs.aoe.rings.min_label_ring_px"):
 			var pos := c + Vector2(r * 0.7071 + 2.0, -r * 0.7071 - 1.0)
-			ci.draw_string_outline(font, pos, str(pips), HORIZONTAL_ALIGNMENT_LEFT, -1, label_px, 3, halo)
-			ci.draw_string(font, pos, str(pips), HORIZONTAL_ALIGNMENT_LEFT, -1, label_px, _ink(st, 0.9))
+			UiLabels.draw(ci, st, font, pos, str(pips), label_px, _ink(st, 1.0))
 	return true
 
 # One wash: the scatter grown by the farthest tier.

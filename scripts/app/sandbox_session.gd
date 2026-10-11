@@ -26,6 +26,7 @@ extends Node
 
 const WorldSync = preload("res://scripts/net/world_sync.gd")
 const World = preload("res://scripts/sim/world.gd")
+const UiStyle = preload("res://scripts/ui/ui_style.gd")
 
 signal status_changed(text: String)
 
@@ -67,8 +68,7 @@ func attach_ui(unit_ui: Node) -> void:
 	_label = Label.new()
 	_label.name = "SessionStatus"
 	_label.position = Vector2(14.0, 8.0)
-	_label.add_theme_font_size_override("font_size", 13)
-	_label.add_theme_color_override("font_color", Color(0.18, 0.13, 0.08, 0.8))
+	UiStyle.shared().stamp(_label)   # (Track L, readable lettering: the label face, 14 px, full ink, a paper outline; it was 13 px at 0.8 alpha)
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_layer.add_child(_label)
 	if role == "host":

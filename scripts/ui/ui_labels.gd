@@ -1,5 +1,7 @@
 extends RefCounted
 
+const UiInk = preload("res://scripts/ui/ui_ink.gd")
+
 # HEIGHT AND SPEED LABELS (Track U3, 2026-10-10; Alex: height is hard to read from above, "make sure that every
 # unit and every node has a height and speed label"). One place for what a label SAYS, when it shows and how it is
 # inked, so the unit markers (unit_marker_layer.gd) and the plan's nodes (motion_planner.gd) cannot disagree.
@@ -9,8 +11,10 @@ extends RefCounted
 #   a unit (own or enemy, whenever it is in sight)   "400 m · 100"   height in metres, speed in m/s (unit left off);
 #                                                    a STATIC unit (the radio tower, a battery) "0 m": its height
 #                                                    above the ground, no speed
-#   a planned step's node (the existing line)        "2 · 76 m/s · 400 m"   the step, the speed it ends at, the height
-#   a carry-on step's node (it had none)             "76 m/s · 400 m"       fainter
+#   a step's node, planned or carry-on               "76 m/s" over "400 m"  the speed it ends at over the height, TWO LINES, no
+#                                                    step number (Track L, 2026-10-10, Alex: "2 lines. Remove the step # as
+#                                                    well"); a step with its special on adds the special's words ("Bomb Drop")
+#                                                    as a line of its own; a carry-on node is the same, in the fainter ink
 #   never anything about an ENEMY'S PLAN: its nodes are not drawn at all (MotionPlanner.plan_shown); an enemy's
 #   current height and speed are visible state, as its position is
 #
@@ -33,13 +37,12 @@ static func unit_text(st: RefCounted, height_m: float, speed_mps: float, static_
 		return st.text("labels.unit_static") % roundi(height_m)
 	return st.text("labels.unit") % [roundi(height_m), roundi(speed_mps)]
 
-# What a planned step's "n · speed m/s" line gains.
-static func node_suffix(st: RefCounted, height_m: float) -> String:
-	return st.text("labels.node_suffix") % roundi(height_m)
+# A step node's two lines (Track L): the speed it ends at, and the height. The same for a planned step and a carry-on one.
+static func node_speed_text(st: RefCounted, speed_mps: float) -> String:
+	return st.text("labels.node_speed") % [roundi(speed_mps), st.text("roster.speed_unit")]
 
-# A carry-on step's whole label.
-static func carry_text(st: RefCounted, speed_mps: float, height_m: float) -> String:
-	return st.text("labels.node_carry") % [roundi(speed_mps), roundi(height_m)]
+static func node_height_text(st: RefCounted, height_m: float) -> String:
+	return st.text("labels.node_height") % roundi(height_m)
 
 # The height to print for a pose ({height_m?, altitude_band, x, y}): the simulation's, or the ground's by data.
 # `ground_fn`: a Callable (pose) -> height above the ground, or an invalid one (then the simulation's).
@@ -63,8 +66,10 @@ static func line_h(st: RefCounted) -> float:
 	return st.num("labels.px") + st.num("labels.line_gap_px")
 
 # Lettering with the paper under-stroke the hover uses: `pos` is the baseline start; centred over `width` when given.
+# The map's own words go through here (the halo is what makes them readable over the grove); UiInk.note records them.
 static func draw(ci: CanvasItem, st: RefCounted, font: Font, pos: Vector2, s: String, px: float, ink: Color, width: float = -1.0,
-		align: int = HORIZONTAL_ALIGNMENT_LEFT) -> void:
+		align: int = HORIZONTAL_ALIGNMENT_LEFT, kind: String = "") -> void:
+	UiInk.note(ci, font, s, px, ink, true, kind, width)
 	var size := int(round(px))
 	ci.draw_string_outline(font, pos, s, align as HorizontalAlignment, width, size, int(st.num("labels.halo_px")), st.color("label_halo"))
 	ci.draw_string(font, pos, s, align as HorizontalAlignment, width, size, ink)

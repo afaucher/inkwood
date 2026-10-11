@@ -197,6 +197,31 @@ func label_font() -> Font:
 	_fonts[key] = f
 	return f
 
+# The face of every word that is not a title, a name or a button (Track L, 2026-10-10; Alex: "Readable or leave it off"): the
+# label face. The thin italic of font(true) is no longer used for any text; this is what the secondary lines of the cards, the
+# marks' words, the clock's warning and the rest take in its place.
+func text_font() -> Font:
+	return label_font()
+
+# The size of the body lettering, and the least any word may be (ui.json lettering.min_px); the floor a too-long line shrinks to.
+func text_px() -> float:
+	return num("labels.px")
+
+func min_px() -> float:
+	return num("lettering.min_px")
+
+func fit_floor_px() -> float:
+	return num("lettering.fit_floor_px")
+
+# The readable look of a Godot Label the UI layer does not draw (the corner stamps: build_version.gd, sandbox_session.gd): the label
+# face, lettering.stamp.px, full ink, and a paper outline, so it reads on the map and on the menu alike (Track L).
+func stamp(label: Label) -> void:
+	label.add_theme_font_override("font", text_font())
+	label.add_theme_font_size_override("font_size", int(num("lettering.stamp.px")))
+	label.add_theme_color_override("font_color", color("ink"))
+	label.add_theme_color_override("font_outline_color", color("label_halo"))
+	label.add_theme_constant_override("outline_size", int(num("lettering.stamp.outline_px")))
+
 # --- Loading -------------------------------------------------------------------
 
 func _load_render(d: Dictionary) -> void:

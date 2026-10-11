@@ -69,14 +69,14 @@ func _draw() -> void:
 	if style == null or sandbox == null:
 		return
 	var ink: Color = style.color("ink")
-	var soft: Color = style.color("ink_soft")
+	var soft: Color = ink   # (Track L, readable lettering: the panel's words are full ink in the label face; the knobs left on "data" are not paler)
 	var faint: Color = style.color("ink_faint")
 	var r := Rect2(Vector2.ZERO, size)
 	UiInk.card_shadow(self, r, style.shadow_dir() * style.num("card.lift_px"), style.color("card_shadow"))
 	UiInk.card(self, r, style.color("card_fill"), ink, style.num("card.outer_line_px"), style.num("card.inner_line_px"),
 		style.num("card.inner_inset_px"), style.num("card.wobble_px"), 41)
 	var serif: Font = style.font(false)
-	var italic: Font = style.font(true)
+	var italic: Font = style.text_font()
 	var pad: float = style.num("card.pad_px")
 	UiInk.text(self, serif, Vector2(pad, 26.0), "K N O B S", style.num("fonts.title_px"), ink)
 	UiInk.text(self, italic, Vector2(0.0, 26.0), "F2 closes", style.num("fonts.detail_px"), soft, HORIZONTAL_ALIGNMENT_RIGHT, size.x - pad)
@@ -88,7 +88,7 @@ func _draw() -> void:
 		UiInk.text(self, serif, Vector2(rr.position.x + 6.0, base), sandbox.knob_label(k), style.num("fonts.button_px") + 1.0, ink)
 		var is_data: bool = DebugSettings.get_choice(k) == 0
 		UiInk.text(self, italic, Vector2(rr.position.x, base), sandbox.knob_text(k), style.num("fonts.detail_px") + 1.0,
-			soft if is_data else ink, HORIZONTAL_ALIGNMENT_RIGHT, rr.size.x - 6.0)
+			style.color("text_quiet") if is_data else ink, HORIZONTAL_ALIGNMENT_RIGHT, rr.size.x - 6.0)
 		if i < keys.size() - 1:
 			draw_line(Vector2(rr.position.x + 6.0, rr.end.y), Vector2(rr.end.x - 6.0, rr.end.y), faint, 0.5, true)
 	var fy := HEADER_H + ROW_H * float(keys.size()) + 18.0

@@ -372,7 +372,8 @@ func _check_target_placement() -> void:
 	var ppm: float = m["ppm"]
 	var o: Vector2 = m["origin"]
 	var px: Vector2 = t["px"]
-	near((px - o).x, 470.0 * ppm, 1e-6, "4. at 470 m on the one scale")
+	# (Vector2 is float32: at 200 px one ulp is 1.5e-5, so 1e-6 held only by luck of the card's width; Track L widened the card to 320 px)
+	near((px - o).x, 470.0 * ppm, 1e-3, "4. at 470 m on the one scale")
 	near((px - o).y, 0.0, 1e-6, "4. at the unit's own height")
 	var cone: Dictionary = m["cones"][0]
 	check(px.x - o.x > float(cone["range_px"]) and px.x - o.x < float(cone["reach_px"]), "4. inside the fade past the effective range, short of where the odds end")

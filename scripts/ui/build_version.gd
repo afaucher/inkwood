@@ -17,6 +17,8 @@ extends RefCounted
 # ones that are awkward to stand up for real, and a corner label is not worth a
 # fixture directory.
 
+const UiStyle = preload("res://scripts/ui/ui_style.gd")
+
 const UNKNOWN := "unversioned"
 
 # `in_editor` is OS.has_feature("editor") -- true from the editor or a
@@ -70,8 +72,9 @@ static func make_label() -> Label:
 	label.offset_left = 10.0
 	label.offset_top = -26.0
 	label.offset_bottom = -6.0
-	label.add_theme_font_size_override("font_size", 12)
-	label.add_theme_color_override("font_color", Color(0.62, 0.64, 0.70, 0.75))
+	# Readable (Track L, "Readable or leave it off"): the label face at lettering.stamp.px, full ink, a paper outline -- it was 12 px in
+	# a pale grey at 0.75 alpha, on a dark menu and on the paper map alike.
+	UiStyle.shared().stamp(label)
 	# It must never eat a click meant for the menu button above it.
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label

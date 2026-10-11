@@ -101,7 +101,7 @@ func _check_data(st: UiStyle) -> void:
 			"bombs.aim.rings.gap_px", "bombs.aim.rings.line_px", "bombs.aim.rings.alpha", "bombs.aim.rings.fill_alpha",
 			"orders.drop_line_px", "roster.bombs.mark_w_px", "roster.bombs.mark_h_px", "roster.bombs.mark_gap_px", "roster.bombs.per_drop_gap_px",
 			# Track B (the drop pinned to its step, step selection): every number the new picture and the selected node read
-			"orders.drop_w_px", "orders.text.min_px", "planner.select.slop_px", "planner.select.node_px", "planner.select.paper_px",
+			"orders.drop_w_px", "lettering.fit_floor_px", "planner.select.slop_px", "planner.select.node_px", "planner.select.paper_px",
 			"planner.select.ring_gap_px", "planner.select.ring_px", "planner.select.number_px", "planner.select.drop_mark.size_px",
 			"planner.select.drop_mark.offset_px", "planner.select.drop_mark.line_px", "planner.select.drop_mark.halo_px",
 			"bombs.pin.line_px", "bombs.pin.halo_px", "bombs.pin.dash_px", "bombs.pin.gap_px", "bombs.pin.start_gap_px", "bombs.pin.arrow_px",

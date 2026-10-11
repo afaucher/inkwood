@@ -45,18 +45,17 @@ func _draw() -> void:
 	if style == null:
 		return
 	var ink: Color = style.color("ink")
-	var soft: Color = style.color("ink_soft")
 	var faint: Color = style.color("ink_faint")
 	if blocking:
 		draw_rect(Rect2(Vector2.ZERO, size), style.color("map_paper"), true)
-	var w := 340.0 if blocking else 300.0
+	var w := 380.0 if blocking else 300.0
 	var h := 126.0 if blocking else 64.0
 	var r := Rect2(Vector2((size.x - w) * 0.5, (size.y - h) * 0.5 if blocking else 18.0), Vector2(w, h))
 	UiInk.card_shadow(self, r, style.shadow_dir() * style.num("card.lift_px"), style.color("card_shadow"))
 	UiInk.card(self, r, style.color("card_fill"), ink, style.num("card.outer_line_px"), style.num("card.inner_line_px"),
 		style.num("card.inner_inset_px"), style.num("card.wobble_px"), 31)
 	var serif: Font = style.font(false)
-	var italic: Font = style.font(true)
+	var italic: Font = style.text_font()   # (Track L, readable lettering: the label face at 14 px in full ink, not the thin italic)
 	var pad: float = style.num("card.pad_px")
 	var ty := r.position.y + (40.0 if blocking else 28.0)
 	UiInk.text(self, serif, Vector2(r.position.x, ty), title, style.num("fonts.title_px") + (4.0 if blocking else 0.0), ink,
@@ -77,7 +76,8 @@ func _draw() -> void:
 	var detail := "%d of %d pieces" % [done, total] if total > 0 else "starting"
 	if blocking:
 		detail += "  ·  %.0f s" % seconds
-		UiInk.text(self, italic, Vector2(r.position.x, y + 26.0), detail, style.num("fonts.detail_px"), soft,
+		UiInk.text(self, italic, Vector2(r.position.x, y + 26.0), detail, style.num("fonts.detail_px"), ink,
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
-		UiInk.text(self, italic, Vector2(r.position.x, y + 44.0), "the same map every time: seed %s" % str(seed_text),
-			style.num("fonts.small_px"), faint, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+		if style.flag("lettering.show.loading_seed"):   # (PROPOSED removal, Track L: off by default)
+			UiInk.text(self, italic, Vector2(r.position.x, y + 44.0), "the same map every time: seed %s" % str(seed_text),
+				style.num("fonts.small_px"), ink, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)

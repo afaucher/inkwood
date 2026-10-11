@@ -265,6 +265,7 @@ func _draw_strip(ink: Color) -> void:
 	var paper: Color = st.color("button_fill")
 	var paper_text: Color = st.color("button_on_text")
 	var off: Color = st.color("button_off_text")
+	var quiet: Color = st.color("text_quiet")
 	# The path's own language between the marks: solid up to a planned step, dashed to the ones that carry on.
 	for i in marks.size() - 1:
 		var a: Vector2 = (marks[i] as Dictionary)["center"]
@@ -302,7 +303,8 @@ func _draw_strip(ink: Color) -> void:
 			draw_arc(c, r + st.num("orders.strip.hover_gap_px"), 0.0, TAU, 40, ink, 0.9, true)
 		var txt := str(int(m["index"]) + 1)
 		var w := UiInk.text_width(font, txt, px)
-		UiInk.text(self, font, c + Vector2(-w * 0.5, float(px) * 0.36), txt, px, paper_text if selected else (ink if state != "later" else off))
+		UiInk.text(self, font, c + Vector2(-w * 0.5, float(px) * 0.36), txt, px, paper_text if selected else (ink if state != "later" else quiet),
+			HORIZONTAL_ALIGNMENT_LEFT, -1.0, "mark_number")
 		if bool(m["special"]):
 			UiInk.bomb_glyph(self, c + Vector2(r + 1.5, r - 2.5), st.num("orders.strip.bomb_px"), ink, paper, 1.1, 1.4)
 
@@ -313,14 +315,13 @@ func _draw() -> void:
 		return
 	var st := style
 	var ink: Color = st.color("ink")
-	var soft: Color = st.color("ink_soft")
 	var faint: Color = st.color("ink_faint")
 	var r := Rect2(Vector2.ZERO, size)
 	UiInk.card_shadow(self, r, st.shadow_dir() * st.num("card.lift_px"), st.color("card_shadow"))
 	UiInk.card(self, r, st.color("card_fill"), ink, st.num("card.outer_line_px"), st.num("card.inner_line_px"),
 		st.num("card.inner_inset_px"), st.num("card.wobble_px"), 13)
 	var serif: Font = st.font(false)
-	var italic: Font = st.font(true)
+	var italic: Font = st.text_font()   # (Track L: the card's small lines are in the label face, upright and semibold, full ink: no thin italic)
 	var pad: float = st.num("card.pad_px")
 	var detail: float = st.num("fonts.detail_px")
 	UiInk.text(self, serif, Vector2(pad, 26.0), "O R D E R S", st.num("fonts.title_px"), ink)
@@ -329,7 +330,7 @@ func _draw() -> void:
 	var line2 := "pick one on the map or in the roster"
 	if id != "" and world.units.has(id):
 		var u = world.units[id]
-		UiInk.text(self, italic, Vector2(0.0, 26.0), "%s · %s" % [Roster.unit_name(u), u.def.name], detail, soft,
+		UiInk.text(self, italic, Vector2(0.0, 26.0), "%s · %s" % [Roster.unit_name(u), u.def.name], detail, ink,
 			HORIZONTAL_ALIGNMENT_RIGHT, size.x - pad)
 		var n := int(u.def.actions_per_turn)
 		var placed: int = planner.planned_count(id)
@@ -360,10 +361,10 @@ func _draw() -> void:
 	_draw_strip(ink)
 	if planner != null and planner.ready_notice != "" and world.phase == World.PHASE_PLANNING:
 		# Ready was refused (a turn that would leave the map): said in full ink, in place of the hint.
-		UiInk.text(self, italic, Vector2(pad, 74.0), planner.ready_notice, detail, ink, HORIZONTAL_ALIGNMENT_LEFT, size.x - 2.0 * pad)
+		_fit_text(italic, Vector2(pad, 74.0), planner.ready_notice, detail, ink)
 	else:
-		UiInk.text(self, italic, Vector2(pad, 74.0), line2, detail, soft)
-	UiInk.text(self, italic, Vector2(pad, 97.0), _altitude_caption(), detail, soft)
+		_fit_text(italic, Vector2(pad, 74.0), line2, detail, ink)
+	_fit_text(italic, Vector2(pad, 97.0), _altitude_caption(), detail, ink)
 	var b := buttons()
 	for name: String in b:
 		_draw_button(b[name], name == "ready", serif, name == _hover_button)
@@ -377,7 +378,7 @@ func _draw() -> void:
 		line_y += detail + 4.0
 	var cap := bomb_caption()
 	if cap != "":
-		_fit_text(italic, Vector2(pad, line_y), cap, detail, ink if _drop_is_on() or _drop_reason_is_plain() else soft)
+		_fit_text(italic, Vector2(pad, line_y), cap, detail, ink)
 	# Ready marks: one per participant.
 	var y: float = (b["ready"]["rect"] as Rect2).end.y + 20.0
 	var x := pad
@@ -389,7 +390,7 @@ func _draw() -> void:
 		if ready:
 			draw_polyline(PackedVector2Array([c + Vector2(-3.0, 0.0), c + Vector2(-0.8, 2.6), c + Vector2(3.6, -3.2)]), ink, 1.6, true)
 		var txt := "%s %s" % [label, "ready" if ready else "planning"]
-		UiInk.text(self, italic, Vector2(x + 14.0, y), txt, detail, ink if ready else soft)
+		UiInk.text(self, italic, Vector2(x + 14.0, y), txt, detail, ink if ready else st.color("text_quiet"))
 		x += 14.0 + UiInk.text_width(italic, txt, detail) + 16.0
 
 # One record per participant, as the ready marks print them: {who, label, ready}. The label is
@@ -420,23 +421,21 @@ func _selected_line(id: String, placed: int, n: int) -> String:
 		return "step %d of %d next" % [placed + 1, n] if placed < n else "%d of %d steps planned" % [placed, n]
 	return style.text("orders.text.selected") % [k + 1, n]
 
-# Draws a line of the card's lettering, shrunk (never below orders.text.min_px) until it fits the card's width.
+# Draws a line of the card's lettering, shrunk (never below lettering.fit_floor_px) until it fits the card's width. A line that had
+# to shrink under the size the lettering rule asks for says so in the lettering log (kind "fit"), so a test can list them.
 func _fit_text(font: Font, pos: Vector2, s: String, size_px: float, color: Color) -> void:
 	var max_w := size.x - 2.0 * style.num("card.pad_px")
-	var px := size_px
-	var floor_px: float = style.num("orders.text.min_px")
-	while px > floor_px and UiInk.text_width(font, s, px) > max_w:
-		px -= 0.5
-	UiInk.text(self, font, pos, s, px, color, HORIZONTAL_ALIGNMENT_LEFT, max_w)
+	var px := UiInk.fit_px(font, s, size_px, max_w, style.fit_floor_px())
+	UiInk.text(self, font, pos, s, px, color, HORIZONTAL_ALIGNMENT_LEFT, max_w, "fit" if px < style.min_px() else "")
 
 # The width the text needs at the size it is drawn (after shrinking), for a test: the line fits when this is <= the card's room.
 func fitted_width(font: Font, s: String, size_px: float) -> float:
 	var max_w := size.x - 2.0 * style.num("card.pad_px")
-	var px := size_px
-	var floor_px: float = style.num("orders.text.min_px")
-	while px > floor_px and UiInk.text_width(font, s, px) > max_w:
-		px -= 0.5
-	return UiInk.text_width(font, s, px)
+	return UiInk.text_width(font, s, UiInk.fit_px(font, s, size_px, max_w, style.fit_floor_px()))
+
+# The size a line of the card is drawn at (after shrinking): `size_px` when it fits, else the largest that does, never under the floor.
+func fitted_px(font: Font, s: String, size_px: float) -> float:
+	return UiInk.fit_px(font, s, size_px, size.x - 2.0 * style.num("card.pad_px"), style.fit_floor_px())
 
 # THE TARGET LINE (Track B; the lead: "always visible on the card while the selected unit carries a special"): "target: radio
 # tower" -- with the special on at the selected step, that step's own target and the drop's accuracy -- or "no target: click an
@@ -513,7 +512,7 @@ func _draw_button(b: Dictionary, big: bool, font: Font, hovered: bool = false) -
 	var on := bool(b["on"])
 	var ink: Color = st.color("ink")
 	var fill: Color = st.color("button_on_fill") if on else st.color("button_fill")
-	var txt: Color = st.color("button_on_text") if on else (ink if enabled else st.color("button_off_text"))
+	var txt: Color = st.color("button_on_text") if on else (ink if enabled else st.color("text_quiet"))
 	draw_rect(r, fill, true)
 	var edge := ink if enabled else st.color("button_off_text")
 	UiInk.ink_line(self, UiInk.rect_pts(r), true, edge, 1.5 if big else 1.0, int(r.position.x + r.position.y), 0.35)

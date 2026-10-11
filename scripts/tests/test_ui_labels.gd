@@ -6,8 +6,9 @@ extends "res://scripts/test_support/test_case.gd"
 #   1. the data: every key the labels read exists
 #   2. EVERY UNIT has a label, own or enemy: "400 m . 100" (height in metres, speed in m/s) in the data's format;
 #      a static unit (the tower, a battery) "0 m" and no speed; it follows the unit through a playback (a climb)
-#   3. EVERY NODE has one: a planned step's line gains the height ("2 . 76 m/s . 400 m"), a carry-on step has its
-#      own ("76 m/s . 400 m"); the band's metres, the simulation's
+#   3. EVERY NODE has one: TWO LINES, the speed over the height ("76 m/s" over "400 m"), no step number (Track L, 2026-10-10,
+#      Alex: "2 lines. Remove the step # as well"), the same for a planned step and a carry-on one; the band's metres, the
+#      simulation's
 #   4. NEVER AN ENEMY'S PLAN: no node lettering for an AI unit, whatever it has planned; its current state is labelled
 #   5. WHAT HEIGHT MEANS is data: "ground" subtracts the terrain under the unit (both for units and for nodes)
 #   6. THE FAR ZOOM hides them (labels.hide_below_px_per_m), and the data's switch does
@@ -54,9 +55,11 @@ func setup(_main) -> void:
 func _check_data() -> void:
 	for n: String in ["labels.hide_below_px_per_m", "labels.below_px", "labels.halo_px", "labels.px", "labels.line_gap_px", "labels.font.weight"]:
 		check(_st.lookup(n) is float or _st.lookup(n) is int, "ui.json has a number at '%s'" % n)
-	for n: String in ["labels.unit", "labels.unit_static", "labels.node_suffix", "labels.node_carry", "labels.height_ref"]:
+	for n: String in ["labels.unit", "labels.unit_static", "labels.node_speed", "labels.node_height", "labels.height_ref"]:
 		check(_st.lookup(n) is String, "ui.json has a string at '%s'" % n)
 	check(_st.flag("labels.enabled"), "the labels are on in the data")
+	check(_st.lookup("labels.band_change_line") is bool, "the band line has its switch (proposed off)")
+	check(_st.lookup("labels.node_suffix") == null and _st.lookup("labels.node_carry") == null, "the one-line formats are gone from the data")
 	check(["sim", "ground"].has(_st.text("labels.height_ref")), "the height reference is one the code knows")
 	check(_st.has_role("label_ink") and _st.has_role("label_carry") and _st.has_role("label_halo"), "the label roles exist")
 	check(_st.lookup("labels.font.serif") is Array and not (_st.lookup("labels.font.serif") as Array).is_empty(), "the label face names its families (readable lettering, Track C)")
@@ -103,21 +106,26 @@ func _check_nodes() -> void:
 	var labels: Array = pl.step_labels("p1")
 	eq(labels.size(), 5, "3. a label slot for every step")
 	for k in 5:
-		check(not (labels[k] as PackedStringArray).is_empty(), "3. step %d has lettering" % (k + 1))
-	for k in 2:
-		var want := "%d · %d m/s" % [k + 1, roundi(float(st[k]["speed"]))] + _st.text("labels.node_suffix") % 400
-		eq((labels[k] as PackedStringArray)[0], want, "3. a planned step says its number, its speed and its height")
-	for k in range(2, 5):
-		var want2 := _st.text("labels.node_carry") % [roundi(float(st[k]["speed"])), 400]
-		eq((labels[k] as PackedStringArray)[0], want2, "3. a carry-on step says its speed and height")
-	# A climb changes the node's height, and the band line stays.
+		var lines: PackedStringArray = labels[k]
+		eq(lines.size(), 2, "3. step %d has two lines of lettering (speed over height)" % (k + 1))
+		eq(lines[0], "%d m/s" % roundi(float(st[k]["speed"])), "3. the first is the speed the step ends at (step %d), in the data's format" % (k + 1))
+		eq(lines[1], _st.text("labels.node_height") % 400, "3. the second is the height, the band's metres (step %d)" % (k + 1))
+		for ln: String in lines:
+			check(not ln.contains("·") and not ln.begins_with(str(k + 1) + " "), "3. no step number, no separator in '%s'" % ln)
+	check(roundi(float(st[0]["speed"])) != roundi(float(st[1]["speed"])), "3. (the two planned steps end at different speeds)")
+	# A climb changes the node's height; the band line is off by default (proposed removal) and comes back with its switch.
 	var up: Dictionary = pl.change_band(1)
 	check(not up.is_empty(), "3. step 2 climbs")
 	var l2: PackedStringArray = pl.step_labels("p1")[1]
-	check((l2[0] as String).ends_with(_st.text("labels.node_suffix") % 1000), "3. the climbing node is 1000 m (%s)" % l2[0])
-	eq(l2[1], "climb to high", "3. the band line is as it was")
+	eq(l2.size(), 2, "3. the climbing step still has two lines (the band line is off by default)")
+	eq(l2[1], _st.text("labels.node_height") % 1000, "3. the climbing node is 1000 m (%s)" % l2[1])
+	_st.ui["labels"]["band_change_line"] = true
+	var l2b: PackedStringArray = pl.step_labels("p1")[1]
+	eq(l2b.size(), 3, "3. with the switch on, the band line is a third line")
+	eq(l2b[2], "climb to high", "3. 'climb to high', as it was")
+	_st.ui["labels"]["band_change_line"] = false
 	var l3: PackedStringArray = pl.step_labels("p1")[2]
-	check((l3[0] as String).ends_with(" m") and (l3[0] as String).contains("1000"), "3. and the carry-on nodes after it are at 1000 m (%s)" % l3[0])
+	eq(l3[1], _st.text("labels.node_height") % 1000, "3. and the carry-on nodes after it are at 1000 m (%s)" % l3[1])
 	pl.clear()
 
 # --- 4 -------------------------------------------------------------------------
@@ -144,9 +152,9 @@ func _check_ground_ref() -> void:
 	_ui.select("p1")
 	_w.plan_step("p1", 0, {"turn": 0.0, "speed": 100.0})
 	var l: PackedStringArray = _ui.planner.step_labels("p1")[0]
-	check((l[0] as String).ends_with(_st.text("labels.node_suffix") % 300), "5. and so is a node's (%s)" % l[0])
+	eq(l[1], _st.text("labels.node_height") % 300, "5. and so is a node's (%s)" % l[1])
 	_st.ui["labels"]["height_ref"] = "sim"
-	check((_ui.planner.step_labels("p1")[0][0] as String).ends_with(_st.text("labels.node_suffix") % 400), "5. 'sim' (the default): the band's metres, the simulation's")
+	eq(_ui.planner.step_labels("p1")[0][1], _st.text("labels.node_height") % 400, "5. 'sim' (the default): the band's metres, the simulation's")
 	ml.ground_height = Callable()
 	_ui.planner.clear()
 
@@ -174,7 +182,7 @@ func _check_far_zoom() -> void:
 	check(not ml.label_shown("p1"), "6. the data's switch turns them off")
 	_ui.select("p1")
 	_w.plan_step("p1", 0, {"turn": 0.0, "speed": 100.0})
-	eq((_ui.planner.step_labels("p1")[0] as PackedStringArray)[0], "1 · 100 m/s", "6. and the node line is as it was before the labels")
+	eq(_ui.planner.step_labels("p1")[0], PackedStringArray(["100 m/s"]), "6. and the node says only its speed (no height line)")
 	_st.ui["labels"]["enabled"] = true
 	_ui.planner.clear()
 

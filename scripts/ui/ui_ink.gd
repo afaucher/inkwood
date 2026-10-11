@@ -120,11 +120,47 @@ static func brackets(ci: CanvasItem, r: Rect2, k: float, ink: Color, width: floa
 		var y: float = c[1]
 		ci.draw_polyline(PackedVector2Array([Vector2(x + c[2] * k, y), Vector2(x, y), Vector2(x, y + c[3] * k)]), ink, width, true)
 
+# THE LETTERING LOG (Track L, 2026-10-10; Alex: "Readable or leave it off"). Every word the interface layer puts on the screen goes
+# through text() here or UiLabels.draw() (which calls note()), so a test that turns `logging` on and lets the interface draw can say
+# exactly what was drawn: the face, the size, the ink, and where (on a card, or on the map under the paper halo). `kind` names the
+# few words that are allowed to be smaller than the rule (data ui.json lettering.exceptions: "mark_number"), and "fit" a line that
+# was shrunk to the card's width. test_lettering reads it; nothing else does, and with `logging` off it costs one bool test.
+static var logging := false
+static var drawn: Array = []
+
+static func note(ci: CanvasItem, font: Font, s: String, size: float, color: Color, on_paper: bool = false, kind: String = "",
+		width: float = -1.0) -> void:
+	if logging:
+		drawn.append({"node": ci, "font": font, "text": s, "px": size, "color": color, "on_paper": on_paper, "kind": kind, "width": width})
+
 # Text in ink: `align` HORIZONTAL_ALIGNMENT_*, `pos` is the baseline start (or
-# the box's left edge for centre/right alignment over `width`).
+# the box's left edge for centre/right alignment over `width`). `kind`: see note().
 static func text(ci: CanvasItem, font: Font, pos: Vector2, s: String, size: float, color: Color,
-		align: int = HORIZONTAL_ALIGNMENT_LEFT, width: float = -1.0) -> void:
+		align: int = HORIZONTAL_ALIGNMENT_LEFT, width: float = -1.0, kind: String = "") -> void:
+	note(ci, font, s, size, color, false, kind, width)
 	ci.draw_string(font, pos, s, align as HorizontalAlignment, width, int(round(size)), color)
+
+# The size `s` is drawn at in a box `max_w` px wide: `size`, or the largest (in 0.5 px steps) that fits, never under `floor_px`.
+static func fit_px(font: Font, s: String, size: float, max_w: float, floor_px: float) -> float:
+	var px := size
+	while px > floor_px and text_width(font, s, px) > max_w:
+		px -= 0.5
+	return px
+
+# `s` broken at its spaces into lines no wider than `max_w` at `size` (a word wider than the box stays whole on a line of its own).
+static func wrap(font: Font, s: String, size: float, max_w: float) -> PackedStringArray:
+	var out := PackedStringArray()
+	var line := ""
+	for word: String in s.split(" ", false):
+		var trial := word if line == "" else line + " " + word
+		if line != "" and text_width(font, trial, size) > max_w:
+			out.append(line)
+			line = word
+		else:
+			line = trial
+	if line != "":
+		out.append(line)
+	return out
 
 static func text_width(font: Font, s: String, size: float) -> float:
 	return font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, int(round(size))).x

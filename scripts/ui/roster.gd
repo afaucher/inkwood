@@ -569,19 +569,19 @@ func _draw() -> void:
 		return
 	var st := style
 	var ink: Color = st.color("ink")
-	var soft: Color = st.color("ink_soft")
+	var soft: Color = ink   # (Track L, readable lettering: the words of the card are all in full ink; `soft` is kept as the name of the quieter slot)
 	var faint: Color = st.color("ink_faint")
 	var r := Rect2(Vector2.ZERO, size)
 	UiInk.card_shadow(self, r, st.shadow_dir() * st.num("card.lift_px"), st.color("card_shadow"))
 	UiInk.card(self, r, st.color("card_fill"), ink, st.num("card.outer_line_px"), st.num("card.inner_line_px"),
 		st.num("card.inner_inset_px"), st.num("card.wobble_px"), 7)
 	var serif: Font = st.font(false)
-	var italic: Font = st.font(true)
+	var italic: Font = st.text_font()   # (Track L: the label face, upright and semibold: the thin italic is gone from every card)
 	var pad: float = st.num("card.pad_px")
 	var title_px: float = st.num("fonts.title_px")
 	# Header: the roster's title, the turn and who still needs orders.
 	UiInk.text(self, serif, Vector2(pad, 26.0), "R O S T E R", title_px, ink)
-	UiInk.text(self, italic, Vector2(0.0, 26.0), header_status(), st.num("fonts.detail_px"), soft,
+	UiInk.text(self, italic, Vector2(0.0, 26.0), header_status(), st.num("fonts.detail_px"), ink,
 		HORIZONTAL_ALIGNMENT_RIGHT, size.x - pad)
 	UiInk.ink_line(self, PackedVector2Array([Vector2(pad, 34.0), Vector2(size.x - pad, 34.0)]), false, faint, 0.8, 3, 0.4)
 	_draw_group_bar(ink, soft, serif, italic)
@@ -675,9 +675,10 @@ func _draw_row(i: int, row: Dictionary, ink_c: Color, soft_c: Color, faint: Colo
 	var rr := row_rect(i)
 	var sel := bool(row["selected"])
 	var down := bool(row["down"])
-	# A down unit's row: every ink in it is the grey one.
+	# A down unit's row: every mark in it is the grey one; its WORDS are the quiet ink (readable: Track L), struck through.
 	var ink := st.color("row_down") if down else ink_c
 	var soft := st.color("row_down") if down else soft_c
+	var txt := st.color("text_quiet") if down else ink_c
 	if sel:
 		draw_rect(rr.grow(-2.0), st.color("row_selected"), true)
 		UiInk.brackets(self, rr.grow(-2.0), st.num("roster.bracket_px"), ink_c, 1.1)
@@ -698,10 +699,10 @@ func _draw_row(i: int, row: Dictionary, ink_c: Color, soft_c: Color, faint: Colo
 		st.color("row_down") if down else st.color("health_pip"), st.color("row_down") if down else st.color("health_pip_empty"))
 	var name_w := pips_left - st.num("roster.name_clip_gap_px") - tx
 	var name_txt := str(row["name"])
-	UiInk.text(self, serif, Vector2(tx, y1), name_txt, st.num("fonts.name_px"), ink, HORIZONTAL_ALIGNMENT_LEFT, name_w)
+	UiInk.text(self, serif, Vector2(tx, y1), name_txt, st.num("fonts.name_px"), txt, HORIZONTAL_ALIGNMENT_LEFT, name_w)
 	if down:
 		var nw := minf(UiInk.text_width(serif, name_txt, st.num("fonts.name_px")), name_w)
-		draw_line(Vector2(tx, y1 - 5.0), Vector2(tx + nw, y1 - 5.0), ink, 1.0, true)
+		draw_line(Vector2(tx, y1 - 5.0), Vector2(tx + nw, y1 - 5.0), txt, 1.0, true)
 	# Line 2: type, speed, band (a down unit: the type only).
 	var detail := "%s · %d %s · %s" % [row["type"], roundi(float(row["speed"])), st.text("roster.speed_unit"), row["band"]]
 	if down:
@@ -709,12 +710,12 @@ func _draw_row(i: int, row: Dictionary, ink_c: Color, soft_c: Color, faint: Colo
 	var detail_right := right
 	var bomb_row: Dictionary = row.get("bombs", {})
 	if not bomb_row.is_empty() and not down:
-		detail_right = _draw_bombs(Vector2(right, y2), bomb_row, ink, soft, italic) - 8.0
-	UiInk.text(self, italic, Vector2(tx, y2), detail, st.num("fonts.detail_px"), soft, HORIZONTAL_ALIGNMENT_LEFT, detail_right - tx)
+		detail_right = _draw_bombs(Vector2(right, y2), bomb_row, ink, txt, italic) - 8.0
+	UiInk.text(self, italic, Vector2(tx, y2), detail, st.num("fonts.detail_px"), txt, HORIZONTAL_ALIGNMENT_LEFT, detail_right - tx)
 	# Line 3: the plan status; a down unit has the word instead and no step pips.
 	var detail_px: float = st.num("fonts.detail_px")
 	if down or str(row["status"]) == "flying":
-		UiInk.text(self, italic, Vector2(tx, y3), status_text(row), detail_px, ink if down else soft)
+		UiInk.text(self, italic, Vector2(tx, y3), status_text(row), detail_px, txt)
 	else:
 		var has_plan := bool(row["has_plan"])
 		var gl: float = st.num("roster.plan_glyph_px")
@@ -739,7 +740,7 @@ func _draw_row(i: int, row: Dictionary, ink_c: Color, soft_c: Color, faint: Colo
 				draw_circle(c, pr, ink, true, -1.0, true)
 			else:
 				draw_circle(c, pr, st.color("pip_empty"), false, 1.0, true)
-		UiInk.text(self, italic, Vector2(tx + gl + dot + 6.0, y3), status_text(row), detail_px, ink if has_plan else soft,
+		UiInk.text(self, italic, Vector2(tx + gl + dot + 6.0, y3), status_text(row), detail_px, txt,
 			HORIZONTAL_ALIGNMENT_LEFT, x0 - pr - 6.0 - (tx + gl + dot + 6.0))
 	if i < _row_sep.size() and _row_sep[i] and not sel:
 		var y := rr.end.y

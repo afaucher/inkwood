@@ -148,7 +148,6 @@ func _draw() -> void:
 		return
 	var st := style
 	var ink: Color = st.color("ink")
-	var soft: Color = st.color("ink_soft")
 	var faint: Color = st.color("ink_faint")
 	draw_rect(Rect2(Vector2.ZERO, size), st.color("result_veil"), true)
 	var r := card_rect()
@@ -156,17 +155,17 @@ func _draw() -> void:
 	UiInk.card(self, r, st.color("card_fill"), ink, st.num("card.outer_line_px"), st.num("card.inner_line_px"),
 		st.num("card.inner_inset_px"), st.num("card.wobble_px"), 29)
 	var serif: Font = st.font(false)
-	var italic: Font = st.font(true)
+	var italic: Font = st.text_font()   # (Track L: the card's smaller lines in the label face, full ink: no thin italic)
 	var pad: float = st.num("card.pad_px") + 8.0
 	var cx := r.position.x
 	var wide := r.size.x
 	UiInk.text(self, serif, Vector2(cx, r.position.y + 54.0), title_text(), st.num("combat.result.title_px"), ink, HORIZONTAL_ALIGNMENT_CENTER, wide)
 	UiInk.ink_line(self, PackedVector2Array([Vector2(cx + pad, r.position.y + 68.0), Vector2(r.end.x - pad, r.position.y + 68.0)]), false, faint, 0.8, 7, 0.4)
-	UiInk.text(self, italic, Vector2(cx, r.position.y + 90.0), sub_text(), st.num("fonts.detail_px"), soft, HORIZONTAL_ALIGNMENT_CENTER, wide)
+	UiInk.text(self, italic, Vector2(cx, r.position.y + 90.0), sub_text(), st.num("fonts.detail_px"), ink, HORIZONTAL_ALIGNMENT_CENTER, wide)
 	UiInk.text(self, serif, Vector2(cx, r.position.y + 126.0), reason_text(), st.num("combat.result.reason_px"), ink, HORIZONTAL_ALIGNMENT_CENTER, wide)
 	var turn_line := turn_text()
 	if turn_line != "":
-		UiInk.text(self, italic, Vector2(cx, r.position.y + 148.0), turn_line, st.num("fonts.detail_px"), soft, HORIZONTAL_ALIGNMENT_CENTER, wide)
+		UiInk.text(self, italic, Vector2(cx, r.position.y + 148.0), turn_line, st.num("fonts.detail_px"), ink, HORIZONTAL_ALIGNMENT_CENTER, wide)
 	var b := buttons()
 	for key: String in b:
 		_draw_button(b[key], key == "again", serif)

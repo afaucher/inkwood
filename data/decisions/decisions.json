@@ -718,13 +718,13 @@
         "a smooth depth gradient (the reference)",
         "stepped colour washes, the seabed on the same height map as the land"
       ],
-      "chosen": "Alex leans to stepped colour washes, underwater on the same height map as above; to be shown on the water board",
+      "chosen": "stepped colour washes in blue, the seabed on the same height system as the land, with the same shadows",
       "parameters": {},
       "applied_to": [
-        "nothing yet: direction for the water board"
+        "the water layer (next): to be built"
       ],
-      "status": "direction from Alex (to confirm on a board)",
-      "notes": "Alex: 'I might actually like to see like a stepped color washed version so under water is the same height map as above.'"
+      "status": "chosen by Alex",
+      "notes": "Alex: 'I might actually like to see like a stepped color washed version so under water is the same height map as above.' Confirmed 2026-10-10 when the water layer was started: 'Let's do a water layer next. We need to settle the water design. I like the same height system with a blue color wash. Same shadows.'"
     },
     {
       "id": "smoke-shadow",
@@ -1299,18 +1299,46 @@
       "question": "The four questions after the cleanup: 1 the far-zoom whole-flight tracks, 2 the step labels' layout, 3 the dorsal turret's hidden overhead cone, 4 the remaining small italic text",
       "board": "none (said in chat, on the tmp/declutter/ shots)",
       "options": [],
-      "chosen": "1 the whole-flight tracks stay off at every zoom; 2 step labels on two lines with no step number; 3 open: hiding the overhead cone may not be enough, a more robust solution is wanted; 4 all lettering readable or left off",
+      "chosen": "1 the whole-flight tracks stay off at every zoom; 2 step labels on two lines with no step number; 3 the overhead cone: option A for now, the side view shows it, revisit after more playtesting; 4 all lettering readable or left off",
       "parameters": {
         "far_zoom_tracks": "off (Alex: 'Leave them off.')",
         "step_label": "two lines, no step number (Alex: '2 lines. Remove the step # as well')",
-        "overhead_cone": "OPEN: hidden on the map for now (proposed default); Alex: 'Is that what the dashed line was? We might need a more robust solution.'",
+        "overhead_cone": "A for now (Alex: 'A for the side view, leave it until I playtest more'): the map draws only the cones that reach the unit's own height (planner.cones.overhead_footprint false); the side view shows the rest; revisit after more playtesting",
         "small_text": "readable or left off (Alex: 'Readable or leave it off')"
       },
       "applied_to": [
-        "in progress"
+        "1: nothing to change (the whole-flight tracks were already off: marker.trails.whole_flight_line false)",
+        "2: the step label is two lines, speed over height, no step number; a step's special is a line of its own; a carry-on node the same, in the fainter ink (scripts/ui/motion_planner.gd step_labels / _draw_ghosts, scripts/ui/ui_labels.gd; data/ui/ui.json labels.node_speed, labels.node_height; the block now stands with its last line nearest the node (proposed))",
+        "4: every word on the screen in the label face (upright, semibold) at 14 px or more, in full ink (or the quiet ink text_quiet for a button that is off, a unit that is down, a knob left on its data), under the paper halo on the map: data/ui/ui.json fonts.detail_px / button_px / small_px 14, lettering.*, role text_quiet; scripts/ui/ui_ink.gd (the lettering log), ui_labels.gd, roster.gd, motion_planner_panel.gd, side_view.gd, result_card.gd, scripts/app/sandbox_objective.gd / sandbox_clock.gd / sandbox_hint.gd / sandbox_knobs.gd / sandbox_loading.gd / sandbox_session.gd, build_version.gd",
+        "tested by test_lettering (the rule on every string the interface draws, and that the rule can fail), test_ui_labels, test_ui_coop, test_declutter; looks: scripts/ui/lettering_shot.gd (tmp/lettering/)",
+        "PROPOSED by Track L, not decided by Alex: the cards are wider (roster.width_px 286 -> 330) so 14 px lines fit; a step's climb/dive line ('climb to high') is off (labels.band_change_line false); the loading card's seed line is off (lettering.show.loading_seed false); the key hint card wraps and stands clear of the build stamp; the listed exceptions are a step's number inside a mark and the engine-themed menu and tooltips (lettering.exceptions)",
+        "3: still open (the dorsal turret's overhead cone is hidden on the map: planner.cones.overhead_footprint false)"
       ],
       "status": "chosen by Alex",
       "notes": "Alex, to the lead's four questions after the cleanup: '1. Leave them off. 2. 2 lines. Remove the step # as well 3. Is that what the dashed line was? We might need a more robust solution. 4. Readable or leave it off'"
+    },
+    {
+      "id": "water-layer",
+      "date": "2026-10-10",
+      "area": "Terrain, Water, Units",
+      "question": "What is in the water layer?",
+      "board": "none yet (planning in chat)",
+      "options": [],
+      "chosen": "a water layer next: water on the same height system with a blue wash and the same shadows; at least one small boat, maybe two; maybe bridges; more terrain variety",
+      "parameters": {
+        "generated": "water is generated from the seed like the rest of the map (Alex: 'I thought the map was random?'); the design doc's global pass: island coast, rivers downhill to the sea, bridges where roads cross",
+        "depth_steps": "three: shallows, shelf, deep (proposed -3, -10, -30 m; Alex: 'Sounds good')",
+        "look": "a board: variants/water/ (Alex: 'Make the board')",
+        "boats": "two: an armed patrol boat and an unarmed supply boat (Alex: 'Sounds good'); in the Strike just as environment (Alex: 'Add the boats just as environment'); look board variants/boats/",
+        "bridges": "yes, where the road crosses the river, drawn like the buildings, destroyable (Alex: 'Sounds good'); look board variants/bridge/",
+        "terrain_variety": "beaches, coastal cliffs, marsh at the river mouth, rock outcrops, orchards and more field types, thin and dense woods (Alex: 'Sounds good'); a board after the water look; mountains still deferred",
+        "boats_role": "real units that sail real patrol routes and can be hit, with no specific part in the mission; the patrol boat's guns fire as any unit's do (Alex: 'Let it fire if it wants')"
+      },
+      "applied_to": [
+        "planning"
+      ],
+      "status": "chosen by Alex; looks on boards",
+      "notes": "Alex: 'Let's do a water layer next. We need to settle the water design. I like the same height system with a blue color wash. Same shadows. We need at least one small boat. Maybe two? Maybe bridges? What else? More terrain variety.' Answers: '1. I thought the map was random? 2. Sounds good 3. Make the board 4-6. Sounds good 7. Add the boats just as environment' On the boats: 'Correct, part of the environment with real patrols but no specific part in the mission'. Then, on the patrol boat's guns: 'Let it fire if it wants'."
     }
   ]
 }

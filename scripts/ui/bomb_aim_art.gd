@@ -57,6 +57,7 @@ extends RefCounted
 # error ends a GDScript function early and silently, so a test counts on this.
 
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
+const UiLabels = preload("res://scripts/ui/ui_labels.gd")
 const UiRoles = preload("res://scripts/ui/ui_roles.gd")
 const TargetArt = preload("res://scripts/ui/target_art.gd")
 const BombAoeArt = preload("res://scripts/ui/bomb_aoe_art.gd")
@@ -232,7 +233,9 @@ static func _tag(ci: CanvasItem, rec: Dictionary, st: UiStyle, alpha: float) -> 
 	var font: Font = st.label_font()
 	var txt := str(num)
 	var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
-	ci.draw_string(font, c + Vector2(-w * 0.5, float(px) * 0.36), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px, ink)
+	# (the step's number in its disc, the step selection's own mark: kind "mark_number" in the lettering rule; the figure is full ink
+	# whatever the quiet pin's fade, so it stays readable)
+	UiInk.text(ci, font, c + Vector2(-w * 0.5, float(px) * 0.36), txt, float(px), _role(st, "bombs.aim.mark.role"), HORIZONTAL_ALIGNMENT_LEFT, -1.0, "mark_number")
 	return true
 
 # The cone of the step the card is about, before Drop is on (a target is set): a faint wash and a dashed rim, nothing else.
@@ -485,11 +488,10 @@ static func _label(ci: CanvasItem, rec: Dictionary, st: UiStyle) -> bool:
 	if txt == "" or not st.flag("bombs.aim.label.enabled"):
 		return true
 	var aim: Vector2 = rec["aim"]
-	var px: int = int(st.num("bombs.aim.label.px"))
-	var font: Font = st.font(true)
+	var px: float = st.num("bombs.aim.label.px")
+	var font: Font = st.text_font()   # (Track L: the label face, 14 px, under the map's paper halo like every word on the map)
 	var pos := aim + Vector2(st.num("bombs.aim.mark.r_px") + st.num("bombs.aim.mark.tick_px") + 3.0, -st.num("bombs.aim.mark.r_px") - 2.0)
-	ci.draw_string_outline(font, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px, int(st.num("bombs.aim.label.halo_px")), _role(st, "bombs.aim.halo_role"))
-	ci.draw_string(font, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, px, _role(st, "bombs.aim.label.role"))
+	UiLabels.draw(ci, st, font, pos, txt, px, _role(st, "bombs.aim.label.role"))
 	return true
 
 # --- Helpers --------------------------------------------------------------------------------------------

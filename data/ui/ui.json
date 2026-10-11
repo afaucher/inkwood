@@ -27,9 +27,10 @@
     "serif": ["IM Fell English", "Iowan Old Style", "Georgia", "Palatino Linotype", "Times New Roman", "serif"],
     "title_px": 15,
     "name_px": 15,
-    "detail_px": 12,
-    "button_px": 13,
-    "small_px": 11
+    "detail_px": 14,
+    "button_px": 14,
+    "small_px": 14,
+    "_lettering": "READABLE LETTERING (Track L, 2026-10-10; Alex: 'Readable or leave it off'). detail_px was 12, button_px 13 and small_px 11 (the small thin italic Alex could not read); all three are now the size Track C chose for the map's labels (labels.px, 14) and the italic is no longer used for any text: the card's secondary lines are drawn in the label face (labels.font, upright semibold). 'small_px' is kept as a key (tests and old callers read it) and equals detail_px. The rule and its exceptions are the 'lettering' block (below the labels)."
   },
 
   "card": {
@@ -48,7 +49,8 @@
   "roster": {
     "_proposed": true,
     "_reason": "Right-hand sidebar summarising the units the players control (design doc, Unit roster sidebar). One row per player-controlled unit: side mark, name, type, speed, altitude band, plan status as pips (steps planned of steps per turn). Sorting and grouping come later: the row list goes through one function (roster.gd ordered_ids) so a sort is a change there. Sizes in px.",
-    "width_px": 286,
+    "width_px": 330,
+    "_width_px": "Was 286. PROPOSED by Track L (2026-10-10, readable lettering): the cards' words are now 14 px in the semibold label face instead of 11 to 12 px thin italic, and the orders card's longest lines ('no target: click an enemy or right-click the map' 301 px, 'step 2: Bomb Drop . radio tower about 5 of 8' 288 px, at 14 px) did not fit the 258 px between the card's margins. 330 gives 302 px; the roster and the orders card share the width (44 px, 3.4 percent of a 1280 window, taken from the map). A line that is still too long for the card (a long unit name, a font a little wider than this one) shrinks to lettering.fit_floor_px, never lower.",
     "header_px": 40,
     "row_px": 62,
     "mark_r_px": 7,
@@ -94,8 +96,10 @@
       "bar_px": 26,
       "button_w_px": 112,
       "_button_w_px": "Was 124. PROPOSED by Track C, 2026-10-10: 12 px narrower to give the weapon-arcs button (roster.arcs) its place in the same bar; 'needs orders' and its chevrons still fit.",
-      "button_h_px": 18,
-      "heading_px": 18
+      "button_h_px": 20,
+      "_button_h_px": "Was 18. Track L, 2026-10-10: the button's word is 14 px now (it was 12), so the button is two px taller (the bar is 26).",
+      "heading_px": 20,
+      "_heading_px": "Was 18. Track L: the group headings are 14 px (they were 11 px thin italic)."
     },
     "arcs": {
       "_proposed": true,
@@ -104,7 +108,7 @@
       "label_off": "Arcs: off",
       "tooltip": "Show or hide the weapon arcs on the map",
       "w_px": 66,
-      "h_px": 18,
+      "h_px": 20,
       "gap_px": 6,
       "_gap_px": "The space between the 'group by' label and its own button, which the label now sits against (it was at the left of the bar before the arcs button took that place)."
     }
@@ -156,7 +160,7 @@
       "selected": "step %d of %d",
       "hint_more": "click a node to change it, or add step %d",
       "hint_full": "plan full: click a node to change a step",
-      "min_px": 10
+      "_min_px": "GONE (Track L, 2026-10-10; it was 10): the one floor a line may shrink to is lettering.fit_floor_px."
     },
     "_u3": "PROPOSED by Track U3 (the strike): the Drop control joins Dive / Level / Climb as a fourth button of the first row (Alex: bombing is 'per step, just like diving'), disabled for a unit with no bombs or none left; under that row a line (drop_line_px, kept for every unit so the card never changes size) says what the Drop control does for the step it acts on: the spread and the release of a drop planned, or why there is none. height_px grew 238 -> 258 for it."
   },
@@ -303,9 +307,10 @@
       "overhead_alpha": 0.55,
       "label": false,
       "_label": "Alex 2026-10-10 (decision side-view-look): no weapon labels on the cones, top-down or side view, for now -- they add noise; revisit when units carry many more hardpoints (perhaps a dropdown to pick the weapon). The lettering below stays for that day.",
-      "label_px": 11,
-      "label_role": { "base": "ink", "alpha": 0.9 },
-      "label_halo_role": { "base": "paper", "alpha": 0.92 },
+      "label_px": 14,
+      "_label_px": "Was 11 (thin italic). Track L, 2026-10-10: readable lettering, the label size and face (labels.px, labels.font); the labels are off (label false) all the same.",
+      "label_role": { "base": "ink" },
+      "label_halo_role": { "base": "paper", "alpha": 0.96 },
       "label_halo_px": 4,
       "outline": {
         "_about": "An inked rim only, with ticks across the centre line every tick_every_m and a faint centre line.",
@@ -397,15 +402,18 @@
 
   "labels": {
     "_proposed": true,
-    "_reason": "HEIGHT AND SPEED LABELS (Track U3, 2026-10-10; Alex: height is hard to read from above -- 'make sure that every unit and every node has a height and speed label'). EVERY VALUE HERE IS PROPOSED by Track U3; the lead proposed the compact format. EVERY unit marker the map shows (a player's, an enemy's, whenever the unit is in sight) carries one small inked label under it, its CURRENT height in metres and speed (live through a playback: the pose the marker is drawn at); a STATIC unit (the radio tower, a battery) has its height above the ground (0 m) and no speed. EVERY plan node carries one too: a planned step's lettering is 'n . speed m/s . height m' (the height folded into the existing line), and a carry-on step, which had none, 'speed m/s . height m' (fainter). Never anything about an enemy's PLAN (its nodes are not drawn at all: motion_planner.gd plan_shown); an enemy's current state is visible state. Ink at moderate alpha with the paper under-stroke the hover uses, so the label reads over the grove.",
+    "_reason": "HEIGHT AND SPEED LABELS (Track U3, 2026-10-10; Alex: height is hard to read from above -- 'make sure that every unit and every node has a height and speed label'). EVERY VALUE HERE IS PROPOSED by Track U3; the lead proposed the compact format. EVERY unit marker the map shows (a player's, an enemy's, whenever the unit is in sight) carries one small inked label under it, its CURRENT height in metres and speed (live through a playback: the pose the marker is drawn at); a STATIC unit (the radio tower, a battery) has its height above the ground (0 m) and no speed. EVERY plan node carries one too: TWO LINES, 'speed m/s' over 'height m', no step number (Track L, 2026-10-10: see _node_lines), the same for a planned step and a carry-on one (fainter). Never anything about an enemy's PLAN (its nodes are not drawn at all: motion_planner.gd plan_shown); an enemy's current state is visible state. Ink at moderate alpha with the paper under-stroke the hover uses, so the label reads over the grove.",
     "enabled": true,
     "height_ref": "sim",
     "_height_ref": "PROPOSED: what the height means. 'sim' (the default) is the height the SIMULATION flies and bombs by (the altitude band's metres, between two bands during a band change; data/sim/altitude.json): the number the bomb's fall time, throw and spread are computed from, so a player aiming a drop reads the figure that decides it. 'ground' is the height above the terrain under the unit (what the shadow gap shows; Track T's height_at), the same figure where the ground is 0 and a smaller one over a ridge. Alex has not said.",
     "unit": "%d m · %d",
     "_unit": "A mobile unit: height in metres, then speed in m/s with the unit left off (the roster beside it says m/s).",
     "unit_static": "%d m",
-    "node_suffix": " · %d m",
-    "node_carry": "%d m/s · %d m",
+    "node_speed": "%d %s",
+    "node_height": "%d m",
+    "_node_lines": "THE STEP LABEL (Track L, 2026-10-10; Alex: '2 lines. Remove the step # as well'). A plan node's lettering is two lines: its speed over its height ('85 m/s' over '400 m'; %s in node_speed is roster.speed_unit), with NO step number (the selected node's disc and the drop's landing keep theirs: they are the step selection's). A step with its special on adds the special's own words ('Bomb Drop', data/units specials) as a line of its own; 'will not release' / 'poor shot' follow it when the drop is marked. A carry-on node has the same two lines, in the fainter ink (label_carry). The speed line follows planner.speed_labels, the height line follows labels.enabled. Was one line, '2 · 85 m/s · 400 m' (labels.node_suffix, labels.node_carry: both gone).",
+    "band_change_line": false,
+    "_band_change_line": "PROPOSED REMOVAL (Track L, 2026-10-10), not asked for by Alex: the third line a step that changes band used to carry ('climb to high', 'dive to low'). Two lines is what he asked for and the height line already says it (the node's metres are the new band's). false leaves it off; true brings it back as a line after the special's.",
     "hide_below_px_per_m": 0.5,
     "_hide": "PROPOSED far-zoom rule: labels hide when the map's scale falls under this many screen px per metre (the planning zoom 0.35 at 2 px/m is 0.7 and shows them; 0.5 is zoom 0.25), below which units are a few px apart and a line of lettering each is noise. The far overview (fog-first-option) hides them all.",
     "below_px": 3.0,
@@ -423,6 +431,38 @@
     "halo_px": 4.0
   },
 
+  "lettering": {
+    "_proposed": true,
+    "_reason": "READABLE OR LEAVE IT OFF (Track L, 2026-10-10). Alex, on the lettering after the declutter: 'Readable or leave it off.' EVERY word on the screen is drawn in the label face (labels.font: upright, semibold, lining figures; the cards' titles, names and buttons keep the card face, upright and regular, 14 to 26 px), at least min_px, in full ink (the ink role) or the one quieter role text_quiet, over the card's own paper or on the map under the paper halo of labels.halo_px. The thin italic (fonts.serif italic) is not used for any text. UiInk.logging records every string drawn so test_lettering can prove it; a text not in the list below that is smaller than min_px, in italic, or paler than contrast_min fails the gate.",
+    "min_px": 14,
+    "fit_floor_px": 12,
+    "_fit_floor_px": "A line of a card that is too long for the card's width (a long unit name, a long reason) shrinks to fit, 0.5 px at a time, and never below this. Nothing the game says by default needs it (test_lettering lists the lines that do: none).",
+    "contrast_min": 4.5,
+    "_contrast_min": "The least contrast ratio (WCAG relative luminance) a word's ink may have against what is behind it: the card's fill (object_fill) for a card's words, the paper (paper) under its halo for the map's. 4.5 is the usual floor for body text; full ink is about 10.",
+    "exceptions": {
+      "mark_number": {
+        "min_px": 10,
+        "_why": "A step's number INSIDE a mark: the selected node's disc (planner.select.number_px 11), the orders card's step strip (orders.strip.number_px 12) and the step number at a drop's landing (bombs.pin.tag.px 10). They belong to the step selection (Track B; Alex's step-selection decision), are one or two digits in a 15 to 20 px disc, in the label face, upright and semibold, in full ink or paper. Not step labels."
+      },
+      "engine_theme": {
+        "min_px": 14,
+        "_why": "The menu (scenes/main.tscn: the title, the three buttons, the scenario selector, the status line) and the hover tooltips (the arcs button's, the scenario selector's) are Godot controls in the engine's own theme: its upright face at the project's gui/theme/default_font_size (18 px). They are not drawn by the UI layer and are not on the map. The corner stamps (build stamp, session status) are Godot Labels too, but take the style's look (stamp, below)."
+      }
+    },
+    "stamp": {
+      "_about": "The two corner stamps that are Godot Labels, not drawn by the UI layer: the build stamp (bottom left; build_version.gd) and the session status (top left in a Host or Join; sandbox_session.gd). Readable on the map or on the menu: the label face, this size, full ink and a paper outline.",
+      "px": 14,
+      "outline_px": 4,
+      "clear_px": 24,
+      "_clear_px": "The height the key hint card (sandbox_hint.gd) keeps clear of the bottom-left corner, where the build stamp stands (14 px of ink needs about 24 px of corner); without it the hint covered the stamp for its first seconds."
+    },
+    "show": {
+      "_about": "PROPOSED REMOVALS (Track L, 2026-10-10): words that say nothing the player needs, each behind a switch (false = left off, true = back). Each has a one-line reason.",
+      "loading_seed": false,
+      "_loading_seed": "'the same map every time: seed 20261009' under the loading card's progress line: a debugging fact, in the palest ink at 11 px; the seed is in the logs and the map is the same either way."
+    }
+  },
+
   "target": {
     "_proposed": true,
     "_reason": "THE TARGET SELECTION ON THE MAP (Track T, 2026-10-10). In force (Alex, decision special-targeting): 'when you have a friendly unit selected, you can also select either an enemy unit or a point on the map'; set by 'left-click an enemy unit, right-click a point on the map -- fine for now. Right click drag is awkward so we will change later' (right-drag still pans: a right press and release without movement is the click). EVERYTHING HERE IS PROPOSED by Track T: the marks (ink, with a paper pool under them, on the map's own palette roles -- hue stays reserved for paper, ink, shadow and the side accents), their sizes (screen px, so they read at the planning zoom 0.35 and at zoom 1), and the two slops.",
@@ -435,7 +475,7 @@
     "point": { "_about": "A point target: a diamond with a dot, r_px from the centre to a corner.", "r_px": 7.5, "line_px": 1.5, "dot_px": 2.2, "halo_px": 2.4 },
     "unseen_alpha": 0.55,
     "quiet": { "_about": "The target of another step, or of another player's drop: the same marks, smaller and fainter.", "k": 0.7, "alpha": 0.75 },
-    "blocked": { "_about": "A drop whose target is outside its cone (it will not release, or is a poor shot): a slash across the aim's mark, and the word beside it.", "slash_px": 9.0, "line_px": 1.6, "label_px": 11 }
+    "blocked": { "_about": "A drop whose target is outside its cone (it will not release, or is a poor shot): a slash across the aim's mark, and the word beside it (the step's lettering: 'will not release').", "slash_px": 9.0, "line_px": 1.6, "label_px": 14 }
   },
 
   "bombs": {
@@ -483,7 +523,7 @@
       "release": { "dot_px": 2.6, "tie_dash_px": 3.0, "tie_gap_px": 3.0, "tie_px": 0.9, "role": { "base": "ink", "alpha": 0.65 } },
       "spread": { "_about": "The ellipse that holds most of the drop's stick: sigma_k times the sim's one-bomb scatter (a standard deviation: 2 holds 86 percent of a round scatter), longer along the bomber's heading by half the stick (the bombs of a drop land a few metres apart along it).", "sigma_k": 2.0, "line_px": 1.1, "dash_px": 4.0, "fill_role": { "base": "ink", "alpha": 0.13 }, "edge_role": { "base": "ink", "alpha": 0.85 } },
       "quiet": { "_about": "The aim of a step that is not the one the card is about, and another player's drop: a small mark, no cone.", "mark_k": 0.7, "alpha": 0.6 },
-      "label": { "enabled": true, "px": 11, "role": { "base": "ink", "alpha": 0.9 }, "halo_px": 4 },
+      "label": { "enabled": true, "px": 14, "role": { "base": "ink" }, "halo_px": 4 },
       "wash": { "_about": "The side colour in `steps` nested copies of the cone, each shrunk toward the ideal aim (to shrink_to of its size at the last), alpha_rim at the edge to alpha_centre at the ideal aim: the more of it, the closer the release is to ideal.", "steps": 5, "alpha_rim": 0.07, "alpha_centre": 0.30, "shrink_to": 0.15 },
       "stipple": { "_about": "Dots on a jittered grid cell_px square in the cone, kept with the probability of closeness to the ideal aim to the power gamma; the spread is scatter_dots impacts scattered as the expected spread says (a fixed pattern, seeded from the unit and the step, so it does not shimmer).", "cell_px": 6.0, "dot_px": 1.05, "alpha": 0.85, "gamma": 1.7, "scatter_dots": 70, "scatter_dot_px": 1.7 },
       "rings": { "_about": "Arcs about the release point at every ring_every_m of range inside the cone, dashed and faint, and the aim's own ring solid.", "ring_every_m": 100, "dash_px": 5.0, "gap_px": 4.0, "line_px": 0.9, "alpha": 0.55, "fill_alpha": 0.05 }
@@ -522,7 +562,7 @@
       "fill_role": { "base": "ink", "alpha": 0.1 },
       "line_px": 1.0,
       "dash_px": 4.0,
-      "rings": { "_about": "The blast table's rings round the lands point: the 3-pip ring solid, the others dashed, each numbered with its pips when label_px is above 0 and the ring is wide enough to read.", "label_px": 10, "solid_alpha": 0.9, "dash_alpha": 0.6, "min_label_ring_px": 14 },
+      "rings": { "_about": "The blast table's rings round the lands point: the 3-pip ring solid, the others dashed, each numbered with its pips when label_px is above 0 and the ring is wide enough to read.", "label_px": 14, "solid_alpha": 0.9, "dash_alpha": 0.6, "min_label_ring_px": 22 },
       "footprint": { "_about": "One wash, the scatter's ellipse grown by the farthest blast tier, with an inked edge.", "fill_alpha": 0.12 },
       "impacts": { "_about": "The stick's bombs at their nominal places along the bomber's heading, centred on the aim: a dot, the direct-hit ring solid and the farthest reach faint.", "dot_px": 1.8, "reach_alpha": 0.4, "hit_alpha": 0.85 },
       "tiers": { "_about": "The scatter grown by each blast tier, outermost first: each wash adds its alpha, so the nearest tier (the most pips) is the darkest. The outer edge is dashed, the 3-pip edge solid.", "alphas": [0.07, 0.07, 0.08], "outer_edge_alpha": 0.6, "inner_edge_alpha": 0.85 }
@@ -540,10 +580,11 @@
     "section": {
       "_about": "The section at the bottom of the orders card: a faint rule, a line saying which step, the picture, the quiet line. gap_px is the room under the card's own content. The picture shrinks to fit the window (the card must stay on screen) and the whole section is left out under min_picture_h_px.",
       "gap_px": 10,
-      "head_px": 18,
+      "head_px": 20,
       "picture_h_px": 150,
       "min_picture_h_px": 60,
-      "caption_h_px": 18,
+      "caption_h_px": 20,
+      "_lettering": "Track L, 2026-10-10: head_px and caption_h_px were 18 for 12 px italic lines; the two lines are 14 px now (lettering.min_px), so each row is 2 px taller (4 px for the section; the picture gives it back: at 1280x720 with three units it is 80 px high against a floor of 60).",
       "bottom_px": 8,
       "pad_px": 9
     },
@@ -704,6 +745,8 @@
     "_label_carry": "Track C, 2026-10-10: a carry-on node's lettering is a little quieter than a planned step's, but readable; was ink at alpha 0.58.",
     "label_halo": { "base": "paper", "alpha": 0.96 },
     "_label_halo": "Track C, 2026-10-10: a firm paper halo under the lettering; was paper at alpha 0.9.",
+    "text_quiet": { "base": "ink", "alpha": 0.76 },
+    "_text_quiet": "Track L, 2026-10-10 (readable lettering): the ink for the few words that are meant to be quieter than the rest -- a button that cannot be pressed, a unit that is down -- and still readable (lettering.contrast_min against the card). Everything else on a card is full ink: the old ink_soft (0.72), ink_faint (0.38), button_off_text (0.3) and row_down (0.4) were the thin, pale grey Alex could not read; they stay for rules, pips and marks, not for words.",
     "row_selected": { "base": "paper", "toward": "object_fill", "t": 0.35 },
     "button_fill": { "base": "roof_lit" },
     "button_on_fill": { "base": "ink" },

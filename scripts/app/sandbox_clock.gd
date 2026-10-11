@@ -55,19 +55,18 @@ func _draw() -> void:
 	if style == null or limit <= 0 or world == null:
 		return
 	var ink: Color = style.color("ink")
-	var soft: Color = style.color("ink_soft")
 	var serif: Font = style.font(false)
-	var italic: Font = style.font(true)
+	var italic: Font = style.text_font()   # (Track L, readable lettering: the warning is in the label face, 14 px, full ink)
 	var px: float = style.num("fonts.detail_px") + 3.0
 	var small: float = style.num("fonts.detail_px")
 	var warn := warning()
 	var w := maxf(UiInk.text_width(serif, line(), px), UiInk.text_width(italic, warn, small) if warn != "" else 0.0) + 28.0
-	var h := 30.0 if warn == "" else 46.0
+	var h := 32.0 if warn == "" else 52.0
 	var x := (size.x - insets_right - w) * 0.5
 	var r := Rect2(Vector2(x, 12.0), Vector2(w, h))
 	UiInk.card_shadow(self, r, style.shadow_dir() * style.num("card.lift_px"), style.color("card_shadow"))
 	UiInk.card(self, r, style.color("card_fill"), ink, style.num("card.outer_line_px"), style.num("card.inner_line_px"),
 		style.num("card.inner_inset_px"), style.num("card.wobble_px"), 17)
-	UiInk.text(self, serif, Vector2(r.position.x + 14.0, r.position.y + px + 6.0), line(), px, ink if warn != "" else soft)
+	UiInk.text(self, serif, Vector2(r.position.x + 14.0, r.position.y + px + 6.0), line(), px, ink)
 	if warn != "":
 		UiInk.text(self, italic, Vector2(r.position.x + 14.0, r.position.y + px + small + 12.0), warn, small, ink)

@@ -19,6 +19,7 @@ extends Node2D
 
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
+const UiLabels = preload("res://scripts/ui/ui_labels.gd")
 
 const MIN_RADIUS_PX := 9.0
 const LABEL := "TARGET"
@@ -77,8 +78,9 @@ func _draw() -> void:
 	var k := clampf(r * 0.22, 5.0, 14.0)
 	UiInk.ink_line(self, PackedVector2Array([c + Vector2(-k, 0.0), c + Vector2(k, 0.0)]), false, ink, 1.8, 3, 0.4)
 	UiInk.ink_line(self, PackedVector2Array([c + Vector2(0.0, -k), c + Vector2(0.0, k)]), false, ink, 1.8, 5, 0.4)
-	# The word, under the ring.
-	var font: Font = style.font(true)
-	var px: float = style.num("fonts.detail_px")
+	# The word, under the ring: the map's readable lettering (Track L, "Readable or leave it off"): the label face and size, full ink,
+	# under the paper halo every word on the map has.
+	var font: Font = UiLabels.font(style)
+	var px: float = UiLabels.px(style)
 	var w := UiInk.text_width(font, label, px)
-	UiInk.text(self, font, Vector2(c.x - w * 0.5, c.y + r + px + 4.0), label, px, Color(ink.r, ink.g, ink.b, 0.9))
+	UiLabels.draw(self, style, font, Vector2(c.x - w * 0.5, c.y + r + px + 4.0), label, px, style.color("label_ink"), w, HORIZONTAL_ALIGNMENT_CENTER)
