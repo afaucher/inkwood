@@ -83,7 +83,7 @@ extends Node
 # map -- fine for now. Right click drag is awkward so we will change later"). `target` (ui_target.gd) is that selection, shared with the
 # planner (Drop needs it, inside the step's cone), the marks (target_marks.gd) and Track V's side view:
 #   left-click an enemy marker   the target, the friendly stays selected (no friendly selected: the enemy is selected, as before)
-#   right press and release      the enemy under the pointer, else the map point; a right DRAG is the camera's pan and is never
+#   right press and release      the enemy under the pointer, else the map point; a right DRAG (no pan since decision pan-right-drag-off) is never
 #                                taken (this node watches the button in _input and marks nothing handled: set_target_unit,
 #                                set_target_point and right_click are the calls a test makes)
 #   Esc                          clears the target (before anything else, so before it leaves for the menu); so does a change of the
@@ -816,7 +816,7 @@ func set_target_point(world_pt: Vector2) -> bool:
 	return true
 
 # A right click at map screen point `p` (a press and release that moved no farther than target.right_click.slop_px; a
-# right DRAG is the camera's pan and never gets here): the enemy under the pointer, else the point on the map.
+# right DRAG never gets here): the enemy under the pointer, else the point on the map.
 func right_click(p: Vector2) -> bool:
 	if input_locked() or not friendly_selected():
 		return false
@@ -844,9 +844,8 @@ func _target_shown_position(id: String) -> Vector2:
 func _on_selection_changed(_id: String) -> void:
 	target.clear()   # PROPOSED (Alex: a target is not meaningful per unit): the friendly selection changed
 
-# The right button, watched in _input so that it sees the press and the release the camera takes for a pan (it marks them
-# handled in its own _unhandled_input / _input): this node never marks a right-button event handled, so the camera pans
-# exactly as before and a click is a press and release that did not move.
+# The right button, watched in _input (from when the camera also panned on it: decision pan-right-drag-off took that away):
+# this node never marks a right-button event handled, and a click is a press and release that did not move.
 func _right_button(event: InputEvent) -> void:
 	if event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT:
 		var mb := event as InputEventMouseButton

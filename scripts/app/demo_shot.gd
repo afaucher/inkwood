@@ -26,7 +26,7 @@ extends SceneTree
 #
 # It prints what the report needs: the time from Local to the first playable
 # frame, frame times by what the game was doing, bake waits, and the checks of
-# the real input path (a left click plans, a right drag pans, the wheel zooms).
+# the real input path (a left click plans, a middle drag pans, the wheel zooms).
 
 const World = preload("res://scripts/sim/world.gd")
 
@@ -173,7 +173,7 @@ func _main_run() -> void:
 	ui.roster.select_row(0)
 	ctl.stop_follow()
 
-	# The real input path: left click plans inside the fan, a right drag pans, the wheel zooms.
+	# The real input path: left click plans inside the fan, a middle drag pans, the wheel zooms.
 	await _input_checks()
 
 	# 3. A plan with a speed change, the fan, a step clamped by inertia.
@@ -354,7 +354,7 @@ func _max_run_turn(tr: Node, id: String) -> float:
 		prev_a = a
 	return best_pos if best_pos >= -best_neg else best_neg
 
-# The real pointer path through the viewport: press in a plane's fan = a step; a right drag pans;
+# The real pointer path through the viewport: press in a plane's fan = a step; a middle drag pans (the right button no longer does: decision pan-right-drag-off);
 # the wheel zooms about the cursor. (Keys: WASD pans through polled physical keys, tested by hand.)
 func _input_checks() -> void:
 	var w: World = sb.world
@@ -388,9 +388,9 @@ func _input_checks() -> void:
 	var z0: float = ctl.zoom_level()
 	_check(c0.distance_to(ctl.center()) < 1e-6, "and the left click did not pan the map")
 	ui.planner.clear()
-	# Right-button drag pans.
+	# Middle-button drag pans.
 	var rd := InputEventMouseButton.new()
-	rd.button_index = MOUSE_BUTTON_RIGHT
+	rd.button_index = MOUSE_BUTTON_MIDDLE
 	rd.pressed = true
 	rd.position = Vector2(400, 300)
 	Input.parse_input_event(rd)
@@ -401,12 +401,12 @@ func _input_checks() -> void:
 	Input.parse_input_event(mv)
 	await _frames(1)
 	var ru := InputEventMouseButton.new()
-	ru.button_index = MOUSE_BUTTON_RIGHT
+	ru.button_index = MOUSE_BUTTON_MIDDLE
 	ru.pressed = false
 	ru.position = Vector2(300, 300)
 	Input.parse_input_event(ru)
 	await _frames(2)
-	_check(ctl.center().distance_to(c0) > 1.0, "a right-button drag pans the map (centre moved %.1f map px)" % ctl.center().distance_to(c0))
+	_check(ctl.center().distance_to(c0) > 1.0, "a middle-button drag pans the map (centre moved %.1f map px)" % ctl.center().distance_to(c0))
 	# Wheel zoom.
 	var wh := InputEventMouseButton.new()
 	wh.button_index = MOUSE_BUTTON_WHEEL_UP

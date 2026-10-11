@@ -13,7 +13,7 @@ extends "res://scripts/test_support/test_case.gd"
 #   1. the style data and the seam (UiTarget, UnitUI.target, MotionPlanner.step_target)
 #   2. THE CLICKS: left on an enemy sets the target and keeps the friendly selected; with no friendly selected it selects the
 #      enemy; left on a friendly selects it; right press-and-release without movement sets a point (or the enemy under the
-#      pointer); a right DRAG sets nothing (it pans); Esc clears the target before anything else; the target clears when the
+#      pointer); a right DRAG sets nothing; Esc clears the target before anything else; the target clears when the
 #      friendly selection changes; a left press on EMPTY map (nothing under it) is announced for the camera to pan from
 #      (decision pan-left-drag), a press on a marker, an enemy or the fan is not
 #   3. DROP'S ENABLE RULES: no target, a target outside the step's cone, a target inside -- and the card says why
@@ -239,12 +239,12 @@ func _clicks() -> bool:
 	# A right click on an enemy is that enemy.
 	_right_click(tower_s)
 	eq([_ui.target.kind, _ui.target.unit_id], ["unit", "tower"], "2. a right click on an enemy marker targets the enemy")
-	# A right DRAG is the camera's pan: no target.
+	# A right DRAG sets nothing (the right button no longer pans: decision pan-right-drag-off).
 	_ui.target.clear()
 	_ui._input(_mouse(MOUSE_BUTTON_RIGHT, true, empty_s))
 	_ui._input(_motion(empty_s + Vector2(30.0, 0.0), Vector2(30.0, 0.0)))
 	_ui._input(_mouse(MOUSE_BUTTON_RIGHT, false, empty_s + Vector2(30.0, 0.0)))
-	eq(_ui.target.is_set(), false, "2. a right DRAG (it pans) sets no target")
+	eq(_ui.target.is_set(), false, "2. a right DRAG sets no target")
 	# A wobble inside the slop is still a click.
 	var slop: float = _st.num("target.right_click.slop_px")
 	_ui._input(_mouse(MOUSE_BUTTON_RIGHT, true, empty_s))

@@ -425,7 +425,7 @@ func ok() -> bool:
 # The keys the first seconds list. The drop key (B) is listed when a unit the players fly carries bombs:
 # it is the one key a new player cannot guess (Track A2: the strike's bomber).
 func _hint_line() -> String:
-	var line := "F2 knobs   ·   Esc menu   ·   right-drag or WASD pans   ·   wheel or Q E zooms   ·   %s readies" % _style.text("keys.ready")
+	var line := "F2 knobs   ·   Esc menu   ·   drag the map or WASD pans   ·   wheel or Q E zooms   ·   %s readies" % _style.text("keys.ready")
 	for id: String in ids:
 		var u = world.units[id]
 		if u.controller == World.CONTROLLER_PLAYER and u.def.carries_bombs():
