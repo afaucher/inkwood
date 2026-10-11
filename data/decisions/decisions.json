@@ -1533,6 +1533,26 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Build it like that. I want to do play testing to figure out how to make it more engaging. But as an initial test of all the units involved that should be fantastic.'"
+    },
+    {
+      "id": "suppress-mission",
+      "date": "2026-10-11",
+      "area": "Missions",
+      "question": "The second mission profile: 'Clear mobile Aa units and their escorts to enable a bombing run of a military complex.' How is it built?",
+      "board": "none yet (boards for the mobile AA and the complex: variants/mobile-aa, variants/military-complex)",
+      "options": [],
+      "chosen": null,
+      "parameters": {
+        "alex": "the mission idea, and the goal 'build the second mission profile' (2026-10-11)",
+        "proposed_fun": "PROPOSED by the lead: the guns are hidden, move (shoot and scoot) and give themselves away when they fire (the Wild Weasels); the fighters bait and hunt them past the escorts while the bomber holds off",
+        "proposed_units": "players: 2 fighters and 1 bomber; enemy: 3 mobile AA, 2 escort fighters, the military complex",
+        "proposed_end": "win: the complex destroyed; lose: the bomber down or a turn limit"
+      },
+      "applied_to": [
+        "in progress: Tracks M2U (units and art) and M2L (rules, AI, scenario)"
+      ],
+      "status": "building on Alex's idea; the details are proposed",
+      "notes": "Alex listed it second of his four mission ideas; the lead recommended it as the quickest to playtest. He then set the goal 'build the second mission profile'."
     }
   ]
 }
