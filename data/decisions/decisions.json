@@ -1734,6 +1734,51 @@
       "notes": "Alex: 'Lets also look at some other control schemes for panning. The r-mouse doesn't feel right but I am not sure what the most typical way is to deal with multiple onscreen interactive elements and map-style pan/zoom at the same time.' Then, of the camera session's options A to D: 'B. Left-drag on empty map pans, left-drag on a thing acts on it'. Not decided: whether right-drag and middle-drag panning stay (both still pan), whether right-click stays the point target, Space + drag (D, not added). The slop of 4 px is PROPOSED."
     },
     {
+      "id": "forest-fire",
+      "date": "2026-10-11",
+      "area": "Environment, Effects, Fog of war",
+      "question": "How does a forest fire work: what starts it, how it spreads and stops, what it does to units, what its smoke does to sight, what is left, how it looks, where it is tried first?",
+      "board": "none for the rules (said in chat, on the lead's seven proposals); the look of a burning grove and a burnt-out tree: a board to come, after the mechanic is built with a stand-in",
+      "options": [
+        "1 ignition: bomb hits, shell hits and ground crashes; each tree within the blast catches at 50%",
+        "2 spread: once a turn each burning tree may light each tree within 30 m, 40% when canopies touch falling to 0 at 30 m; a tree burns 3 turns, then is burnt out",
+        "3 damage: ground and sea units within 25 m of a burning tree, 10% a turn to lose 1 pip; planes untouched",
+        "4 smoke and sight: a cover (seen only from close, like woods), b sight lines (smoke hides what is behind it; needs line of sight on), c aim (shots through smoke hit less often); the lead recommends a",
+        "5 a burnt-out tree takes its woods cover with it",
+        "6 the look: today's W1 smoke as a stand-in, a column per burning tree, then a board of 3-4 options for a burning grove and a burnt-out tree",
+        "7 tried first in Suppress, plus a sandbox switch"
+      ],
+      "chosen": "a forest fire is smoke coming from the trees, no flame; it is started by bomb hits, shell hits and ground crashes (each tree within the blast catches at 50%), spreads tree to tree by distance once a turn (40% when canopies touch, falling to 0 at 30 m), and a tree burns 3 turns, then burns down to its trunk; ground and sea units near a burning tree may lose 1 pip, 10% a turn fading with distance to 0 at 25 m; a burnt-out tree gives no woods cover; built first with W1 smoke as the stand-in look, then a board for the burning grove and the burnt-out trunk; tried first in Suppress; its smoke makes things harder to see by cover (option a): a ground unit inside the smoke is seen only from close, as in woods. Open: hidden from view (as woods today) or visible but not trackable, and whether a followed bomb target that goes into the smoke is aimed at its last-seen place",
+      "parameters": {
+        "smoke_only": "burning trees draw smoke and no flame (consistent with decision fire-colour: 'No fire for now. Just smoke.')",
+        "ignite.sources": "bomb_impact, shell_impact, crash",
+        "ignite.chance": 0.5,
+        "ignite.radius": "the event's blast_m for bombs and shells; PROPOSED for a crash, which has no blast: 20 m",
+        "spread.per": "turn",
+        "spread.chance_touching": 0.4,
+        "spread.reach_m": 30,
+        "spread.distance": "PROPOSED: measured canopy edge to canopy edge, 40% at 0 m (or overlapping) falling linearly to 0 at 30 m",
+        "burn_turns": 3,
+        "after": "the tree burns down to its trunk (Alex: 'lets burn down to the trunks?'; the trunk's look comes from the board)",
+        "damage.pips": 1,
+        "damage.chance_near": 0.1,
+        "damage.reach_m": 25,
+        "damage.fade": "Alex: 'fade the change with distance as well'; PROPOSED: linear from 10% at a burning tree's canopy edge to 0 at 25 m, the trees combined as 1 - product(1 - p) and at most 1 pip a unit a turn, at the unit's closest approach in the turn",
+        "damage.who": "ground and sea units; planes untouched",
+        "cover_after_burn": "a burnt-out tree gives no woods cover; PROPOSED: the woods density at a point is scaled by the share of the trees within 20 m that are not burnt out",
+        "smoke_sight": "a, cover (Alex: 'a - but confirm what the implication of this is'): the concealment rule (scripts/sim/concealment.gd) applied to smoke, so the fog, the enemy AI and shared spotting agree; PROPOSED: ground and sea units inside the smoke, mobile and static, seen only within 150 m; planes not covered",
+        "smoke.reach_m": "PROPOSED: inside the smoke = within 20 m of a burning tree's canopy edge",
+        "smoke_sight.open": "1 hidden from view (the woods rule today: the marker is not drawn) or visible but not trackable (Alex's reading); 2 a followed bomb target that goes into the smoke: still followed (today, PROPOSED by the strike track) or aimed at its last-seen place (the lead recommends, matching decision outside-cone-release for guns)",
+        "look": "W1 smoke (decision damage-smoke) as a stand-in column per burning tree; then a board for the burning grove and the burnt-out trunk",
+        "first_scenario": "suppress (data/scenarios/suppress.json), plus a sandbox switch"
+      },
+      "applied_to": [
+        "to be built (track 'Forest fire', docs/status.md): data/sim/fire.json and scripts/sim/fire*.gd, the World's resolve and its net state, the effects layer's smoke per burning tree, the map's burnt trunks, Suppress"
+      ],
+      "status": "chosen by Alex; two details of the smoke cover open",
+      "notes": "Alex: 'I want to build a forest fire mechanic.' Then: 'I am thinking that the fire is actually just smoke coming from the trees. It spreads from tree to tree based on distance. It can inflict damage to nearby units with low power and low chance.' Then: 'It should generate smoke which makes it harder to see.' On the lead's seven proposals: '1 - yes 2 - yes 3 - lets fade the change with distance as well 4 - this is deeper then I was thinking. tell me more about this decision in a second. 5 - yes, lets burn down to the trunks? 6 - that is what I wanted 7 - suppress sounds good'. On the lead's explanation of question 4 (a cover, b sight lines, c aim): 'a - but confirm what the implication of this is.  the player might be able to visually see the unit on screen but won't be able to target it directly in a way that tracks it if it moves?' The numbers are starting values for a playtest (decision balance-uncalibrated); every detail marked PROPOSED is the lead's."
+    },
+    {
       "id": "pan-right-drag-off",
       "date": "2026-10-11",
       "area": "Camera",
