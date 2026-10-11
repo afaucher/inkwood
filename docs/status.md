@@ -11,7 +11,7 @@ Decisions and open questions live in the Decision Ledger
 | --- | --- | --- | --- |
 | Draw the boats and the bridge in the game (item 1 below) | lead session (builder) | scripts/ui/unit_marker_art*.gd (boat and bridge dispatch only), new scripts/ui/unit_marker_art_boats.gd, scripts/fx/ (the bridge's ruin), data/ui/ui.json unit_art keys | 2026-10-11 |
 | Build Hold the bridge (item 2 below) | lead session (builder) | data/scenarios/bridge.json, scripts/sim/mission.gd, scripts/app/main.gd selector, scripts/debug/debug_settings.gd scenario choices, scripts/test_support/bridge_*.gd, scripts/tests/test_bridge_mission.gd | 2026-10-11 |
-| Camera controls: wheel zoom in toward the cursor and out about the centre (Alex); left-drag on empty map pans (Alex); then the map's border at full zoom-out (board) | camera session (beautiful-lumiere worktree) | scripts/world/camera_controller.gd, data/view/camera.json, scripts/tests/test_camera.gd; the left-press hand-over: a signal in scripts/ui/unit_ui.gd, one line in scripts/app/sandbox.gd, their checks in test_ui_target and test_sandbox | 2026-10-11 |
+| Camera controls: wheel zoom anchors and left-drag pan (landed); right-drag pan removed, panning stops at the map's edge (Alex); the map's border board (builder) | camera session (beautiful-lumiere worktree) | scripts/world/camera_controller.gd, data/view/camera.json, scripts/tests/test_camera.gd; the board: scripts/render/map_border*.gd, data/view/map_border.json, scripts/ui/boards/map_border_board_shot.gd, variants/map-border/, scripts/tests/test_map_border.gd, and a one-line hook in scripts/render/map_view.gd | 2026-10-11 |
 
 ## Next, free to take
 
