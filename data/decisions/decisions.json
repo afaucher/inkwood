@@ -1649,6 +1649,29 @@
       ],
       "status": "chosen by Alex; deferred",
       "notes": "Alex: 'Future feature absolutely. A plane at low altitude can do a low pass. Potentially this is the last height band that has some interaction with hills.'"
+    },
+    {
+      "id": "flak-look",
+      "date": "2026-10-11",
+      "area": "Effects, Strike",
+      "question": "How does a flak burst look (variants/flak/)?",
+      "board": "variants/flak/ (the Strike Boards viewer, Flak tab)",
+      "options": [
+        "F1",
+        "F2 · Ragged burst",
+        "F3",
+        "F4"
+      ],
+      "chosen": "F2 · Ragged burst",
+      "parameters": {
+        "flak": "F2"
+      },
+      "applied_to": [
+        "data/fx/fx.json working_default.flak",
+        "variants/flak/board.json chosen"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Strike board - F2 Ragged Burst is the only open one I want to make right now'. The tower's ruin (R1) and the bombs' area of effect stay open."
     }
   ]
 }

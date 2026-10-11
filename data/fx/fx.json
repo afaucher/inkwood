@@ -614,9 +614,9 @@
       "_reason": "the art plan's proposed treatment (stipple burst plus hatch strokes with a fire accent), as a working default only"
     },
     "flak": {
-      "value": "F1",
-      "_proposed": true,
-      "_reason": "the lead's working default until Alex chooses from variants/flak/ (PROPOSED by Track X2: the recommendation recorded in that board)"
+      "value": "F2",
+      "decision": "flak-look",
+      "_reason": "Alex 2026-10-11 on variants/flak/: 'F2 Ragged Burst'"
     },
     "bomb": {
       "value": "B3",
