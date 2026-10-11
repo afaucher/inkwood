@@ -1836,15 +1836,49 @@
         "B folding strips: three strips folded or unfolded each on its own",
         "C a drafting sheet: all three always shown small"
       ],
-      "chosen": "B folding strips, with no limit on how many are open at once; the map's cone wash off by default with an arcs on/off button in the panel; the views show the selected unit's own cones only",
+      "chosen": "B folding strips, with no limit on how many are open at once; the map's cone wash off by default with an arcs on/off button in the panel; the views show the selected unit's own cones only; the roster header's Arcs button is removed, so the panel's is the only arcs control",
       "parameters": {
-        "planner.cones.shown": false
+        "planner.cones.shown": false,
+        "side_view.strips.open": {
+          "top": true,
+          "front": true,
+          "side": true
+        }
       },
       "applied_to": [
-        "being built: scripts/ui/side_view*.gd, data/ui/ui.json side_view and planner.cones.shown"
+        "scripts/ui/side_view.gd (the strips, the Arcs button), side_view_top.gd, side_view_front.gd, side_view_art.gd",
+        "scripts/ui/roster.gd: the roster's Arcs button removed",
+        "data/ui/ui.json side_view.strips/top/front/arcs, planner.cones.shown false",
+        "scripts/tests/test_side_view.gd"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'Next - I want to enhance the side view. I want to be able to select between top, front & side. I think this solves the 'cone but only upwards' problem. Maybe they fold instead of you selecting only one - so you could have all three. It would also make it easier to disable the cones on the main map which visually make it much harder to read.' Then, to the three questions: '1 B - but no limit on which are open at a time. I am testing on 4k 2 Yes, lets actually add a button to the panel to turn arcs on/off 3 self only'. How each view projects the cones, the strips' sizes and which are open at first are PROPOSED by the builder."
+      "notes": "Alex: 'Next - I want to enhance the side view. I want to be able to select between top, front & side. I think this solves the 'cone but only upwards' problem. Maybe they fold instead of you selecting only one - so you could have all three. It would also make it easier to disable the cones on the main map which visually make it much harder to read.' Then, to the three questions: '1 B - but no limit on which are open at a time. I am testing on 4k 2 Yes, lets actually add a button to the panel to turn arcs on/off 3 self only'. How each view projects the cones, the strips' sizes and which are open at first are PROPOSED by the builder. Then, to 'the roster header also has an Arcs button... do you want the roster's one removed?': 'Yes, remove the extra'."
+    },
+    {
+      "id": "map-border",
+      "date": "2026-10-11",
+      "area": "Map",
+      "question": "What does the map show past its edge (today the engine's plain grey), as a band along the edge at play zooms and in the wide strips at full zoom-out?",
+      "board": "variants/map-border",
+      "options": [
+        "A hatched edge onto blank paper",
+        "B printed map sheet (neatline, 500 m ticks and numbers, scale bar, north arrow)",
+        "C contours continue",
+        "D sheet on a table"
+      ],
+      "chosen": "A's hatched edge onto blank paper, with B's distance legend (the 500 m ticks and numbers, the scale bar); not B's neatline",
+      "parameters": {
+        "map_border.option": "E (A's hatched edge with B's distance legend)"
+      },
+      "applied_to": [
+        "data/view/map_border.json option E (the default; A to D and none stay switchable)",
+        "scripts/render/map_border.gd, map_border_e.gd (A's edge plus map_border_legend.gd: 500 m ticks inward from the edge, numbers 14 px inside the map, the scale bar at full zoom-out)",
+        "scripts/render/map_view.gd: the border node",
+        "scripts/tests/test_map_border.gd",
+        "variants/map-border (chosen_* frames)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'The secondary thing I wanted to do was look at a couple of art proposals for what to do for the area around the map when you zoom out. It is just a solid color right now. What are some treatments? Should we constrain the outer most zoom to a specific area? For treatments I was thinking of: The hatch edging onto a continued blank paper pattern. Clipped so you just see it as the border but not beyond.' Then, from the board: 'I like the hatches, with the distance legend'. The lead read 'the distance legend' as B's ticks, numbers and scale bar, without B's double-ruled neatline and north arrow (asked)."
     }
   ]
 }

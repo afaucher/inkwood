@@ -1,0 +1,448 @@
+{
+  "id": "map-border",
+  "about": "Every frame of the board as its own PNG at native size (1280 x 720), in frames/: <option>_<view>.png, option none (today's look, the reference), A, B, C, D; views far (fully zoomed out, the fog on: the topographic overview), edge035 (planning zoom 0.35 against the north-west corner, the fog off) and edge1 (zoom 1 at the same corner). board.png is the sheet of 1:1 crops of these.",
+  "frames": [
+    {
+      "file": "frames/none_far.png",
+      "option": "none",
+      "view": "far",
+      "zoom": 0.0679,
+      "focus_m": [
+        3817.6,
+        2500.0
+      ],
+      "fog": true,
+      "chosen": false,
+      "caption": "reference (none): the map's own edge  -  fully zoomed out (zoom 0.068)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/A_far.png",
+      "option": "A",
+      "view": "far",
+      "zoom": 0.0679,
+      "focus_m": [
+        3817.6,
+        2500.0
+      ],
+      "fog": true,
+      "chosen": false,
+      "caption": "A  -  Hatched edge onto blank paper  -  fully zoomed out (zoom 0.068)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/B_far.png",
+      "option": "B",
+      "view": "far",
+      "zoom": 0.0679,
+      "focus_m": [
+        3817.6,
+        2500.0
+      ],
+      "fog": true,
+      "chosen": false,
+      "caption": "B  -  Printed map sheet  -  fully zoomed out (zoom 0.068)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/C_far.png",
+      "option": "C",
+      "view": "far",
+      "zoom": 0.0679,
+      "focus_m": [
+        3817.6,
+        2500.0
+      ],
+      "fog": true,
+      "chosen": false,
+      "caption": "C  -  Contours continue  -  fully zoomed out (zoom 0.068)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/D_far.png",
+      "option": "D",
+      "view": "far",
+      "zoom": 0.0679,
+      "focus_m": [
+        3817.6,
+        2500.0
+      ],
+      "fog": true,
+      "chosen": false,
+      "caption": "D  -  Sheet on a table  -  fully zoomed out (zoom 0.068)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/chosen_far.png",
+      "option": "E",
+      "view": "far",
+      "zoom": 0.0679,
+      "focus_m": [
+        3817.6,
+        2500.0
+      ],
+      "fog": true,
+      "chosen": true,
+      "caption": "E  -  CHOSEN: Hatched edge with the distance legend  -  fully zoomed out (zoom 0.068)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/none_edge035.png",
+      "option": "none",
+      "view": "edge035",
+      "zoom": 0.35,
+      "focus_m": [
+        814.3,
+        414.3
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "reference (none): the map's own edge  -  planning zoom 0.35 at the north-west corner (zoom 0.350)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/none_edge1.png",
+      "option": "none",
+      "view": "edge1",
+      "zoom": 1.0,
+      "focus_m": [
+        220.0,
+        80.0
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "reference (none): the map's own edge  -  zoom 1 at the north-west corner (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/none_edge1_se.png",
+      "option": "none",
+      "view": "edge1_se",
+      "zoom": 1.0,
+      "focus_m": [
+        4959.0,
+        4920.0
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "reference (none): the map's own edge  -  zoom 1 at the south-east corner (the sea's edge: the sheet's shadow of option D falls here) (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/A_edge035.png",
+      "option": "A",
+      "view": "edge035",
+      "zoom": 0.35,
+      "focus_m": [
+        814.3,
+        414.3
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "A  -  Hatched edge onto blank paper  -  planning zoom 0.35 at the north-west corner (zoom 0.350)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/A_edge1.png",
+      "option": "A",
+      "view": "edge1",
+      "zoom": 1.0,
+      "focus_m": [
+        220.0,
+        80.0
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "A  -  Hatched edge onto blank paper  -  zoom 1 at the north-west corner (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/A_edge1_se.png",
+      "option": "A",
+      "view": "edge1_se",
+      "zoom": 1.0,
+      "focus_m": [
+        4959.0,
+        4920.0
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "A  -  Hatched edge onto blank paper  -  zoom 1 at the south-east corner (the sea's edge: the sheet's shadow of option D falls here) (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/B_edge035.png",
+      "option": "B",
+      "view": "edge035",
+      "zoom": 0.35,
+      "focus_m": [
+        814.3,
+        414.3
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "B  -  Printed map sheet  -  planning zoom 0.35 at the north-west corner (zoom 0.350)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/B_edge1.png",
+      "option": "B",
+      "view": "edge1",
+      "zoom": 1.0,
+      "focus_m": [
+        220.0,
+        80.0
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "B  -  Printed map sheet  -  zoom 1 at the north-west corner (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/B_edge1_se.png",
+      "option": "B",
+      "view": "edge1_se",
+      "zoom": 1.0,
+      "focus_m": [
+        4959.0,
+        4920.0
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "B  -  Printed map sheet  -  zoom 1 at the south-east corner (the sea's edge: the sheet's shadow of option D falls here) (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/C_edge035.png",
+      "option": "C",
+      "view": "edge035",
+      "zoom": 0.35,
+      "focus_m": [
+        814.3,
+        414.3
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "C  -  Contours continue  -  planning zoom 0.35 at the north-west corner (zoom 0.350)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/C_edge1.png",
+      "option": "C",
+      "view": "edge1",
+      "zoom": 1.0,
+      "focus_m": [
+        220.0,
+        80.0
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "C  -  Contours continue  -  zoom 1 at the north-west corner (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/C_edge1_se.png",
+      "option": "C",
+      "view": "edge1_se",
+      "zoom": 1.0,
+      "focus_m": [
+        4959.0,
+        4920.0
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "C  -  Contours continue  -  zoom 1 at the south-east corner (the sea's edge: the sheet's shadow of option D falls here) (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/D_edge035.png",
+      "option": "D",
+      "view": "edge035",
+      "zoom": 0.35,
+      "focus_m": [
+        814.3,
+        414.3
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "D  -  Sheet on a table  -  planning zoom 0.35 at the north-west corner (zoom 0.350)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/D_edge1.png",
+      "option": "D",
+      "view": "edge1",
+      "zoom": 1.0,
+      "focus_m": [
+        220.0,
+        80.0
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "D  -  Sheet on a table  -  zoom 1 at the north-west corner (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/D_edge1_se.png",
+      "option": "D",
+      "view": "edge1_se",
+      "zoom": 1.0,
+      "focus_m": [
+        4959.0,
+        4920.0
+      ],
+      "fog": false,
+      "chosen": false,
+      "caption": "D  -  Sheet on a table  -  zoom 1 at the south-east corner (the sea's edge: the sheet's shadow of option D falls here) (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/chosen_edge035.png",
+      "option": "E",
+      "view": "edge035",
+      "zoom": 0.35,
+      "focus_m": [
+        814.3,
+        414.3
+      ],
+      "fog": false,
+      "chosen": true,
+      "caption": "E  -  CHOSEN: Hatched edge with the distance legend  -  planning zoom 0.35 at the north-west corner (zoom 0.350)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/chosen_edge1.png",
+      "option": "E",
+      "view": "edge1",
+      "zoom": 1.0,
+      "focus_m": [
+        220.0,
+        80.0
+      ],
+      "fog": false,
+      "chosen": true,
+      "caption": "E  -  CHOSEN: Hatched edge with the distance legend  -  zoom 1 at the north-west corner (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/chosen_edge1_se.png",
+      "option": "E",
+      "view": "edge1_se",
+      "zoom": 1.0,
+      "focus_m": [
+        4959.0,
+        4920.0
+      ],
+      "fog": false,
+      "chosen": true,
+      "caption": "E  -  CHOSEN: Hatched edge with the distance legend  -  zoom 1 at the south-east corner (the sea's edge: the sheet's shadow of option D falls here) (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/chosen_edge1_tick_n.png",
+      "option": "E",
+      "view": "edge1_tick_n",
+      "zoom": 1.0,
+      "focus_m": [
+        500.0,
+        80.0
+      ],
+      "fog": false,
+      "chosen": true,
+      "caption": "E  -  CHOSEN: Hatched edge with the distance legend  -  zoom 1 against the north edge at the 500 m tick: the legend's number over the land (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/chosen_edge1_tick_e.png",
+      "option": "E",
+      "view": "edge1_tick_e",
+      "zoom": 1.0,
+      "focus_m": [
+        4959.0,
+        2500.0
+      ],
+      "fog": false,
+      "chosen": true,
+      "caption": "E  -  CHOSEN: Hatched edge with the distance legend  -  zoom 1 against the east edge at the 2,500 m tick: the legend's number over the deep sea (zoom 1.000)",
+      "size": [
+        1280,
+        720
+      ]
+    }
+  ]
+}

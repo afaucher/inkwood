@@ -12,8 +12,6 @@ Decisions and open questions live in the Decision Ledger
 | Draw the boats and the bridge in the game (item 1 below) | lead session (builder) | scripts/ui/unit_marker_art*.gd (boat and bridge dispatch only), new scripts/ui/unit_marker_art_boats.gd, scripts/fx/ (the bridge's ruin), data/ui/ui.json unit_art keys | 2026-10-11 |
 | Build Hold the bridge (item 2 below) | lead session (builder) | data/scenarios/bridge.json, scripts/sim/mission.gd, scripts/app/main.gd selector, scripts/debug/debug_settings.gd scenario choices, scripts/test_support/bridge_*.gd, scripts/tests/test_bridge_mission.gd | 2026-10-11 |
 | Forest fire (decision forest-fire): trees burn as smoke, spread by distance, low damage nearby, smoke cover, burnt down to trunks; tried in Suppress | fire session (nice-dewdney worktree) | new data/sim/fire.json, scripts/sim/fire*.gd, scripts/tests/test_fire*.gd; the fire step and its net state in scripts/sim/world.gd (and the snapshot in scripts/net/world_sync.gd); smoke cover and burnt cover in scripts/sim/concealment.gd, data/sim/concealment.json; new scripts/fx/fx_fire*.gd and its hook in fx_field.gd/fx_layer.gd; per-chunk rebake in scripts/render/map_view.gd, chunk_terrain_provider.gd; data/scenarios/suppress.json (fire on); a fire knob in scripts/debug/debug_settings.gd | 2026-10-11 |
-| Camera controls: wheel zoom anchors and left-drag pan (landed); right-drag pan removed, panning stops at the map's edge (Alex); the map's border board (builder) | camera session (beautiful-lumiere worktree) | scripts/world/camera_controller.gd, data/view/camera.json, scripts/tests/test_camera.gd; the board: scripts/render/map_border*.gd, data/view/map_border.json, scripts/ui/boards/map_border_board_shot.gd, variants/map-border/, scripts/tests/test_map_border.gd, and a one-line hook in scripts/render/map_view.gd | 2026-10-11 |
-| Side view: top, front and side as folding strips, an arcs button in the panel, map cones off by default (Alex, decision side-view-views) | camera session (builder) | scripts/ui/side_view*.gd, scripts/tests/test_side_view.gd, data/ui/ui.json side_view keys and planner.cones.shown; the arcs default's knock-on in tests that expect cones (test_cone_overlay, test_ui_*) | 2026-10-11 |
 
 ## Next, free to take
 
@@ -44,6 +42,7 @@ Decisions and open questions live in the Decision Ledger
 
 ## Recently landed
 
+- 2026-10-11: the camera and the map's edge: wheel zoom in toward the cursor and out about the centre, left-drag on empty map pans, no right-drag pan, panning stops 100 m past the edge, and past the edge a hatched band onto blank paper with a distance legend (decisions zoom-anchors, pan-left-drag, pan-right-drag-off, pan-stops-at-edge, map-border); the side view's top, front and side strips, with the map's cones off by default and the panel's Arcs button (side-view-views).
 - 2026-10-11: combat answers (Alex's four). Bridge: 14 pips, about 20 turns of one tank's gun (bridge-durability, number proposed). Cruiser
   shell blast: 6 / 12 / 20 m at 4 / 3 / 2 pips (shell-blast, pips proposed). A bomb whose target left its cone and a gun salvo whose
   target is no longer spotted or in reach now fire a POOR shot instead of holding (outside-cone-release): `data/sim/bombs.json`

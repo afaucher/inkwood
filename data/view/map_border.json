@@ -1,0 +1,164 @@
+{
+  "_about": "WHAT THE MAP SHOWS PAST ITS EDGE (builder, map-border board, 2026-10-11). Read by scripts/render/map_border.gd and its options (map_border_*.gd) through scripts/world/camera_data.gd, which records every field it hands out so test_map_border can prove the file carries nothing dead. EVERY VALUE IS PROPOSED; nothing here is a decision until Alex picks an option (variants/map-border/board.json, chosen: null). Alex's words that frame it (2026-10-11): 'The secondary thing I wanted to do was look at a couple of art proposals for what to do for the area around the map when you zoom out. It is just a solid color right now. What are some treatments? Should we constrain the outer most zoom to a specific area? For treatments I was thinking of: The hatch edging onto a continued blank paper pattern. Clipped so you just see it as the border but not beyond.' His decision (pan-stops-at-edge): keep the zoom-out limit at 'fit_map' and stop panning past the edge -- the view shows at most pan.edge_overscroll_m (data/view/camera.json, 100 m) past the edge at any zoom but the full zoom-out, where the whole map is centred and the strips beside it are wide. So every option works as (1) a band along the edge at most reach.band_m deep, seen at the planning zoom 0.35 and at zoom 1, and (2) the fill of arbitrarily wide strips at full zoom-out. THE FOUR OPTIONS (letters fixed; all PROPOSED): A hatched edge onto blank paper, B printed map sheet, C contours continue, D sheet on a table; 'none' is today's look (the engine's clear colour past the map's edge, and the map's own hard edge at the last 256 m chunk, 120 m past the 5,000 m bounds on the right and bottom). The DEFAULT stays 'none' until Alex chooses. Record shape as data/view/fog.json: {value, _proposed, _reason}. Colours are ROLES, never hexes (working rule 6): {base, toward?, t?, lift?, chroma?, alpha?} exactly as scripts/render/fog_style.gd resolves them against data/params/render_defaults.json (paper, ink, object_fill, wall_fill, rock_fill, roof_lit, dirt, shadow, side_a, side_b); hue stays reserved for paper, ink, the shadow tint, the two side accents and water, so every role below is the paper ramp, the ink ramp, or a mix toward the one shadow tint. Sizes marked 'px' are SCREEN px (a map mark keeps its width at every zoom, as the fog's inked edge does); sizes in 'm' are the world's.",
+
+  "option": { "value": "E", "decision": "map-border", "_reason": "which treatment is on: none | A | B | C | D | E. E is THE GAME'S LOOK since Alex chose it (2026-10-11, decision map-border, from variants/map-border): 'I like the hatches, with the distance legend.' = A's hatched edge onto blank paper plus B's distance legend (a tick every 500 m with its number in metres, and the scale bar at the full zoom-out), without B's double neatline and without its north arrow. The others stay switchable for comparison and 'none' is the old look (the engine's clear colour past the map's hard edge). MapBorder.set_option(letter) switches at run time; the environment variable INKWOOD_MAP_BORDER=<letter> sets it for a run without touching this file" },
+
+  "reach": {
+    "band_m": { "value": 100, "_proposed": true, "_reason": "the band along the edge every option is drawn for, metres: the most the view shows past the edge at any zoom but the full zoom-out (data/view/camera.json pan.edge_overscroll_m, the lead's 100 m; test_map_border holds the two equal). At 2 px/m: 70 screen px at the planning zoom 0.35, 200 px at zoom 1, 14 px at the full zoom-out (0.068)" },
+    "outside_px": { "value": 200000, "_proposed": true, "_reason": "how far past the map's edge the outside fill goes, MAP px (100 km at 2 px/m): far more than the widest strip any window shows at the full zoom-out (a 21:9 window is about 3 km of strip each side), so the fill never shows the engine's clear colour. It is four rectangles (a cost of four quads, whatever the size)" },
+    "inset_px": { "value": 80, "_proposed": true, "_reason": "MAP px the fill's rectangles reach INTO the map under an edge line, so an inked line centred on the edge is whole (the fill is transparent inside the map except for the ink)" }
+  },
+
+  "paper": {
+    "role": { "value": { "base": "paper" }, "_proposed": true, "_reason": "the colour the outside paper is tinted from: the map's own paper, evaluated per pixel at WORLD coordinates by the same function the map's chunks use (shaders/map_paper.gdshader), so the paper runs on past the edge with no seam in its tint" },
+    "grain": { "value": true, "_proposed": true, "_reason": "multiply the paper grain (the map's own tile at the map's strength, render_defaults paper_grain) over the outside paper, in phase with the chunks' grain. No ink, no specks, no fibres and no dirt stipple beyond the edge: 'continued blank paper'" },
+    "grain_tile_px": { "value": 512, "_proposed": true, "_reason": "when the map's own grain tile cannot be borrowed (a MapView with no baked provider: tests, the scene stand-in) the border builds a tile of this size from the map's seed. The map's tile is chunk_px square and is used whenever it exists" }
+  },
+
+  "e": {
+    "name": { "value": "Hatched edge with the distance legend", "decision": "map-border", "_reason": "THE CHOSEN LOOK (Alex, 2026-10-11, decision map-border): 'I like the hatches, with the distance legend.' Option A's hatched edge onto blank paper (its a.edge, a.rule2 and a.hatch records are the edge) plus the distance legend below: 500 m ticks with their numbers in metres, and the scale bar at the full zoom-out. Not B's double-ruled neatline, not B's north arrow. The numbers below are still PROPOSED" },
+    "tick": {
+      "spacing_m": { "value": 500, "_proposed": true, "_reason": "metres between ticks, from the world's origin: ten squares across the 5,000 m map, the fog's topographic grid (fog.json topo.grid.spacing_m), so on the overview each tick is where a grid line meets the edge" },
+      "length_px": { "value": 8, "_proposed": true, "_reason": "SCREEN px: a tick is a stroke from the edge line INWARD, into the map, so it never lies on the hatching (which is outside the edge)" },
+      "width_px": { "value": 1.2, "_proposed": true, "_reason": "SCREEN px" },
+      "role": { "value": { "base": "ink", "alpha": 0.95 }, "_proposed": true, "_reason": "ink" },
+      "number_the_ends": { "value": false, "_proposed": true, "_reason": "whether the ticks at 0 and 5,000 m (the corners) are numbered. false: they are the edge itself, and a number centred on one would hang out over the hatching" }
+    },
+    "label": {
+      "role": { "value": { "base": "ink" }, "_proposed": true, "_reason": "full ink, on the map's paper halo (the lettering rule for words on the map: the label face, at least 14 px: data ui.json labels.px and lettering.min_px; the halo is labels.halo_px in the label_halo role)" },
+      "gap_px": { "value": 3, "_proposed": true, "_reason": "SCREEN px between a tick's inner end and its number: the number stands just inside the tick, on the map, never on the hatching" },
+      "suffix": { "value": " m", "_proposed": true, "_reason": "the unit, so the numbers are 'in metres': kept while the ticks are far enough apart for it, dropped first (the scale bar still says it), then the number itself is left off. Readable or left off" },
+      "min_gap_px": { "value": 10, "_proposed": true, "_reason": "SCREEN px of clear map wanted between two neighbouring numbers; a number that does not fit is left off (Alex: 'Readable or leave it off')" }
+    },
+    "scale_bar": {
+      "lengths_m": { "value": [100, 200, 250, 500, 1000, 2000, 2500], "_proposed": true, "_reason": "the lengths a scale bar may have: the longest that fits the margin left of the map, clear of the hatch band" },
+      "height_px": { "value": 6, "_proposed": true, "_reason": "SCREEN px; two segments, one inked and one paper" },
+      "min_px": { "value": 40, "_proposed": true, "_reason": "SCREEN px: no bar is drawn shorter than this (and none when no length fits)" },
+      "margin_px": { "value": 12, "_proposed": true, "_reason": "SCREEN px kept clear between the bar and the window edge and the hatch band" },
+      "role": { "value": { "base": "ink" }, "_proposed": true, "_reason": "ink; the paper segment is the paper itself" },
+      "when": { "value": "whole_map_in_view", "_proposed": true, "_reason": "when the scale bar is drawn: 'whole_map_in_view' (the window holds the whole map: the full zoom-out) or 'never'" }
+    }
+  },
+
+  "a": {
+    "name": { "value": "Hatched edge onto blank paper", "_proposed": true, "_reason": "Alex's own idea (2026-10-11): 'The hatch edging onto a continued blank paper pattern. Clipped so you just see it as the border but not beyond.' Blank paper past the edge; along the edge a band of ink hachures pointing OUTWARD (perpendicular to the edge, a fan at each corner), clipped to the band" },
+    "_versus_fog": { "_value": "heavier, denser, doubled", "_proposed": true, "_reason": "HOW IT READS AS THE WORLD'S EDGE, NOT AS THE FOG'S SIGHT EDGE (data/view/fog.json edge.inked: a 1.5 px line, hatching at 45 degrees 4 px apart, 0.9 px wide, ink alpha 0.55, 26 px deep, inside the fog). This one is all three: HEAVIER (a 2.6 px edge line, hatch 1.1 px wide at alpha 0.8), DENSER (3 px between hatch lines, 2.2 times the fog's deep: 56 px), DOUBLED (a hairline rule 4.5 px outside the heavy one), and the hatching is perpendicular to the edge where the fog's slants at 45 degrees. Informational: the notes on the board say it; no code reads this" },
+    "edge": {
+      "line_role": { "value": { "base": "ink", "alpha": 0.95 }, "_proposed": true, "_reason": "the heavy line on the edge: ink, near full" },
+      "line_px": { "value": 2.6, "_proposed": true, "_reason": "SCREEN px; the fog's inked edge is 1.5" },
+      "wobble_px": { "value": 1.4, "_proposed": true, "_reason": "SCREEN px of hand wobble on the line (inward only, so the map is never revealed past it); the fog's is 2.5, the world's edge is straighter than a sight circle" },
+      "wobble_per_px": { "value": 0.02, "_proposed": true, "_reason": "noise frequency per MAP px (one wave every 50 map px), anchored to the world so the line does not swim when the view pans" }
+    },
+    "rule2": {
+      "role": { "value": { "base": "ink", "alpha": 0.75 }, "_proposed": true, "_reason": "the second, fine rule outside the first" },
+      "px": { "value": 0.9, "_proposed": true, "_reason": "SCREEN px, a hairline" },
+      "gap_px": { "value": 4.5, "_proposed": true, "_reason": "SCREEN px between the heavy line and the hairline" }
+    },
+    "hatch": {
+      "role": { "value": { "base": "ink", "alpha": 0.8 }, "_proposed": true, "_reason": "ink; the fog's is alpha 0.55" },
+      "spacing_px": { "value": 3.0, "_proposed": true, "_reason": "SCREEN px between hatch lines (the fog's is 4)" },
+      "width_px": { "value": 1.1, "_proposed": true, "_reason": "SCREEN px (the fog's is 0.9)" },
+      "depth_px": { "value": 56, "_proposed": true, "_reason": "SCREEN px the hatching reaches from the hairline, its ends ragged between ragged_min and 100% of it; never past reach.band_m (14 px at the full zoom-out, where the whole 100 m band is 14 px). The fog's is 26" },
+      "ragged_min": { "value": 0.45, "_proposed": true, "_reason": "the shortest hatch line is this fraction of depth_px (the fog's 45%)" },
+      "jitter": { "value": 0.3, "_proposed": true, "_reason": "how far a line strays from its slot, as a fraction of spacing_px, so the lines are not a ruled grid" },
+      "taper": { "value": 0.5, "_proposed": true, "_reason": "the alpha a line has left at its far end, as a fraction of its start (a pen lifting off)" }
+    }
+  },
+
+  "b": {
+    "name": { "value": "Printed map sheet", "_proposed": true, "_reason": "the paper continues; at the edge a ruled neatline in the cards' double-rule language, graticule ticks every 500 m with coordinate numbers in metres, and in the margin at the full zoom-out a scale bar and a north arrow (north is up: there is no rotation)" },
+    "rule": {
+      "inner_role": { "value": { "base": "ink", "alpha": 0.9 }, "_proposed": true, "_reason": "the fine neatline, on the map's edge (the card's inner rule: ui.json card.inner_line_px 0.6)" },
+      "inner_px": { "value": 1.0, "_proposed": true, "_reason": "SCREEN px" },
+      "outer_role": { "value": { "base": "ink", "alpha": 0.95 }, "_proposed": true, "_reason": "the heavy border rule outside it (the card's outer rule: ui.json card.outer_line_px 1.3)" },
+      "outer_px": { "value": 2.2, "_proposed": true, "_reason": "SCREEN px" },
+      "gap_px": { "value": 5.0, "_proposed": true, "_reason": "SCREEN px between the two rules (the card's inner_inset_px is 3.5)" },
+      "wobble_px": { "value": 0.5, "_proposed": true, "_reason": "SCREEN px of hand wobble on the rules (the card's is 0.6)" }
+    },
+    "tick": {
+      "spacing_m": { "value": 500, "_proposed": true, "_reason": "metres between graticule ticks, from the world's origin: ten squares across the 5,000 m map, the fog's topographic grid (fog.json topo.grid.spacing_m)" },
+      "length_px": { "value": 6, "_proposed": true, "_reason": "SCREEN px, from the outer rule outward" },
+      "width_px": { "value": 1.2, "_proposed": true, "_reason": "SCREEN px" },
+      "role": { "value": { "base": "ink", "alpha": 0.95 }, "_proposed": true, "_reason": "ink" }
+    },
+    "label": {
+      "role": { "value": { "base": "ink" }, "_proposed": true, "_reason": "full ink (the lettering rule: full ink on paper, the label face, at least 14 px: data/ui/ui.json lettering.min_px, labels.px)" },
+      "gap_px": { "value": 4, "_proposed": true, "_reason": "SCREEN px between a tick's end and its number" },
+      "suffix": { "value": " m", "_proposed": true, "_reason": "the unit, so the numbers are 'in metres': added when the spacing between ticks leaves room for it, left off (the scale bar still says the unit) when it does not. Readable or left off" },
+      "min_gap_px": { "value": 10, "_proposed": true, "_reason": "SCREEN px of clear paper wanted between two neighbouring numbers; a number that does not fit is left off (Alex: 'Readable or leave it off')" }
+    },
+    "scale_bar": {
+      "lengths_m": { "value": [100, 200, 250, 500, 1000, 2000, 2500], "_proposed": true, "_reason": "the lengths a scale bar may have: the longest that fits the margin" },
+      "height_px": { "value": 6, "_proposed": true, "_reason": "SCREEN px; two segments, one inked and one paper, in the printed-map manner" },
+      "min_px": { "value": 40, "_proposed": true, "_reason": "SCREEN px: no bar is drawn shorter than this (and none when no length fits)" },
+      "margin_px": { "value": 12, "_proposed": true, "_reason": "SCREEN px kept clear between the bar and the window edge, the map and the roster" },
+      "role": { "value": { "base": "ink" }, "_proposed": true, "_reason": "ink; the paper segment is the paper itself" }
+    },
+    "north_arrow": {
+      "height_px": { "value": 46, "_proposed": true, "_reason": "SCREEN px, the shaft and its head; the N above it is the label face" },
+      "role": { "value": { "base": "ink" }, "_proposed": true, "_reason": "ink; half the arrowhead is filled, as on a printed map" }
+    },
+    "furniture_when": { "value": "whole_map_in_view", "_proposed": true, "_reason": "when the scale bar and the north arrow are drawn: 'whole_map_in_view' (the view holds the whole map: the full zoom-out and a little above it) or 'never'. They go in the widest margin beside the map, and only where they fit" }
+  },
+
+  "c": {
+    "name": { "value": "Contours continue", "_proposed": true, "_reason": "past the edge the terrain goes on in the fog's topographic style -- contours only, no trees, no tones, no detail -- in a fainter ink, fading to blank paper far out; the playable map keeps its full ink and ends at a thin edge line" },
+    "contour": {
+      "role": { "value": { "base": "ink", "toward": "paper", "t": 0.5 }, "_proposed": true, "_reason": "the contour ink faded half way to paper: fainter than the fog's (fog.json topo.lines.role fades 35%). At the planning zoom 0.35 a one-texel line is a third of a screen pixel wide, so a paler role than this is not seen there (62% was tried and was not)" },
+      "alpha": { "value": 0.85, "_proposed": true, "_reason": "the alpha the contour lines are laid at (the fog's is 0.85)" },
+      "water_lines": { "value": true, "_proposed": true, "_reason": "continue the sea's shore and depth steps as lines too (the fog's water lines, quieter: topo.water.line_alphas), so a sea that runs off the map's edge goes on (the wash that fills it is c.wash). false: the land's contours only" }
+    },
+    "wash": {
+      "on": { "value": true, "_proposed": true, "_reason": "continue the SEA past the edge as the fog's quiet wash (its three depth steps at topo.water.quiet, the water palette's own colours), fading to blank paper like the contours. Alex's words were 'contours only'; open deep sea has no contours, so without this a sea that runs off the edge stops at the line (this seed's east edge is sea). The map's own water inside is untouched. false: contours only" },
+      "cell_m": { "value": 16, "_proposed": true, "_reason": "metres between the samples of the water's depth the wash is made from (a bilinear mask: the steps are smooth lines between samples); 105,000 samples, about 1.4 s on one worker thread" },
+      "strength": { "value": 1.0, "_proposed": true, "_reason": "a multiplier on the wash's alpha, which is 1 minus the fog's topo.water.quiet (0.55)" }
+    },
+    "edge": {
+      "line_role": { "value": { "base": "ink", "alpha": 0.9 }, "_proposed": true, "_reason": "the thin line the playable map ends at" },
+      "line_px": { "value": 1.2, "_proposed": true, "_reason": "SCREEN px" },
+      "wobble_px": { "value": 0.6, "_proposed": true, "_reason": "SCREEN px, inward only" },
+      "wobble_per_px": { "value": 0.02, "_proposed": true, "_reason": "noise frequency per map px" }
+    },
+    "lods": {
+      "texels_per_px": { "value": [1.0, 0.25, 0.0625], "_proposed": true, "_reason": "baked texels per MAP px for each level of detail, finest first, as the fog's topographic layer (fog.json topo.lods) so a line is about a screen pixel wide at every zoom" },
+      "depth_m": { "value": [120, 1200, 1200], "_proposed": true, "_reason": "how far past the edge each level is baked, metres. The finest need only cover the band (100 m) and a margin; the coarse ones the wide strips at the full zoom-out (about 900 m on a 1280 x 720 window; a wider window shows blank paper beyond the deepest level, after the fade); past the deepest level the paper is blank" },
+      "lod_ratio": { "value": 0.75, "_proposed": true, "_reason": "the level shown at a zoom is the coarsest whose texels per px are at least this times the zoom (fog.json topo.lod_ratio)" },
+      "tile_texels": { "value": 1024, "_proposed": true, "_reason": "the longest side of a baked tile, in texels" }
+    },
+    "fade": {
+      "from_m": { "value": 700, "_proposed": true, "_reason": "metres from the edge where the contours begin to fade to blank paper: the ring's outer edge must not be a hard square" },
+      "to_m": { "value": 1100, "_proposed": true, "_reason": "metres where they are gone (inside the deepest level's depth)" }
+    },
+    "bake": {
+      "workers": { "value": 3, "_proposed": true, "_reason": "recorder threads, each with a private twin of the terrain (the fog's way: its caches are not thread-safe)" },
+      "tiles_per_frame": { "value": 2, "_proposed": true, "_reason": "baked tiles whose canvases are submitted to the GPU per frame (the main thread's share; the recording is on the workers)" },
+      "in_flight": { "value": 6, "_proposed": true, "_reason": "tiles in the pipeline at once (recording, submitted, being read back)" }
+    }
+  },
+
+  "d": {
+    "name": { "value": "Sheet on a table", "_proposed": true, "_reason": "the map is a sheet of paper with a slightly ragged (deckle) edge and a lifted shadow, lying on a darker surface that fills everything outside it" },
+    "table": {
+      "role": { "value": { "base": "paper", "toward": "ink", "t": 0.42 }, "_proposed": true, "_reason": "THE SURFACE: no new hue -- the paper ramp stepped down toward the ink (an ink wash on the paper), a darker brown than the sheet. The alternative the brief names, a step toward the shadow tint ({base: paper, toward: shadow, t: 0.35}), is a one-line change here; it reads cooler and greyer" },
+      "seam_role": { "value": { "base": "ink", "alpha": 0.2 }, "_proposed": true, "_reason": "the seams between the table's boards: material is linework, not colour" },
+      "seam_px": { "value": 1.0, "_proposed": true, "_reason": "SCREEN px" },
+      "seam_phase": { "value": 0.37, "_proposed": true, "_reason": "where the first seam falls between the map's north edge and the next, as a fraction of board_m, so no seam lies along the sheet's edge" },
+      "board_m": { "value": 650, "_proposed": true, "_reason": "metres between seams; the seams run along the map's x axis, with a little wobble. 0 draws no seams" }
+    },
+    "deckle": {
+      "amplitude_m": { "value": 7, "_proposed": true, "_reason": "metres the sheet's edge may be bitten inward: a deckle edge is millimetres on a sheet of paper, and the sheet is a half-metre map at 5,000 m, so 10 m is a millimetre. 'Slightly ragged'" },
+      "step_m": { "value": 9, "_proposed": true, "_reason": "metres between the vertices of the ragged edge" },
+      "per_m": { "value": 0.045, "_proposed": true, "_reason": "noise frequency per metre along the edge (a fine tooth every ~20 m on top of a slow wave); two octaves" },
+      "seed": { "value": 41, "_proposed": true, "_reason": "the edge's noise seed (a different value is another edge)" }
+    },
+    "lip": {
+      "role": { "value": { "base": "object_fill", "alpha": 0.9 }, "_proposed": true, "_reason": "a thin pale lip along the sheet's edge, the paper's thickness catching the light" },
+      "width_m": { "value": 2.5, "_proposed": true, "_reason": "metres" }
+    },
+    "shadow": {
+      "role": { "value": { "base": "shadow" }, "_proposed": true, "_reason": "the map's shadow tint, laid at the map's shadow strength (render_defaults shadow_strength) times strength_scale: the cards' lifted-shadow language (ui.json card.lift_px 9: the card's rectangle moved away from the sun)" },
+      "lift_m": { "value": 18, "_proposed": true, "_reason": "metres the sheet is lifted: its shadow is the sheet's silhouette moved this far away from the sun (south-east), flat, with no blur. 36 px at zoom 1, 13 px at 0.35, 2 px at the full zoom-out" },
+      "strength_scale": { "value": 1.0, "_proposed": true, "_reason": "a multiplier on the map's shadow strength" }
+    }
+  }
+}
