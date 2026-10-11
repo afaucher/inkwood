@@ -1494,13 +1494,17 @@
       "chosen": "mixed warfare, each mission with only a few elements: a big ship off the coast, tanks that move inland and spot anti-aircraft batteries for the ship's guns so airstrikes can go in; airstrikes that clear artillery so warships can engage supply boats; a small airfield where planes land to repair and rearm; trains as targets; observation balloons that tell the enemy where you are; mobile artillery that follows tanks and adds firepower without taking direct fire",
       "parameters": {
         "mission_size": "only a few elements per mission",
-        "capture_airfield": "a mission objective: capture an airfield intact with tanks (so it could be based from); the basing itself is not simulated (Alex: 'as mission objective, don't need to sim that part')"
+        "capture_airfield": "a mission objective: capture an airfield intact with tanks (so it could be based from); the basing itself is not simulated (Alex: 'as mission objective, don't need to sim that part')",
+        "ground_scale": "ground objectives just start closer; engagement ranges are not settled yet (Alex: 'I am not sure what engagement ranges make sense yet')",
+        "shared_spotting": "yes: any friendly unit's sight counts for every gun of its side; long-range guns need a spotted target",
+        "big_guns_as_specials": "yes: a warship's main guns and artillery are specials, fired by hand with a long reload, aimed with the target selection",
+        "warship": "not a full battleship: something smaller that operates more independently"
       },
       "applied_to": [
         "planning"
       ],
       "status": "direction from Alex; details open",
-      "notes": "Alex: 'Let's plan some more units. I love the idea of mixed warfare. You have a huge ship parked off the coast but you need tanks to move inland to spot the aa batteries for the ship. Once it gets those to clear for airstrikes. Or you need airstrikes to clear artillery so the warships can engage the supply boats. Airplanes could land at a little airfield to repair and rearm. A train is a perfect target. Observation balloons could let the enemy know where you are. Mobile artillery could follow tanks to provide more firepower without taking direct fire.' Then: 'Each mission would only have a few elements'. Then: 'Capturing an airfield intact with tanks might make you able to base there (as mission objective, don't need to sim that part.'"
+      "notes": "Alex: 'Let's plan some more units. I love the idea of mixed warfare. You have a huge ship parked off the coast but you need tanks to move inland to spot the aa batteries for the ship. Once it gets those to clear for airstrikes. Or you need airstrikes to clear artillery so the warships can engage the supply boats. Airplanes could land at a little airfield to repair and rearm. A train is a perfect target. Observation balloons could let the enemy know where you are. Mobile artillery could follow tanks to provide more firepower without taking direct fire.' Then: 'Each mission would only have a few elements'. Then: 'Capturing an airfield intact with tanks might make you able to base there (as mission objective, don't need to sim that part.' Answers to the four questions: '1. Ground objectives can just start closer. I am not sure what engagement ranges make sense yet. 2. Yes 3 yes 4 not a full battleship, something smaller that would operate more independently'."
     }
   ]
 }
