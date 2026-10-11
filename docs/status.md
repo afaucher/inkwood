@@ -10,6 +10,7 @@ Decisions and open questions live in the Decision Ledger
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
 | Combat answers: bridge durability, the cruiser's shell blast, poor shots for bombs and guns | lead session (builder) | data/units/bridge.json, data/sim/guns.json, data/sim/bombs.json, scripts/sim/guns.gd, gun_rules.gd, combat_resolver.gd (the held-salvo path), their tests | 2026-10-11 |
+| Camera controls: wheel zoom in toward the cursor and out about the centre (Alex); then pan schemes and the map's border at full zoom-out (research, board) | camera session (beautiful-lumiere worktree) | scripts/world/camera_controller.gd, data/view/camera.json, scripts/tests/test_camera.gd | 2026-10-11 |
 
 ## Next, free to take
 
