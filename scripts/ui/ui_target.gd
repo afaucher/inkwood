@@ -38,6 +38,10 @@ var sight: Callable = Callable()
 # unit_id -> Vector2 (metres): where that unit is SHOWN now (UnitUI points it at the playback's pose while a turn
 # plays, else the unit's place). Unset: the unit's own x, y.
 var shown: Callable = Callable()
+# unit_id -> bool: whether that unit is IN SMOKE now and so cannot be tracked (the forest fire, decision forest-fire; Alex: "visible but untrackable ...
+# last place you saw it"). UnitUI points it at World.tracking_denied. Unset: every unit can be tracked. A click on such a unit sets a POINT target at the
+# place it is shown (PROPOSED reading of Alex: it "won't be able to target it directly in a way that tracks it if it moves").
+var untracked: Callable = Callable()
 
 func is_set() -> bool:
 	return kind != ""
@@ -56,10 +60,14 @@ func clear() -> void:
 	point_m = Vector2.INF
 	changed.emit()
 
-# An enemy unit as the target; `at_m` is where the player sees it now (kept as the last place it was seen).
+# An enemy unit as the target; `at_m` is where the player sees it now (kept as the last place it was seen). A unit in smoke is not tracked, so it
+# becomes a POINT target at `at_m` (a unit target set before it went into the smoke stays a unit target; the sim handles that).
 func set_unit(id: String, at_m: Vector2) -> void:
 	if id == "":
 		clear()
+		return
+	if untracked.is_valid() and bool(untracked.call(id)):
+		set_point(at_m)
 		return
 	if kind == "unit" and unit_id == id and point_m == at_m:
 		return

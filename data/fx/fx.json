@@ -20899,5 +20899,217 @@
         }
       }
     }
+  },
+  "forest_fire": {
+    "_about": "THE FOREST FIRE'S LOOK (track 'Forest fire', decision forest-fire, 2026-10-11; scripts/fx/fx_fire.gd draws the smoke, scripts/render/fire_trunk.gd and chunk_terrain_provider.gd the trunks). Alex: 'the fire is actually just smoke coming from the trees' and 'lets burn down to the trunks'; the look is a STAND-IN: today's W1 smoke (decision damage-smoke) as one column per burning tree, no flame and no fire colour (decision fire-colour), then a board of 3-4 options for a burning grove and a burnt-out tree will swap it. So the smoke and the trunk are each behind ONE block here ('smoke', 'trunk') that a board can vary. EVERY VALUE IS A PROPOSED VALUE RECORD {value, _proposed, _reason}: the builder's numbers, not Alex's decisions, until a board is chosen. A column is a stream of W1 puffs born on a fixed grid from the tree's lit time; thick while the tree burns (tone 2), the medium tone for its last dying_s, the thin tone for tail_s after burn-out, then it only ages away; a puff is a pure function of (the feed, the game time), so every peer and a late joiner draw the same smoke.",
+    "smoke": {
+      "_about": "One burning tree's column of smoke (fx_fire.gd).",
+      "smoke_option": {
+        "value": "W1",
+        "_proposed": true,
+        "_reason": "PROPOSED stand-in (forest-fire option 6): the smoke option the column is drawn in, today's W1 (decision damage-smoke, soft white to grey, translucent washes, no outline). A board may name another"
+      },
+      "puff_size_m": {
+        "value": 5.0,
+        "_proposed": true,
+        "_reason": "PROPOSED: the size class (m) the W1 puff sprites are baked at: a baked puff's radius is the option's radius_frac x this; each puff is then scaled to its own radius, so this only sets the sprite's resolution"
+      },
+      "map_scale": {
+        "value": true,
+        "_proposed": true,
+        "_reason": "PROPOSED: the column's size follows the MAP's metres (a column stands on a tree, which is drawn at the map's scale), not the planes' own drawn scale as a plane's smoke does; so its shadow gap is not multiplied by the planes' true_scale either"
+      },
+      "radius_frac_of_tree": {
+        "value": [
+          0.6,
+          1.0
+        ],
+        "_proposed": true,
+        "_reason": "PROPOSED: a puff's radius [least, most] as a share of the burning tree's canopy radius r_m (the feed's), before the W1 option's own growth over the puff's life"
+      },
+      "tone_radius_scale": {
+        "value": [
+          0.7,
+          0.85,
+          1.0
+        ],
+        "_proposed": true,
+        "_reason": "PROPOSED: the radius is scaled by this per tone (thin, medium, thick), so a dying column narrows"
+      },
+      "interval_s": {
+        "value": 1.0,
+        "_proposed": true,
+        "_reason": "PROPOSED: seconds between puffs of one column (a turn is 5 s): about six live puffs make a column"
+      },
+      "interval_jitter": {
+        "value": 0.3,
+        "_proposed": true,
+        "_reason": "PROPOSED: each puff's birth is moved by up to this share of the interval, so neighbouring columns do not pulse together; deterministic from the tree's place"
+      },
+      "life_s": {
+        "value": 6.0,
+        "_proposed": true,
+        "_reason": "PROPOSED: seconds a puff lasts: a little over a turn, so smoke thins away within about a turn after the tree is out (Alex wants a fast flash and a very slow decay for effects; the slow part is the W1 fade over these seconds and the column that stops, not a long hang)"
+      },
+      "base_height_m": {
+        "value": 60.0,
+        "_proposed": true,
+        "_reason": "PROPOSED: the height above the ground a puff is born at (m), above the treetops; with rise_mps it sets the shadow's gap by the plane rule (1% of the height along the light, so a puff 80 m up sits three quarters of a metre from its shadow)"
+      },
+      "rise_mps": {
+        "value": 16.0,
+        "_proposed": true,
+        "_reason": "PROPOSED: how fast the smoke rises (m/s), so a puff that is still thick enough to cast a shadow (alpha 0.25 and up, the first 3 to 4 s of its life) is high enough for the altitude rule to give a gap of the min_shadow_px (1.5 px) at the map's play scale"
+      },
+      "spread_frac": {
+        "value": 0.35,
+        "_proposed": true,
+        "_reason": "PROPOSED: a puff is born within this share of the tree's canopy radius from its centre"
+      },
+      "wind_scale": {
+        "value": 1.0,
+        "_proposed": true,
+        "_reason": "PROPOSED: the W1 option's wind (a drift of about 2.5 m/s east and 1 m/s south, per-puff jitter) times this: the columns of a grove all lean one way"
+      },
+      "tone_burning": {
+        "value": 2,
+        "_proposed": true,
+        "_reason": "PROPOSED: the W1 tone (0 thin, 1 medium, 2 thick) of a puff born while the tree burns: thick, so it casts a shadow (decision smoke-shadow)"
+      },
+      "tone_dying": {
+        "value": 1,
+        "_proposed": true,
+        "_reason": "PROPOSED: the tone of a puff born in the last dying_s of the burn"
+      },
+      "tone_tail": {
+        "value": 0,
+        "_proposed": true,
+        "_reason": "PROPOSED: the tone of a puff born in the tail after burn-out: thin, no shadow"
+      },
+      "dying_s": {
+        "value": 2.5,
+        "_proposed": true,
+        "_reason": "PROPOSED: the last seconds of the burn that use tone_dying"
+      },
+      "tail_s": {
+        "value": 2.5,
+        "_proposed": true,
+        "_reason": "PROPOSED: puffs keep coming this long after the burn-out at the thin tone, so the column thins instead of cutting off"
+      },
+      "peak_alpha": {
+        "value": 0.9,
+        "_proposed": true,
+        "_reason": "PROPOSED: the most opaque a puff gets (the W1 option's own strength times this): many puffs overlap in a column and a grove, so a translucent wash is held back"
+      },
+      "ground_shadow": {
+        "value": true,
+        "_proposed": true,
+        "_reason": "Thick smoke casts a ground shadow (decision smoke-shadow, Alex 2026-10-10) by the plane rule: 1% of the height along the light"
+      },
+      "shadow_min_tone": {
+        "value": 1,
+        "_proposed": true,
+        "_reason": "PROPOSED: from the medium tone up a puff casts a shadow, as the crash smoke does"
+      },
+      "smoke_when_hidden": {
+        "value": false,
+        "_proposed": true,
+        "_reason": "PROPOSED, as combat.fx.smoke_when_hidden: a column whose tree stands out of the player's sight is not drawn (smoke over fog would give a fire away); true draws every column"
+      },
+      "draw_budget": {
+        "value": 1500,
+        "_proposed": true,
+        "_reason": "PROPOSED: the most puffs drawn in one frame; past it a fixed share of the puffs is skipped (chosen by a hash of the puff, so none flickers) and the rest drawn larger, up to 1.6 times (a grove of hundreds of burning trees)"
+      }
+    },
+    "trunk": {
+      "_about": "A burnt-out tree as the map draws it (scripts/render/fire_trunk.gd, baked into the chunks its canopy or shadow reaches): the canopy gone, a charred trunk and a scorch. A STAND-IN look.",
+      "trunk_r_frac": {
+        "value": 0.14,
+        "_proposed": true,
+        "_reason": "PROPOSED: the trunk's radius as a share of the tree's canopy radius r (px)"
+      },
+      "trunk_r_min_px": {
+        "value": 1.6,
+        "_proposed": true,
+        "_reason": "PROPOSED: the least trunk radius, px"
+      },
+      "height_frac": {
+        "value": 0.3,
+        "_proposed": true,
+        "_reason": "PROPOSED: the trunk's height as a share of the tree's height h, which sets the length of its own small shadow"
+      },
+      "shadow_width_frac": {
+        "value": 0.9,
+        "_proposed": true,
+        "_reason": "PROPOSED: the trunk shadow's width as a share of the trunk's diameter"
+      },
+      "fill_role": {
+        "value": "wreck.char",
+        "_proposed": true,
+        "_reason": "PROPOSED: the trunk's fill: the burnt-metal role (dirt ink at alpha 0.9), an existing palette role"
+      },
+      "edge_role": {
+        "value": "ink",
+        "_proposed": true,
+        "_reason": "PROPOSED: the trunk's outline: the palette's ink"
+      },
+      "edge_lw": {
+        "value": 1.2,
+        "_proposed": true,
+        "_reason": "PROPOSED: the outline's width as a multiple of the map's line weight (fire_trunk.gd never draws it under 1.02 px: a hairline ring is painted as a translucent canvas group, a pass over the whole chunk for every trunk)"
+      },
+      "scorch_role": {
+        "value": "scar.dot.soft",
+        "_proposed": true,
+        "_reason": "PROPOSED: the scorched ground round the trunk: the soft burnt stipple role (ink at alpha 0.15), an existing palette role"
+      },
+      "scorch_dot_role": {
+        "value": "scar.dot",
+        "_proposed": true,
+        "_reason": "PROPOSED: the stipple dots on the scorch: the burnt-ground stipple role (dirt ink at alpha 0.40, the art plan's terrain.burnt), an existing palette role"
+      },
+      "scorch_r_frac": {
+        "value": 0.55,
+        "_proposed": true,
+        "_reason": "PROPOSED: the scorch's radius as a share of the canopy radius"
+      },
+      "scorch_dots_per_r": {
+        "value": 1.1,
+        "_proposed": true,
+        "_reason": "PROPOSED: stipple dots in the scorch, per px of its radius"
+      },
+      "ticks": {
+        "value": 5,
+        "_proposed": true,
+        "_reason": "PROPOSED: short charred root marks in ink round the trunk (0 none)"
+      },
+      "tick_role": {
+        "value": "ink.dot",
+        "_proposed": true,
+        "_reason": "PROPOSED: the marks' role: ink at alpha 0.85, an existing palette role"
+      },
+      "tick_len_frac": {
+        "value": [
+          0.2,
+          0.42
+        ],
+        "_proposed": true,
+        "_reason": "PROPOSED: a mark's length [least, most] as a share of the canopy radius"
+      }
+    },
+    "map": {
+      "_about": "How the burnt-out trees reach the map.",
+      "rebake_at": {
+        "value": "playback_end",
+        "_proposed": true,
+        "_reason": "PROPOSED: the map is re-baked for the trees burnt out as of the game time being shown, i.e. when the playback reaches the end of the turn they burn out in (they are trunks from out_turn+1 on); the chunks that tree's canopy or shadow touches only, each old chunk kept on screen until its new one lands"
+      },
+      "match_tolerance_m": {
+        "value": 0.5,
+        "_proposed": true,
+        "_reason": "PROPOSED: a map tree is the feed's tree when its place is within this many metres of the feed's x_m, y_m (so the match does not depend on the id's format)"
+      }
+    }
   }
 }

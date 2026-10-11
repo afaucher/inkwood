@@ -301,6 +301,7 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	target = UiTarget.new()
 	target.sight = _unit_in_sight
 	target.shown = _target_shown_position
+	target.untracked = _unit_in_smoke
 	selection.changed.connect(_on_selection_changed)
 	planner = MotionPlanner.new()
 	planner.name = "MotionPlanner"
@@ -840,6 +841,10 @@ func _target_shown_position(id: String) -> Vector2:
 		return world_pos_at(id, playback_time())
 	var u = world.units[id]
 	return Vector2(float(u.x), float(u.y))
+
+# Is the unit in the smoke of a burning tree now (so a click on it sets a point target, not a unit target: forest fire, decision forest-fire)?
+func _unit_in_smoke(id: String) -> bool:
+	return world != null and world.has_method("tracking_denied") and bool(world.tracking_denied(id))
 
 func _on_selection_changed(_id: String) -> void:
 	target.clear()   # PROPOSED (Alex: a target is not meaningful per unit): the friendly selection changed

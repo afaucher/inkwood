@@ -82,6 +82,9 @@
     }
   ],
 
+  "fire": true,
+  "_fire_note": "THE FOREST FIRE SWITCH (decision forest-fire, 2026-10-11; scripts/sim/fire.gd, data/sim/fire.json). ALEX: 'suppress sounds good' as the place to try it first. On: bomb and shell hits and crashes set the trees they reach alight (the guns hide in the groves, so a bomb or a shell near them starts a fire that spreads and smokes), a burning tree smokes for three turns and then stands as a trunk (and takes its woods cover with it), units near a burning tree may lose a pip, and a unit in the smoke is visible but cannot be tracked. Off everywhere else. The 'fire' knob (INKWOOD_FIRE) overrides it.",
+
   "water": true,
   "_water_note": "THE WATER SWITCH (see data/scenarios/strike.json): the map of this seed has a river west of the village and the sea east of it; with the switch on the ground is capped by the coast, no tree stands in the water, and the ground rule (data/sim/ground.json) keeps the guns out of it. This scenario has no boat and no bridge of its own ('each mission has only a few elements', Alex): no water_units.",
 

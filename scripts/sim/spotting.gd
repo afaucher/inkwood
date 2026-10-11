@@ -32,6 +32,12 @@ extends RefCounted
 # which the host sends with the turn's result) and the next turn's run starts from it; a break starts it again from nothing; a
 # point on the map has no memory (it is not a thing that can be tracked), so its run is the part of the turn it has been in sight.
 #
+# VISIBLE IS NOT TRACKED (the forest fire, decision forest-fire; Alex: "visible but untrackable ... last place you saw it"). _sees() answers who can SEE
+# a target; "spotted" -- what fire control needs -- is seen AND tracked. A ground or sea unit in the smoke of a burning tree is seen as before but is not
+# tracked, so it is not spotted: the guns' special cannot be switched on at it, a salvo already set is a poor shot (data/sim/guns.json
+# gun_unspotted_mode) at the last place it WAS spotted (run_at's last_t), and its spotted run starts again when it leaves the smoke (run_at: a moment
+# not spotted breaks the run). spotters_in()/spotters_now() stay "who sees it". PROPOSED: planes are not hidden from tracking.
+#
 # Everything here is a pure function of the World's units, their histories and the arguments: deterministic, host-resolved,
 # testable headless. The World is passed as an untyped Object (world.gd preloads this file).
 
@@ -115,7 +121,7 @@ func _sees(o: Object, os: Dictionary, tg: Dictionary, t: float, down_at: Diction
 	# the spotter's side and is revealed at this moment (scripts/sim/reveal.gd)
 	if world != null and tg["unit"] != null:
 		var cover: RefCounted = ConcealRules.shared()
-		if cover.covered(world, tg["unit"], float(tg["x"]), float(tg["y"])) and not _revealed(world, tg["unit"], str(o.side), t):
+		if cover.covered(world, tg["unit"], float(tg["x"]), float(tg["y"]), t) and not _revealed(world, tg["unit"], str(o.side), t):
 			r = minf(r, float(cover.radius_m))
 	var dx := float(tg["x"]) - float(os["x"])
 	var dy := float(tg["y"]) - float(os["y"])
@@ -190,10 +196,26 @@ static func los_from_vision(vision: Object, world: Object) -> Callable:
 			tgt_agl = float(vision.unit_agl(world, tu, float(tgt["x"]), float(tgt["y"]), str(tgt["altitude_band"]), float(tgt["height_m"])))
 		return bool(engine.visible_from(Vector2(float(eye["x"]), float(eye["y"])), eye_agl, Vector2(float(tgt["x"]), float(tgt["y"])), tgt_agl))
 
-# Does any unit of `side` see `target` in this frame? {spotted: bool, by: the first unit that does, or ""}.
+# Is the target a unit that the smoke of a burning tree denies TRACKING at this moment (scripts/sim/fire.gd; decision forest-fire)? A unit in smoke
+# is VISIBLE as it was (nothing in _sees changes) but it is not held for fire control. False for a point, for a World with no fire and for a unit
+# the smoke does not hide from tracking (a plane). `t` as everywhere here: seconds into the last resolve, < 0 as the world stands.
+func tracking_denied(world: Object, target: Dictionary, frame: Dictionary, t: float = -1.0) -> bool:
+	var fire: Variant = world.get("fire")
+	if fire == null:
+		return false
+	var tg := target_at(world, target, frame)
+	if tg.is_empty() or tg["unit"] == null:
+		return false
+	return bool(fire.denies_tracking((tg["unit"] as Object).def, float(tg["x"]), float(tg["y"]), float(fire.moment(world, t))))
+
+# Does any unit of `side` see `target` in this frame, and is it SPOTTED -- seen and TRACKED, which is what fire control needs? A target in smoke is
+# seen but not tracked (decision forest-fire), so {spotted: false, visible: true, untracked: true}. {spotted: bool, visible: bool, untracked: bool, by:
+# the first unit that sees it, or ""}.
 func spotted_in(world: Object, side: String, target: Dictionary, frame: Dictionary, t: float = -1.0, down_at: Dictionary = {}) -> Dictionary:
 	var by := spotters_in(world, side, target, frame, t, down_at, true)
-	return {"spotted": not by.is_empty(), "by": by[0] if not by.is_empty() else ""}
+	var visible := not by.is_empty()
+	var lost := visible and tracking_denied(world, target, frame, t)
+	return {"spotted": visible and not lost, "visible": visible, "untracked": lost, "by": by[0] if visible else ""}
 
 # Is the target spotted by `side` as the world stands now (the planning phase)?
 func spotted_now(world: Object, side: String, target: Dictionary) -> bool:
