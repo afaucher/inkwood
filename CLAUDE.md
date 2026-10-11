@@ -99,7 +99,8 @@ find the enemy bomber in the fog and shoot it down before it reaches the target.
   (`scripts/fx/`, smoke W1, no fire) and the result card itself
   (`test_ui_combat`, `test_ui_result`, `test_ui_trails_combat`).
 - Every choice Alex made from a board is in `data/decisions/decisions.json`;
-  the boards are under `variants/` (their frames are regenerated, not committed).
+  the boards are under `variants/`: only their records are committed, board images
+  never go in git (Alex; `.gitignore`), they are regenerated and shown in viewer artifacts.
 
 **The strike plays** (2026-10-10; design doc: Next layer: the strike): the
 menu's scenario selector (the `scenario` knob: strike by default, intercept,
@@ -518,7 +519,6 @@ is made in BOTH twins; `tar_pack.ps1` is the one Windows-only helper, because
 - Renderer: "Forward Plus" carried over from Bridge to Friendship (a 3D game).
   For a 2D game the Mobile or Compatibility renderer may suit the target devices
   better; the design doc leaves platforms open.
-- Variant boards: commit the rendered sheets, or only each board's `board.json`?
 - Steam during tests: the runners do not set `INKWOOD_STEAM=off`, so every
   headless test initialises Steam against a running client (`[Steam] ready:
   ...` in the logs, appid 480). Bridge to Friendship behaves the same.

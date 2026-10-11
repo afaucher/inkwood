@@ -2118,6 +2118,30 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'We also need a slight wind or variety over time. What is the natural pattern near the coast?' The lead answered with the coastal breeze cycle (typical figures, not from a checked source) and noted that a mission is 2-3 minutes of game time (5 s turns), so the daily swing is set at the start from the time of day, as the sun is, and variety during a mission comes from gusts and slow wander. Alex: '1-3 looks good'."
+    },
+    {
+      "id": "board-images",
+      "date": "2026-10-11",
+      "area": "Project",
+      "question": "Commit the boards' rendered images, or only each board's records?",
+      "board": "none (said in chat)",
+      "options": [
+        "commit the images",
+        "only the records"
+      ],
+      "chosen": "board images never go in git; only the records (board.json, frames.json)",
+      "parameters": {
+        "ignored": "variants/**/*.png, *.webp, *.jpg",
+        "shown": "viewer artifacts at full size"
+      },
+      "applied_to": [
+        ".gitignore",
+        "variants/README.md",
+        "CLAUDE.md",
+        "docs/operating.md"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Asked about the board images in git (about 520 MB and growing): 'Board images should not go in it' / 'Git'. The images already committed are untracked from now on; they remain in the history (rewriting it would need a force-push over the other sessions' work: not done, ask Alex first)."
     }
   ]
 }
