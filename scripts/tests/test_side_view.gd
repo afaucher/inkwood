@@ -24,6 +24,22 @@ extends "res://scripts/test_support/test_case.gd"
 #  10. THE CARD          it grows by the section while the panel shows and keeps on screen at 720 px
 #  11. THE FRAMES        every sub-draw ran to its end, in the guns view, the arrow, the drop and the playback
 #  12. THE PLAYBACK      live at the shown pose, the target followed through the turn
+#
+# THE THREE STRIPS (decision side-view-views, 2026-10-11; Alex: "I want to be able to select between top, front & side ... Maybe they fold
+# instead of you selecting only one - so you could have all three", "1 B - but no limit on which are open at a time", "Yes, lets actually
+# add a button to the panel to turn arcs on/off", "3 self only"). The projections, the sizes and the room rule are PROPOSED.
+#  13. THE STRIPS        three, in Alex's order; each folds and unfolds on its own; any number open at once; a click on a header
+#  14. THE FOLD STATE    the session's, not a unit's; an enemy or nothing selected shows no strips
+#  15. THE TOP STRIP     the map's own cone wash in the unit's frame; the dorsal turret as its footprint; a climb cuts the plane
+#                        differently (combat.gd agrees); the target at its bearing and distance
+#  16. THE FRONT STRIP   the dorsal turret a fan over the top, a forward gun a small disc, a waist gun a fan to its side; the target
+#                        at its lateral offset and height difference
+#  17. SELF ONLY         the selected friendly unit's own cones, nobody else's
+#  21. THE ARCS BUTTON   the panel's own (the roster header's was removed: Alex 2026-10-11 "Yes, remove the extra") flips the one switch,
+#                        UnitUI.toggle_arcs is that switch and the button follows it (mounted)
+#  22. THE MAP'S ARCS    off by default: the overlay collects nothing until the switch is on
+#  23. THE ROOM          the strips stack in a tall window, the room is shared in a shorter one (the card stays on the screen), and
+#                        a window too short for the strips shows the panel as it was
 
 const World = preload("res://scripts/sim/world.gd")
 const AiDumb = preload("res://scripts/sim/ai_dumb.gd")
@@ -34,6 +50,8 @@ const MotionPlanner = preload("res://scripts/ui/motion_planner.gd")
 const SideView = preload("res://scripts/ui/side_view.gd")
 const UiTarget = preload("res://scripts/ui/ui_target.gd")
 const ConeOverlay = preload("res://scripts/ui/cone_overlay.gd")
+const SideViewTop = preload("res://scripts/ui/side_view_top.gd")
+const SideViewFront = preload("res://scripts/ui/side_view_front.gd")
 const Combat = preload("res://scripts/sim/combat.gd")
 const CombatResolver = preload("res://scripts/sim/combat_resolver.gd")
 const Bombs = preload("res://scripts/sim/bombs.gd")
@@ -97,6 +115,7 @@ var _stage := 0
 var _frames := 0
 var _base_h := 0.0
 var _setup_done := false
+var _smoke_done := false
 
 func setup(_main) -> void:
 	_st = UiStyle.shared() as UiStyle
@@ -113,6 +132,13 @@ func setup(_main) -> void:
 	_check_drop()
 	_check_never_enemy_plan()
 	_check_indicators_only()
+	_check_strips()
+	_check_fold_state_kept()
+	_check_top()
+	_check_front()
+	_check_self_only()
+	SideView.reset_view_setting()
+	ConeOverlay.reset_view_setting()
 	_build_ui_world()
 	_setup_done = true
 	timeout_seconds = 60.0
@@ -174,21 +200,33 @@ func _check_data() -> void:
 			"side_view.mark.r_px", "side_view.mark.rim_px", "side_view.mark.pitch_tick_px", "side_view.mark.pitch_tick_line_px",
 			"side_view.target.r_px", "side_view.target.rim_px", "side_view.target.hollow_ring_px", "side_view.target.cross_px",
 			"side_view.target.cross_line_px", "side_view.target.tick_px", "side_view.target.tick_line_px", "side_view.target.tick_under_px",
-			"side_view.target.arrow_px", "side_view.drop.arc_px", "side_view.drop.arc_alpha", "side_view.drop.spread_h_px",
+			"side_view.target.arrow_px", "side_view.target.square_px", "side_view.strips.head_px", "side_view.strips.gap_px", "side_view.strips.box_px",
+				"side_view.strips.box_gap_px", "side_view.strips.name_px", "side_view.strips.box_line_px", "side_view.strips.chevron_px",
+				"side_view.strips.chevron_line_px", "side_view.strips.min_picture_h_px", "side_view.strips.picture_h_px.top",
+				"side_view.strips.picture_h_px.front", "side_view.strips.picture_h_px.side", "side_view.arcs.w_px", "side_view.arcs.h_px",
+				"side_view.top.nose_deg", "side_view.front.theta_bins", "side_view.front.pitch_step_deg", "side_view.front.boundary_samples",
+				"side_view.front.densify_step", "side_view.drop.arc_px", "side_view.drop.arc_alpha", "side_view.drop.spread_h_px",
 			"side_view.drop.spread_alpha", "side_view.drop.land_r_px", "side_view.drop.samples", "side_view.drop.top_px",
 			"side_view.drop.bottom_px", "side_view.drop.left_px", "side_view.drop.right_px", "side_view.text.level_within_m"]:
 		var v: Variant = _st.lookup(n)
 		check(v is float or v is int, "1. ui.json has a number at '%s'" % n)
-	for f: String in ["side_view.enabled", "side_view.live_during_playback", "side_view.text.enabled", "side_view.target.off_axis_hollow"]:
+	for f: String in ["side_view.enabled", "side_view.live_during_playback", "side_view.text.enabled", "side_view.target.off_axis_hollow",
+			"side_view.strips.open.top", "side_view.strips.open.front", "side_view.strips.open.side", "side_view.top.footprint",
+			"side_view.top.pitch_shift", "side_view.front.rear_dashed"]:
 		check(_st.lookup(f) is bool, "1. ui.json has a flag at '%s'" % f)
 	for t: String in ["side_view.cone_mode", "side_view.text.head_step", "side_view.text.head_now", "side_view.text.head_live", "side_view.text.unit_line",
 			"side_view.text.above", "side_view.text.below", "side_view.text.level", "side_view.text.drop_line", "side_view.text.drop_line_free",
-			"side_view.text.point", "side_view.text.unseen"]:
+			"side_view.text.point", "side_view.text.unseen", "side_view.strips.name.top", "side_view.strips.name.front",
+			"side_view.strips.name.side", "side_view.arcs.label_on", "side_view.arcs.label_off", "side_view.arcs.tooltip"]:
 		check(_st.lookup(t) is String, "1. ui.json has the text %s" % t)
 	for r: String in ["side_view.paper_role", "side_view.frame_role", "side_view.ground.role", "side_view.line.role", "side_view.mark.rim_role", "side_view.target.rim_role"]:
 		check(_st.lookup(r) is Dictionary and (_st.lookup(r) as Dictionary).has("base"), "1. ui.json has the palette role %s" % r)
 	eq(_st.text("side_view.cone_mode"), "wash", "1. Alex chose the colour wash for the side view")
 	eq(_st.flag("planner.cones.label"), false, "1. and no weapon labels (the map's lettering is off too)")
+	eq(_st.flag("planner.cones.shown"), false, "1. the map's cone wash starts OFF (decision side-view-views: the strips show them)")
+	eq(_st.text("planner.cones.shown_decision"), "side-view-views", "1. and the record names the decision")
+	eq(_st.lookup("side_view.strips.order"), ["top", "front", "side"], "1. the strips are top, front and side (Alex's order)")
+	check(float(_st.num("side_view.strips.name_px")) >= _st.min_px() and _st.num("fonts.button_px") >= _st.min_px(), "1. the strips' names and the Arcs button are at least the lettering floor")
 	eq(_st.errors.size(), 0, "1. no style lookups failed: %s" % str(_st.errors))
 
 # --- 2. Who ---------------------------------------------------------------------------------------------------
@@ -668,7 +706,7 @@ func _check_never_enemy_plan() -> void:
 	# The files: no plan read in them but through the planner (the pattern test_ui_coop's tripwire uses).
 	var rx := RegEx.new()
 	rx.compile("\\.plan\\b|planned_states\\(|\"plan\"\\)|\\.reachable\\(|drop_cone\\(|drop_steps\\(")
-	for f: String in ["res://scripts/ui/side_view.gd", "res://scripts/ui/side_view_art.gd"]:
+	for f: String in ["res://scripts/ui/side_view.gd", "res://scripts/ui/side_view_art.gd", "res://scripts/ui/side_view_top.gd", "res://scripts/ui/side_view_front.gd"]:
 		var hits := 0
 		for line: String in FileAccess.get_file_as_string(f).split("\n"):
 			if line.strip_edges().begins_with("#"):
@@ -686,7 +724,7 @@ func _check_indicators_only() -> void:
 	rx_hex.compile("Color\\(\\s*[0-9.]|Color8\\(|Color\\.html|\"#[0-9a-fA-F]{3,8}\"|Color\\.(RED|BLUE|GREEN|BLACK|WHITE)")
 	var rx_art := RegEx.new()
 	rx_art.compile("unit_marker|UnitMarkerArt|draw_texture|Sprite|TextureRect|silhouette|baked|\\.art\\b")
-	for f: String in ["res://scripts/ui/side_view.gd", "res://scripts/ui/side_view_art.gd"]:
+	for f: String in ["res://scripts/ui/side_view.gd", "res://scripts/ui/side_view_art.gd", "res://scripts/ui/side_view_top.gd", "res://scripts/ui/side_view_front.gd"]:
 		var hex := 0
 		var art := 0
 		for line: String in FileAccess.get_file_as_string(f).split("\n"):
@@ -703,6 +741,346 @@ func _check_indicators_only() -> void:
 	for c: Dictionary in m["cones"]:
 		eq(bool(c["side_view"]), true, "9. a side-on cone record (the overlay draws no label for it)")
 	_sel.clear()
+
+# --- 13 to 20. The three strips (decision side-view-views, 2026-10-11) -----------------------------------------------------
+
+# A weapon as the front strip's outline reads one: only the cone's own fields.
+class _Gun extends RefCounted:
+	var id := "synthetic"
+	var mount := 0.0
+	var elevation := 0.0
+	var half_across := 0.1
+	var half_height := 0.1
+	var rim_odds_factor := 1.0
+
+const STRIP_IDS := ["top", "front", "side"]
+
+func _rows(m: Dictionary) -> Dictionary:
+	var out := {}
+	for e: Dictionary in (m["layout"] as Dictionary)["strips"]:
+		out[str(e["id"])] = e
+	return out
+
+func _pic_h(id: String) -> float:
+	return _st.num("side_view.strips.picture_h_px." + id)
+
+func _click(sv: SideView, at: Vector2) -> void:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = at
+	sv._gui_input(ev)
+
+# 13. THREE STRIPS, EACH FOLDING ON ITS OWN, ANY NUMBER OPEN.
+func _check_strips() -> void:
+	SideView.reset_view_setting()
+	_tg.clear()
+	var m := _model_for("b1")
+	var lay: Dictionary = m["layout"]
+	eq(lay["mode"], "strips", "13. with no card to fit (a panel alone) the strips stack")
+	var rows := _rows(m)
+	eq(rows.keys(), STRIP_IDS, "13. three strips, in Alex's order: top, front, side")
+	var names := {"top": "Top", "front": "Front", "side": "Side"}
+	var chrome := _st.num("side_view.section.gap_px") + _st.num("side_view.section.head_px") + _st.num("side_view.section.caption_h_px") + _st.num("side_view.section.bottom_px")
+	var sh := _st.num("side_view.strips.head_px")
+	var sgap := _st.num("side_view.strips.gap_px")
+	for id: String in STRIP_IDS:
+		eq(str(rows[id]["name"]), names[id], "13. the %s strip is named %s" % [id, names[id]])
+		check(bool(rows[id]["shown"]), "13. the %s strip starts unfolded (PROPOSED: all three)" % id)
+		near((rows[id]["head"] as Rect2).size.y, sh, 1e-9, "13. %s: a header row of the data's height" % id)
+		near((rows[id]["pic"] as Rect2).size.y, _pic_h(id), 1e-9, "13. %s: a picture of the data's height" % id)
+		check(_st.num("side_view.strips.name_px") >= _st.min_px(), "13. (the names are at least the lettering floor, %s px)" % str(_st.min_px()))
+	near(_sv.size.y, chrome + 3.0 * sh + _pic_h("top") + _pic_h("front") + _pic_h("side") + 3.0 * sgap, 1e-6, "13. the section is the rows and the pictures")
+	near(float((m["size"] as Vector2).y), _pic_h("side"), 1e-9, "13. model()['size'] stays the Side picture's, as it was")
+	check(m.has("top") and m.has("front"), "13. the model carries the other two strips")
+	# Each folds and unfolds on its own.
+	var full := _sv.size.y
+	for id: String in STRIP_IDS:
+		_sv.set_strip_open(id, false)
+		var r2 := _rows(_sv.model())
+		check(not bool(r2[id]["shown"]), "13. %s folds" % id)
+		eq((r2[id]["pic"] as Rect2).size, Vector2.ZERO, "13. folded: header only, no picture")
+		check(not (_sv._pics[id] as Control).visible, "13. (its canvas is down)")
+		near(_sv.size.y, full - _pic_h(id) - sgap, 1e-6, "13. and the section is that much shorter")
+		for other: String in STRIP_IDS:
+			if other != id:
+				check(bool(r2[other]["shown"]), "13. folding %s leaves %s as it was" % [id, other])
+		_sv.set_strip_open(id, true)
+		check(bool(_rows(_sv.model())[id]["shown"]) and (_sv._pics[id] as Control).visible, "13. %s unfolds again" % id)
+		near(_sv.size.y, full, 1e-6, "13. at its old height")
+	# Any number open at once: all eight combinations.
+	for mask in 8:
+		var want := chrome + 3.0 * sh
+		for i in 3:
+			var open := (mask >> i) & 1 == 1
+			_sv.set_strip_open(STRIP_IDS[i], open)
+			if open:
+				want += _pic_h(STRIP_IDS[i]) + sgap
+		var rr := _rows(_sv.model())
+		for i in 3:
+			eq(bool(rr[STRIP_IDS[i]]["shown"]), (mask >> i) & 1 == 1, "13. combination %d: %s" % [mask, STRIP_IDS[i]])
+		near(_sv.size.y, want, 1e-6, "13. combination %d: the section is the rows and the open pictures" % mask)
+	for id: String in STRIP_IDS:
+		_sv.set_strip_open(id, true)
+	# A click on a header folds and unfolds (the fold box is on-screen, no key).
+	var head: Rect2 = (_rows(_sv.model())["front"]["head"] as Rect2)
+	_click(_sv, head.get_center())
+	check(not bool(_rows(_sv.model())["front"]["shown"]), "13. a click on the Front header folds it")
+	eq([bool(_rows(_sv.model())["top"]["shown"]), bool(_rows(_sv.model())["side"]["shown"])], [true, true], "13. and only it")
+	head = (_rows(_sv.model())["front"]["head"] as Rect2)
+	_click(_sv, head.get_center())
+	check(bool(_rows(_sv.model())["front"]["shown"]), "13. and a second click unfolds it")
+	check(_sv.press_strip("top") and not _sv.strip_shown("top"), "13. press_strip is the click")
+	_sv.set_strip_open("top", true)
+	eq(_sv.has_arcs_button(), false, "13. a panel alone has no Arcs button (the interface points it at the switch)")
+
+# 14. THE FOLD STATE IS THE SESSION'S, NOT A UNIT'S.
+func _check_fold_state_kept() -> void:
+	SideView.reset_view_setting()
+	_sv.set_strip_open("front", false)
+	for id: String in ["p1", "p3", "b1", "p1"]:
+		var rr := _rows(_model_for(id))
+		eq([bool(rr["top"]["shown"]), bool(rr["front"]["shown"]), bool(rr["side"]["shown"])], [true, false, true], "14. %s selected: Front is still folded, the others open" % id)
+	var other_panel := SideView.new()
+	add_child(other_panel)
+	other_panel.setup(_w, _px, _sel, _st)
+	check(not other_panel.strip_chosen("front") and other_panel.strip_chosen("top"), "14. another panel (a rebuilt interface) keeps it: the choice is the session's")
+	other_panel.queue_free()
+	# An enemy or nothing selected: no strips at all, and the choice waits.
+	_sel.select("ai1")
+	_sv.refresh()
+	eq(_sv.is_active(), false, "14. an enemy selected: no panel")
+	eq(_sv.model().has("layout"), false, "14. so no strips")
+	for id: String in STRIP_IDS:
+		check(not (_sv._pics[id] as Control).visible, "14. (every canvas is down)")
+	_sel.clear()
+	_sv.refresh()
+	eq(_sv.is_active(), false, "14. nothing selected: no panel")
+	eq(_sv.model().has("layout"), false, "14. and no strips")
+	check(not _sv.strip_chosen("front"), "14. and the choice is still there for the next friendly unit")
+	SideView.reset_view_setting()
+	check(_sv.strip_chosen("front"), "14. reset_view_setting gives the data's starting state back")
+	check(_st.flag("side_view.strips.open.top") and _st.flag("side_view.strips.open.front") and _st.flag("side_view.strips.open.side"), "14. (all three open: PROPOSED, Alex wants all three)")
+
+# 15. THE TOP STRIP: the map's own cone wash in the unit's frame.
+func _check_top() -> void:
+	SideView.reset_view_setting()
+	_tg.clear()
+	_w.units["b1"].heading = 0.0
+	var m := _model_for("b1")
+	var t: Dictionary = m["top"]
+	var by := {}
+	for c: Dictionary in t["cones"]:
+		by[str((c["weapon"] as Object).id)] = c
+	var foot := {}
+	for c: Dictionary in t["footprints"]:
+		foot[str((c["weapon"] as Object).id)] = c
+	check(by.has("nose_gun") and by.has("tail_turret") and not by.has("dorsal_turret"), "15. the nose gun and the tail turret are wedges in the plane (%s)" % str(by.keys()))
+	check(foot.has("dorsal_turret"), "15. the dorsal turret misses the plane: it is in the Top strip as its footprint (%s)" % str(foot.keys()))
+	near(float(foot["dorsal_turret"]["half"]), 0.0, 1e-12, "15. a footprint has no slice")
+	# The records are the map's own (cone_overlay.gd's collect), made small: same half width, same level, same range on the strip's scale.
+	var overlay := ConeOverlay.new()
+	add_child(overlay)
+	overlay.setup(_w, _xf, _sel, _st)
+	eq(overlay.collect().size(), 0, "22. the map draws no cones by default: the overlay collects nothing until the switch is on")
+	overlay.set_arcs_shown(true)
+	var map_recs := overlay.collect()
+	check(map_recs.size() == 3, "15. the map has one record a hardpoint (%d)" % map_recs.size())
+	var ppm: float = t["ppm"]
+	for r: Dictionary in map_recs:
+		var key := str((r["weapon"] as Object).id)
+		var mine: Dictionary = by.get(key, foot.get(key, {}))
+		if not check(not mine.is_empty(), "15. the strip has the map's %s" % key):
+			continue
+		near(float(mine["half"]), float(r["half"]), 1e-12, "15. %s: the wedge's half width is the map's" % key)
+		near(float(mine["b0"]), float(r["b0"]), 1e-12, "15. %s: and the plane's height over its centre line" % key)
+		near(float(mine["phi"]), float(r["phi"]), 1e-9, "15. %s: and its centre line (the nose is the page's right: heading 0)" % key)
+		near(float(mine["range_px"]) / ppm, float((r["weapon"] as Object).range_m), 1e-6, "15. %s: the range is the weapon's on the strip's one scale" % key)
+	overlay.set_arcs_shown(false)
+	overlay.queue_free()
+	ConeOverlay.reset_view_setting()
+	# The page holds every wedge, fade and all.
+	var page := Rect2(Vector2.ZERO, t["size"] as Vector2).grow(1.0)
+	for c: Dictionary in (t["cones"] as Array) + (t["footprints"] as Array):
+		var w: Object = c["weapon"]
+		var hw: float = float(c["half"]) if float(c["half"]) > 0.0 else float(w.half_across)
+		check(page.encloses(ConeOverlay.wedge_bounds(c, hw)), "15. %s is on the page, whole" % str(w.id))
+	# The target: at its bearing and distance in the unit's frame (nose right, the right wing down), the one scale on both axes.
+	_pick_point(Vector2(1300.0, 3200.0))   # 300 m ahead, 200 m to the right of b1 (heading 0)
+	m = _model_for("b1")
+	t = m["top"]
+	var tt: Dictionary = t["target"]
+	near(float(tt["rel_f"]), 300.0, 1e-3, "15. the target is 300 m ahead")
+	near(float(tt["rel_r"]), 200.0, 1e-3, "15. and 200 m to the right")
+	var pv: Vector2 = (tt["px"] as Vector2) - (t["origin"] as Vector2)
+	near(pv.x, 300.0 * float(t["ppm"]), 1e-3, "15. ahead is to the right on the page, on the strip's scale")
+	near(pv.y, 200.0 * float(t["ppm"]), 1e-3, "15. and the right wing is down the page, on the same scale")
+	# The unit's frame, not the world's: the same point seen by a bomber heading south is on its left.
+	_w.units["b1"].heading = PI * 0.5
+	m = _model_for("b1")
+	tt = m["top"]["target"]
+	near(float(tt["rel_f"]), 200.0, 1e-3, "15. a bomber heading south: the point is 200 m ahead (the page turns with the unit)")
+	near(float(tt["rel_r"]), -300.0, 1e-3, "15. and 300 m to its left")
+	_w.units["b1"].heading = 0.0
+	# The nose is data: up puts ahead at the top.
+	_st.ui["side_view"]["top"]["nose_deg"] = -90.0
+	m = _model_for("b1")
+	pv = (m["top"]["target"]["px"] as Vector2) - (m["top"]["origin"] as Vector2)
+	near(pv.y, -300.0 * float(m["top"]["ppm"]), 1e-3, "15. nose_deg -90: ahead is up the page")
+	near(pv.x, 200.0 * float(m["top"]["ppm"]), 1e-3, "15. and the right wing is still to the right")
+	_st.ui["side_view"]["top"]["nose_deg"] = 0.0
+	# A target far beyond the page is an arrow on its edge.
+	_pick_point(Vector2(5000.0, 3000.0))
+	m = _model_for("b1")
+	eq(bool(m["top"]["target"]["inside"]), false, "15. a far target is an arrow on the edge")
+	check((m["top"]["target"]["dir"] as Vector2).x > 0.9, "15. pointing right (ahead)")
+	_tg.clear()
+	# A climb tilts the slice the plane makes: the dorsal turret's cone reaches the plane, and combat.gd agrees at its rim.
+	_sel.select("b1")
+	_pl.clear()
+	_pl.place_point(Vector2(1160.0, 3000.0))
+	check(not _pl.change_band(1).is_empty(), "15. the bomber climbs a band")
+	_sv.refresh()
+	var mc := _sv.model()
+	var pitch: float = (mc["pose"] as Dictionary)["pitch"]
+	check(pitch > 0.1, "15. (a climb: pitch %.1f degrees)" % rad_to_deg(pitch))
+	var dorsal: Dictionary = {}
+	for c: Dictionary in mc["top"]["cones"]:
+		if str((c["weapon"] as Object).id) == "dorsal_turret":
+			dorsal = c
+	if check(not dorsal.is_empty(), "15. in the climb the dorsal turret has a slice in the horizontal plane: a wedge, not a footprint"):
+		var wp: Object = dorsal["weapon"]
+		var shooter := {"x": 0.0, "y": 0.0, "heading": 0.0, "height_m": float((mc["pose"] as Dictionary)["height_m"]), "pitch": pitch}
+		var pose := Combat.pose(shooter, wp.hardpoints[0] as Vector3)
+		for f: Array in [[0.9, true], [-0.9, true], [1.1, false], [-1.1, false]]:
+			var a: float = float(dorsal["phi"]) + float(f[0]) * float(dorsal["half"])
+			var tgt := {"x": float(pose["x"]) + 200.0 * cos(a), "y": float(pose["y"]) + 200.0 * sin(a), "height_m": float(pose["z"])}
+			var g := Combat.evaluate_pose(pose, wp, tgt, ["centre"])
+			eq(bool(g["in_cone"]), bool(f[1]), "15. combat.gd %s a point on the plane %.1f of the slice's half width off its centre (r %.3f)" % ["takes" if bool(f[1]) else "refuses", float(f[0]), float(g["r"])])
+	_pl.clear()
+	# A weapon the plane misses on both sides of its level: the footprint (a battery's upward cone) is dashed, one per weapon.
+	_sel.clear()
+
+# 16. THE FRONT STRIP: looking along the nose.
+func _check_front() -> void:
+	SideView.reset_view_setting()
+	_tg.clear()
+	var m := _model_for("b1")
+	var f: Dictionary = m["front"]
+	var by := {}
+	for c: Dictionary in f["cones"]:
+		by[str((c["weapon"] as Object).id)] = c
+	check(by.has("nose_gun") and by.has("dorsal_turret") and by.has("tail_turret"), "16. the Front strip has all three of the bomber's guns, the dorsal turret among them (%s)" % str(by.keys()))
+	var dorsal_levels: Array = (by["dorsal_turret"]["shape"] as Dictionary)["levels"]
+	var rad: PackedFloat64Array = dorsal_levels[dorsal_levels.size() - 1]
+	var bins := rad.size()
+	var covered := 0
+	var below := 0
+	var top_r := 0.0
+	for i in bins:
+		if rad[i] > 0.0:
+			covered += 1
+			var a := SideViewFront.bin_angle(i, bins)
+			if sin(a) < -0.06:
+				below += 1
+			if absf(a - PI * 0.5) < deg_to_rad(3.0):
+				top_r = maxf(top_r, rad[i])
+	eq(below, 0, "16. the dorsal turret reaches nothing below the unit's level: a fan over the top")
+	check(covered > bins * 2 / 5, "16. and it is a wide one (%d of %d directions round the unit)" % [covered, bins])
+	near(top_r, sin(deg_to_rad(70.0)), 0.04, "16. straight up it reaches sin(70 degrees) of its range (its cone's top edge is 70 degrees up)")
+	check(bool(by["dorsal_turret"]["rear"]) and bool(by["tail_turret"]["rear"]) and not bool(by["nose_gun"]["rear"]), "16. the cones that face the tail are marked (their rim is dashed)")
+	# A fixed forward gun is a small disc at the centre: the light fighter's wing guns, 10 by 8 degrees.
+	var mf := _model_for("p1")
+	var wing: Dictionary = (mf["front"]["cones"] as Array)[0]
+	var wl: Array = (wing["shape"] as Dictionary)["levels"]
+	var outer: PackedFloat64Array = wl[wl.size() - 1]
+	var all := true
+	var big := 0.0
+	for i in outer.size():
+		all = all and outer[i] > 0.0
+		big = maxf(big, outer[i])
+	check(all, "16. a fixed forward gun is a disc round the unit: every direction is covered")
+	near(big, sin(deg_to_rad(10.0)), 0.01, "16. of radius sin(10 degrees) of its range: small")
+	eq(wl.size(), int(_st.num("planner.cones.wash.steps")), "16. a peaked gun has the map's rings of equal odds, nested")
+	# A waist gun is a fan to its side; a fan to the other for the other side. (A synthetic gun: the data has none.)
+	for side: float in [1.0, -1.0]:
+		var g := _Gun.new()
+		g.mount = side * PI * 0.5
+		g.half_across = deg_to_rad(40.0)
+		g.half_height = deg_to_rad(25.0)
+		var shp := SideViewFront.shape(g, 0.0, _st)
+		var lv: Array = shp["levels"]
+		var rg: PackedFloat64Array = lv[lv.size() - 1]
+		var wrong := 0
+		var right := 0
+		for i in rg.size():
+			if rg[i] > 0.0:
+				if cos(SideViewFront.bin_angle(i, rg.size())) * side < -0.05:
+					wrong += 1
+				else:
+					right += 1
+		eq(wrong, 0, "16. a gun mounted %s covers nothing on the other side" % ("to the right" if side > 0.0 else "to the left"))
+		check(right > 4, "16. but a fan on its own (%d directions)" % right)
+		var far := 0.0
+		for v in rg:
+			far = maxf(far, v)
+		near(far, 1.0, 0.02, "16. out to its full range (abeam, the whole range is on the plane)")
+	# The target: at its lateral offset and height difference, one scale on both axes.
+	_pick_point(Vector2(1300.0, 3150.0))   # 150 m to the right of b1 and on the ground, 400 m below it
+	m = _model_for("b1")
+	var tt: Dictionary = m["front"]["target"]
+	near(float(tt["rel_lat"]), 150.0, 1e-3, "16. the target is 150 m to the right")
+	near(float(tt["rel_z"]), -_w.band_height("medium"), 1e-6, "16. and 400 m below")
+	var pv: Vector2 = (tt["px"] as Vector2) - (m["front"]["origin"] as Vector2)
+	near(pv.x, 150.0 * float(m["front"]["ppm"]), 1e-3, "16. its lateral offset on the strip's scale")
+	near(pv.y, _w.band_height("medium") * float(m["front"]["ppm"]), 1e-3, "16. and its height difference on the same scale (down the page)")
+	_tg.clear()
+	# The ground is a line under the unit when it is near (the Side strip's rule).
+	_w.units["b1"].altitude_band = "low"
+	m = _model_for("b1")
+	near(float(m["front"]["ground_y"]), float((m["front"]["origin"] as Vector2).y) + _w.band_height("low") * float(m["front"]["ppm"]), 1e-6, "16. the ground line is 120 m under a bomber in the low band")
+	_w.units["b1"].altitude_band = "medium"
+	# A climb turns the fan: the nose gun's disc rises by the pitch.
+	_sel.select("p1")
+	_pl.clear()
+	_pl.place_point(Vector2(1100.0, 1000.0))
+	_pl.change_band(1)
+	_sv.refresh()
+	var mc := _sv.model()
+	var pitch: float = (mc["pose"] as Dictionary)["pitch"]
+	check(pitch > 0.1, "16. the light fighter climbs (%.1f degrees)" % rad_to_deg(pitch))
+	var wc: Array = ((mc["front"]["cones"] as Array)[0]["shape"] as Dictionary)["levels"]
+	var rc: PackedFloat64Array = wc[wc.size() - 1]
+	var up_sum := 0.0
+	for i in rc.size():
+		up_sum += rc[i] * sin(SideViewFront.bin_angle(i, rc.size()))
+	check(up_sum > 0.0, "16. in a climb the forward gun's disc is above the nose axis on the plane across it (%.2f)" % up_sum)
+	_pl.clear()
+	_sel.clear()
+
+# 17. SELF ONLY, THE SAME INK, NO LABELS: only the selected friendly unit's own cones, with enemies about.
+func _check_self_only() -> void:
+	SideView.reset_view_setting()
+	_tg.clear()
+	for id: String in ["b1", "p1", "p3"]:
+		var m := _model_for(id)
+		var own := 0
+		for w in _w.units[id].def.weapons:
+			own += 1
+		var n_top := 0
+		for c: Dictionary in (m["top"]["cones"] as Array) + (m["top"]["footprints"] as Array):
+			eq(str(c["unit"]), id, "17. a Top cone is %s's" % id)
+			n_top += 1
+		var n_front := 0
+		for c: Dictionary in m["front"]["cones"]:
+			eq(str(c["unit"]), id, "17. a Front cone is %s's" % id)
+			n_front += 1
+		check(n_top >= own and n_front == own, "17. %s: its own weapons (%d), none of the enemy bombers' or fighters' (Top %d, Front %d)" % [id, own, n_top, n_front])
+		for c: Dictionary in m["cones"]:
+			eq(str(c["unit"]), id, "17. a Side cone is %s's" % id)
+	_sel.clear()
+	# no weapon lettering on the strips: the draw calls are the map's, with its label switch off
+	eq(_st.flag("planner.cones.label"), false, "17. no weapon labels (decision side-view-look)")
 
 # --- 10, 11, 12. The card, the frames, the playback -------------------------------------------------------------------------
 
@@ -842,7 +1220,187 @@ func _physics_process(_delta: float) -> void:
 			eq(_st.errors.size(), 0, "no style lookup failed in the whole run: %s" % str(_st.errors))
 			_ui.marker_layer.playback_paused = false
 			_ui.marker_layer.stop_playback()
-			finish()
+			# On to the strips on the mounted interface: a new turn, the bomber selected.
+			_ui.auto_begin_turn = true
+			if _wb.phase == World.PHASE_RESOLVED:
+				_wb.begin_turn()
+			_ui.planner.clear()
+			_ui_target().clear()
+			SideView.reset_view_setting()
+			_ui.select("b1")
+			_next(5)
+		5:
+			_stage_arcs()
+		6:
+			_stage_strips_tall()
+		7:
+			_stage_strips_kept()
+		8:
+			_stage_room_short()
+		9:
+			_stage_room_compact()
+
+# --- 21, 22. The two Arcs buttons, one switch (mounted) -----------------------------------------------------------------------------
+
+func _stage_arcs() -> void:
+	check(_sv2.is_active(), "21. the side view is up for the bomber in the new turn")
+	eq(_ui.arcs_shown(), false, "22. the map's arcs start OFF")
+	eq(_ui.cones.collect().size(), 0, "22. so the map draws no cones at all (the overlay collects nothing)")
+	check(_sv2.has_arcs_button(), "21. the panel has an Arcs button")
+	eq(_ui.roster.has_method("arcs_button_rect") or _ui.roster.has_method("press_arcs") or _ui.roster.has_method("has_arcs_button"), false, "21. and the roster header has none: it is the only arcs control")
+	eq([_sv2.arcs_on(), _sv2.arcs_label()], [false, _st.text("side_view.arcs.label_off")], "21. it reads 'Arcs: off'")
+	check((_sv2.model()["top"]["cones"] as Array).size() + (_sv2.model()["top"]["footprints"] as Array).size() > 0, "22. the strips show the bomber's cones all the same: they do not depend on the map's switch")
+	check(_sv2.press_arcs(), "21. the panel's button is pressed")
+	eq([_ui.arcs_shown(), _sv2.arcs_on(), _sv2.arcs_label()], [true, true, _st.text("side_view.arcs.label_on")], "21. the map and the panel's button say on")
+	eq(_ui.cones.collect().size(), 3, "22. and the map's cones are back (the bomber's three guns)")
+	_ui.toggle_arcs()
+	eq([_ui.arcs_shown(), _sv2.arcs_on(), _sv2.arcs_label()], [false, false, _st.text("side_view.arcs.label_off")], "21. UnitUI.toggle_arcs is the same switch: the panel's button follows")
+	eq(_ui.cones.collect().size(), 0, "22. and the map's cones are gone again")
+	_ui.set_arcs(true)
+	eq(_sv2.arcs_on(), true, "21. so is UnitUI.set_arcs")
+	_ui.set_arcs(false)
+	_click(_sv2, _sv2.arcs_button_rect().get_center())
+	eq([_ui.arcs_shown(), _sv2.arcs_on()], [true, true], "21. a click on the panel's button is the same press")
+	_click(_sv2, _sv2.arcs_button_rect().get_center())
+	eq(_ui.arcs_shown(), false, "21. a second click turns them off")
+	eq(_sv2.arcs_button_rect().size, Vector2(_st.num("side_view.arcs.w_px"), _st.num("side_view.arcs.h_px")), "21. the button is the data's size")
+	check(_sv2.arcs_button_rect().end.x <= _sv2.size.x + 1e-6 and _sv2.arcs_button_rect().position.y >= 0.0, "21. inside the panel's heading row, at the right")
+	eq(_sv2.tooltip_text == "" and _sv2._get_tooltip(_sv2.arcs_button_rect().get_center()) == _st.text("side_view.arcs.tooltip"), true, "21. and it says what it does")
+	# A taller window, so the strips have their room.
+	_ui.hud.size = Vector2(1280.0, 1400.0)
+	_ui.layout()
+	_next(6)
+
+# 23. A tall window: the three strips stack and the card grows by them.
+func _stage_strips_tall() -> void:
+	var lay: Dictionary = _sv2.model()["layout"]
+	eq(lay["mode"], "strips", "23. at 1400 px the strips stack")
+	var rows := _rows(_sv2.model())
+	eq([bool(rows["top"]["shown"]), bool(rows["front"]["shown"]), bool(rows["side"]["shown"])], [true, true, true], "23. all three are open (PROPOSED default)")
+	var chrome := _st.num("side_view.section.gap_px") + _st.num("side_view.section.head_px") + _st.num("side_view.section.caption_h_px") + _st.num("side_view.section.bottom_px")
+	var want := chrome + 3.0 * _st.num("side_view.strips.head_px") + _pic_h("top") + _pic_h("front") + _pic_h("side") + 3.0 * _st.num("side_view.strips.gap_px")
+	near(_sv2.size.y, want, 1e-6, "23. the section is the data's rows and pictures (%.0f px)" % want)
+	near(_ui.orders.size.y, _base_h + _sv2.size.y, 1e-6, "23. the card grew by exactly it (%.0f px tall)" % _ui.orders.size.y)
+	check(_ui.orders.position.y + _ui.orders.size.y <= 1400.0 - _st.num("card.margin_px") + 1e-6, "23. and it is on the screen")
+	print("[test] at 1280x1400 with 3 units the card is %.0f px tall (the section %.0f)" % [_ui.orders.size.y, _sv2.size.y])
+	for id: String in STRIP_IDS:
+		check((_sv2._pics[id] as Control).visible and ((_sv2._pics[id] as Control).size.y == _pic_h(id)), "23. the %s picture is on the card at its height" % id)
+	eq(_sv2.failed_draws, 0, "23. every sub-draw of the three strips ran to its end")
+	# A click on a header folds that strip and the card gives its room back; the others stay.
+	_click(_sv2, (rows["front"]["head"] as Rect2).get_center())
+	check(not _sv2.strip_shown("front") and _sv2.strip_shown("top") and _sv2.strip_shown("side"), "23. a click on Front's header folds only Front")
+	near(_ui.orders.size.y, _base_h + want - _pic_h("front") - _st.num("side_view.strips.gap_px"), 1e-6, "23. and the card is that much shorter")
+	_ui.select("p1")
+	_next(7)
+
+func _stage_strips_kept() -> void:
+	check(_sv2.is_active(), "14. the fighter selected: the panel is up")
+	check(not _sv2.strip_shown("front") and _sv2.strip_shown("top") and _sv2.strip_shown("side"), "14. Front is still folded: the fold state is the session's, not the bomber's")
+	_ui.select("b1")
+	_sv2.refresh()
+	check(not _sv2.strip_shown("front"), "14. and still folded back on the bomber")
+	_sv2.press_strip("front")
+	check(_sv2.strip_shown("front"), "23. unfolded again by the click's own call")
+	# A shorter window: the room is shared (each picture no smaller than the data's floor) and the card stays on screen. (The session's
+	# order of opening starts afresh, so the data's priority rules.)
+	SideView.reset_view_setting()
+	var h := 800.0
+	_ui.hud.size = Vector2(1280.0, h)
+	_ui.layout()
+	_next(8)
+
+# 23. A shorter window: the open strips share the room, the ones that do not fit are held folded, the card stays on the screen.
+func _stage_room_short() -> void:
+	var lay: Dictionary = _sv2.model()["layout"]
+	var h := 800.0
+	eq(lay["mode"], "strips", "23. at 800 px there is still room for a strip")
+	var shown: Array = []
+	for e: Dictionary in lay["strips"]:
+		if bool(e["shown"]):
+			shown.append(str(e["id"]))
+			check((e["pic"] as Rect2).size.y >= _st.num("side_view.strips.min_picture_h_px") - 1e-6, "23. the %s picture is not under the data's floor (%.0f px)" % [str(e["id"]), (e["pic"] as Rect2).size.y])
+	check(shown.size() >= 1 and shown.size() < 3, "23. the room holds some of the open strips, not all (%s)" % str(shown))
+	check(_ui.orders.position.y + _ui.orders.size.y <= h - _st.num("card.margin_px") + 1e-6, "23. and the card stays on the screen (bottom %.0f of %.0f)" % [_ui.orders.position.y + _ui.orders.size.y, h])
+	for id: String in STRIP_IDS:
+		check(_sv2.strip_chosen(id), "23. what the player chose is kept: %s is still open" % id)
+	eq(shown[0], "side", "23. the Side strip, the picture the panel has always had, keeps its place first (the data's priority)")
+	# A strip held folded comes forward on a click, and the one with the least claim gives its place up.
+	var held := ""
+	for id: String in STRIP_IDS:
+		if not shown.has(id):
+			held = id
+	check(held != "" and _sv2.press_strip(held) and _sv2.strip_shown(held), "23. a click on %s's header brings it forward (the room had held it)" % held)
+	check(not _sv2.strip_shown("side") or shown.size() >= 2, "23. the strip opened last has the first claim: Side gives its place up when only one fits")
+	for id: String in STRIP_IDS:
+		check(_sv2.strip_chosen(id), "23. what the player chose is still kept: %s is open" % id)
+	check(_ui.orders.position.y + _ui.orders.size.y <= h - _st.num("card.margin_px") + 1e-6, "23. the card is still on the screen")
+	_ui.hud.size = Vector2(1280.0, 720.0)
+	_ui.layout()
+	_next(9)
+
+# 23. 1280x720 with three units, as before the strips: the heading row with its Arcs button, the Side picture, the quiet line.
+func _stage_room_compact() -> void:
+	_next(10)   # (this stage waits for frames: no other physics frame may enter it)
+	var lay: Dictionary = _sv2.model()["layout"]
+	eq(lay["mode"], "compact", "23. at 720 px there is room for the panel as it was (the Side picture alone)")
+	check(_sv2.is_active() and _sv2.has_arcs_button(), "23. still up, still with its Arcs button")
+	check((_sv2.model()["size"] as Vector2).y >= _st.num("side_view.section.min_picture_h_px"), "23. its picture is not under the data's floor (%.0f px)" % (_sv2.model()["size"] as Vector2).y)
+	eq(_sv2.press_strip("top"), false, "23. no strips to press")
+	check(_ui.orders.position.y + _ui.orders.size.y <= 720.0 - _st.num("card.margin_px") + 1e-6, "23. the card is on the screen (bottom %.0f)" % (_ui.orders.position.y + _ui.orders.size.y))
+	print("[test] at 1280x720 with 3 units the panel is %s, the section %.0f px, the card %.0f px" % [str(lay["mode"]), _sv2.size.y, _ui.orders.size.y])
+	# Too short even for that: nothing, and the card is its own size again.
+	_ui.hud.size = Vector2(1280.0, 560.0)
+	_ui.layout()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+	eq(_sv2.is_active(), false, "23. a window too short for the Side picture shows no panel")
+	near(_ui.orders.size.y, _base_h, 1e-6, "23. and the card gives its room back")
+	await _smoke_all_units()
+	check(_smoke_done, "18. the smoke check of every kind of unit ran to its end (a runtime error would have ended it early)")
+	eq(_sv2.failed_draws, 0, "no sub-draw failed anywhere in the run")
+	eq(_st.errors.size(), 0, "no style lookup failed in the whole run: %s" % str(_st.errors))
+	SideView.reset_view_setting()
+	ConeOverlay.reset_view_setting()
+	finish()
+
+# 18. EVERY KIND OF FRIENDLY UNIT draws its three strips to their end: the fighters and the bomber, a tank (an all-round cone), a cruiser (four
+# mounts, all-round and up), a patrol boat, a mobile gun, a boat with none.
+func _smoke_all_units() -> void:
+	var w := World.new()
+	w.add_player("local")
+	var kinds := ["light_fighter", "heavy_fighter", "bomber", "tank", "cruiser", "patrol_boat", "mobile_aa", "supply_boat"]
+	for i in kinds.size():
+		_add(w, "u_" + str(kinds[i]), str(kinds[i]), "allies", "player", 1000.0 + 300.0 * float(i), 1000.0, 0.0)
+	_add(w, "e1", "light_fighter", "axis", "ai", 1500.0, 1100.0, PI, "medium")
+	var sel := UiSelection.new()
+	var pl := MotionPlanner.new()
+	add_child(pl)
+	pl.setup(w, _xf, sel, "local", _st)
+	var sv := SideView.new()
+	add_child(sv)
+	sv.setup(w, pl, sel, _st)
+	SideView.reset_view_setting()
+	for k: String in kinds:
+		var id := "u_" + k
+		sel.select(id)
+		sv.refresh()
+		if not check(sv.is_active(), "18. %s: the panel is up" % k):
+			continue
+		var m := sv.model()
+		var before := sv.picture_draws
+		await get_tree().process_frame
+		await get_tree().process_frame
+		check(sv.picture_draws - before >= 3, "18. %s: the three strips were drawn (%d draws)" % [k, sv.picture_draws - before])
+		for c: Dictionary in (m["top"]["cones"] as Array) + (m["top"]["footprints"] as Array):
+			eq(str(c["unit"]), id, "18. %s: a Top cone is its own" % k)
+		var n_weapons: int = (w.units[id].def.weapons as Array).size()
+		eq((m["front"]["cones"] as Array).size(), n_weapons, "18. %s: a Front cone for each of its %d weapons" % [k, n_weapons])
+	eq(sv.failed_draws, 0, "18. every strip of every kind of unit ran to its end")
+	sv.queue_free()
+	pl.queue_free()
+	_smoke_done = true
 
 func _next(stage: int) -> void:
 	_stage = stage

@@ -17,7 +17,7 @@ extends SceneTree
 # phase picks what is saved and under which data:
 #   before   the data as it stood before this track (run this on the code before the change; it reads nothing new)
 #   after    the data as it stands: <w>_plan_after.png, <w>_zoom1_after.png, and the weapon arcs switched off with the
-#            roster's button (pressed as a mouse click on its rect): <w>_plan_arcs_off.png, <w>_zoom1_arcs_off.png
+#            side view panel's button (pressed as a mouse click on its rect): <w>_plan_arcs_off.png, <w>_zoom1_arcs_off.png
 #   each     the new defaults with ONE old line put back by data at a time (<w>_plan_only_<line>.png): which switch is which line
 #   legacy   the old look put back BY DATA ALONE (the switches this track added, flipped back): proves each is reversible
 # Files are named <width>x<height>_<view>_<phase-or-variant>.png.
@@ -226,17 +226,21 @@ func _run() -> void:
 		await _frames(4)
 
 	if phase == "after":
-		# The weapon arcs off, by the roster's own button (a real click on its rect).
-		if not ui.roster.has_method("arcs_button_rect"):
-			printerr("[declutter-shot] the roster has no arcs button")
+		# The weapon arcs off, by the side view panel's own button (a real click on its rect; the roster header's button was removed,
+		# Alex 2026-10-11 "Yes, remove the extra"). The arcs start off now, so they are switched on first.
+		var sv: Variant = ui.get_meta("side_view", null)
+		if sv == null or not bool(sv.has_arcs_button()):
+			printerr("[declutter-shot] the side view panel has no arcs button")
 			_failures += 1
 		else:
-			var r: Rect2 = ui.roster.arcs_button_rect()
+			ui.set_arcs(true)
+			sv.refresh()
+			var r: Rect2 = sv.arcs_button_rect()
 			var ev := InputEventMouseButton.new()
 			ev.button_index = MOUSE_BUTTON_LEFT
 			ev.pressed = true
 			ev.position = r.get_center()
-			ui.roster._gui_input(ev)
+			sv._gui_input(ev)
 			_say("the arcs button pressed: arcs are %s" % ("shown" if ui.arcs_shown() else "hidden"))
 			if ui.arcs_shown():
 				_failures += 1
@@ -244,8 +248,8 @@ func _run() -> void:
 			await _shot("%dx%d_plan_arcs_off.png" % [size.x, size.y])
 			await _view_zoom1(at, first_end)
 			await _shot("%dx%d_zoom1_arcs_off.png" % [size.x, size.y])
-			ev.position = r.get_center()
-			ui.roster._gui_input(ev)
+			ev.position = sv.arcs_button_rect().get_center()
+			sv._gui_input(ev)
 			_say("pressed again: arcs are %s" % ("shown" if ui.arcs_shown() else "hidden"))
 			if not ui.arcs_shown():
 				_failures += 1

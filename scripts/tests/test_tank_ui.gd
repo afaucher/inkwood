@@ -126,7 +126,8 @@ func _screen() -> void:
 	ui.select("t1")
 	await _frames(3)
 	var cones = ui.cones
-	check(cones.arcs_shown(), "4. the arcs are on (the data's starting state)")
+	ui.set_arcs(true)   # (the map's arcs start OFF now, decision side-view-views: this section is about the cone the map draws once they are on)
+	check(cones.arcs_shown(), "4. the arcs are on (switched on)")
 	var recs: Array = cones.collect()
 	var mine := recs.filter(func(c: Dictionary) -> bool: return c["unit"] == "t1")
 	eq(mine.size(), 1, "4. the selected tank shows its one gun cone")

@@ -5,7 +5,8 @@ extends "res://scripts/test_support/test_case.gd"
 # scripts/ui/declutter_shot.gd's (tmp/declutter/).
 #
 #   1. THE DATA holds Alex's removals and the new defaults, with his words as the reasons: no leader line to the roster, no
-#      whole-flight track line, no clamp mark (the little X), no dashed overhead footprint; the arcs start shown; no key for the
+#      whole-flight track line, no clamp mark (the little X), no dashed overhead footprint; the arcs start HIDDEN (decision
+#      side-view-views, 2026-10-11: they were shown until then); no key for the
 #      arcs; the lettering is larger, upright, semibold, full ink with a firm halo
 #   2. THE LEADER LINE is off by default and comes back by data
 #   3. THE CLAMP MARK (the dashed line to a little X): a clamped step has none while the data says off -- clamp_marks() is what
@@ -13,9 +14,9 @@ extends "res://scripts/test_support/test_case.gd"
 #   4. THE TRACK LINE is off by default, still RECORDED, and comes back by data
 #   5. THE OVERHEAD FOOTPRINT: a cone with no slice at the plane's level (the dorsal turret) is not drawn by default; the data
 #      brings it back; the side view's records are never dropped
-#   6. THE ARCS BUTTON (on the roster header; Alex: "Lets prioritize onscreen buttons. No keyboard mapping."): "Arcs: on" /
-#      "Arcs: off", a click hides every cone on the map and a second shows them, it stays as set (another selection, another
-#      overlay), and there is NO key for it
+#   6. THE ARCS BUTTON (the side view panel's, in its heading row: the roster header's own was removed, Alex 2026-10-11 "Yes, remove
+#      the extra"; Alex: "Lets prioritize onscreen buttons. No keyboard mapping."): "Arcs: on" / "Arcs: off", a click shows every cone
+#      on the map and a second hides them, it stays as set (another selection, another overlay), and there is NO key for it
 #   7. THE LETTERING: the labels are drawn at the data's size in the data's face; the node lettering and the unit labels agree
 
 const World = preload("res://scripts/sim/world.gd")
@@ -24,6 +25,7 @@ const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiLabels = preload("res://scripts/ui/ui_labels.gd")
 const Roster = preload("res://scripts/ui/roster.gd")
 const ConeOverlay = preload("res://scripts/ui/cone_overlay.gd")
+const SideView = preload("res://scripts/ui/side_view.gd")
 const SandboxTracks = preload("res://scripts/app/sandbox_tracks.gd")
 const UiSelection = preload("res://scripts/ui/ui_selection.gd")
 
@@ -87,7 +89,7 @@ func _check_data() -> void:
 	eq(_st.flag("marker.trails.whole_flight_line"), false, "1. no whole-flight track line by default")
 	eq(_st.flag("planner.clamp_marks"), false, "1. no clamp mark (the dashed line to a little X) by default")
 	eq(_st.flag("planner.cones.overhead_footprint"), false, "1. no dashed overhead footprint by default")
-	eq(_st.flag("planner.cones.shown"), true, "1. the weapon arcs start shown")
+	eq(_st.flag("planner.cones.shown"), false, "1. the weapon arcs start hidden (decision side-view-views: the side view's strips show them)")
 	# Alex's words are kept beside the switches he asked for.
 	check(_st.text("marker._leader_to_roster").contains("thin black line"), "1. the leader line's reason quotes Alex")
 	check(_st.text("marker.trails._whole_flight_line").contains("extremely thin red/blue line"), "1. the track line's reason quotes Alex")
@@ -180,6 +182,7 @@ func _check_track_line() -> void:
 func _check_overhead() -> void:
 	_sections.append("overhead")
 	_ui.select("b1")
+	_ui.set_arcs(true)   # (the map's arcs start off now: this section is about which cones the map draws once they are on)
 	var cones: Array = _ui.cones.collect()
 	var dorsal := 0
 	var with_slice := 0
@@ -200,76 +203,82 @@ func _check_overhead() -> void:
 	# The side view's records are side-on: their `half` is an elevation and none is dropped.
 	var side_on := [{"half": 0.0, "side_view": true}, {"half": 0.4, "side_view": true}]
 	eq(ConeOverlay.drawn_cones(side_on, _st).size(), 2, "5. a side-on record is never dropped")
+	ConeOverlay.reset_view_setting()   # (back to the data's starting state for the next section)
 
 # --- 6 -------------------------------------------------------------------------
 
-func _click(ro: Roster, at: Vector2) -> void:
+func _click(c: Control, at: Vector2) -> void:
 	var ev := InputEventMouseButton.new()
 	ev.button_index = MOUSE_BUTTON_LEFT
 	ev.pressed = true
 	ev.position = at
-	ro._gui_input(ev)
+	c._gui_input(ev)
 
+# The weapon-arcs button is the side view panel's (decision side-view-views; Alex: "Yes, remove the extra" -- the roster header's own is gone).
 func _check_arcs_button() -> void:
 	_sections.append("arcs")
 	var ro: Roster = _ui.roster
 	var pl = _ui.planner
 	_ui.select("b1")
-	check(ro.has_arcs_button(), "6. the roster has the weapon-arcs button")
-	var r: Rect2 = ro.arcs_button_rect()
+	var sv: Control = _ui.get_meta("side_view")
+	sv.refresh()
+	check(sv.is_active() and sv.has_arcs_button(), "6. the side view panel has the weapon-arcs button")
+	eq(ro.has_method("arcs_button_rect") or ro.has_method("press_arcs"), false, "6. and the roster header has none")
 	var g: Rect2 = ro.group_button_rect()
-	check(r.position.y >= _st.num("roster.header_px") and r.end.y <= ro.list_top(), "6. in the header's bar, above the list")
-	check(r.end.x <= g.position.x - 60.0 and absf(r.position.x - _st.num("card.pad_px")) < 0.5, "6. at the left of the bar, clear of the group-by button and of its label (which sits against that button)")
+	check(g.position.y >= _st.num("roster.header_px") and g.end.y <= ro.list_top(), "6. the roster's bar holds its group-by button alone")
+	eq(g.size.x, _st.num("roster.group.button_w_px"), "6. at its own width")
+	var r: Rect2 = sv.arcs_button_rect()
+	check(r.position.y >= 0.0 and r.end.y <= _st.num("side_view.section.gap_px") + _st.num("side_view.section.head_px") + 1e-6 and r.end.x <= sv.size.x + 1e-6, "6. in the panel's heading row, at the right")
 	check(r.size.x >= 60.0 and r.size.y >= 16.0, "6. big enough to hit (%s)" % str(r.size))
-	eq(ro.arcs_label(), "Arcs: on", "6. it reads 'Arcs: on' to start with")
-	eq(_ui.arcs_shown(), true, "6. the arcs are shown to start with")
-	check(_ui.cones.collect().size() > 0, "6. and the selected bomber's cones are on the map")
-	eq(ro._get_tooltip(r.get_center()), _st.text("roster.arcs.tooltip"), "6. it has a tooltip")
-	eq(ro._get_tooltip(Vector2(5.0, 5.0)), "", "6. and only it")
-	# A click on the group-by button is not a click on it.
+	eq(sv.arcs_label(), "Arcs: off", "6. it reads 'Arcs: off' to start with")
+	eq(_ui.arcs_shown(), false, "6. the arcs are hidden to start with")
+	eq(_ui.cones.collect().size(), 0, "6. and the map draws no cones")
+	eq(sv._get_tooltip(r.get_center()), _st.text("side_view.arcs.tooltip"), "6. it has a tooltip")
+	eq(sv._get_tooltip(Vector2(5.0, 40.0)), "", "6. and only it")
+	# A click on the roster's group-by button is not a click on it.
 	_click(ro, g.get_center())
-	eq(_ui.arcs_shown(), true, "6. the group-by button does not touch the arcs")
+	eq(_ui.arcs_shown(), false, "6. the group-by button does not touch the arcs")
 	ro.set_group_by("none")
 	# The click.
-	_click(ro, r.get_center())
-	eq(_ui.arcs_shown(), false, "6. a click hides the arcs")
-	eq(ro.arcs_label(), "Arcs: off", "6. and it reads 'Arcs: off'")
-	eq(_ui.cones.collect().size(), 0, "6. every cone of the map is gone")
+	_click(sv, r.get_center())
+	eq(_ui.arcs_shown(), true, "6. a click shows the arcs")
+	eq(sv.arcs_label(), "Arcs: on", "6. and it reads 'Arcs: on'")
+	check(_ui.cones.collect().size() > 0, "6. and the selected bomber's cones are on the map")
 	await get_tree().process_frame
 	await get_tree().process_frame
-	eq(_ui.cones._cones.size(), 0, "6. and the overlay has noticed: nothing is handed to the draw routines")
+	check(_ui.cones._cones.size() > 0, "6. and the overlay has noticed: the cones are handed to the draw routines")
 	# It stays as set: another selection, the next turn's planning, another overlay.
 	_ui.select("p1")
-	eq(_ui.cones.collect().size(), 0, "6. it stays off when another unit is selected")
+	check(_ui.cones.collect().size() > 0, "6. it stays on when another unit is selected")
 	var other := ConeOverlay.new()
 	add_child(other)
 	other.setup(_w, Transform2D.IDENTITY, UiSelection.new(), _st)
-	eq(other.arcs_shown(), false, "6. and for another overlay of the same session")
+	eq(other.arcs_shown(), true, "6. and for another overlay of the same session")
 	other.queue_free()
 	# The second click.
-	_click(ro, r.get_center())
-	eq(_ui.arcs_shown(), true, "6. a second click shows them again")
-	eq(ro.arcs_label(), "Arcs: on", "6. 'Arcs: on'")
-	check(_ui.cones.collect().size() > 0, "6. the cones are back")
+	sv.refresh()
+	_click(sv, sv.arcs_button_rect().get_center())
+	eq(_ui.arcs_shown(), false, "6. a second click hides them again")
+	eq(sv.arcs_label(), "Arcs: off", "6. 'Arcs: off'")
+	eq(_ui.cones.collect().size(), 0, "6. every cone of the map is gone")
 	# The calls the button stands for.
-	_ui.set_arcs(false)
-	eq(ro.arcs_label(), "Arcs: off", "6. UnitUI.set_arcs(false) is the same switch")
+	_ui.set_arcs(true)
+	eq(sv.arcs_label(), "Arcs: on", "6. UnitUI.set_arcs(true) is the same switch")
 	_ui.toggle_arcs()
-	eq(_ui.arcs_shown(), true, "6. and toggle_arcs()")
+	eq(_ui.arcs_shown(), false, "6. and toggle_arcs()")
 	# NO KEY (Alex: "No keyboard mapping"): C, or any key, does not touch it.
 	for code: Key in [KEY_C, KEY_A, KEY_R, KEY_V]:
 		var ev := InputEventKey.new()
 		ev.keycode = code
 		ev.pressed = true
 		check(not _ui._key(ev), "6. %s is not taken by the interface" % OS.get_keycode_string(code))
-	eq(_ui.arcs_shown(), true, "6. no key changed the arcs")
-	# A roster on its own (no cone overlay behind it) has no such button, and a click where it would be does nothing.
-	var alone := Roster.new()
+	eq(_ui.arcs_shown(), false, "6. no key changed the arcs")
+	# A panel on its own (no cone overlay behind it) has no such button, and pressing where it would be does nothing.
+	var alone := SideView.new()
 	add_child(alone)
-	alone.setup(_w, UiSelection.new(), _st)
-	eq(alone.has_arcs_button(), false, "6. a roster with no overlay behind it has no arcs button")
-	_click(alone, alone.arcs_button_rect().get_center())
-	eq(alone.arcs_label() != "", true, "6. (and asking for its label is harmless)")
+	alone.setup(_w, pl, UiSelection.new(), _st)
+	eq(alone.has_arcs_button(), false, "6. a panel with no overlay behind it has no arcs button")
+	eq(alone.press_arcs(), false, "6. (and pressing it does nothing)")
 	alone.queue_free()
 	# The frames: both settings draw to their end.
 	_ui.set_arcs(false)

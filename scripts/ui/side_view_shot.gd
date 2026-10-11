@@ -24,18 +24,39 @@ extends SceneTree
 #   7 live_playback       scene 3 played: the turn held at 2.5 s, the panel live at the fighter's SHOWN pose with the enemy
 #                         followed at ITS shown position (Alex: a moving target follows the unit)
 #
+# THE THREE STRIPS (decision side-view-views, 2026-10-11): `scenes=strips` photographs the panel with its Top, Front and Side strips,
+# at the window's size (`res=WxH`, 1280x720 by default; Alex tests on 3840x2160), for the Strike's bomber (its dorsal turret covers what
+# is ABOVE it) and a fighter, with all three strips open and with some folded, and the Arcs button on and off:
+#
+#   build\deps\godot\4.7-stable\Godot_v4.7-stable_win64_console.exe --path . --windowed --resolution 1280x720 `
+#       --script res://scripts/ui/side_view_shot.gd -- scenes=strips res=3840x2160 out=tmp/sideview3
+#
+#   s3_<res>_<n>_<scene>.png        the whole window
+#   s3_<res>_<n>_<scene>_card.png   the sidebar column, cropped 1:1
+#   s3_<res>_<n>_<scene>_panel.png  the side view's section alone, 1:1 (the file to read: lettering, the cones, the target)
+#   1 bomber_all       the bomber low, an enemy fighter behind it, right and 280 m above (in the dorsal turret's reach): all three strips
+#   2 bomber_folded    the same, Front folded, Top and Side open
+#   3 bomber_arcs      the same with the Arcs button pressed: the map's own cones back, the button filled with ink, the roster's too
+#   4 fighter_all      a light fighter, an enemy 380 m ahead a little to the left: all three strips
+#   5 fighter_top      the same, only Top unfolded
+#   6 bomber_climb     the bomber's first step climbs a band: the cones tilt (Side) and the dorsal turret reaches the plane (Top)
+#
 # A shot only sets the scene up and calls the interface's own public methods (it plans through the planner and picks the
 # target the way a click does); nothing is drawn by the script.
 
 const World = preload("res://scripts/sim/world.gd")
 const BoardScene = preload("res://scripts/ui/boards/board_scene.gd")
 const UiTarget = preload("res://scripts/ui/ui_target.gd")
+const SideView = preload("res://scripts/ui/side_view.gd")
+const ConeOverlay = preload("res://scripts/ui/cone_overlay.gd")
 
 const PLAY_ZOOM := 0.35          # data/view/camera.json zoom.start: the planning view
 const BASE := Vector2(2300.0, 2300.0)
 
 var out_dir := "tmp/sideview_game"
 var only := 0                    # only=N runs scene N alone
+var strips_mode := false         # scenes=strips: the three strips' scenes instead of the mock-up's seven
+var res := Vector2i(1280, 720)   # res=WxH: the window's size (the strips' scenes)
 var scene: BoardScene = null
 var ui = null
 var world: World = null
@@ -55,6 +76,12 @@ func _initialize() -> void:
 			out_dir = kv[1]
 		elif kv.size() == 2 and kv[0] == "only":
 			only = int(kv[1])
+		elif kv.size() == 2 and kv[0] == "scenes":
+			strips_mode = kv[1] == "strips"
+		elif kv.size() == 2 and kv[0] == "res":
+			var wh := kv[1].split("x")
+			if wh.size() == 2:
+				res = Vector2i(int(wh[0]), int(wh[1]))
 	_run.call_deferred()
 
 func _say(msg: String) -> void:
@@ -104,6 +131,11 @@ func _run() -> void:
 		sv.target_source = func() -> Object: return tg
 	else:
 		_say("UnitUI.target (Track T) is the panel's source")
+	if strips_mode:
+		await _strips_scenes()
+		scene.shutdown()
+		quit(1 if failures > 0 else 0)
+		return
 	if only == 0 or only == 1:
 		await _scene_1()
 	if only == 0 or only == 2:
@@ -291,3 +323,93 @@ func _scene_7() -> void:
 	ui.marker_layer.set_playback_time(2.5)
 	await _shoot(7, "live_playback")
 	ui.marker_layer.playback_paused = false
+
+# --- The three strips (decision side-view-views) ---------------------------------------------------------------------------
+
+func _strips_scenes() -> void:
+	if res != Vector2i(1280, 720):
+		DisplayServer.window_set_size(res)
+		root.size = res
+		await scene.frames(30)
+		_say("the window is %d x %d" % [root.size.x, root.size.y])
+	if only == 0 or only == 1:
+		await _strips_bomber(1, "bomber_all", [], false)
+	if only == 0 or only == 2:
+		await _strips_bomber(2, "bomber_folded", ["front"], false)
+	if only == 0 or only == 3:
+		await _strips_bomber(3, "bomber_arcs", [], true)
+	if only == 0 or only == 4:
+		await _strips_fighter(4, "fighter_all", [])
+	if only == 0 or only == 5:
+		await _strips_fighter(5, "fighter_top", ["front", "side"])
+	if only == 0 or only == 6:
+		await _strips_bomber_climb(6, "bomber_climb")
+
+# The bomber low, an enemy fighter behind it, to its right and 280 m above: out of the tail turret's cone (its elevation is level) and
+# in the dorsal turret's.
+func _strips_bomber(n: int, name: String, folded: Array, arcs: bool) -> void:
+	SideView.reset_view_setting()
+	ConeOverlay.reset_view_setting()
+	await _park([bomber, enemy])
+	await scene.place({bomber: {"x": BASE.x, "y": BASE.y, "heading": 0.0, "band": "low"},
+		enemy: {"x": BASE.x - 150.0, "y": BASE.y + 100.0, "heading": PI, "band": "medium"}})
+	ui.select(bomber)
+	ui.planner.clear()
+	await _frame(BASE + Vector2(-75.0, 50.0))
+	_target_unit(enemy)
+	await _strips_shoot(n, name, folded, arcs)
+
+# The bomber's first step climbs a band: the airframe pitches up, every cone tilts in the Side strip, and in the Top strip the dorsal
+# turret's cone now reaches the horizontal plane (a wedge, not a footprint).
+func _strips_bomber_climb(n: int, name: String) -> void:
+	SideView.reset_view_setting()
+	ConeOverlay.reset_view_setting()
+	await _park([bomber, enemy])
+	await scene.place({bomber: {"x": BASE.x, "y": BASE.y, "heading": 0.0, "band": "low"},
+		enemy: {"x": BASE.x - 150.0, "y": BASE.y + 100.0, "heading": PI, "band": "medium"}})
+	ui.select(bomber)
+	ui.planner.clear()
+	ui.planner.place_point(Vector2(BASE.x + 140.0, BASE.y))
+	ui.planner.change_band(1)
+	await _frame(BASE + Vector2(-75.0, 50.0))
+	_target_unit(enemy)
+	await _strips_shoot(n, name, [], false)
+
+func _strips_fighter(n: int, name: String, folded: Array) -> void:
+	SideView.reset_view_setting()
+	ConeOverlay.reset_view_setting()
+	await _park([light, enemy])
+	await scene.place({light: {"x": BASE.x, "y": BASE.y, "heading": 0.0, "band": "medium"},
+		enemy: {"x": BASE.x + 380.0, "y": BASE.y - 60.0, "heading": PI, "band": "medium"}})
+	ui.select(light)
+	ui.planner.clear()
+	await _frame(BASE + Vector2(190.0, -30.0))
+	_target_unit(enemy)
+	await _strips_shoot(n, name, folded, false)
+
+func _strips_shoot(n: int, name: String, folded: Array, arcs: bool) -> void:
+	for id: String in sv.strip_ids():
+		sv.set_strip_open(id, not folded.has(id))
+	if arcs:
+		sv.press_arcs()
+	await scene.frames(4)
+	sv.refresh()
+	await scene.frames(3)
+	var img: Image = await scene.grab()
+	var stem := "s3_%dx%d_%d_%s" % [res.x, res.y, n, name]
+	_save(img, stem + ".png")
+	var col: Rect2 = ui.sidebar_rect()
+	_save(img.get_region(Rect2i(int(col.position.x), 0, int(col.size.x), mini(int(col.end.y), img.get_height()))), stem + "_card.png")
+	var r: Rect2 = sv.get_global_rect()
+	_save(img.get_region(Rect2i(Vector2i(int(r.position.x), int(r.position.y)), Vector2i(int(r.size.x), int(r.size.y))).intersection(Rect2i(0, 0, img.get_width(), img.get_height()))), stem + "_panel.png")
+	var m: Dictionary = sv.model()
+	var lay: Dictionary = m.get("layout", {})
+	var shown := []
+	for e: Dictionary in lay.get("strips", []):
+		if bool(e["shown"]):
+			shown.append(str(e["id"]))
+	_say("%s: layout %s, strips shown %s, section %.0f px, the card %.0f px tall (bottom at %.0f of %d), arcs button %s, picture draws %d, failed sub-draws %d" % [
+		stem, str(lay.get("mode")), str(shown), float(lay.get("section_h", 0.0)), ui.orders.size.y,
+		ui.orders.position.y + ui.orders.size.y, root.size.y, "on" if sv.arcs_on() else "off", sv.picture_draws, sv.failed_draws])
+	if sv.failed_draws != 0 or not bool(m.get("active")):
+		failures += 1
