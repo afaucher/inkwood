@@ -1,0 +1,103 @@
+# How we work on Inkwood
+
+The working method, learned over the first three days (2026-10-09 to 11). CLAUDE.md
+holds the engine traps and the code map; this file holds how the work is run. Any
+agent starting on Inkwood reads both, then `docs/status.md` for what is in flight.
+
+## Who decides
+
+- **Alex decides.** Anything the design doc does not settle is a question for Alex,
+  asked with options and a recommendation, never a choice an agent makes alone.
+- **Everything an agent chooses is labelled PROPOSED** in data, code comments,
+  reports and docs, until Alex picks. Never present a proposal as his decision.
+- **Looks are decided on boards**: 3 to 6 options drawn by the game from one seed
+  (`variants/<name>/`: `board.json` with `chosen: null`, `frames.json`, native-size
+  frames), shown beside the things they will sit with, with the palette strip.
+  Read the Style guide first (the design doc's "Style guide" tab).
+- **Show boards at full resolution.** Alex cannot read a shrunken sheet. Publish a
+  viewer artifact that shows the frames or the sheet at native pixels (the viewers so
+  far are listed in the Decision Ledger). Never ask him to judge a thumbnail.
+- **Balance is not calibrated** (decision balance-uncalibrated): missions are
+  playtests, the attackers have the advantage, "find the fun first".
+
+## Recording a decision (all three, every time)
+
+1. `data/decisions/decisions.json`: a record with `id`, `date`, `area`, `question`,
+   `board`, `options`, `chosen`, `parameters`, `applied_to`, `status` ("chosen by
+   Alex", "open", "chosen by Alex; deferred", ...) and `notes` with **Alex's words
+   verbatim**. Then the data values it sets (each value record names the decision:
+   `"decision": "<id>"` in place of `"_proposed": true`), and `chosen` in the board's
+   `board.json`. The file round-trips through `json.dumps(indent=2,
+   ensure_ascii=False)` byte-for-byte, so a Python edit is safe.
+2. **The design doc's decision log** (Claude Docs connector): project
+   `5cdc9f22-2f23-41a5-9196-c0370d346d2e`, main body node `c63a6162-6cc2`, the log
+   table `m7fs7g4y4v6.105818`. Insert a row after the header row
+   `m7fs7g4y4v6.105819`: a date chip, the decision in one sentence, and the status
+   dropdown (enum `fc9d8bd4-a434`; index 0 = Said by Alex, 2 = Proposed). Read with
+   the docs tools, never a web fetch.
+3. **The Decision Ledger** artifact (https://claude.ai/artifact/AQtHN2PP9H9mnyRjsCMDjE):
+   its `decisions` collection holds the major decisions and everything open,
+   deferred or proposed; its `links` collection lists the boards and documents. Add
+   or update a row with the `ArtifactData` tool (pin `if_version`). Row shape:
+   `{title, area, status: decided|open|deferred|proposed, what, date, links: [link
+   ids], source: "<decisions.json id>"}`. The seed script is `tmp/ledger/seed.py`.
+
+## The lead and the builders
+
+- The main session is the **lead**: it plans with Alex, writes briefs, launches
+  builder subagents, reviews their work, runs the gate and commits. Builders do not
+  commit.
+- **Implementation builders run on Sonnet** (`model: "sonnet"`); planning and
+  research may use the default model.
+- **A brief is self-contained**: Alex's decisions quoted, the files to read first,
+  what to deliver, the folders it owns, who else is editing what, the rules
+  (no commit, no build.ps1, never kill Godot by image name), and the report shape.
+- **Reuse, do not redo.** Board and prototype code is written to become the game's
+  code; integration extends it. A stopped track's leftovers are finished, not
+  restarted (snapshot them to `tmp/` first). A follow-up in a finished builder's
+  area goes to that builder (SendMessage) so its context is reused.
+- **An interrupt stops every builder running at that moment**, silently and for
+  good, with no completion notice. After any interrupt, list the agents at once,
+  tell Alex what stopped and what it left, and ask before relaunching on top of the
+  partial work. Never report a builder as running without checking.
+- **Parallel builders share one working tree.** Each owns folders; shared files
+  (world.gd, unit_ui.gd, ui.json, ...) are re-read immediately before every edit,
+  edits stay in the builder's own parts, and nobody undoes another's changes.
+
+## Several agents at once (sessions as well as builders)
+
+- **Claim before you start**: add a row to the claims table in `docs/status.md`
+  (track, owner, folders, date) and commit it. Do not start a track someone has
+  claimed; remove your row when it lands.
+- **Commit only your own files.** If a shared file carries another agent's
+  uncommitted hunks, either wait for them or validate yours alone (below).
+- **Validating one track alone**: a throwaway checkout at `../inkwood_wt`
+  (`git worktree add --detach ../inkwood_wt HEAD`, then link the engine:
+  `New-Item -ItemType Junction -Path ..\inkwood_wt\build\deps -Target build\deps`),
+  copy only that track's files in, run the whole gate there, then stage exactly those
+  files in the main tree and commit. A file with mixed hunks can be staged from a
+  constructed copy with `git hash-object -w` + `git update-index --cacheinfo`.
+- **Pushing**: other sessions push too. If a push is rejected, `git fetch` and
+  `git merge origin/main` (the merge only touches files they changed), then push.
+
+## Running things
+
+- **The gate**: every test in `scripts/tests/`, each through `test_runner.ps1`; read
+  `test_logs/<name>.log` for `>>> [TEST PASSED] <name> <<<`, never the runner's
+  stdout. A parallel loop of runners (5 to 6 at a time) runs the whole gate in a
+  few minutes; networked tests own fixed ports (CLAUDE.md), so one run at a time.
+- **build.ps1 stops any running copy of the game by name** (`Stop-Process -Name
+  Inkwood`) before exporting. Alex may be playtesting: ask before running it. Do
+  not change the build scripts (Alex: "Don't touch the build").
+- **Never kill Godot by image name**; stop only the processes you started (by PID).
+- **Windowed shots** go to `tmp/<track>/` at native size; send Alex the one or two
+  that show the point (SendUserFile), not the whole folder.
+- **Third-party reference art** (Hannes Breuer's) stays local in `reference/style/`
+  (gitignored) and is never uploaded to a shared doc.
+
+## Talking to Alex
+
+- Short, plain words; numbered questions he can answer by number; one
+  recommendation each.
+- Say what is done and verified plainly, and what failed or was skipped.
+- Lead with what he can do now (a link, a build path, a choice to make).
