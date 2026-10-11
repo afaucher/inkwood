@@ -199,7 +199,7 @@
     "_proposed": true,
     "_reason": "PROPOSED by Track TR, not Alex's call: T2 (a paper-light streak with an ink edge) reads as a bright round, which is what a tracer is, without a glow or a new hue: the ink edge keeps it visible on forest, hatching and the ribbons, it is the most visible of the thin marks at the planning zoom, and its fading hairline shows who fired at whom. T5 is the same streak in plain ink with hit and miss marks, if Alex wants every roll's outcome marked; T4 is the most ink-like close in but smears at the planning zoom; T1 is the loudest and echoes the planner's dashed lines; T3 (side colours) is too faint over the blue shadows."
   },
-  "chosen": null,
-  "chosen_by": null,
-  "decision": "tracers-mg"
+  "chosen": "T5",
+  "chosen_by": "Alex",
+  "decision": "tracers-look"
 }

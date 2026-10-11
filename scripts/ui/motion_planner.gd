@@ -1364,7 +1364,7 @@ func _draw_fan() -> void:
 	var poly := fan_outline_screen()
 	if poly.size() < 3:
 		return
-	# The fan's other looks (data planner.fan.mode, PROPOSED: the board is variants/motion-range/); 'ribs', today's, is the rest of this function.
+	# The fan's looks (data planner.fan.mode; Alex chose 'wash_rim', decision motion-range-look; the board is variants/motion-range/); 'ribs', the look before that decision and still a switch, is the rest of this function.
 	if _draw_fan_mode(poly, style.text("planner.fan.mode")):
 		return
 	var n := poly.size() / 2
@@ -1394,12 +1394,13 @@ func _draw_fan() -> void:
 		draw_colored_polygon(poly, style.color("fan_fill"))
 	UiInk.ink_line(self, poly, true, edge, style.num("planner.fan_line_px"), 31, 0.4)
 
-# THE FAN'S OTHER LOOKS (Alex 2026-10-11, the second playtest: "Should we just have a little shaded area where you can set the node?"; the
-# board is variants/motion-range/; data planner.fan.mode and planner.fan.<mode>; EVERY MODE AND VALUE IS PROPOSED by builder BM). Every one
+# THE FAN'S LOOKS (Alex 2026-10-11, the second playtest: "Should we just have a little shaded area where you can set the node?"; the
+# board is variants/motion-range/; data planner.fan.mode and planner.fan.<mode>; ALEX CHOSE wash_rim, decision motion-range-look: the default; the other
+# modes are switches and, with the numbers inside wash_rim, PROPOSED by builder BM). Every one
 # marks the same region, World.reachable's outline (the nodes the next step may be set at, clipped by the ground and sea rules for a tank or a
 # ship), in ink at lower alphas only (the fan_* roles): shade (a flat shaded area, no outline), wash_rim (the wash under a thin rim), stipple
 # (dots), hatch (45 degree strokes), rim_ticks (a quiet rim with a ruler along the centre line: a tick at the slowest and at the fastest
-# reach). True when `mode` was drawn; false for 'ribs' (today's look, drawn by _draw_fan itself) or a name this does not know.
+# reach). True when `mode` was drawn; false for 'ribs' (the old look, drawn by _draw_fan itself) or a name this does not know.
 func _draw_fan_mode(poly: PackedVector2Array, mode: String) -> bool:
 	if not ["shade", "wash_rim", "stipple", "hatch", "rim_ticks"].has(mode):
 		return false

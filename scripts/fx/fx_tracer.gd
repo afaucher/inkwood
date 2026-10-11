@@ -1,8 +1,9 @@
 extends RefCounted
 
-# MACHINE-GUN TRACERS (Track TR, 2026-10-11). EVERYTHING HERE IS PROPOSED: Alex's note from the second playtest was
-# "We should show tracers for machine guns" (decision playtest-2); the weapons that draw one, the look and every number are
-# the builder's proposals, in data/fx/fx.json `tracers`, until Alex picks from variants/tracers/.
+# MACHINE-GUN TRACERS (Track TR, 2026-10-11). Alex's note from the second playtest was "We should show tracers for machine guns"
+# (decision playtest-2); the scope is machine guns only (decision tracers-mg) and the look is his pick from variants/tracers/, T5, an
+# ink streak with a dot for a hit and a tick for a miss (decision tracers-look). STILL PROPOSED: the list of weapon ids that count as
+# machine guns and every number of the options, in data/fx/fx.json `tracers`.
 #
 # WHAT IT DRAWS. A "fire" event (scripts/sim/combat.gd: one per roll, with the weapon id, the hardpoint, the muzzle's place x/y,
 # the target's centre tx/ty and whether the roll hit) from a weapon in tracers.weapons gets one tracer: a short-lived line of fire

@@ -1,12 +1,15 @@
 extends "res://scripts/test_support/test_case.gd"
 
-# THE FAN'S OTHER LOOKS (builder BM, 2026-10-11; the range-of-motion board, variants/motion-range/; data/ui/ui.json planner.fan).
-# The planner draws the region where the next step's node may be set in one of several looks (planner.fan.mode); every look
-# but today's ('ribs') is PROPOSED and nothing is chosen. Headless draws nothing, so this tests what a look is made of:
+# THE FAN'S LOOKS (builder BM, 2026-10-11; the range-of-motion board, variants/motion-range/; data/ui/ui.json planner.fan).
+# The planner draws the region where the next step's node may be set in one of several looks (planner.fan.mode). ALEX CHOSE
+# C, 'Wash and a thin inked rim' (decision motion-range-look, 2026-10-11), for every unit type: the default is 'wash_rim'.
+# The other looks, 'ribs' (the look before the decision) among them, stay as switches and are PROPOSED, not chosen; the
+# numbers inside C (wash 14%, rim 0.9 px at 50%) are PROPOSED too. Headless draws nothing, so this tests what a look is made of:
 #
-#   1. the data is whole: the mode is one of `modes`, every other mode has the block and the colour roles it names, and
+#   0. the default is the chosen look: planner.fan.mode is 'wash_rim', the block records the decision, the board records Alex's pick
+#   1. the data is whole: the mode is one of `modes`, every mode has the block and the colour roles it names, and
 #      every role is ink (no hue: the fan is ink at an alpha, working rule 6)
-#   2. today's look is left to the original code: _draw_fan_mode answers false for 'ribs' and for a name it does not know
+#   2. the original code draws 'ribs' (the old look, a switch): _draw_fan_mode answers false for 'ribs' and for a name it does not know
 #   3. the fan's area (_fan_parts) is the outline for a real fan, and nothing for a fan with no area (a ship dead in the water)
 #   4. the stipple's dots all lie INSIDE the fan, there are some, they are kept between calls and made again for another fan
 #   5. the hatch's strokes all lie inside the fan (Geometry2D.clip_polyline_with_polygon is a DIFFERENCE: CLAUDE.md), run at
@@ -27,7 +30,19 @@ func setup(_main) -> void:
 		return
 	var mode := style.text("planner.fan.mode")
 	check((modes as Array).has(mode), "planner.fan.mode ('%s') is one of the modes" % mode)
-	check((modes as Array).has("ribs"), "today's look, ribs, is one of the modes")
+	eq(mode, "wash_rim", "the default look is Alex's pick, C (wash and a thin inked rim), for every unit type")
+	eq(style.text("planner.fan.decision"), "motion-range-look", "planner.fan names the decision that set the look")
+	check((modes as Array).has("ribs"), "the old look, ribs, is still one of the modes (a switch)")
+	for m0: String in ["ribs", "shade", "wash_rim", "stipple", "hatch", "rim_ticks"]:
+		check((modes as Array).has(m0), "the mode '%s' is kept as a switch" % m0)
+	# The board records the pick (read from the file, not from a copy).
+	var board_path := "res://variants/motion-range/board.json"
+	if check(FileAccess.file_exists(board_path), "the motion-range board is on disk"):
+		var board: Variant = JSON.parse_string(FileAccess.get_file_as_string(board_path))
+		if check(board is Dictionary, "the motion-range board parses"):
+			eq(str((board as Dictionary).get("chosen", "")), "C", "the board records Alex's pick, C")
+			eq(str((board as Dictionary).get("chosen_by", "")), "Alex", "the board records who chose")
+			eq(str((board as Dictionary).get("decision", "")), "motion-range-look", "the board names the decision")
 	var ink: Color = style.palette["ink"]
 	for m: String in modes:
 		if m == "ribs":
@@ -61,7 +76,7 @@ func setup(_main) -> void:
 	if not check(poly.size() >= 6, "the next step's fan is a polygon (%d points)" % poly.size()):
 		finish()
 		return
-	check(not pl._draw_fan_mode(poly, "ribs"), "ribs is drawn by the original code, not _draw_fan_mode")
+	check(not pl._draw_fan_mode(poly, "ribs"), "ribs (the old look, a switch) is drawn by the original code, not _draw_fan_mode")
 	check(not pl._draw_fan_mode(poly, "no such look"), "a name _draw_fan_mode does not know is left to the original code")
 
 	var parts: Array = pl._fan_parts(poly)

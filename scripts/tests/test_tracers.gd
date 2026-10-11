@@ -1,7 +1,7 @@
 extends "res://scripts/test_support/test_case.gd"
 
-# MACHINE-GUN TRACERS (Track TR, 2026-10-11; EVERYTHING PROPOSED until Alex picks from variants/tracers/; the scope, machine guns
-# only, is Alex's: decision tracers-mg). Headless: the records and the data, and the draw routine run to its end under a canvas.
+# MACHINE-GUN TRACERS (Track TR, 2026-10-11; the scope, machine guns only, is Alex's: decision tracers-mg; so is the look, T5: decision
+# tracers-look; the weapon list and every number are still the builder's proposals). Headless: the records and the data, and the draw routine run to its end under a canvas.
 #
 #   1. the data: every value of fx.json tracers is a proposed record (the scope names its decision); the weapon list is the machine guns
 #      and none of flak, light flak, the nose cannon or the tank's gun; every id in it is a weapon of some unit; five options, each with
@@ -211,7 +211,11 @@ func _check_data() -> void:
 	eq(book.option_names(), ["T1", "T2", "T3", "T4", "T5"], "five proposed options")
 	check(book.cfg["options"].has(_data.working_default("tracers")), "the working default is one of them")
 	var wd: Variant = (_data.raw["working_default"] as Dictionary).get("tracers")
-	check(wd is Dictionary and (wd as Dictionary).get("_proposed") == true, "the working default is marked proposed")
+	eq(_data.working_default("tracers"), "T5", "the working default is Alex's T5 (an ink streak with hit and miss marks)")
+	eq(book.name, "T5", "...and a fresh book runs it")
+	check(wd is Dictionary and str((wd as Dictionary).get("decision", "")) == "tracers-look", "the working default names his decision tracers-look")
+	check(wd is Dictionary and str((wd as Dictionary).get("_reason", "")).contains("T5"), "...and quotes him")
+	check(book.opt.has("marks"), "T5 carries the hit and miss marks")
 	var hue_free := ["ink", "paper", "flash", "side_a", "side_b", "dirt"]
 	var side_chroma: float = FxStyle.to_oklch(_style.palette["side_a"])[1]
 	for name: String in book.option_names():

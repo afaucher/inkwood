@@ -1959,7 +1959,7 @@
       ],
       "chosen": "C, a wash under one thin inked rim, for every unit type",
       "parameters": {
-        "switch": "data/ui/ui.json planner.fan.mode (today's 'ribs' is the default)",
+        "switch": "data/ui/ui.json planner.fan.mode, now 'wash_rim' (Alex's C); the other five modes stay as switches",
         "recommendation": "C for every unit (PROPOSED)",
         "mode": "wash_rim"
       },

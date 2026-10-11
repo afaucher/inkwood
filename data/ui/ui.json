@@ -368,15 +368,15 @@
     "fan_line_px": 1.2,
     "rib_line_px": 0.7,
     "fan": {
-      "_proposed": true,
-      "_reason": "THE RANGE-OF-MOTION INDICATOR (Alex 2026-10-11, the second playtest: 'I want to look at the design of the acceptable range of motion indicator for planes. Is there a style that makes more sense across all unit types? Should we just have a little shaded area where you can set the node? Show me some options before commiting this.'). The board is variants/motion-range/; EVERY OPTION AND VALUE HERE IS PROPOSED by builder BM and nothing is chosen until Alex picks, so the default stays today's look. mode names how the region where the NEXT step's node may be set (World.reachable's outline, clipped by the ground and sea rules for a tank or a ship) is drawn: 'ribs' is today's (the inked outline, a faint wash and one rib per sampled turn: planner.fan_line_px, rib_line_px and the fan_fill, fan_line, fan_rib roles); 'shade' a flat shaded area and no outline at all (Alex's own idea); 'wash_rim' the wash under a thin inked rim, no ribs; 'stipple' ink dots, no outline; 'hatch' 45 degree ink strokes, no outline; 'rim_ticks' a quiet rim and a ruler along the centre line with a tick at the slowest and the fastest reach. Switching on the chosen one is this one value. Colours are the roles named in each block (all ink at a lower alpha: no hue, lightness a ramp off the paper); sizes are screen px.",
-      "mode": "ribs",
+      "decision": "motion-range-look",
+      "_reason": "ALEX CHOSE, decision motion-range-look (2026-10-11, board variants/motion-range/): 'C · Wash and a thin inked rim', for every unit type; 'No need to rerender'. So mode is wash_rim: the region where the NEXT step's node may be set (World.reachable's outline, clipped by the ground and sea rules for a tank or a ship) is a light ink wash under one thin inked rim, with no ribs and no spokes. ONLY THE NUMBERS INSIDE C STAY PROPOSED (builder BM, not Alex's): the wash at 14% (role fan_wash) and the rim at 0.9 px at 50% (planner.fan.wash_rim.rim_px, role fan_rim). The other five modes are kept as switches and are not chosen: 'ribs' is the look before this decision (the inked outline, a faint wash and one rib per sampled turn: planner.fan_line_px, rib_line_px and the fan_fill, fan_line, fan_rib roles); 'shade' a flat shaded area and no outline; 'stipple' ink dots; 'hatch' 45 degree ink strokes; 'rim_ticks' a quiet rim and a ruler along the centre line with a tick at the slowest and the fastest reach. Their values are the builder's proposals. STILL OPEN (asked of Alex): the cruiser's fan sits under its own hull, because the markers draw over the planner; no look shows it until the draw order changes, and it has not been changed. The question that started it (the second playtest): 'I want to look at the design of the acceptable range of motion indicator for planes. Is there a style that makes more sense across all unit types? Should we just have a little shaded area where you can set the node? Show me some options before commiting this.' Colours are the roles named in each block (all ink at a lower alpha: no hue, lightness a ramp off the paper); sizes are screen px.",
+      "mode": "wash_rim",
       "modes": ["ribs", "shade", "wash_rim", "stipple", "hatch", "rim_ticks"],
-      "shade": { "fill_role": "fan_shade" },
-      "wash_rim": { "fill_role": "fan_wash", "rim_role": "fan_rim", "rim_px": 0.9 },
-      "stipple": { "dot_role": "fan_dot", "cell_px": 3.6, "dot_px": 0.9, "max_cells": 30000 },
-      "hatch": { "line_role": "fan_hatch", "spacing_px": 4.0, "line_px": 0.8, "angle_deg": 45 },
-      "rim_ticks": { "rim_role": "fan_rim_quiet", "rim_px": 0.9, "centre_role": "fan_centre", "centre_px": 0.7, "tick_role": "fan_tick", "tick_px": 4.0, "tick_line_px": 1.1 }
+      "shade": { "_proposed": true, "fill_role": "fan_shade" },
+      "wash_rim": { "_proposed": true, "_reason": "Alex chose this look (motion-range-look); only its numbers are PROPOSED: the wash is the role fan_wash (ink at 14%) and the rim is 0.9 px in the role fan_rim (ink at 50%).", "fill_role": "fan_wash", "rim_role": "fan_rim", "rim_px": 0.9 },
+      "stipple": { "_proposed": true, "dot_role": "fan_dot", "cell_px": 3.6, "dot_px": 0.9, "max_cells": 30000 },
+      "hatch": { "_proposed": true, "line_role": "fan_hatch", "spacing_px": 4.0, "line_px": 0.8, "angle_deg": 45 },
+      "rim_ticks": { "_proposed": true, "rim_role": "fan_rim_quiet", "rim_px": 0.9, "centre_role": "fan_centre", "centre_px": 0.7, "tick_role": "fan_tick", "tick_px": 4.0, "tick_line_px": 1.1 }
     },
     "path_line_px": 1.6,
     "carry_line_px": 1.0,
