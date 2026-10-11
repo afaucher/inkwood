@@ -1669,6 +1669,32 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'I think we center the zoom on the mouse for both mouse zoom in and out. I suspect the actual typical implementation zooms in on mouse position but out in screen position.' 'Like it doesn't serve as a way to pan.' Then: 'in toward the cursor, out about the centre - no option needed. just do it unless we find an obviously better alternative.' The centre is the map area's (the view less the roster sidebar), PROPOSED by the camera session."
+    },
+    {
+      "id": "pan-left-drag",
+      "date": "2026-10-11",
+      "area": "Camera",
+      "question": "How does the player pan the map, with the left button planning moves and the right button setting targets? Right-drag panning did not feel right.",
+      "board": "none (said in chat; research: Civilization VI and VII, Google Maps and Factorio's map pan on a left drag; Total War, EU4, StarCraft II and Age of Empires IV on the middle button; Figma and Photoshop on Space + drag)",
+      "options": [
+        "A middle-drag (with keys and edge scroll)",
+        "B left-drag on empty map pans, left-drag on a thing acts on it",
+        "C right-drag pans, right-click commands (as built)",
+        "D Space + left-drag"
+      ],
+      "chosen": "B: left-drag on empty map pans, left-drag on a thing acts on it",
+      "parameters": {
+        "pan.left_drag_slop_px": 4
+      },
+      "applied_to": [
+        "scripts/ui/unit_ui.gd: empty_map_press (a left press map_press does not use: no unit, step handle, fan or bomb cone under it)",
+        "scripts/world/camera_controller.gd: begin_grab (pans past pan.left_drag_slop_px, the point pressed kept under the pointer)",
+        "scripts/app/sandbox.gd: the two wired",
+        "data/view/camera.json: pan.left_drag_slop_px (proposed)",
+        "tests: test_camera GRAB, test_ui_target, test_sandbox (through Viewport.push_input)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Lets also look at some other control schemes for panning. The r-mouse doesn't feel right but I am not sure what the most typical way is to deal with multiple onscreen interactive elements and map-style pan/zoom at the same time.' Then, of the camera session's options A to D: 'B. Left-drag on empty map pans, left-drag on a thing acts on it'. Not decided: whether right-drag and middle-drag panning stay (both still pan), whether right-click stays the point target, Space + drag (D, not added). The slop of 4 px is PROPOSED."
     }
   ]
 }

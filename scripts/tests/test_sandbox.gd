@@ -164,6 +164,65 @@ func _go(next: String) -> void:
 	_phase = next
 	_phase_frames = 0
 
+# --- left-drag on empty map, through the real input path (decision pan-left-drag) -------------
+#
+# Viewport.push_input, as the engine delivers a mouse: the cards first, then _input, then _unhandled_input. A left drag
+# that starts on empty map pans with the pointer; one that starts on a unit's marker selects it and moves nothing.
+
+func _left_drag_pans() -> void:
+	var vp := _sb.get_viewport()
+	var sel: String = _sb.ui.selection.unit_id
+	var c0: Vector2 = _sb.ctl.center()
+	var z0: float = _sb.ctl.zoom_level()
+	_sb.ui.select("")   # no fan on the map: every point off a marker and off the cards is empty
+	var empty := Vector2.INF
+	for y in range(260, 620, 40):
+		for x in range(80, 760, 40):
+			var p := Vector2(x, y)
+			if not _sb.ui.over_card(p) and _sb.ui.marker_layer.unit_at(_sb.ui._to_map(p)) == "":
+				empty = p
+				break
+		if empty.is_finite():
+			break
+	if check(empty.is_finite(), "LEFT DRAG: a point on the map with nothing under it"):
+		var w0: Vector2 = _sb.ctl.screen_to_world_px(empty)
+		var to := empty + Vector2(60.0, 40.0)
+		_push_left_drag(vp, empty, to)
+		near(_sb.ctl.world_px_to_screen(w0).distance_to(to), 0.0, 0.5, "LEFT DRAG: a left drag on empty map pans: the point pressed ends under the pointer")
+		eq(_sb.ui.selection.unit_id, "", "LEFT DRAG: and selects nothing")
+	var c1: Vector2 = _sb.ctl.center()
+	var on_unit: Vector2 = _sb.ui.marker_layer.get_global_transform_with_canvas() * _sb.ui.screen_pos_now(sel)
+	if check(on_unit.is_finite(), "LEFT DRAG: %s's marker is on screen" % sel):
+		_push_left_drag(vp, on_unit, on_unit + Vector2(60.0, 40.0))
+		eq(_sb.ui.selection.unit_id, sel, "LEFT DRAG: a left press on a unit's marker selects it")
+		near(_sb.ctl.center().distance_to(c1), 0.0, 1e-6, "LEFT DRAG: and a drag from it does not pan")
+	_sb.ui.select(sel)
+	_sb.ctl.set_view(c0, z0)
+
+func _push_left_drag(vp: Viewport, from: Vector2, to: Vector2) -> void:
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.position = from
+	down.global_position = from
+	vp.push_input(down)
+	var last := from
+	for i in range(1, 5):
+		var mv := InputEventMouseMotion.new()
+		var at := from.lerp(to, i / 4.0)
+		mv.position = at
+		mv.global_position = at
+		mv.relative = at - last
+		mv.button_mask = MOUSE_BUTTON_MASK_LEFT
+		last = at
+		vp.push_input(mv)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = to
+	up.global_position = to
+	vp.push_input(up)
+
 # --- 2/3/4. Structure, one space, the map rule -----------------------------------------------
 
 func _inspect() -> void:
@@ -201,6 +260,8 @@ func _inspect() -> void:
 	# Parts and wiring.
 	check(_sb.map_view.camera == _sb.ctl.camera, "the controller drives MapView's own camera")
 	check(not _sb.map_view.input_enabled, "MapView's fallback input is off: the controller owns the camera")
+	check(_sb.ui.empty_map_press.is_connected(_sb.ctl.begin_grab), "a left press on empty map is handed to the camera: left-drag on empty map pans (decision pan-left-drag)")
+	_left_drag_pans()
 	check(_sb.map_view.live_layer.get_child(0) == _sb.fog, "the fog is the first child of the live layer")
 	# Track P (2026-10-10): the map bakes by sight and the fog is made for the whole map ahead of play.
 	check(_sb.map_view.background_baking(), "the map bakes by sight: the fog says which chunks are out of sight, the rest bake in the background")

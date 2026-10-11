@@ -22,6 +22,11 @@ extends "res://scripts/test_support/test_case.gd"
 #            offset / zoom; held keys zoom about zoom_centre.
 #   PAN      a drag (middle or right button) moves the map with the pointer; a
 #            left drag does nothing; a pan stops following.
+#   GRAB     (Alex, 2026-10-11, decision pan-left-drag) a left press the interface
+#            hands over (begin_grab: nothing on the map under it) pans once the
+#            pointer has moved past pan.left_drag_slop_px -- not before, so a click
+#            stays a click -- with the point pressed kept under the pointer; the
+#            release ends it; with input off nothing is taken.
 #   FRAME    frame_plan fits every planned point of a unit's turn inside the
 #            framing rectangle (with and without a HUD inset), no closer than
 #            frame.max_zoom; a set too big for the zoom-out limit reports false.
@@ -65,6 +70,7 @@ func setup(_main) -> void:
 	_clamps()
 	_cursor()
 	_pan()
+	_grab()
 	_frame()
 	_follow()
 	_far()
@@ -292,6 +298,58 @@ func _pan() -> void:
 	var before_idle := _ctl.world_px_to_screen(w)
 	_ctl._input(idle)
 	near(_ctl.world_px_to_screen(w).distance_to(before_idle), 0.0, 0.0, "_input does nothing when no drag is in progress")
+
+# --- left drag on empty map (decision pan-left-drag) ----------------------------------------------
+
+func _grab() -> void:
+	_ctl.set_view(_at(0.5, 0.5), 0.5)
+	var press := Vector2(500.0, 400.0)
+	var w := _ctl.screen_to_world_px(press)
+	var c0 := _ctl.center()
+	_ctl.begin_grab(press)
+	var inside := press + Vector2(_ctl.left_drag_slop * 0.6, _ctl.left_drag_slop * 0.6)
+	_move(inside)
+	near(_ctl.center().distance_to(c0), 0.0, 0.0, "GRAB: within pan.left_drag_slop_px (%.0f px) the map does not move" % _ctl.left_drag_slop)
+	check(not _ctl.is_grabbing(), "GRAB: and it is not a pan yet")
+	for to: Vector2 in [press + Vector2(40.0, -25.0), press + Vector2(-120.0, 60.0), press + Vector2(7.0, 3.0)]:
+		_move(to)
+		near(_ctl.world_px_to_screen(w).distance_to(to), 0.0, 1e-3, "GRAB: past the slop the map point pressed stays under the pointer (at %s)" % to)
+	check(_ctl.is_grabbing(), "GRAB: past the slop it is a pan")
+	_left_up(press + Vector2(7.0, 3.0))
+	check(not _ctl.is_grabbing(), "GRAB: the release ends it")
+	var c1 := _ctl.center()
+	_move(press + Vector2(300.0, 200.0))
+	near(_ctl.center().distance_to(c1), 0.0, 0.0, "GRAB: after the release the pointer moves nothing")
+	# A click on empty map: press and release without leaving the slop moves nothing.
+	_ctl.begin_grab(press)
+	_move(inside)
+	_left_up(inside)
+	_move(press + Vector2(200.0, 0.0))
+	near(_ctl.center().distance_to(c1), 0.0, 0.0, "GRAB: a click on empty map moves nothing, then or after")
+	# With the camera's input off a press is not taken.
+	_ctl.input_enabled = false
+	_ctl.begin_grab(press)
+	_ctl.input_enabled = true
+	_move(press + Vector2(200.0, 0.0))
+	near(_ctl.center().distance_to(c1), 0.0, 0.0, "GRAB: with the camera's input off no press is taken")
+	# A grab pan stops following, as any pan does.
+	_ctl.follow(func() -> Variant: return Vector2(100.0, 100.0))
+	_ctl.begin_grab(press)
+	_move(press + Vector2(50.0, 0.0))
+	_left_up(press + Vector2(50.0, 0.0))
+	check(not _ctl.is_following(), "GRAB: a left-drag pan stops following")
+
+func _move(to: Vector2) -> void:
+	var mv := InputEventMouseMotion.new()
+	mv.position = to
+	_ctl._input(mv)
+
+func _left_up(at: Vector2) -> void:
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = at
+	_ctl._input(up)
 
 func _drag(button: int, by: Vector2) -> void:
 	var down := InputEventMouseButton.new()
