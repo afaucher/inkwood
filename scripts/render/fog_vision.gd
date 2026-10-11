@@ -65,6 +65,8 @@ extends RefCounted
 const CameraData = preload("res://scripts/world/camera_data.gd")
 const FogViewshed = preload("res://scripts/render/fog_viewshed.gd")
 const SightRules = preload("res://scripts/sim/sight_rules.gd")
+const RevealRules = preload("res://scripts/sim/reveal.gd")
+const ConcealRules = preload("res://scripts/sim/concealment.gd")
 
 const REVEAL_PLAYER_SIDES := "player_sides"
 const REVEAL_PLAYER_CONTROLLED := "player_controlled"
@@ -101,7 +103,14 @@ var sight: SightRules = SightRules.new()   # what a downed unit still sees (data
 var terrain: Object = null              # the height source, set by attach_terrain
 var viewshed: FogViewshed = null        # built the first time line of sight is on
 
-var circles: Array = []   # [{id: String, x: float, y: float, r: float, eye_agl: float, shed: Shed?}] metres
+var circles: Array = []   # [{id: String, x: float, y: float, r: float, eye_agl: float, shed: Shed?, reveal: bool?}] metres
+# REVEAL ON FIRING (Track M2L, PROPOSED; scripts/sim/reveal.gd, data/sim/reveal.json): a gun that fired at the player's side is shown
+# where it fired from. Each REVEALED gun adds a circle (radius reveal.radius_m, key "reveal": true: no viewshed, the line of sight does
+# not cut it -- the shot is what gives the place away) to `circles`; `reveal_list` is every mark the sides have been shown, revealed or
+# fading (Reveal.marks), for the "last seen" marks (scripts/ui/reveal_marks.gd). reveal_enabled false: the rule is off for this fog.
+var reveal_enabled := true
+var reveal_list: Array = []
+var reveal_time_s := NAN           # the game second the marks were taken at
 # The time the circles were sampled at (update_from_world): < 0 means the
 # units' current state. shows_unit / unit_visible sample enemies at the same t,
 # so a marker and the fog edge agree frame by frame during the resolve.
@@ -285,9 +294,29 @@ func update_from_world(world: Object, t: float = -1.0, source: String = "history
 			continue
 		var agl := unit_agl(world, u, st.x, st.y, st.band, st.height_m) if los else float(eye_heights.get(str(u.def.domain), eye_heights["ground"]))
 		circles.append({"id": str(u.id), "x": st.x, "y": st.y, "r": r, "eye_agl": agl})
+	_add_reveals(world, t, sides)
 	if circles.size() > max_circles:
 		push_warning("FogVision: %d revealing units, the mask draws the first %d (mask.max_circles)" % [circles.size(), max_circles])
 	_attach_sheds()
+
+# The guns that fired at the player's sides (Reveal.marks at this update's moment): the revealed ones open a circle at the place of
+# their shot, all of them (the fading too) go to `reveal_list`. The moment is the update's own: the playback time t of the turn's
+# resolve, or the world as it stands (a unit is not shown firing before the playback reaches the shot).
+func _add_reveals(world: Object, t: float, sides: Dictionary) -> void:
+	reveal_list = []
+	reveal_time_s = NAN
+	if not reveal_enabled:
+		return
+	var rv: Variant = RevealRules.of(world)
+	if rv == null or not rv.ok():
+		return
+	reveal_time_s = rv.game_time(int(world.turn), t) if t >= 0.0 else rv.now_s(world)
+	for side: Variant in sides:
+		for m: Dictionary in rv.marks(str(side), reveal_time_s):
+			reveal_list.append(m)
+			if bool(m["revealed"]):
+				circles.append({"id": "reveal:%s" % str(m["unit"]), "x": float(m["x"]), "y": float(m["y"]), "r": float(rv.radius_m),
+					"eye_agl": float(eye_heights["ground"]), "reveal": true})
 
 # Circles given directly: [{x, y, r} (+ id, eye_agl)] in metres. An eye_agl is the
 # eye's height above the ground there (default: the ground domain's eye height).
@@ -311,6 +340,8 @@ func _attach_sheds() -> void:
 	_budget_left_us = int(budget_ms * 1000.0)
 	stats.pending = 0
 	for c: Dictionary in circles:
+		if c.has("reveal"):
+			continue   # a revealed gun's patch is a circle: the shot, not a line of sight, gives the place away (no viewshed)
 		var key: String = c.id if c.id != "" else "#%d" % i
 		i += 1
 		seen[key] = true
@@ -398,7 +429,7 @@ func target_visible(x: float, y: float, agl: float) -> bool:
 		var r: float = c.r
 		if dx * dx + dy * dy > r * r:
 			continue
-		if vs == null or vs.visible_from(Vector2(c.x, c.y), float(c.eye_agl), Vector2(x, y), agl):
+		if vs == null or c.has("reveal") or vs.visible_from(Vector2(c.x, c.y), float(c.eye_agl), Vector2(x, y), agl):
 			return true
 	return false
 
@@ -427,9 +458,31 @@ func shows_unit(world: Object, unit_id: String, at: Variant = null) -> bool:
 	if at is Vector2:
 		x = (at as Vector2).x
 		y = (at as Vector2).y
+	# CONCEALMENT (Track M2L, proposed; scripts/sim/concealment.gd): a mobile ground unit standing in woods is seen only close to a circle, or in a
+	# patch a shot has opened (the reveal circles), not across the whole of a sight circle.
+	var cover: RefCounted = ConcealRules.shared()
+	if cover.covered(world, u, x, y):
+		return _seen_in_cover(world, u, x, y, st, float(cover.radius_m))
 	if not los_on():
 		return is_visible_xy(x, y)
 	return target_visible(x, y, unit_agl(world, u, x, y, st.band, st.height_m))
+
+# A unit in cover at (x, y): shown inside a REVEAL circle (a gun that has fired: the patch is the shot giving the place away, whatever the
+# line of sight), or within `limit_m` of a sight circle's centre (and, with line of sight on, in the eye's view).
+func _seen_in_cover(world: Object, u: Object, x: float, y: float, st: Dictionary, limit_m: float) -> bool:
+	var los := los_on()
+	var vs := engine() if los else null
+	var agl := unit_agl(world, u, x, y, st.band, st.height_m) if los else 0.0
+	for c: Dictionary in circles:
+		var revealed := c.has("reveal")
+		var r: float = float(c.r) if revealed else minf(float(c.r), limit_m)
+		var dx: float = x - c.x
+		var dy: float = y - c.y
+		if dx * dx + dy * dy > r * r:
+			continue
+		if vs == null or revealed or vs.visible_from(Vector2(c.x, c.y), float(c.eye_agl), Vector2(x, y), agl):
+			return true
+	return false
 
 # Track U's hook, ready to plug in: `ui.marker_layer.unit_visible =
 # vision.unit_visible(world)` -- a Callable taking a unit id. It reads the

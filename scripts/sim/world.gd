@@ -68,6 +68,19 @@ extends RefCounted
 #              releases nothing and spends no bombs, "poor_shot" releases a poor stick (bombs.gd).
 #              drop_expected() answers the expected-damage line.
 #
+# THE GUNS (Track SH, the warship, proposed 2026-10-10; Alex's decision mixed-warfare: the warship's big guns are specials,
+# "fired by hand with a long reload, aimed with the target selection", at a target the side has SPOTTED -- shared spotting,
+# "Yes": any friendly unit's sight counts). A unit's special is the bomb drop (above) OR a gun salvo: a step request may carry
+# {"fire": {"special": "main_guns", "target": {"unit": id} | {"point": [x, y]}}} (guns.gd has the model, gun_rules.gd the numbers
+# in data/sim/guns.json, spotting.gd the sight). gun_check() answers the interface: whether the special can be switched on in a step
+# for a target and why not (reloading, out of range, unspotted, ...); plan_step() accepts any well-formed fire and the step's
+# "fire" analysis says whether it would go off. At resolve the salvo is fired at the moment fire_at of its step IF the target is
+# still spotted and in range then (else a gun_hold event and nothing is spent); its shells fly for seconds, may land in a LATER turn
+# (shells_in_flight, carried like the bombs and handed to a client by apply_resolution) and hurt ANY unit at the surface near the
+# impact by the blast table of data/sim/guns.json. The scatter grows with the range and shrinks with the time the target has been
+# spotted (spot_memory) and the salvos already fired at it (gun_memory, the bracketing). The sight rules are the fog's and the AI's;
+# line of sight is a seam (set_sight_los), as the water and the ground are.
+#
 # THE WATER (Track WS, proposed 2026-10-10; Alex's decisions water-layer and boat-looks: boats and bridges are
 # units, part of the environment). A SEA unit (data/units: domain "sea", with a draught_m) sails only on water.
 # The World does not know the generator: it is GIVEN a water query, as a Callable, and without one the rule is
@@ -84,6 +97,22 @@ extends RefCounted
 # 0); either way the step reports clamped and the limit "shore" (Envelope.LIMIT_SHORE). add_unit refuses to
 # put a sea unit where it would not float. The AI never plans onto land (ai_pilot.gd, role "sail"); the clamp
 # is the rule for a human's plan and the net under the AI's.
+#
+# THE GROUND (Track TK2, proposed 2026-10-11; data/sim/ground.json, scripts/sim/ground_rules.gd): a GROUND unit that moves (data/units:
+# domain "ground", mobility "mobile": the tank) stays on dry land, never crosses a height step except on a road (Alex, decision
+# terrain-passability A: every height step is a cliff, ramps do not exist yet), crosses a river only over an INTACT bridge unit
+# (data/units/bridge.json; a destroyed bridge is water again), and drives faster on a road than off it (a speed factor on its top
+# speed; woods slower again, never a block). Like the water the World is GIVEN its eyes, as Callables, and without them the rule is off:
+#
+#   world.set_ground(level_fn, road_fn, woods_fn, path_fn)   # (x, y) -> level int; -> metres to the road; -> tree density 0..1;
+#                                                            # (from, to) -> the road between two points (scripts/world/ground_map.gd)
+#   world.ground_ok_at(x, y, heading, unit_id)               # may this unit's hull stand there (no water, no cliff)
+#   world.ground_on_road(x, y)                               # is a point on the road (or an intact bridge's deck)
+#
+# A step that would break the rule is CLAMPED like a sea unit's: slowed, else held, with the limit "cliff", "water" (or "terrain" where
+# the going only slowed it). The AI never plans such a step (ai_drive.gd); the clamp is the rule for a human's plan and the net under
+# the AI's. And THE PLANNER sees the same rules: reachable() clips the fan of a ground unit by the ground rule and of a sea unit by the
+# water rule, so a player sees where a tank or a ship can go and cannot place a step it cannot make.
 #
 # LEAVING THE MAP is an event, not an error: the step state carries
 # out_of_bounds, a "left_bounds" / "returned_to_bounds" event goes into the
@@ -109,6 +138,10 @@ const BombRules = preload("res://scripts/sim/bomb_rules.gd")
 const Bombs = preload("res://scripts/sim/bombs.gd")
 const BombExpect = preload("res://scripts/sim/bomb_expect.gd")
 const SeaRules = preload("res://scripts/sim/sea_rules.gd")
+const Guns = preload("res://scripts/sim/guns.gd")
+const GunRules = preload("res://scripts/sim/gun_rules.gd")
+const Spotting = preload("res://scripts/sim/spotting.gd")
+const GroundRules = preload("res://scripts/sim/ground_rules.gd")
 const JsMath = preload("res://scripts/core/js_math.gd")
 
 const PHASE_PLANNING := "planning"
@@ -144,10 +177,23 @@ var bombs_in_flight: Array = []
 # invalid Callable means no water: sea units move as any unit does.
 var sea: SeaRules
 var water_depth: Callable = Callable()
+# The big-gun specials (Track SH; data/sim/guns.json), the shells still in the air (guns.gd header has the record; carried across turns
+# by resolve(), handed to a client by apply_resolution()), shared spotting, and what a side remembers between turns: spot_memory
+# {side: {enemy unit id: seconds it has been spotted without a break, at the turn's end}} (the ranging in) and gun_memory (the
+# bracketing: Guns.bracket_after has the records).
+var guns: GunRules
+var shells_in_flight: Array = []
+var spotting: Spotting
+var spot_memory: Dictionary = {}
+var gun_memory: Array = []
+# The ground rule's numbers (data/sim/ground.json) and the queries a ground unit is kept on dry, level land by (set_ground), which
+# also holds the rule itself (ground_rules.gd). Without queries (and without water) ground units move as any unit does.
+var ground: GroundRules
+var _fan_cache: Dictionary = {}   # key -> PackedVector2Array: the ruled fans asked for lately (_ruled_outline)
 
 var _combat_resolver: CombatResolver
 
-func _init(turn_path: String = SimRules.TURN_PATH, altitude_path: String = SimRules.ALTITUDE_PATH, unit_dir: String = UnitDef.UNITS_DIR, combat_path: String = CombatRules.PATH, bombs_path: String = BombRules.PATH, sea_path: String = SeaRules.PATH) -> void:
+func _init(turn_path: String = SimRules.TURN_PATH, altitude_path: String = SimRules.ALTITUDE_PATH, unit_dir: String = UnitDef.UNITS_DIR, combat_path: String = CombatRules.PATH, bombs_path: String = BombRules.PATH, sea_path: String = SeaRules.PATH, guns_path: String = GunRules.PATH) -> void:
 	rules = SimRules.new(turn_path, altitude_path)
 	units_dir = unit_dir
 	errors.append_array(rules.errors)
@@ -158,7 +204,12 @@ func _init(turn_path: String = SimRules.TURN_PATH, altitude_path: String = SimRu
 	errors.append_array(bombs.errors)
 	sea = SeaRules.new(sea_path)
 	errors.append_array(sea.errors)
-	_combat_resolver = CombatResolver.new(combat, bombs)
+	ground = GroundRules.new()
+	errors.append_array(ground.errors)
+	guns = GunRules.new(guns_path)
+	errors.append_array(guns.errors)
+	spotting = Spotting.new()
+	_combat_resolver = CombatResolver.new(combat, bombs, guns)
 
 func ok() -> bool:
 	return errors.is_empty()
@@ -183,6 +234,7 @@ func unit_def(type_id: String) -> UnitDef:
 # (0 or less where there is none, an upland included). An invalid Callable takes the water away again.
 func set_water(depth_fn: Callable) -> void:
 	water_depth = depth_fn
+	_fan_cache.clear()
 
 func has_water() -> bool:
 	return water_depth.is_valid()
@@ -206,6 +258,50 @@ func afloat_at(px: float, py: float, heading: float, unit_id: String) -> bool:
 func unit_afloat(unit_id: String) -> bool:
 	var u := _unit(unit_id)
 	return u != null and _afloat_pose(u.def, u.x, u.y, u.heading)
+
+# --- Ground (Track TK2; the header's THE GROUND) ------------------------------------------------------
+
+# Give the World the ground's eyes (any of them; an invalid Callable switches that part of the rule off): `level_fn` (x, y) -> the
+# height level (int), `road_fn` (x, y) -> metres to the nearest road centre line (INF when none), `woods_fn` (x, y) -> the tree density
+# 0..1, `path_fn` (from: Vector2, to: Vector2) -> PackedVector2Array, the road between two points (the AI's "drive" role asks for it).
+func set_ground(level_fn: Callable, road_fn: Callable = Callable(), woods_fn: Callable = Callable(), path_fn: Callable = Callable()) -> void:
+	ground.set_queries(level_fn, road_fn, woods_fn, path_fn)
+	_fan_cache.clear()
+
+# Does the ground rule have anything to judge by: a ground query, or water (no ground unit drives into water)?
+func has_ground() -> bool:
+	return ground.has_queries() or water_depth.is_valid()
+
+# Is the point on the road (its centre line within road_half_m) or on the deck of an intact bridge?
+func ground_on_road(px: float, py: float) -> bool:
+	return ground.road_dist(px, py) <= ground.road_half_m or ground.on_span(ground.spans(units), px, py)
+
+# The road between two points as a polyline (empty without a road query or a road).
+func ground_road_path(from: Vector2, to: Vector2) -> PackedVector2Array:
+	return ground.road_path(from, to)
+
+# May a hull of this unit's type, centred at (px, py) and pointing along `heading`, stand there: no water under it (but for an
+# intact bridge) and no height step under it off a road. True when the rule has nothing to judge by or the unit is not a ground unit
+# that moves.
+func ground_ok_at(px: float, py: float, heading: float, unit_id: String) -> bool:
+	var u := _unit(unit_id)
+	if u == null:
+		return false
+	return _grounded_pose(u.def, px, py, heading)
+
+# Is the unit on legal ground where it is now?
+func unit_grounded(unit_id: String) -> bool:
+	var u := _unit(unit_id)
+	return u != null and _grounded_pose(u.def, u.x, u.y, u.heading)
+
+# Does the ground rule apply to this unit type: a ground unit that moves, in a World that can judge?
+func _ground_rule_on(def: UnitDef) -> bool:
+	return def.domain == "ground" and not def.is_static() and has_ground()
+
+func _grounded_pose(def: UnitDef, px: float, py: float, heading: float) -> bool:
+	if not _ground_rule_on(def):
+		return true
+	return ground.pose_ok(def.size_m, px, py, heading, ground.spans(units), water_depth)
 
 # --- Players and units -------------------------------------------------------
 
@@ -323,6 +419,10 @@ func plan_step(unit_id: String, step_index: int, request: Variant) -> Dictionary
 		var tgt := Envelope.drop_target(req)
 		if tgt.has("unit") and not units.has(str(tgt["unit"])):
 			return _fail_d("plan_step: the drop's target unit '%s' does not exist" % str(tgt["unit"]))
+	if req.has("fire"):
+		var fire_problem := _fire_request_problem(u, step_index, req)
+		if fire_problem != "":
+			return _fail_d("plan_step: " + fire_problem)
 	while u.plan.size() < step_index:
 		u.plan.append({})
 	if step_index < u.plan.size():
@@ -371,7 +471,53 @@ func reachable(unit_id: String, step_index: int) -> Dictionary:
 	var from: Dictionary = u.state()
 	if step_index > 0:
 		from = _run_plan(u)[step_index - 1]
-	return u.def.envelope.reachable(from, rules.step_dt(n))
+	var out := u.def.envelope.reachable(from, rules.step_dt(n))
+	if _ruled(u.def) and not u.down:
+		out["outline"] = _ruled_outline(u, from, rules.step_dt(n))   # the fan, clipped by the water or ground rule (Track TK2)
+	return out
+
+# Is the unit's type one the World keeps somewhere: a sea unit on water, a ground unit on dry level land?
+func _ruled(def: UnitDef) -> bool:
+	return (def.domain == "sea" and water_depth.is_valid()) or _ground_rule_on(def)
+
+# THE FAN UNDER A RULE (Track TK2): the envelope's outline of reachable end points, where every sample's end is the end of the step
+# the World would really make for it: the far edge (the fastest step at each turn) and the near edge (the slowest), each put through
+# the water or the ground rule, which slows it short of a shore, a cliff or a river and holds it (the apex) where even the slowest
+# would break it. So a point inside the fan is a step the unit can make, and a click outside it is clamped by the same rule anyway.
+# The same sampling as Envelope.reachable (9 turns), the same shape (the far edge left to right, then the near edge back).
+func _ruled_outline(u: Unit, from: Dictionary, dt: float, samples: int = 9) -> PackedVector2Array:
+	var env := u.def.envelope
+	var v0 := float(from["speed"])
+	var turn_max := env.turn_rate(v0) * dt
+	var spans: Array = ground.spans(units) if u.def.domain == "ground" else []
+	# A fan costs a few dozen milliseconds (eighteen steps, each looked at a few times along its arc) and the planner asks for it as often
+	# as the pointer moves, so the fans asked for lately are kept, by unit, start state and the bridges that stand.
+	var key := "%s|%d|%.9f|%.9f|%.12f|%.9f|%d" % [u.id, samples, float(from["x"]), float(from["y"]), float(from["heading"]), v0, hash(str(spans))]
+	if _fan_cache.has(key):
+		return _fan_cache[key]
+	var far := PackedVector2Array()
+	var near := PackedVector2Array()
+	var count := maxi(samples, 2)
+	for i in count:
+		var t := -turn_max + 2.0 * turn_max * float(i) / float(count - 1)
+		var w := env.speed_window(v0, dt, env.turn_loss(t, turn_max, dt), env.speed_max)
+		for edge in 2:
+			var c := env.clamp_step(from, {"turn": t, "speed": w[1] if edge == 0 else w[0]}, dt)
+			if u.def.domain == "sea":
+				c = _keep_afloat(u, from, c, dt)
+			else:
+				c = ground.keep(u.def, from, c, dt, spans, water_depth)
+			var p := Vector2(float(c["x"]), float(c["y"]))
+			if edge == 0:
+				far.append(p)
+			else:
+				near.append(p)
+	near.reverse()
+	far.append_array(near)
+	if _fan_cache.size() >= 64:
+		_fan_cache.clear()
+	_fan_cache[key] = far
+	return far
 
 # --- Bombs: what the interface asks (Track S2; bombs.gd has the model) ---------------------------
 
@@ -541,6 +687,256 @@ static func _aim_point(v: Variant) -> Array:
 		return [float(v[0]), float(v[1])]
 	return []
 
+# --- Guns: what the interface asks, and the model (Track SH, the warship, proposed 2026-10-10; guns.gd, spotting.gd) -----------------
+
+# The ids of the gun specials a unit has: the specials of its type (data/units/<id>.json) that have a record in data/sim/guns.json.
+func gun_specials(unit_id: String) -> Array[String]:
+	var out: Array[String] = []
+	if not units.has(unit_id):
+		return out
+	for sp: Variant in (units[unit_id] as Unit).def.specials:
+		var sid := str((sp as Dictionary).get("id", ""))
+		if guns.has_special(sid):
+			out.append(sid)
+	return out
+
+func has_guns(unit_id: String) -> bool:
+	return not gun_specials(unit_id).is_empty()
+
+# Does any unit of the world have a gun special (so the spotting memory is worth keeping)?
+func _has_gun_units() -> bool:
+	for id: String in units:
+		if not gun_specials(id).is_empty():
+			return true
+	return false
+
+# Turns until the unit's guns are loaded: 0 when they are loaded now (a salvo fired in turn N is ready in turn N + reload_turns + 1).
+# Counted from the turn being planned: once a turn is resolved it is counted from the next one, so the roster does not say 'reload 3'
+# for the turn that has just been fired in.
+func gun_reload_left(unit_id: String, special_id: String) -> int:
+	if not units.has(unit_id):
+		return 0
+	var from_turn := turn if phase == PHASE_PLANNING else turn + 1
+	return maxi(0, (units[unit_id] as Unit).gun_ready_turn(special_id) - from_turn)
+
+# Hand the World a line-of-sight query for the spotting (spotting.gd header: the same query the fog uses, where it uses one). An
+# invalid Callable takes it away: sight is the circle alone, which is the fog's own default (data/view/fog.json).
+func set_sight_los(los: Callable) -> void:
+	spotting.los = los
+	spotting.forget()
+
+# The sight radius scale (the fog's sight_range_scale knob, 1.0), for the spotting.
+func set_sight_scale(scale: float) -> void:
+	spotting.sight_scale = scale
+	spotting.forget()
+
+# Is the target ({"unit": id} | {"point": [x, y]}) spotted by `side` as the world stands (the planning phase), by any unit of the side?
+func spotted_now(side: String, target: Dictionary) -> bool:
+	return spotting.spotted_now(self, side, target)
+
+# The units of `side` that see the target now, in World order.
+func spotters_now(side: String, target: Dictionary) -> Array[String]:
+	return spotting.spotters_now(self, side, target)
+
+# CAN THE SPECIAL BE SWITCHED ON in step `step_index` of the unit's current plan, for `target` ({"unit": id} | {"point": [x, y]})?
+# Plan the step's motion first (the guns fire from where the step puts the ship), then ask. Returns {} (and last_error) for an
+# unknown unit or a step out of range; otherwise a record whose "ok" says yes or no and "reason" why not, a word of Guns (WHY_*):
+# "reloading", "already_planned" (another step fires this special: one salvo a turn), "no_target", "target_down", "own_side",
+# "too_close", "out_of_range", "unspotted", "not_a_gun", "unit_down"; checked in that order. The rest is what the card and the map
+# show, always filled in when it can be:
+#   special, step, target (normalised), target_pos Vector2 (where the target is now), from Vector2 (the guns at the moment of
+#   fire), fire_t (seconds into the turn), range_m, range_min_m, range_max_m, spotted (bool), by (the first unit that sees it, or ""),
+#   spotters (all of them), spotted_s (the seconds it will have been spotted at the moment of fire if it stays so: the ranging),
+#   salvos (the bracketing: salvos already fired at it), spread_m (one shell's scatter, sigma, expected), aim_factor, flight_s,
+#   impact_t (seconds after the start of THIS turn the shells land), lands_in_turn, reload_left, ready_turn.
+# The target's motion is NOT projected at planning (as for the bombs: the card shows where it is seen); at resolve the salvo leads it.
+func gun_check(unit_id: String, step_index: int, target: Variant, special_id: String = "") -> Dictionary:
+	var u := _unit(unit_id)
+	if u == null:
+		return {}
+	var ids := gun_specials(unit_id)
+	if special_id == "":
+		if ids.is_empty():
+			return {"ok": false, "reason": Guns.WHY_NOT_A_GUN, "special": "", "step": step_index}
+		special_id = ids[0]
+	if not ids.has(special_id):
+		return {"ok": false, "reason": Guns.WHY_NOT_A_GUN, "special": special_id, "step": step_index}
+	var n := u.def.actions_per_turn
+	if step_index < 0 or step_index >= n:
+		return _fail_d("gun_check: a %s has steps 0..%d this turn, got %d" % [u.type, n - 1, step_index])
+	if u.down:
+		return {"ok": false, "reason": Guns.WHY_UNIT_DOWN, "special": special_id, "step": step_index}
+	var tgt := Guns.normal_target(target)
+	if tgt.is_empty():
+		return {"ok": false, "reason": Guns.WHY_NO_TARGET, "special": special_id, "step": step_index}
+	var states := _run_plan(u)
+	var prev: Dictionary = _start_state(u) if step_index == 0 else states[step_index - 1]
+	return _gun_analysis(u, guns.special(special_id), tgt, step_index, prev, states[step_index])
+
+# The fire a step's request carries, as the step state records it (plain values; the resolver reads special, target and fire_t):
+# {special, target, aim?, fire_t, ok, reason, range_m, spotted, spread_m, flight_s, from: [x, y]}.
+func _fire_state(u: Unit, k: int, prev: Dictionary, cur: Dictionary, req: Dictionary) -> Dictionary:
+	var sid := Guns.fire_special(req)
+	var tgt := Guns.fire_target(req)
+	var out := {"special": sid, "target": tgt}
+	var aim := Guns.fire_aim(req)
+	if not aim.is_empty():
+		out["aim"] = aim
+	if not gun_specials(u.id).has(sid) or tgt.is_empty():
+		out["ok"] = false
+		out["reason"] = Guns.WHY_NOT_A_GUN if tgt.size() > 0 else Guns.WHY_NO_TARGET
+		out["fire_t"] = rules.turn_seconds * float(k + 1) / float(u.def.actions_per_turn)
+		return out
+	var a := _gun_analysis(u, guns.special(sid), tgt, k, prev, cur)
+	out["ok"] = a["ok"]
+	out["reason"] = a["reason"]
+	out["fire_t"] = a["fire_t"]
+	out["range_m"] = a["range_m"]
+	out["spotted"] = a["spotted"]
+	out["spread_m"] = a["spread_m"]
+	out["flight_s"] = a["flight_s"]
+	out["from"] = [(a["from"] as Vector2).x, (a["from"] as Vector2).y]
+	return out
+
+# The whole answer for a salvo from step `step` (prev -> cur) at `tgt` (a normalised target) as the world stands.
+func _gun_analysis(u: Unit, spec: GunRules.Spec, tgt: Dictionary, step: int, prev: Dictionary, cur: Dictionary) -> Dictionary:
+	var n := u.def.actions_per_turn
+	var dt := rules.step_dt(n)
+	var fire_t := rules.turn_seconds * float(step) / float(n) + spec.fire_at * dt
+	var pose := Envelope.point_on_step(prev, cur, dt, spec.fire_at)
+	var from := Vector2(float(pose["x"]), float(pose["y"]))
+	var why := ""
+	var ready_turn := u.gun_ready_turn(spec.id)
+	if ready_turn > turn:
+		why = Guns.WHY_RELOADING
+	for i in u.plan.size():
+		if why == "" and i != step and (u.plan[i] as Dictionary).has("fire") and Guns.fire_special(u.plan[i]) == spec.id:
+			why = Guns.WHY_ALREADY_PLANNED
+	var tpos := Vector2.ZERO
+	var target_problem := ""
+	if tgt.has("unit"):
+		var tid := str(tgt["unit"])
+		if not units.has(tid):
+			target_problem = Guns.WHY_NO_TARGET
+		else:
+			var tu: Unit = units[tid]
+			tpos = Vector2(tu.x, tu.y)
+			if tu.side == u.side:
+				target_problem = Guns.WHY_OWN_SIDE
+			elif tu.down:
+				target_problem = Guns.WHY_TARGET_DOWN
+	else:
+		var tp: Array = tgt["point"]
+		tpos = Vector2(float(tp[0]), float(tp[1]))
+	if why == "" and target_problem != "":
+		why = target_problem
+	var range_m := from.distance_to(tpos)
+	var range_why := Guns.reach_error(from, tpos, spec, water_depth)
+	if why == "" and range_why != "":
+		why = range_why
+	var spotters: Array[String] = []
+	if target_problem == "":
+		spotters = spotting.spotters_now(self, u.side, tgt)
+	var spotted := not spotters.is_empty()
+	if why == "" and not spotted:
+		why = Guns.WHY_UNSPOTTED
+	var carry := 0.0
+	if tgt.has("unit"):
+		carry = float((spot_memory.get(u.side, {}) as Dictionary).get(str(tgt["unit"]), 0.0))
+	var spotted_s := (carry + fire_t) if spotted else 0.0
+	var salvos := Guns.bracket_salvos(gun_memory, u.side, tgt, turn, spec) if spotted else 0
+	var spotter_ratio := spotting.closeness_in(self, u.side, tgt, spotting.frame_at(self, -1.0)) if spotted else 1.0
+	var flight := Guns.flight_time(range_m, spec)
+	var impact_t := fire_t + flight
+	return {
+		"ok": why == "", "reason": why, "special": spec.id, "step": step, "target": tgt, "target_pos": tpos, "from": from, "fire_t": fire_t,
+		"range_m": range_m, "range_min_m": spec.range_min_m, "range_max_m": spec.range_max_m,
+		"spotted": spotted, "by": spotters[0] if spotted else "", "spotters": spotters, "spotted_s": spotted_s, "salvos": salvos,
+		"spotter_ratio": spotter_ratio,
+		"spread_m": Guns.sigma_m(range_m, spotted_s, spec, salvos, spotter_ratio), "aim_factor": Guns.aim_factor(spotted_s, spec),
+		"flight_s": flight, "impact_t": impact_t, "lands_in_turn": turn + int(floorf(impact_t / rules.turn_seconds + 1e-9)),
+		"reload_left": maxi(0, ready_turn - turn), "ready_turn": ready_turn,
+	}
+
+# "" if the request's fire can be planned in this step of this unit, else what is wrong with it. The activation rules (reload, range,
+# spotted) are NOT checked here (gun_check says; the interface refuses; a plan whose earlier step moved is not refused after the
+# fact, as a drop is not): only that the request is well formed and the unit can fire it.
+func _fire_request_problem(u: Unit, step_index: int, req: Dictionary) -> String:
+	var e := Guns.request_error(req["fire"])
+	if e != "":
+		return e
+	if req.has("drop"):
+		return "a step has one special: this step already drops bombs"
+	var sid := Guns.fire_special(req)
+	if not guns.has_special(sid):
+		return "'%s' is not a gun special (data/sim/guns.json)" % sid
+	if u.def.special(sid).is_empty():
+		return "a %s has no special '%s'" % [u.type, sid]
+	var tgt := Guns.fire_target(req)
+	if tgt.has("unit") and not units.has(str(tgt["unit"])):
+		return "the fire's target unit '%s' does not exist" % str(tgt["unit"])
+	for i in u.plan.size():
+		if i != step_index and (u.plan[i] as Dictionary).has("fire") and Guns.fire_special(u.plan[i]) == sid:
+			return "unit '%s' has %s planned on step %d already: one salvo a turn" % [u.id, sid, i]
+	return ""
+
+# The resolver's question during the combat walk: is the target spotted by `side` at t seconds into this turn, for how long without a
+# break (the target's run from the start of the turn, plus what it had at the turn's start), how many salvos has the side
+# already fired at it (the bracketing), and how close its nearest spotter is (the share of its sight). {spotted, run_s, salvos, spotter_ratio}.
+func _spot_result(side: String, target: Dictionary, t: float, downs: Dictionary, special_id: String) -> Dictionary:
+	var carry := 0.0
+	if target.has("unit"):
+		carry = float((spot_memory.get(side, {}) as Dictionary).get(str(target["unit"]), 0.0))
+	var r := spotting.run_at(self, side, target, t, carry, guns.spot_step_s, downs)
+	var spec := guns.special(special_id)
+	r["salvos"] = Guns.bracket_salvos(gun_memory, side, target, turn, spec) if spec != null and bool(r["spotted"]) else 0
+	r["spotter_ratio"] = spotting.closeness_in(self, side, target, spotting.frame_at(self, t), t, downs) if bool(r["spotted"]) else 1.0
+	return r
+
+# The bracketing memory after a resolve: the salvos fired this turn added (shell_fire events), then every entry kept only while it is
+# still a target worth remembering: not renewed for bracket_turns -> gone; a unit that is down -> gone; a target not spotted at the
+# end of the turn -> gone (the run is broken and the guns start again). `downs`: the units downed in the turn.
+func _gun_memory_after(events: Array, downs: Dictionary) -> Array:
+	var mem: Array = gun_memory.duplicate(true)
+	for ev: Dictionary in events:
+		if str(ev.get("type", "")) != "shell_fire" or not units.has(str(ev["unit"])):
+			continue
+		var spec := guns.special(str(ev["special"]))
+		if spec == null:
+			continue
+		var aim: Array = ev["aim"]
+		mem = Guns.bracket_after(mem, (units[str(ev["unit"])] as Unit).side, ev["target"] as Dictionary, Vector2(float(aim[0]), float(aim[1])), turn, spec)
+	var longest := 0
+	for sid: String in guns.specials:
+		longest = maxi(longest, (guns.specials[sid] as GunRules.Spec).bracket_turns)
+	var kept: Array = []
+	for rec: Dictionary in mem:
+		if turn - int(rec["turn"]) > longest:
+			continue
+		var side := str(rec["side"])
+		var unit_id := str(rec["unit"])
+		if unit_id != "":
+			if not units.has(unit_id) or (units[unit_id] as Unit).down or downs.has(unit_id):
+				continue
+			if not (spot_memory.get(side, {}) as Dictionary).has(unit_id):
+				continue
+		else:
+			var p: Array = rec["point"]
+			if p.size() < 2 or not spotting.spotted_at(self, side, {"point": [float(p[0]), float(p[1])]}, rules.turn_seconds, downs):
+				continue
+		kept.append(rec)
+	return kept
+
+# What a joining client needs beyond the units: the shells in the air and what the sides remember (WorldSync's snapshot), and what
+# resolve() adds to its result for a client that only applies it.
+func net_guns() -> Dictionary:
+	return {"shells": shells_in_flight.duplicate(true), "spot_memory": spot_memory.duplicate(true), "gun_memory": gun_memory.duplicate(true)}
+
+func apply_net_guns(d: Dictionary) -> void:
+	shells_in_flight = (d.get("shells", []) as Array).duplicate(true)
+	spot_memory = (d.get("spot_memory", {}) as Dictionary).duplicate(true)
+	gun_memory = (d.get("gun_memory", []) as Array).duplicate(true)
+
 # --- Ready-up ----------------------------------------------------------------
 
 # Everyone whose ready flag holds up the turn: the active human players, and
@@ -652,10 +1048,24 @@ func resolve() -> Dictionary:
 		_apply_drop_limits(units[id], histories[id], 1)
 	var fight := _combat_resolver.run(units, histories, turn, rng_seed, rules.turn_seconds,
 		func(uid: String, t: float) -> Dictionary: return sample(uid, t, "history"),
-		func(band: String) -> float: return band_height(band), bombs_in_flight)
+		func(band: String) -> float: return band_height(band), bombs_in_flight, shells_in_flight,
+		func(side: String, target: Dictionary, t: float, downs: Dictionary, special_id: String) -> Dictionary: return _spot_result(side, target, t, downs, special_id),
+		func(special_id: String, from: Vector2, to: Vector2) -> String: return Guns.reach_error(from, to, guns.special(special_id), water_depth))
 	var down_at: Dictionary = fight["down_at"]
 	var fates: Dictionary = fight["fates"]
 	bombs_in_flight = fight["bombs"]
+	# The guns (Track SH): the shells still in the air, the reload of the guns that fired, and what the sides remember of the
+	# targets they have spotted and fired at -- judged from the turn's histories, before any unit is marked down (a unit that
+	# went down this turn saw until down_at: spotting.gd).
+	shells_in_flight = fight["shells"]
+	for gid: String in (fight["fired"] as Dictionary):
+		var gu: Unit = units[gid]
+		for sid: Variant in (fight["fired"][gid] as Array):
+			gu.gun_ready[str(sid)] = turn + (guns.special(str(sid)) as GunRules.Spec).reload_turns + 1
+	if _has_gun_units():
+		spot_memory = spotting.memory_after(self, spot_memory, rules.turn_seconds, guns.spot_step_s, down_at)
+		gun_memory = _gun_memory_after(fight["events"], down_at)
+	spotting.forget()
 	for id: String in units:
 		var u: Unit = units[id]
 		u.health = int(fight["health"][id])
@@ -723,7 +1133,9 @@ func resolve() -> Dictionary:
 		if ev["type"] == "left_bounds":
 			unit_left_bounds.emit(str(ev["unit"]), turn, int(ev["step"]))
 	turn_resolved.emit(turn, histories, events)
-	return {"turn": turn, "histories": histories, "events": events, "units": _net_states(), "bombs": bombs_in_flight.duplicate(true)}
+	var result := {"turn": turn, "histories": histories, "events": events, "units": _net_states(), "bombs": bombs_in_flight.duplicate(true)}
+	result.merge(net_guns())
+	return result
 
 # THE NETWORK CONTRACT (proposed by the lead for the first fight, 2026-10-09;
 # Alex: the host resolves each turn and sends the result): a World that did
@@ -761,6 +1173,8 @@ func apply_resolution(result: Dictionary) -> bool:
 		u.plan.clear()
 	# The bombs still falling after this turn (a result without them has none).
 	bombs_in_flight = (result.get("bombs", []) as Array).duplicate(true)
+	apply_net_guns(result)
+	spotting.forget()
 	_set_phase(PHASE_RESOLVED)
 	var events: Array = (result["events"] as Array).duplicate(true)
 	for ev: Dictionary in events:
@@ -775,6 +1189,7 @@ func begin_turn() -> void:
 		_fail("begin_turn: only after a resolve (phase is %s)" % phase)
 		return
 	turn += 1
+	spotting.forget()
 	for who: Variant in ready.keys():
 		if ready[who] == true:
 			ready[who] = false
@@ -880,12 +1295,16 @@ func _step(u: Unit, k: int, prev: Dictionary) -> Dictionary:
 	var s := u.def.envelope.clamp_step(prev, req, rules.step_dt(n))
 	if u.def.domain == "sea" and water_depth.is_valid():
 		s = _keep_afloat(u, prev, s, rules.step_dt(n))
+	elif _ground_rule_on(u.def):
+		s = ground.keep(u.def, prev, s, rules.step_dt(n), ground.spans(units), water_depth)
 	s["step"] = k
 	s["t"] = rules.turn_seconds * float(k + 1) / float(n)
 	s["planned"] = planned
 	s["out_of_bounds"] = not in_bounds(float(s["x"]), float(s["y"]))
 	if req is Dictionary and (req as Dictionary).has("drop"):
 		s["drop"] = _drop_state(u, k, prev, s, req)
+	if req is Dictionary and (req as Dictionary).has("fire"):
+		s["fire"] = _fire_state(u, k, prev, s, req)
 	return s
 
 # --- The water rule (Track WS; the header's THE WATER) --------------------------------------------------------
@@ -933,6 +1352,7 @@ func _keep_afloat(u: Unit, prev: Dictionary, s: Dictionary, dt: float) -> Dictio
 	return _shore_limited({
 		"x": prev["x"], "y": prev["y"], "heading": prev["heading"], "speed": 0.0,
 		"altitude_band": prev["altitude_band"], "turn": 0.0, "limits": [],
+		"held": true,   # (Envelope.point_on_step: a held step goes nowhere, whatever speed the unit had; Track TK2)
 	})
 
 static func _shore_limited(c: Dictionary) -> Dictionary:

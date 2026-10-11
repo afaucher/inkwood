@@ -81,6 +81,8 @@ const AiParams = preload("res://scripts/sim/ai_params.gd")
 const Mission = preload("res://scripts/sim/mission.gd")
 const WorldLayout = preload("res://scripts/world/world_layout.gd")
 const WaterGen = preload("res://scripts/world/water_gen.gd")
+const GroundMap = preload("res://scripts/world/ground_map.gd")
+const Reveal = preload("res://scripts/sim/reveal.gd")
 
 const WATER_PREFIX := "water."
 const SCENARIO_DIR := "res://data/scenarios"
@@ -181,9 +183,11 @@ func _read_water(d: Dictionary, quiet: bool) -> void:
 	water_on = sw
 	if not water_on:
 		return
-	var wu: Variant = d.get("water_units")
-	if not (wu is Array) or (wu as Array).is_empty() or not (d.get("units") is Array):
-		_err("'water' is on but there is no non-empty 'water_units' list (and 'units')", quiet)
+	# (A scenario may have the water -- the map's river and sea, the ground rule's no-go -- and no boat or bridge of its own: the second
+	# mission, Track M2L. No 'water_units' is then an empty list; one that is there must be a list.)
+	var wu: Variant = d.get("water_units", [])
+	if not (wu is Array) or not (d.get("units") is Array):
+		_err("'water' is on but 'water_units' is not a list (or there is no 'units' list)", quiet)
 		return
 	d["units"] = (d["units"] as Array) + (wu as Array)
 	var wa: Variant = d.get("water_assignments")
@@ -250,14 +254,32 @@ func view_flag(name: String) -> bool:
 func populate(world: Object) -> Array[String]:
 	var ids: Array[String] = []
 	world.rng_seed = rng_seed
+	Reveal.of(world)   # the guns that fire at a side are remembered from the first turn (scripts/sim/reveal.gd, Track M2L)
 	if water_on:
 		var w := water()
 		if w != null:
 			world.set_water(Callable(w, "depth_at"))
+	# THE GROUND (Track TK2): a scenario with a unit that drives (a tank) gives the World the ground's eyes, as the water above: the
+	# height levels, the road and the woods of its seed (the water's capped terrain when the water is on), so a tank is kept on dry land,
+	# off the cliffs and out of the river, and drives faster on the road (data/sim/ground.json, scripts/world/ground_map.gd).
+	if _has_ground_mover(world):
+		var gm: RefCounted = GroundMap.shared(seed_value, water())
+		if gm.ok():
+			gm.attach(world)
+		else:
+			_err("the ground of seed %d did not build: %s" % [seed_value, str(gm.errors)], false)
 	world.add_player(local_player)
 	for spec: Dictionary in units:
 		ids.append(str(world.add_unit(spec)))
 	return ids
+
+# Does the scenario have a unit that drives (domain ground, not static)? Then the World is given the ground (populate).
+func _has_ground_mover(world: Object) -> bool:
+	for spec: Dictionary in units:
+		var def: Object = world.unit_def(str(spec.get("type", "")))
+		if def != null and def.domain == "ground" and not def.is_static():
+			return true
+	return false
 
 # The AI the scenario asks for, built for `world` and NOT attached (the caller attaches
 # it, on the host or locally only: a client's World must never plan the enemy). An AiDumb
@@ -401,6 +423,8 @@ func _read_ai(d: Dictionary, quiet: bool) -> void:
 				cleaned["route"] = _points(cleaned["route"], "ai.assignments.%s.route" % k, quiet)
 			if cleaned.has("target"):
 				cleaned["target"] = _point(cleaned["target"], "ai.assignments.%s.target" % k, quiet)
+			if cleaned.has("to"):   # (the drive role's target, reached by road: Track TK2)
+				cleaned["to"] = _point(cleaned["to"], "ai.assignments.%s.to" % k, quiet)
 			ai_assignments[k] = cleaned
 
 # A route: a list of [x, y] pairs and/or {"site": ...} points, as a list of [x, y] pairs.

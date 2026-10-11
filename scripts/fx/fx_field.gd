@@ -756,6 +756,7 @@ func ruin(unit_id: String, world_pos: Vector2, t: float, kind: String = "radio_t
 	var rng := Mulberry32.new(_seed_call("ruin", "%s|%s" % [unit_id, kind], t))
 	var seed_v := int(rng.next() * 2147483647.0)
 	var rec := add_ruin(unit_id, world_pos, t, kind, size_m, heading, seed_v)
+	size_m = _effects_size(kind, size_m)   # (the record keeps the unit's own size; the flash and the smoke are sized by this)
 	var is_tower := kind == "radio_tower"
 	var tag := "ruin:" + ruin_name
 	bursts.append({
@@ -774,6 +775,14 @@ func ruin(unit_id: String, world_pos: Vector2, t: float, kind: String = "radio_t
 		_add_clods(unit_id, "bar", deb, world_pos, FxData.f(deb, "h0_m"), t, size_m, rng, size_m)
 	_add_plume(unit_id, tag, FxData.grp(o, "plume"), world_pos, 0.0, t, size_m, rng, size_m)
 	_add_smolder(unit_id, FxData.grp(o, "smolder"), world_pos, t, size_m, rng, size_m, ":" + tag)
+
+# What the flash and the smoke of a destroyed unit are sized by: its size_m, except the military complex's (mission 2, Track M2U): an
+# 80 m compound is not blown up as one 80 m ball, the blast is its main building's (data/ui/unit_art_mission2.json
+# military_complex.ruin.effects_size_frac, PROPOSED).
+func _effects_size(kind: String, size_m: float) -> float:
+	if kind == "military_complex":
+		return size_m * float(load("res://scripts/ui/unit_marker_art_static.gd").mc_effects_frac())
+	return size_m
 
 # The ruin alone (a game in progress put back): the same record ruin() makes from `seed_v`; returns it.
 func add_ruin(unit_id: String, world_pos: Vector2, t: float, kind: String, size_m: float, heading: float, seed_v: int) -> Dictionary:

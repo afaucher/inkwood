@@ -66,6 +66,8 @@ extends Node
 const World = preload("res://scripts/sim/world.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
 const Envelope = preload("res://scripts/sim/envelope.gd")
+const Guns = preload("res://scripts/sim/guns.gd")
+const Reveal = preload("res://scripts/sim/reveal.gd")
 
 # The game's players are known to the World by these names. (The AI keeps
 # World.AI_PLAYER.)
@@ -177,6 +179,7 @@ func setup(w: World, scenario: String, scenario_local_player: String = "") -> vo
 	if scenario_local_player != "":
 		world.remove_player(scenario_local_player)
 	world.add_player(local_player())
+	Reveal.of(world)    # (the guns that have fired are kept from the first turn on: scripts/sim/reveal.gd)
 	names[local_player()] = display_name
 	if is_host():
 		_members = [HOST_ID]
@@ -396,6 +399,10 @@ func _plan_problem(unit_id: String, plan: Array) -> String:
 		var e := Envelope.request_error(r)
 		if e != "":
 			return e
+		if (r as Dictionary).has("fire"):
+			e = Guns.request_error((r as Dictionary)["fire"])   # a gun special's request (Track SH): the World's plan_step refuses a bad one
+			if e != "":
+				return e
 	return ""
 
 # --- Host: sending ----------------------------------------------------------------------------------
@@ -539,6 +546,10 @@ func snapshot() -> Dictionary:
 		"ready": world.ready.duplicate(), "units": units,
 		# Bombs still falling from an earlier turn (the strike): a joiner must land them too.
 		"bombs": world.net_bombs(),
+		# The shells in the air and what the sides remember of their targets (the warship): a joiner must land them too.
+		"guns": world.net_guns(),
+		# The guns that gave themselves away by firing, and when (the second mission): a joiner must see them as the others do.
+		"reveal": Reveal.of(world).net_state(),
 	}
 
 # --- Client: messages from the host ----------------------------------------------------------------
@@ -680,6 +691,8 @@ func apply_snapshot(s: Dictionary) -> void:
 		if u.controller == World.CONTROLLER_PLAYER:
 			_set_plan(id, us["plan"])
 	world.apply_net_bombs(s.get("bombs", []))
+	world.apply_net_guns(s.get("guns", {}))
+	Reveal.of(world).apply_net_state(s.get("reveal", {}))
 	var flags: Dictionary = s["ready"]
 	for p: Variant in flags:
 		_apply_ready(str(p), bool(flags[p]))

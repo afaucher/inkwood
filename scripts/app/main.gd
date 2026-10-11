@@ -21,10 +21,11 @@ extends Node2D
 const BuildVersion = preload("res://scripts/ui/build_version.gd")
 
 # The menu's scenario selector: the knob's choices in the order the menu lists them, and their words.
-const SCENARIO_ORDER: Array[String] = ["strike", "intercept", "sandbox"]
+const SCENARIO_ORDER: Array[String] = ["strike", "intercept", "suppress", "sandbox"]
 const SCENARIO_WORDS := {
 	"strike": "STRIKE: bomb the radio tower",
 	"intercept": "INTERCEPT: shoot down the bomber",
+	"suppress": "SUPPRESS: clear the guns, bomb the complex",
 	"sandbox": "SANDBOX: the flight toy",
 }
 

@@ -170,6 +170,19 @@ static func text_width(font: Font, s: String, size: float) -> float:
 static func card_shadow(ci: CanvasItem, r: Rect2, offset: Vector2, shadow: Color) -> void:
 	ci.draw_rect(Rect2(r.position + offset, r.size), shadow, true)
 
+# A small shell (Track SH, 2026-10-10): the mark of a step whose special is a gun salvo -- a pointed round with a base band, in `ink`
+# on a pool of `paper` `halo` px wider. The twin of bomb_glyph, upright, the same size for the same `s`.
+static func shell_glyph(ci: CanvasItem, c: Vector2, s: float, ink: Color, paper: Color, line_w: float, halo: float) -> void:
+	var tip := c + Vector2(0.0, -s * 1.9)
+	var body := PackedVector2Array([c + Vector2(-s * 0.72, s * 1.0), c + Vector2(-s * 0.72, -s * 0.45), c + Vector2(-s * 0.4, -s * 1.2), tip,
+		c + Vector2(s * 0.4, -s * 1.2), c + Vector2(s * 0.72, -s * 0.45), c + Vector2(s * 0.72, s * 1.0)])
+	var closed := body.duplicate()
+	closed.append(body[0])
+	ci.draw_circle(c + Vector2(0.0, -s * 0.4), s * 1.35 + halo, paper, true, -1.0, true)
+	ci.draw_colored_polygon(body, ink)
+	ci.draw_polyline(closed, paper, line_w * 0.6, true)
+	ci.draw_line(c + Vector2(-s * 0.72, s * 0.45), c + Vector2(s * 0.72, s * 0.45), paper, line_w, true)
+
 # A small bomb (Track B, 2026-10-10): the mark of a step whose special is the bomb drop -- a body of radius `s`, a stem and two fins,
 # in `ink` on a pool of `paper` `halo` px wider. One drawing for the map's node and the orders card's step strip.
 static func bomb_glyph(ci: CanvasItem, c: Vector2, s: float, ink: Color, paper: Color, line_w: float, halo: float) -> void:

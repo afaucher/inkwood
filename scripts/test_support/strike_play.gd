@@ -68,6 +68,7 @@ var snaps: Array[Dictionary] = []   # per resolved turn: {turn, units: {id: {x, 
 var continue_after_result := false  # keep beginning turns after the mission is decided (to watch the bombs fall)
 var drops_made := 0
 var phase := "run"                  # the bomber's: run | egress | turn
+var target_id := TOWER              # the unit a drop is aimed at (Track M2L: the second mission's planner, suppress_play.gd, sets the military complex)
 
 # `overrides`: scenario unit id -> {x, y, heading, ...} applied to the unit specs before the World is built.
 func _init(scenario_id: String = "strike", rng_seed: int = -1, overrides: Dictionary = {}) -> void:
@@ -250,7 +251,7 @@ func _plan_drops(b: Unit, tp: Vector2) -> void:
 		if k >= b.plan.size():
 			continue
 		var req: Dictionary = (b.plan[k] as Dictionary).duplicate(true)
-		req["drop"] = {"aim": [tp.x, tp.y], "target": {"unit": TOWER}}   # Track T: the tower is the step's target (a unit target follows the unit)
+		req["drop"] = {"aim": [tp.x, tp.y], "target": {"unit": target_id}}   # Track T: the tower is the step's target (a unit target follows the unit)
 		if not world.plan_step(b.id, k, req).is_empty():
 			planned += 1
 

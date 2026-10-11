@@ -152,6 +152,10 @@ func on_event(ev: Dictionary) -> void:
 			_bomb_drops(ev, turn_no)
 		"bomb_impact":
 			_bomb_impact(ev, game_t)
+		"shell_fire":
+			_shell_flights(ev, turn_no)
+		"shell_impact":
+			_shell_impact(ev, game_t)
 		"down":
 			if not world.units.has(id):
 				return
@@ -232,6 +236,48 @@ func _bomb_drops(ev: Dictionary, turn_no: int) -> void:
 			continue
 		fx.bomb_drop(bomber, _bomb_key(drop_index, int(im.get("bomb", 0))), Vector2(float(s["x"]), float(s["y"])), marker_layer.height_above_ground(s),
 			t0 + rt, Vector2(float(im["x"]), float(im["y"])), t0 + float(im.get("t", rt)))
+
+# THE BIG GUNS (Track SH, the warship, proposed 2026-10-10; scripts/sim/guns.gd): a salvo's shells, one by one, are drawn as the bombs
+# are -- the layer's falling-bomb picture from the guns to where each lands (the shell's own height is the arc's apex) -- and a landing
+# shell is a blast and a crater like a bomb's, the blast's size the shell's. The keys are apart from the bombs' (500000 + step x 1000 + shell).
+static func _shell_key(step: int, shell: int) -> int:
+	return 500000 + step * 1000 + shell
+
+func _shell_flights(ev: Dictionary, turn_no: int) -> void:
+	var shooter := str(ev.get("unit", ""))
+	if not fx.has_method("bomb_drop") or not world.units.has(shooter) or not _may_show(shooter):
+		return
+	var step := int(ev.get("step", 0))
+	var t0 := turn_t0(turn_no)
+	# Shells still in the air at the turn's end are records of the World's shells_in_flight, the rest are among the turn's shell_impact events.
+	for rec: Variant in world.shells_in_flight:
+		var r: Dictionary = rec
+		if str(r.get("unit", "")) == shooter and int(r.get("release_turn", -1)) == turn_no and int(r.get("step", -1)) == step:
+			fx.bomb_drop(shooter, _shell_key(step, int(r.get("shell", 0))), Vector2(float(r["x0"]), float(r["y0"])), float(r.get("apex_m", 0.0)),
+				t0 + float(r["release_t"]), Vector2(float(r["x"]), float(r["y"])), turn_t0(int(r["impact_turn"])) + float(r["impact_t"]))
+	if not lookahead.is_valid():
+		return
+	for e: Variant in lookahead.call():
+		var im: Dictionary = e
+		if str(im.get("type", "")) != "shell_impact" or str(im.get("unit", "")) != shooter or int(im.get("step", -1)) != step 				or int(im.get("released_turn", turn_no)) != turn_no or int(im.get("turn", turn_no)) != turn_no:
+			continue
+		var rt := float(im.get("released_t", ev.get("t", 0.0)))
+		var s: Dictionary = world.sample(shooter, rt, "history")
+		if s.is_empty():
+			continue
+		fx.bomb_drop(shooter, _shell_key(step, int(im.get("shell", 0))), Vector2(float(s["x"]), float(s["y"])), 0.12 * Vector2(float(s["x"]) - float(im["x"]), float(s["y"]) - float(im["y"])).length(),
+			t0 + rt, Vector2(float(im["x"]), float(im["y"])), t0 + float(im.get("t", rt)))
+
+func _shell_impact(ev: Dictionary, game_t: float) -> void:
+	var shooter := str(ev.get("unit", ""))
+	var pos := Vector2(float(ev.get("x", 0.0)), float(ev.get("y", 0.0)))
+	var blast := float(ev.get("blast_m", 20.0))
+	var key := _shell_key(int(ev.get("step", 0)), int(ev.get("shell", 0)))
+	if _may_show(shooter):
+		if fx.has_method("bomb_impact"):
+			fx.bomb_impact(pos, game_t, blast, shooter, key)
+	elif fx.has_method("add_crater"):
+		fx.add_crater(shooter, pos, game_t, blast, _scar_seed("%s/%d" % [shooter, key]))
 
 # A bomb lands: the blast and the crater; out of sight only the crater, quietly.
 func _bomb_impact(ev: Dictionary, game_t: float) -> void:

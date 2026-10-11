@@ -46,6 +46,10 @@ var _under_parent: Node = null
 
 var art: UnitMarkerArt.Art = null
 var plane: Sprite2D
+# A SHIP's ink V wake (Track SH, the warship): a sprite under the plane's, made when the art carries one and shown while the ship is
+# under way (`underway`, set by the layer from the unit's speed: data unit_art.ship.underway_mps).
+var wake: Sprite2D = null
+var underway: bool = false
 var shadow: Sprite2D           # lives in the layer's shadow group, not under this node
 
 var screen_ppm: float = 1.0    # the host's px per metre where the unit is
@@ -159,10 +163,31 @@ func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_off
 		shadow.scale = sc
 		shadow.position = screen_pos + shadow_offset_px
 		shadow.visible = visible
+		_pose_wake(sc, sprite_rot)
 	else:
 		shadow.visible = false
+		if wake != null:
+			wake.visible = false
 	_pose_shapes()
 	queue_redraw()
+
+# The wake sprite of a ship's art, posed as the plane is, shown while the ship is under way.
+func _pose_wake(sc: Vector2, sprite_rot: float) -> void:
+	if art == null or art.wake == null:
+		if wake != null:
+			wake.visible = false
+		return
+	if wake == null:
+		wake = Sprite2D.new()
+		wake.centered = false
+		wake.name = "Wake"
+		add_child(wake)
+		move_child(wake, 0)   # under the plane's sprite
+	wake.texture = art.wake
+	wake.offset = -art.wake_origin
+	wake.rotation = sprite_rot
+	wake.scale = sc
+	wake.visible = underway
 
 # Hides (or shows again) the stand-out shapes with the marker: a marker the layer hides
 # (fog, a unit that exploded) is not posed any more, so its shapes follow its visibility here.

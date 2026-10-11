@@ -1,0 +1,147 @@
+{
+  "_about": "THE BIG-GUN SPECIALS' constants (Track SH, the warship, 2026-10-10; scripts/sim/gun_rules.gd reads this, scripts/sim/guns.gd is the model, scripts/sim/spotting.gd answers who is spotted, the World and combat_resolver.gd use them). ALEX'S (decision mixed-warfare, 2026-10-10): 'You have a huge ship parked off the coast but you need tanks to move inland to spot the aa batteries for the ship.' Shared spotting: 'Yes' (any friendly unit's sight counts for every gun of its side; long-range guns need a spotted target). Big guns as specials: 'yes' (a warship's main guns and artillery are specials, fired by hand with a long reload, aimed with the target selection). 'I am not sure what engagement ranges make sense yet.' And his targeting rules (decisions special-targeting, target-follows-unit, step-selection): a special is active and targeted for its step, the target is an enemy unit or a point; with no target, or one outside its reach, it cannot be activated and the card says why; a unit target is followed and the release is picked at resolve; clicking a node selects the step, whose lettering names the special and its action ('Main Guns Fire'). EVERY NUMBER HERE IS PROPOSED by Track SH; none is a decision. A gun special is a special of a unit file (data/units/<id>.json specials) whose id has a record under 'specials' here (the bomb drop, id 'bomb', is the other kind: data/sim/bombs.json and the unit's bomb_load). One special, one gun battery: a unit with one is still ONE unit, not a nest. THE MODEL (scripts/sim/guns.gd has it in full): the special is switched on in a step with a target; it can be activated only while the target is inside [range_min_m, range_max_m] of the gun and SPOTTED by the unit's side at planning (shared spotting). At resolve it fires at the moment fire_at of the step (a fraction of the step) IF the target is still spotted and in range then, and the guns are loaded; otherwise it does not fire and nothing is spent (the same answer data/sim/bombs.json outside_cone_mode 'hold' gives for a bomb whose target left the cone; Alex's open question outside-cone-release, hold or poor_shot, covers this too and is not decided). A salvo is `shells` shells that leave salvo_interval_s apart, fly for range / shell_speed_mps seconds (at least min_flight_s: they can land in a later turn, carried like bombs) and land scattered about the target (led by its velocity when it is a moving unit, lead_target) by a Gaussian whose sigma grows with range and shrinks the longer the target has been spotted (RANGING IN, PROPOSED; related to Alex's still-open idea that a special used on an area pre-aims it, but it is not that idea). A landing shell hurts what stands at the surface by a blast table like the bombs' (blast_pips_by_distance). After a salvo the guns need reload_turns turns: fired in turn N they are ready again in turn N + reload_turns + 1. Record shape as data/sim/bombs.json: {value, _proposed, _reason}. Metres, seconds. THE COASTAL STRIP (Alex: 'You can attack coast not inland.'): a target is also out of reach when the first water, measured along the line of fire from the target back toward the ship, is more than inland_max_m from it (reason 'inland'; needs the World's water). THE SCATTER, in full: sigma = (spread_base_m + spread_per_range x range) x aim_factor(seconds spotted without a break) x bracket_mult(salvos already fired at the same spotted target) x spotter_mult(how close the nearest spotter is, as a share of its sight); scripts/test_support/gun_tuning.gd prints what that does to a battery. THE LONG REACH IS A GAMBLE (Alex, decision bridge-mission: 'shots need to be really on point to hit'): at the edge of the range a fresh target is a 1 percent kill and a target ranged in for 20 s with two salvos already on it is a 92 percent one.",
+
+  "spot": {
+    "step_s": {
+      "value": 0.5,
+      "_proposed": true,
+      "_reason": "spotting is judged at moments this far apart through the resolve (the turn is walked from its start, so 'how long has it been spotted' has an answer): coarser than the combat tick (0.25 s), because a unit moves a few metres in 0.5 s and a shell's fire moment is not a razor's edge. 10 judgements a 5 s turn"
+    }
+  },
+
+  "specials": {
+    "main_guns": {
+      "_about": "The small cruiser's main guns (data/units/cruiser.json): a fore and an after turret. A salvo is every barrel at once.",
+      "range_max_m": {
+        "value": 3000,
+        "_proposed": true,
+        "_reason": "Alex has not settled engagement ranges. The map is 5 km: 3 km lets a ship parked a kilometre off the coast reach two kilometres inland (the tanks' spotting range is under a kilometre, so the guns reach well beyond what the ship itself sees, which is the point of the spotters) without covering the whole map from one corner. A real cruiser reaches 15 km or more; this is the game's scale (planes cover 500 m a turn)"
+      },
+      "inland_max_m": {
+        "value": 600,
+        "_proposed": true,
+        "_reason": "ALEX (decision mixed-warfare): 'The sea guns have a range limit. You can attack coast not inland.' THE COASTAL STRIP: a target is out of reach (reason 'inland') when, measured along the line of fire from the target back toward the ship, the first water is more than this far from it. 600 m is the strip a ship's guns can plausibly work (a tenth of the map: the village, the bridge and the road along the shore, not the hills behind). Needs the World's water (World.set_water); a World with none has no coast and the rule is off. PROPOSED"
+      },
+      "inland_step_m": {
+        "value": 20,
+        "_proposed": true,
+        "_reason": "the line of fire is walked back from the target in steps of this length to find the shore: finer than the shallows (the generator's coast is smooth at this scale). PROPOSED"
+      },
+      "range_min_m": {
+        "value": 150,
+        "_proposed": true,
+        "_reason": "the guns cannot hit what is alongside: about the ship's own length and a bit. Keeps a salvo from landing on the firing ship"
+      },
+      "shells": {
+        "value": 6,
+        "_proposed": true,
+        "_reason": "the shells of a salvo: the sheet's cruiser has two or three turrets of two or three barrels (4 to 10 barrels in all); 6 is the common one, three twin turrets"
+      },
+      "salvo_interval_s": {
+        "value": 0.2,
+        "_proposed": true,
+        "_reason": "the shells of a salvo leave this far apart, in turn (a ripple, not one instant); a salvo is out of the guns in 1 s"
+      },
+      "reload_turns": {
+        "value": 2,
+        "_proposed": true,
+        "_reason": "Alex: 'fired by hand with a long reload'. The lead proposed 2: fired in turn N, the guns cannot be activated in turns N + 1 and N + 2 and are ready in turn N + 3, a salvo every third turn (15 s)"
+      },
+      "fire_at": {
+        "value": 0.5,
+        "_proposed": true,
+        "_reason": "the guns fire at this fraction of the step they are switched on in (0 its start, 1 its end): the middle, where the ship is at the average of the step's two ends"
+      },
+      "shell_speed_mps": {
+        "value": 250,
+        "_proposed": true,
+        "_reason": "the shell's average speed along its ground track (a real 6-inch shell leaves at 800 m/s but slows and flies a high arc; the game's ranges are scaled down about five times, so is its speed). A shell at 2 km flies 8 s, nearly two turns: it lands in a LATER turn and a moving target must be led"
+      },
+      "min_flight_s": {
+        "value": 1.5,
+        "_proposed": true,
+        "_reason": "the least a shell flies, for the close targets (150 m is 0.6 s at the shell speed): the shell has to climb and fall"
+      },
+      "apex_per_range": {
+        "value": 0.12,
+        "_proposed": true,
+        "_reason": "for the picture only (scripts/sim/guns.gd shell_position): the shell's height at the top of its arc, as a share of the range it flies: 240 m high over a 2 km shot. The sim lands shells on the ground and does not use the height"
+      },
+      "lead_target": {
+        "value": true,
+        "_proposed": true,
+        "_reason": "a UNIT target is followed (Alex, decision target-follows-unit): the salvo is aimed where the unit would be when the shells land if it holds its heading and speed from the moment of fire (the bombs' followed_aim: a constant-velocity projection). A unit that turns or stops after the shot is missed by that much. false would aim at where it is at the moment of fire. A point target is fixed"
+      },
+      "spread_base_m": {
+        "value": 12,
+        "_proposed": true,
+        "_reason": "the scatter of each shell (one standard deviation, in each ground axis) at no range, for a target that has just been spotted: the floor"
+      },
+      "spread_per_range": {
+        "value": 0.015,
+        "_proposed": true,
+        "_reason": "metres of scatter added per metre of range: 30 m at 2 km, 45 m at 3 km, on top of the base (42 m and 57 m for a fresh target)"
+      },
+      "unranged_factor": {
+        "value": 1.0,
+        "_proposed": true,
+        "_reason": "RANGING IN: the scatter is multiplied by this for a target that has been spotted for no time at all..."
+      },
+      "ranged_factor": {
+        "value": 0.35,
+        "_proposed": true,
+        "_reason": "...falling in a straight line to this once it has been spotted for ranging_s: the spotters have given the guns its range, bearing and drift. 0.35 turns a 42 m scatter at 2 km into 15 m. PROPOSED; the nearest thing Alex has said is the idea that a special used on an area pre-aims it, so an enemy revealed there may be hit with higher accuracy (not designed or built yet)"
+      },
+      "ranging_s": {
+        "value": 20,
+        "_proposed": true,
+        "_reason": "how long a target must have been spotted, without a break, for the guns to be fully ranged on it: four turns"
+      },
+      "spotter_far_factor": {
+        "value": 1.5,
+        "_proposed": true,
+        "_reason": "Alex (the lead's brief): 'Spotting tightens it: the longer and closer the target is spotted, the tighter.' Read here as the TIME it has been spotted (ranging_s) AND how CLOSE the nearest spotter is to it. The scatter is multiplied by 1 at a spotter right on the target and by this at one that only just sees it (the target at the edge of its sight), in a straight line between: a tank at 100 m gives the guns a better fix than a tower at its 500 m limit. PROPOSED; the other reading ('closely' = without a break) is the time alone, which spotter_far_factor 1 gives"
+      },
+      "bracket_factor": {
+        "value": 0.7,
+        "_proposed": true,
+        "_reason": "BRACKETING (historical: a ship walks its fall of shot onto a target, salvo by salvo): the scatter is multiplied by this for each salvo this side has already fired at the same spotted target, down to bracket_floor. 0.7: two earlier salvos leave 49 percent of the scatter, so a target hit by the third has been ranged to about 17 percent of a fresh shot's (with ranging_s of spotting too). PROPOSED"
+      },
+      "bracket_floor": {
+        "value": 0.4,
+        "_proposed": true,
+        "_reason": "the least the bracketing multiplier gets to (0.7 x 0.7 x 0.7 = 0.34 would be lower): fall of shot never gets perfect, a ship still rolls and the shells still differ. PROPOSED"
+      },
+      "bracket_turns": {
+        "value": 4,
+        "_proposed": true,
+        "_reason": "a target not fired at for this many turns is a new target again (the ranging is lost: the target has moved on, the gunnery officer has forgotten the fall of shot). A target that is not spotted at the end of a turn is a new target again at once. PROPOSED"
+      },
+      "bracket_point_m": {
+        "value": 40,
+        "_proposed": true,
+        "_reason": "a POINT target counts as the same target as an earlier salvo's when it is within this distance of that salvo's aim (a point is not a thing that can be tracked, so 'the same' needs a radius; about two blast radii). A unit target is the same unit. PROPOSED"
+      },
+      "salvo_error_fraction": {
+        "value": 0.6,
+        "_proposed": true,
+        "_reason": "a salvo is correlated, as a stick of bombs is: this share of one shell's scatter (a standard deviation) is the whole salvo's (a long or a short salvo) and the rest each shell's own, in quadrature, so every shell still scatters by the same total and only how alike the shells fall changes"
+      },
+      "blast_pips_by_distance": {
+        "value": [[6, 3], [12, 2], [20, 1]],
+        "_proposed": true,
+        "_reason": "pips a landing shell does to a unit at the surface, by the distance of its centre from the impact, read as 'within distance_m: pips', smaller first (the shape of data/sim/bombs.json blast_pips_by_distance): a shell is much smaller than a bomb (12 m, 25 m, 45 m), a direct hit on a battery is 3 pips (of 4) and a near miss 2 or 1. The tuning table (scripts/test_support/gun_tuning.gd) prints what a salvo does to a battery by how long the target has been spotted"
+      },
+      "blast_height_m": {
+        "value": 25,
+        "_proposed": true,
+        "_reason": "as the bombs': the blast reaches units this high above the ground or lower (ground units and the surface band); an aircraft in the low band (120 m) is above it"
+      },
+      "blast_hits_own_side": {
+        "value": true,
+        "_proposed": true,
+        "_reason": "as the bombs': a shell does not know whose side a unit is on. A spotter close to the target is in danger from its own ship's guns"
+      }
+    }
+  }
+}

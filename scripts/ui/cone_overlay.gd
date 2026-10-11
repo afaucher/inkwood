@@ -78,6 +78,10 @@ const Combat = preload("res://scripts/sim/combat.gd")
 
 signal arcs_changed(shown: bool)
 
+# A cone's half width of 180 degrees is ALL AROUND (a tank's turret: Track TK2, 2026-10-11). Drawn as a pie or a ring it would close on
+# itself and fail to triangulate, so a half width is kept this far (radians; 0.2 px at 100 px) under a half turn.
+const FULL_CIRCLE_GAP := 0.001
+
 # The arcs switch as the player left it this session: -1 not touched (planner.cones.shown rules), 0 hidden, 1 shown.
 static var _session_arcs := -1
 
@@ -324,6 +328,7 @@ static func range_rel(c: Dictionary, d_px: float) -> float:
 # The wedge's polygon: the apex, then the arc from phi - half to phi + half, at `radius`
 # (px; the effective range when not given).
 static func wedge_points(c: Dictionary, half: float, steps_per_rad: float = 14.0, radius: float = -1.0) -> PackedVector2Array:
+	half = minf(half, PI - FULL_CIRCLE_GAP)   # a cone ALL AROUND (the tank's turret, half_across 180) is a pie with a hairline missing: a polygon that triangulates
 	var pts := PackedVector2Array([c["apex"]])
 	var n := maxi(3, ceili(half * 2.0 * steps_per_rad))
 	var rad := radius if radius > 0.0 else float(c["range_px"])
@@ -334,6 +339,8 @@ static func wedge_points(c: Dictionary, half: float, steps_per_rad: float = 14.0
 
 # A band of the falloff zone: between two azimuth offsets and two radii (px).
 static func annulus(c: Dictionary, a0: float, a1: float, r0: float, r1: float) -> PackedVector2Array:
+	a0 = maxf(a0, -(PI - FULL_CIRCLE_GAP))   # (see wedge_points: a ring all the way round keeps a hairline gap, else it cannot be triangulated)
+	a1 = minf(a1, PI - FULL_CIRCLE_GAP)
 	var pts := PackedVector2Array()
 	var n := maxi(2, ceili(absf(a1 - a0) * 14.0))
 	for i in n + 1:
@@ -386,9 +393,20 @@ static func _draw_rim(ci: CanvasItem, c: Dictionary, col: Color, w: float, st: U
 		pts.append(pts[0])
 		UiInk.dashed(ci, pts, Color(col.r, col.g, col.b, col.a * st.num("planner.cones.overhead_alpha")), w * 0.8, st.num("planner.cones.overhead_dash_px"), st.num("planner.cones.overhead_dash_px"))
 		return true
+	var reach: float = c.get("reach_px", c["range_px"])
+	if half >= PI - FULL_CIRCLE_GAP - 1e-6:
+		# ALL ROUND (a tank's turret): a ring at the range and a faint dashed one at the reach, no sides (a pie's two radial edges
+		# would be a line running out behind the tank)
+		var centre: Vector2 = c["apex"]
+		UiInk.ink_line(ci, UiInk.circle_pts(centre, float(c["range_px"]), 64), true, col, w, seed_value, 0.5)
+		if reach > float(c["range_px"]) + 1.0:
+			var ring := UiInk.circle_pts(centre, reach, 72)
+			ring.append(ring[0])
+			var rdash: float = st.num("planner.cones.falloff_dash_px")
+			UiInk.dashed(ci, ring, Color(col.r, col.g, col.b, col.a * st.num("planner.cones.falloff_side_alpha")), w * 0.8, rdash, rdash)
+		return true
 	UiInk.ink_line(ci, wedge_points(c, half), true, col, w, seed_value, 0.5)
 	# The falloff zone: the wedge's sides carry on, dashed and fainter, to where the odds are gone.
-	var reach: float = c.get("reach_px", c["range_px"])
 	if reach > float(c["range_px"]) + 1.0:
 		var fcol := Color(col.r, col.g, col.b, col.a * st.num("planner.cones.falloff_side_alpha"))
 		var dash: float = st.num("planner.cones.falloff_dash_px")

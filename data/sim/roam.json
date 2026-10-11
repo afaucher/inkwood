@@ -1,0 +1,34 @@
+{
+  "_about": "THE ROAM ROLE's numbers (Track M2L, 2026-10-11; scripts/sim/ai_roam.gd reads this). The mobile AA of the second mission ('clear the mobile AA and their escorts to enable a bombing run of a military complex') SHOOTS AND SCOOTS: it sits hidden at one of a few hide points near the target, holds still and fires while planes are in its reach, and after it has fired -- and so, by scripts/sim/reveal.gd, given itself away -- it relocates to the next hide point after a delay. THE BEHAVIOUR IS THE LEAD'S PROPOSAL, NOT ALEX'S (decision suppress-mission: the guns are hidden, move, and give themselves away when they fire, as the Wild Weasels baited guns over Vietnam); Alex's words are 'Find the fun first' and 'a mission can always have limited units' (decisions mixed-warfare, balance-uncalibrated). It MOVES under the ground rule (data/sim/ground.json: no cliff off a road, no water, slower off the road) by the drive role's pure pursuit (scripts/sim/ai_drive.gd, numbers in data/sim/ai.json 'drive'). EVERY VALUE IS PROPOSED. Record shape as data/sim/combat.json: {value, _proposed, _reason}.",
+
+  "hold_reach_factor": {
+    "value": 1.0,
+    "_proposed": true,
+    "_reason": "a plane is 'in reach' of the gun when its SLANT distance from the gun (its band's height counts: scripts/sim/ai_roam.gd) is within this many times the gun's farthest weapon reach (effective range x (1 + the common range overshoot), data/sim/combat.json) plus the margin below. 1: the gun's own reach, no more. (The mobile AA reaches 720 m since 2026-10-11 (600 m effective): a medium plane is in reach out to 600 m on the ground and holds the gun out to about 990 m; a high plane (997 m up) is never in reach and holds it only within about 390 m of straight overhead)"
+  },
+  "hold_margin_m": {
+    "value": 350,
+    "_proposed": true,
+    "_reason": "metres added to that reach for the decision to STOP: the unit plans a whole turn at a time and a plane covers 425 to 500 m of it, so a gun that waited until the plane was already in reach would be driving when the plane arrived. 350 m is most of a turn of a bomber's flight. A gun that is stopped fires whenever the combat rules say it can (a moving one fires too: stopping is the AI's habit, not a condition)"
+  },
+  "relocate_delay_turns": {
+    "value": 1,
+    "_proposed": true,
+    "_reason": "after its LAST shot a gun waits this many whole turns before it relocates: it fires in turn N, and at the planning of turn N + 1 (this many turns later) it drives off, if no plane is in reach. 1: it scoots at once, the next turn, so a fighter has the rest of the turn it fired in and the planning of the next one to find it, the reveal_s of data/sim/reveal.json (two turns) being the window the player has. 2 or more gives the player more time to bring the bomber on it"
+  },
+  "settle_tolerance_m": {
+    "value": 60,
+    "_proposed": true,
+    "_reason": "the gun's starting hide point is the one of its list nearest where the scenario puts it; the scenario is expected to put it on one (within this): further off is a warning in the pilot's list (a scenario that placed it by mistake)"
+  },
+  "min_leg_m": {
+    "value": 90,
+    "_proposed": true,
+    "_reason": "a relocation goes to the next hide point of the list that is at least this far from where the gun stands: scooting 40 m would be no scoot, and the reveal patch (data/sim/reveal.json radius_m 90) would still hold it. Was 150 while the legs were 160 to 450 m; the coordinator's legs of 100 to 200 m (2026-10-11) need a smaller floor, or the gun skips the point next to it"
+  },
+  "stuck_turns": {
+    "value": 2,
+    "_proposed": true,
+    "_reason": "a relocation that makes no progress along its course for this many turns running (the ground rule held the gun: a cliff or the water in the way, or a destroyed bridge) is given up: the gun hides where it stands, and tries again the next time it has fired. A scenario's hide points are checked to be reachable (test_suppress), so this is the net under a data mistake"
+  }
+}

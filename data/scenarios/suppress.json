@@ -1,0 +1,179 @@
+{
+  "_about": "SUPPRESS (Track M2L, 2026-10-11): the second mission profile. ALEX'S WORDS (decision suppress-mission, the idea he listed second of four): 'Clear mobile Aa units and their escorts to enable a bombing run of a military complex.' The players fly two fighters (a light and a heavy) and one bomber from a map edge; the enemy has a military complex, three mobile anti-aircraft guns and two escort fighters. WHAT IS PROPOSED (by the lead, decision suppress-mission, and by this track): the fun -- the guns are hidden, MOVE (shoot and scoot) and GIVE THEMSELVES AWAY WHEN THEY FIRE, as the Wild Weasels baited guns over Vietnam: the fighters bait and hunt them past the escorts while the bomber holds off until the path is clear (scripts/sim/reveal.gd, scripts/sim/ai_roam.gd, data/sim/reveal.json, data/sim/roam.json) -- and EVERY placement and number below. ALEX'S FRAMING (decisions mixed-warfare, balance-uncalibrated): 'For now our goal is a small set of missions that are fun tactics games. We can tie them together later. Find the fun first!'; 'A mission can always have limited units'; the balance is not calibrated, this is a playtest, and the attackers have the advantage. The map is the Strike's (seed 20261009, water on): the complex stands at the world layout's radio-tower site (the walled compound in the village; the tower itself is left out of this mission), the mobile guns hide in the groves round it. Read by scripts/app/sandbox.gd through scripts/app/sandbox_scenario.gd. Units are in metres on the 5,000 m map (data/sim/turn.json); heading 0 points along +x (east), positive is clockwise on screen. Nothing is at copied map coordinates but the players' start: the complex, the guns' hide points and the escorts' loops name the world layout's site and an offset from it, so they follow the village if the layout rules change (and test_suppress checks that every hide point is dry, level ground that the guns can drive between).",
+
+  "id": "suppress",
+  "seed": 20261009,
+  "rng_seed": 7,
+  "_rng_seed_note": "The World's combat seed (hit, flak and bomb-scatter rolls; only the host's World rolls). PROPOSED, and nothing depends on it: the tests search for a seed at run time.",
+  "local_player": "local",
+  "briefing": "SUPPRESS  -  the guns hide and shoot and move: bait them out, clear the escorts, and bring the bomber onto the military complex by turn {turn_limit}.",
+
+  "sides": {
+    "_about": "Scenario side -> the World's side name (the interface's accent table in data/ui/ui.json knows allies and axis) and the callsign pool (data/names/callsigns.json). side_a is brick red, side_b slate blue (Alex). The players are side_a; the complex, the guns and the escorts are side_b.",
+    "side_a": { "world_side": "allies", "callsign_pool": "side_a" },
+    "side_b": { "world_side": "axis", "callsign_pool": "side_b" }
+  },
+
+  "units": [
+    {
+      "id": "bomber_1",
+      "type": "bomber", "side": "side_a", "controller": "player", "callsign": "pool",
+      "x": 1180.0, "y": 3640.0, "heading": -1.2376, "altitude_band": "medium",
+      "_proposed": true,
+      "_reason": "The players' bomber (Alex: one bomber, two fighters). From the south-west, 2,324 m from the complex (5.5 turns of cruise, 85 m/s, 425 m a turn) and 1,360 m from the south edge, heading straight at it, in the MEDIUM band (the Strike's: the band the bombing tables make a real choice of). Far enough that the players have the fog to search and time to bait the guns before the bomber need come within their reach (a gun reaches about a kilometre); the first guns on the way in are the southern one's, which is where the fighters should meet them."
+    },
+    {
+      "id": "light_fighter_1",
+      "type": "light_fighter", "side": "side_a", "controller": "player", "callsign": "pool",
+      "x": 1009.0, "y": 3369.0, "heading": -1.2376, "altitude_band": "medium",
+      "_proposed": true,
+      "_reason": "Player fighter 1: 200 m ahead of the bomber and 250 m to its left, on its heading, medium: the Strike's formation (the escort's own station width, data/sim/ai.json escort.station_right_m), faster than the bomber (100 m/s against 85) and meant to go first. The bait: a fighter flying into a gun's reach makes it fire and so gives its place away."
+    },
+    {
+      "id": "heavy_fighter_1",
+      "type": "heavy_fighter", "side": "side_a", "controller": "player", "callsign": "pool",
+      "x": 1449.0, "y": 3627.0, "heading": -1.2376, "altitude_band": "medium",
+      "_proposed": true,
+      "_reason": "Player fighter 2: the heavy type (5 pips, the cannon), 100 m ahead of the bomber and 250 m to its right, the Strike's formation. The tougher fighter, for the escorts and for taking the flak while a gun is found."
+    },
+    {
+      "id": "escort_1",
+      "type": "light_fighter", "side": "side_b", "controller": "ai", "callsign": "pool",
+      "site": "radio_tower", "dx": 650.0, "dy": -150.0, "heading": 2.1,
+      "altitude_band": "medium", "speed": 85.0,
+      "_proposed": true,
+      "_reason": "The first of the two escort fighters (Alex: 'their escorts'; the lead: two): on its loop over the complex, at its first waypoint 650 m east of the complex (the Strike's patrol, scripts/sim/ai_pilot.gd role patrol), heading for the next, at the patrol speed (85 m/s) in the medium band, the players' band. A light fighter (3 pips): the players' fighters can win the fight."
+    },
+    {
+      "id": "escort_2",
+      "type": "light_fighter", "side": "side_b", "controller": "ai", "callsign": "pool",
+      "site": "radio_tower", "dx": -650.0, "dy": 150.0, "heading": -1.01,
+      "altitude_band": "medium", "speed": 85.0,
+      "_proposed": true,
+      "_reason": "The second escort: the same loop, half a lap round from the first (at its third waypoint, 650 m west of the complex, heading for the fourth), so the two cover the whole ring and the players meet one of them from whichever side they come."
+    },
+    {
+      "id": "military_complex_1",
+      "type": "military_complex", "side": "side_b", "controller": "ai",
+      "site": "radio_tower", "heading": 0.0,
+      "_proposed": true,
+      "_reason": "The target (Alex: 'a bombing run of a military complex'): the world layout's 'radio_tower' site, the middle of the walled compound in the village (scripts/world/world_layout.gd), the radio tower left out of this mission. A static unit like the tower (data/units/military_complex.json is the units track's). The map already draws the compound and the village round it."
+    },
+    {
+      "id": "mobile_aa_1",
+      "type": "mobile_aa", "side": "side_b", "controller": "ai",
+      "site": "radio_tower", "dx": 60.0, "dy": 220.0, "heading": -1.4, "speed": 0.0,
+      "_proposed": true,
+      "_reason": "The first mobile gun (Alex: 'mobile Aa units'; the lead: three): hidden in the grove south of the complex, 228 m from it, on the players' side of the village, at the first hide point of its list (the south sector: three groves 120 to 180 m apart, tree density 0.9 and up: it is seen only inside 200 m, data/sim/concealment.json, or when it fires)."
+    },
+    {
+      "id": "mobile_aa_2",
+      "type": "mobile_aa", "side": "side_b", "controller": "ai",
+      "site": "radio_tower", "dx": -260.0, "dy": -280.0, "heading": 1.5, "speed": 0.0,
+      "_proposed": true,
+      "_reason": "The second mobile gun: in the grove north-west of the complex, 382 m from it, between the village and the river (the north-west sector: three groves 100 to 200 m apart on the river's east bank). A bomber that flies over the complex from the south meets it on the way out."
+    },
+    {
+      "id": "mobile_aa_3",
+      "type": "mobile_aa", "side": "side_b", "controller": "ai",
+      "site": "radio_tower", "dx": 320.0, "dy": 80.0, "heading": 0.0, "speed": 0.0,
+      "_proposed": true,
+      "_reason": "The third mobile gun: in the grove east of the complex, 330 m from it, between the village and the eastern high ground (the east sector: three groves 170 to 230 m apart). It watches the side the sea is on, and a bomber that comes in from there to dodge the others."
+    }
+  ],
+
+  "water": true,
+  "_water_note": "THE WATER SWITCH (see data/scenarios/strike.json): the map of this seed has a river west of the village and the sea east of it; with the switch on the ground is capped by the coast, no tree stands in the water, and the ground rule (data/sim/ground.json) keeps the guns out of it. This scenario has no boat and no bridge of its own ('each mission has only a few elements', Alex): no water_units.",
+
+  "ai": {
+    "kind": "pilot",
+    "_proposed": true,
+    "_reason": "The same AI as the Strike (scripts/sim/ai_pilot.gd): the escorts' patrol role, and the mobile guns' ROAM role (scripts/sim/ai_roam.gd, PROPOSED by the lead). The complex is a static unit and takes no assignment.",
+    "assignments": {
+      "escort_1": {
+        "role": "patrol",
+        "route": [
+          { "site": "radio_tower", "dx": 650.0, "dy": -150.0 },
+          { "site": "radio_tower", "dx": 150.0, "dy": 650.0 },
+          { "site": "radio_tower", "dx": -650.0, "dy": 150.0 },
+          { "site": "radio_tower", "dx": -150.0, "dy": -650.0 }
+        ],
+        "band": "medium",
+        "_reason": "The Strike's loop round the tower, round the complex: four waypoints on a ring 670 m from it, clockwise on screen, 940 m a leg. Anchored to the complex's site."
+      },
+      "escort_2": {
+        "role": "patrol",
+        "route": [
+          { "site": "radio_tower", "dx": -650.0, "dy": 150.0 },
+          { "site": "radio_tower", "dx": -150.0, "dy": -650.0 },
+          { "site": "radio_tower", "dx": 650.0, "dy": -150.0 },
+          { "site": "radio_tower", "dx": 150.0, "dy": 650.0 }
+        ],
+        "band": "medium",
+        "_reason": "The same loop starting at the opposite waypoint, so the two escorts stay half a lap apart."
+      },
+      "mobile_aa_1": {
+        "role": "roam",
+        "route": [
+          { "site": "radio_tower", "dx": 60.0, "dy": 220.0 },
+          { "site": "radio_tower", "dx": -60.0, "dy": 140.0 },
+          { "site": "radio_tower", "dx": -120.0, "dy": 240.0 }
+        ],
+        "_reason": "The south sector's hide points, three groves of the village's southern side 204 to 228 m from the complex, legs of 117, 144 and 181 m (PROPOSED by the coordinator: legs of 100 to 200 m in or next to woods, so a relocation takes a few turns, not ten to twenty). It starts at the first and visits them in order after each time it has fired (data/sim/roam.json). Checked: dry, one height level, a drivable leg between each (test_suppress)."
+      },
+      "mobile_aa_2": {
+        "role": "roam",
+        "route": [
+          { "site": "radio_tower", "dx": -260.0, "dy": -280.0 },
+          { "site": "radio_tower", "dx": -360.0, "dy": -280.0 },
+          { "site": "radio_tower", "dx": -280.0, "dy": -100.0 }
+        ],
+        "_reason": "The north-west sector's hide points: three groves on the river's east bank, 372 to 457 m from the complex, legs of 100, 197 and 181 m."
+      },
+      "mobile_aa_3": {
+        "role": "roam",
+        "route": [
+          { "site": "radio_tower", "dx": 320.0, "dy": 80.0 },
+          { "site": "radio_tower", "dx": 480.0, "dy": 140.0 },
+          { "site": "radio_tower", "dx": 400.0, "dy": 300.0 }
+        ],
+        "_reason": "The east sector's hide points: three groves between the village and the eastern high ground, 330 to 500 m from the complex, legs of 171, 179 and 234 m (the east has few groves near: the longest leg is a little over the 200 m proposed)."
+      }
+    }
+  },
+
+  "mission": {
+    "id": "suppress",
+    "_proposed": true,
+    "_reason": "Suppress as data (scripts/sim/mission.gd; no new condition type is needed): won when the military complex is down, lost when the bomber is down or the turn limit has been played (the Strike's rules, Alex's strike-plan: 'win when the target is destroyed, lose when the bomber is down or at a turn limit'; that this mission uses them is the lead's proposal, decision suppress-mission). The NUMBER is proposed, below.",
+    "win": [ { "type": "unit_down", "unit": "military_complex_1" } ],
+    "lose": [
+      { "type": "unit_down", "unit": "bomber_1" },
+      { "type": "turn_limit", "turn": 28, "unit": "military_complex_1", "_reason": "PROPOSED: the Strike's 20 turns (five to fly in, a stick on the first pass, three passes in all) and eight more for the new part of the mission, finding the guns and clearing the escorts before the bomber commits: the bomber starts 5.5 turns out and may circle outside the guns' reach while the fighters work. See the report of the scripted run (test_suppress): the limit is a dial, not a finding." }
+    ]
+  },
+
+  "objective": {
+    "unit": "military_complex_1",
+    "radius_m": 120.0,
+    "frame_m": 700.0,
+    "label": "COMPLEX",
+    "_proposed": true,
+    "_reason": "The marker the players are given (design doc, Fog of war: 'map indicators for mission-critical targets may sit on top of both layers'): a ring round the complex, drawn over the fog, so the players know where the village is before they see it. 120 m: wide enough to hold the walled compound and the 45 m outer blast ring of the bombs. frame_m 700: the opening view reaches 700 m round the complex, enough to show the groves the guns hide in."
+  },
+
+  "view": {
+    "_about": "How the sandbox shows this scenario. Each can be flipped at run time from the knob panel (F2) or INKWOOD_<KEY> (scripts/debug/debug_settings.gd); these are the values the knobs call \"data\".",
+    "fog": { "value": true, "_proposed": true, "_reason": "Fog of war is how the guns and the escorts have to be FOUND (the complex's ring is the one thing drawn through it); on by default" },
+    "plane_px": { "value": 36, "_proposed": true, "_reason": "Planes are drawn at their own scale, a light fighter about 36 px across at zoom 1 whatever the map scale (decision demo-baseline: planes_drawn_at_own_scale)" },
+    "plane_min_px": { "value": 14, "_proposed": true, "_reason": "A light fighter never draws smaller than this on screen, so the planes stay findable when the view is zoomed out" },
+    "start_zoom_max": { "value": 0.9, "_proposed": true, "_reason": "The opening view frames the players' planes, the first turn's carry-on flight and the complex; it does not zoom in past this" },
+    "start_pad_m": { "value": 110, "_proposed": true, "_reason": "A margin round every plane and its carry-on end in the opening view, so none sits on the edge of the free area" },
+    "start_look_ahead_turns": { "value": 1, "_proposed": true, "_reason": "The opening view frames this many turns of carry-on flight beyond each PLAYER plane (the enemy's plan is never framed: it would leak it)" },
+    "start_frame_objective": { "value": true, "_proposed": true, "_reason": "The opening view also frames the target ring and the village round it, so the first screen shows where the mission is going" },
+    "track_sample_s": { "value": 0.25, "_proposed": true, "_reason": "Tracks (the flown path of each plane, drawn for the whole game) are sampled from each turn's history this often" },
+    "track_line_px": { "value": 1.6, "_proposed": true, "_reason": "Track line width on screen; ink in the unit's side colour" },
+    "bake_pause_overview": { "value": 0.5, "_proposed": true, "_reason": "The map view stops drawing new chunks once the topographic overview covers this much of the full render (see sandbox.json)" },
+    "result_card_delay_s": { "value": 1.5, "_proposed": true, "_reason": "The result card appears this long after the playback of the deciding turn ends, so the last of the smoke and the ruin are seen before the card covers them" }
+  }
+}

@@ -691,3 +691,882 @@ static func bake(st: UiStyle, M: A.Model, accent: Color, ppm: float, rot: float)
 		art.texture = ImageTexture.create_from_image(A._straight(imgs[0], false))
 		art.mask = ImageTexture.create_from_image(A._straight(imgs[1], true))
 	return art
+
+
+# =====================================================================================================================
+# THE MILITARY COMPLEX (Track M2U, mission 2, 2026-10-11): the second mission's target, a fenced compound of a main
+# building (a hangar, a factory hall or a barracks range), sheds, tanks or a chimney, a yard with vehicles and crates, a gate and
+# a gatehouse, drawn in the VILLAGE'S building language (scripts/render/ink_structs.gd draw_house: each roof in two
+# halves, the half turned from the sun in the shaded roof tone, an inset eave line, the outline, the ridge; the wall fill and
+# its slope tone; the prism shadow of the part heights) and in the unit sheet's pen. A static target that never turns, so it is
+# BAKED ALREADY TURNED by its heading like the tower and the battery (Art.screen_aligned).
+#
+#   var art := UnitMarkerArtStatic.complex_art(style, accent, ppm, rot)        # standing; what the one dispatch line calls
+#   var ruin := UnitMarkerArtStatic.complex_ruin_art(style, ppm, rot)          # destroyed, R1's language; for the effects layer
+#   art.mask      the CAST SHADOW (every part by its height), as the tower's
+#
+# DRAWN AT THE MAP'S SCALE, not the units' (the brief: "a static target drawn at the map's scale"; the way a bridge is): the
+# marker layer sizes a marker at the plane rule, 4 px per metre at zoom 1 against the map's 2, so the geometry is drawn at
+# data military_complex.map_scale_factor (PROPOSED, 0.5) of the baked scale and the Art's `ppm` stays the layer's, which is
+# what the marker multiplies by (Art.extent_m is in the layer's metres too, so the hit radius is the drawn one).
+#
+# THREE LOOKS, judged on variants/military-complex/ (scripts/ui/boards/military_complex_board_shot.gd): A a hangar yard, B
+# works with a saw-tooth hall and a chimney, C barracks and a depot in a low wall. Which one the game draws is ui.json
+# unit_art.variant.military_complex when it has it, else the data's default_look (PROPOSED).
+# ONE ACCENT ZONE: a recognition panel painted on the main roof (the radio tower's hut roof panel, as it were). COLOUR is a
+# role (the palette's, plus data's roles block); material is linework. No hex.
+
+const MC_DATA_PATH := "res://data/ui/unit_art_mission2.json"
+const MC_SILHOUETTE := "military_complex"
+const InkRoles = preload("res://scripts/render/ink_roles.gd")
+
+static var _mc_all: Dictionary = {}
+static var _mc_models: Dictionary = {}
+static var _mc_roles: Dictionary = {}
+
+# A TRACE of the sub-draws that ran to their end, for the test (test_mission2_units): with `mc_tracing` on, each sub-draw appends
+# its name as its LAST statement, so a runtime error that aborts one half-way leaves its name out.
+static var mc_tracing: bool = false
+static var mc_trace: Array[String] = []
+
+static func _mct(what: String) -> void:
+	if mc_tracing:
+		mc_trace.append(what)
+
+static func mc_all() -> Dictionary:
+	if _mc_all.is_empty():
+		var v: Variant = JSON.parse_string(FileAccess.get_file_as_string(MC_DATA_PATH))
+		if v is Dictionary:
+			_mc_all = v
+		else:
+			push_error("unit_marker_art_static: %s does not parse as a JSON object" % MC_DATA_PATH)
+	return _mc_all
+
+static func mc_data() -> Dictionary:
+	return mc_all()["military_complex"]
+
+static func mc_val(rec: Variant) -> Variant:
+	if rec is Dictionary and (rec as Dictionary).has("value"):
+		return (rec as Dictionary)["value"]
+	return rec
+
+static func mc_looks() -> Array:
+	return mc_data()["looks"]
+
+static func mc_look_of(st: RefCounted) -> int:
+	var v: Variant = st.lookup("unit_art.variant." + MC_SILHOUETTE)
+	if v is float or v is int:
+		return clampi(int(v), 0, mc_looks().size() - 1)
+	return int(mc_val(mc_data()["default_look"]))
+
+# The geometry's share of the marker's baked scale (data map_scale_factor).
+static func mc_scale_factor() -> float:
+	return float(mc_val(mc_data()["map_scale_factor"]))
+
+# The share of the complex's size_m the effects layer sizes a destroyed complex's flash and smoke by (data ruin.effects_size_frac).
+static func mc_effects_frac() -> float:
+	return float(mc_val((mc_data()["ruin"] as Dictionary)["effects_size_frac"]))
+
+static func mc_roles(st: RefCounted) -> Dictionary:
+	if _mc_roles.is_empty():
+		var errs: Array = []
+		_mc_roles = InkRoles.resolve_all(st, mc_all()["roles"], errs)
+		for e: Variant in errs:
+			push_error("unit_marker_art_static: " + str(e))
+	return _mc_roles
+
+static func _mc_rr(rng: Mulberry32, pair: Variant) -> float:
+	var a: Array = pair
+	return A._r(rng, float(a[0]), float(a[1]))
+
+static func mc_model(st: RefCounted, look: int = -1) -> A.Model:
+	if look < 0:
+		look = mc_look_of(st)
+	var key := "%s|%d|%d" % [MC_SILHOUETTE, look, st.scene_seed]
+	if _mc_models.has(key):
+		return _mc_models[key]
+	var m := A.Model.new()
+	m.silhouette = MC_SILHOUETTE
+	m.variant = look
+	m.seed = A.unit_seed(st.scene_seed, int(mc_val(mc_data()["sheet_index"])), look)
+	m.p = gen_complex(look, Mulberry32.new(m.seed))
+	m.G = build_complex(m.p)
+	_mc_models[key] = m
+	return m
+
+# genComplex(look, rng): every draw in the data's order, then the spare jitter stream.
+static func gen_complex(look: int, rng: Mulberry32) -> Dictionary:
+	var d := mc_data()
+	var L: Dictionary = (d["looks"] as Array)[look]
+	var p := {}
+	p.look = look
+	p.kind = str(L["id"])
+	var fp: Array = mc_val(d["footprint_m"])
+	p.fw = float(fp[0])
+	p.fd = float(fp[1])
+	p.fence = str(L["fence"])
+	p.gate = str(L["gate"])
+	p.main_w = _mc_rr(rng, (L["main"] as Dictionary)["w"])
+	p.main_d = _mc_rr(rng, (L["main"] as Dictionary)["d"])
+	var ranges: Dictionary = L["ranges"]
+	for key: String in ranges:
+		p[key] = _mc_rr(rng, ranges[key])
+	p.jseed = int(rng.next() * 2147483646.0)
+	return p
+
+# --- the geometry (metres; x east, y south; the compound's centre is the origin) --------------------------------------
+
+static func _rot_rect(c: Vector2, w: float, d: float, rot: float) -> PackedVector2Array:
+	return place(A.rect_p(-w / 2.0, -d / 2.0, w / 2.0, d / 2.0), c.x, c.y, rot)
+
+# One thing standing in the compound: kind, a name, its centre, its size (w along its own x, d along its own y), its turn,
+# the height of its crown and of its eaves (metres, for the cast shadow) and its footprint.
+static func _part(kind: String, name: String, c: Vector2, w: float, d: float, rot: float, h: float, eave: float = -1.0) -> Dictionary:
+	var poly := A.circ(c, w / 2.0, 24) if kind == "tank" else _rot_rect(c, w, d, rot)
+	return {"kind": kind, "name": name, "c": c, "w": w, "d": d, "rot": rot, "h": h, "eave": h * 0.62 if eave < 0.0 else eave, "poly": poly}
+
+# The fence or wall ring as an open polyline with the gate's gap: from one side of the gate round to the other.
+static func _ring(hx: float, hy: float, gate: String, gh: float) -> PackedVector2Array:
+	if gate == "west":
+		return PackedVector2Array([Vector2(-hx, gh), Vector2(-hx, hy), Vector2(hx, hy), Vector2(hx, -hy), Vector2(-hx, -hy), Vector2(-hx, -gh)])
+	return PackedVector2Array([Vector2(gh, hy), Vector2(hx, hy), Vector2(hx, -hy), Vector2(-hx, -hy), Vector2(-hx, hy), Vector2(-gh, hy)])
+
+# The accent panel on a roof of centre c and size (w, d): a rectangle `pw` long beside x offset fx, on each of the two halves
+# (north first), taking most of the half's pitch.
+static func _panels(c: Vector2, w: float, d: float, fx: float, pw: float) -> Array:
+	var ph := d * 0.34
+	var x0 := c.x + fx
+	var gap := d * 0.08
+	return [A.rect_p(x0, c.y - gap - ph, x0 + pw, c.y - gap), A.rect_p(x0, c.y + gap, x0 + pw, c.y + gap + ph)]
+
+static func _jit(rng: Mulberry32, amp: float) -> Vector2:
+	var a := rng.next() - 0.5
+	var b := rng.next() - 0.5
+	return Vector2(a, b) * 2.0 * amp
+
+static func build_complex(p: Dictionary) -> Dictionary:
+	var G := {}
+	var hts: Dictionary = mc_val(mc_data()["heights_m"])
+	var hx: float = float(p.fw) / 2.0 - 4.0
+	var hy: float = float(p.fd) / 2.0 - 4.0
+	var jr := Mulberry32.new(int(p.jseed))
+	var J: float = float(p.jitter)
+	var parts: Array = []
+	var gate_half := 4.5
+	var gate_pt := Vector2(0.0, hy)
+	var routes: Array = []
+	G.apron = PackedVector2Array()
+	G.pipes = []
+	G.heaps = []
+	var panels: Array = []   # the accent panel's two places, one on each roof half: the lit half's is drawn
+	var mw: float = p.main_w
+	var md: float = p.main_d
+	match str(p.kind):
+		"hangar_yard":
+			var mc := Vector2(-3.0, -hy + 3.5 + md / 2.0) + _jit(jr, J)
+			parts.append(_part("barrel", "main", mc, mw, md, 0.0, float(hts["hangar"]), float(hts["hangar"]) * 0.62))
+			var ap := float(p.apron_extra)
+			G.apron = A.rect_p(mc.x - mw / 2.0 - 3.0, mc.y + md / 2.0, mc.x + mw / 2.0 + 3.0, mc.y + md / 2.0 + ap)
+			var sw: float = p.shed_w
+			var sd_: float = p.shed_d
+			var sx := hx - 3.5 - sw / 2.0
+			var s1 := Vector2(sx, -hy + 6.0 + sd_ / 2.0) + _jit(jr, J) * 0.5
+			var s2 := Vector2(sx, s1.y + sd_ + 3.6) + _jit(jr, J) * 0.5
+			parts.append(_part("gable", "shed", s1, sw, sd_, 0.0, float(hts["shed"])))
+			parts.append(_part("gable", "shed", s2, sw, sd_, 0.0, float(hts["shed"])))
+			var tr: float = p.tank_r
+			parts.append(_part("tank", "tank", Vector2(-hx + 4.0 + tr, 3.0), tr * 2.0, tr * 2.0, 0.0, float(hts["tank"])))
+			parts.append(_part("tank", "tank", Vector2(-hx + 4.0 + tr, 3.0 + 2.0 * tr + 2.6), tr * 2.0, tr * 2.0, 0.0, float(hts["tank"])))
+			var nt := clampi(int(round(float(p.trucks))), 1, 5)
+			for i in nt:
+				var q := Vector2(-16.0 + float(i) * 9.5, hy - 10.5) + _jit(jr, J) * 0.4
+				parts.append(_part("truck", "truck", q, 5.6, 2.4, (jr.next() - 0.5) * 0.3 + (PI if i % 2 == 1 else 0.0), float(hts["truck"])))
+			parts.append(_part("gable", "gatehouse", Vector2(-10.0, hy - 2.2), 4.6, 3.2, 0.0, float(hts["gatehouse"])))
+			parts.append(_part("tower", "tower", Vector2(hx - 1.6, -hy + 1.6), 2.4, 2.4, 0.0, float(hts["tower"])))
+			parts.append(_part("tower", "tower", Vector2(-hx + 1.6, hy - 1.6), 2.4, 2.4, 0.0, float(hts["tower"])))
+			panels = _panels(mc, mw, md, mw * 0.12, 7.0)
+			routes = [[gate_pt, Vector2(0.0, hy - 14.0), Vector2(mc.x, mc.y + md / 2.0 + ap * 0.5)]]
+		"works":
+			var mc := Vector2(-hx + 5.0 + mw / 2.0, -hy + 3.5 + md / 2.0) + _jit(jr, J)
+			parts.append(_part("saw", "main", mc, mw, md, 0.0, float(hts["hall"]), float(hts["hall"]) * 0.8))
+			var bw: float = p.boiler_w
+			var bd: float = p.boiler_d
+			var bc := Vector2(mc.x + mw / 2.0 + 4.0 + bw / 2.0, mc.y + 1.0) + _jit(jr, J) * 0.5
+			parts.append(_part("gable", "boiler", bc, bw, bd, 0.0, float(hts["shed"]) + 1.5))
+			var stw: float = p.stack_w
+			# the chimney stands at the east end of the boiler house, so its long shadow falls across open ground to the south-east
+			parts.append(_part("stack", "stack", Vector2(bc.x + bw / 2.0 + 2.6, bc.y - bd / 2.0 + 1.6), stw, stw, 0.0, float(hts["stack"])))
+			G.pipes = [PackedVector2Array([Vector2(mc.x + mw / 2.0, bc.y - 0.5), Vector2(bc.x - bw / 2.0, bc.y - 0.5)]),
+				PackedVector2Array([Vector2(mc.x + mw / 2.0, bc.y + 0.5), Vector2(bc.x - bw / 2.0, bc.y + 0.5)])]
+			var sw: float = p.shed_w
+			var sd_: float = p.shed_d
+			for k in 3:
+				var q := Vector2(mc.x - mw / 2.0 + 3.0 + sw / 2.0, mc.y + md / 2.0 + 5.0 + sd_ / 2.0 + float(k) * (sd_ + 2.6)) + _jit(jr, J) * 0.4
+				parts.append(_part("gable", "shed", q, sw, sd_, 0.0, float(hts["shed"])))
+			G.heaps = [{"c": Vector2(hx - 11.0, hy - 9.0), "r": float(p.heap_r)}]
+			for i in 2:
+				parts.append(_part("truck", "truck", Vector2(6.0 + float(i) * 8.0, hy - 5.0 - float(i) * 3.0) + _jit(jr, J) * 0.3, 5.6, 2.4, (jr.next() - 0.5) * 0.3 + (PI if i == 1 else 0.0), float(hts["truck"])))
+			parts.append(_part("gable", "gatehouse", Vector2(-hx + 4.0, 8.5), 3.2, 4.6, 0.0, float(hts["gatehouse"])))
+			parts.append(_part("tower", "tower", Vector2(hx - 1.6, hy - 1.6), 2.4, 2.4, 0.0, float(hts["tower"])))
+			parts.append(_part("tower", "tower", Vector2(-hx + 1.6, -hy + 1.6), 2.4, 2.4, 0.0, float(hts["tower"])))
+			gate_pt = Vector2(-hx, 0.0)
+			var pr := A.rect_p(mc.x - mw * 0.1 - 4.0, mc.y - 2.7, mc.x - mw * 0.1 + 4.0, mc.y + 2.7)   # across the teeth, mid-hall (a canton in a corner would read as a flag)
+			panels = [pr, pr]
+			routes = [[gate_pt, Vector2(-hx + 10.0, 2.0), Vector2(mc.x, mc.y + md / 2.0 + 2.5), Vector2(bc.x, bc.y + bd / 2.0 + 4.0)]]
+		_:
+			var north := Vector2(0.0, -hy + 2.5 + md / 2.0) + _jit(jr, J) * 0.5
+			parts.append(_part("gable", "main", north, mw, md, 0.0, float(hts["barracks"])))
+			var swd: float = p.side_w
+			var sdp: float = p.side_d
+			var sy := north.y + md / 2.0 + 2.0 + sdp / 2.0
+			parts.append(_part("gable", "range", Vector2(-hx + 3.5 + swd / 2.0, sy) + _jit(jr, J) * 0.4, sdp, swd, PI / 2.0, float(hts["barracks"])))
+			parts.append(_part("gable", "range", Vector2(hx - 3.5 - swd / 2.0, sy) + _jit(jr, J) * 0.4, sdp, swd, PI / 2.0, float(hts["barracks"])))
+			var dw: float = p.depot_w
+			var dd: float = p.depot_d
+			parts.append(_part("gable", "depot", Vector2(hx - 3.5 - dw / 2.0, sy + sdp / 2.0 + 2.5 + dd / 2.0) + _jit(jr, J) * 0.3, dw, dd, 0.0, float(hts["shed"]) + 1.0))
+			var nt := clampi(int(round(float(p.trucks))), 1, 5)
+			for i in nt:
+				var q := Vector2(-12.0 + float(i) * 6.8, sy + 2.0 + float(i % 2) * 5.0) + _jit(jr, J) * 0.4
+				parts.append(_part("truck", "truck", q, 5.6, 2.4, (jr.next() - 0.5) * 0.3 + (PI / 2.0 if i % 2 == 1 else 0.0), float(hts["truck"])))
+			parts.append(_part("crates", "crates", Vector2(-hx + 10.0, hy - 7.0), 5.0, 2.6, 0.0, 1.8))
+			parts.append(_part("crates", "crates", Vector2(-hx + 16.0, hy - 6.5), 2.6, 2.6, 0.0, 1.8))
+			parts.append(_part("gable", "gatehouse", Vector2(-gate_half - 3.2, hy - 2.2), 4.6, 3.2, 0.0, float(hts["gatehouse"])))
+			G.flag = Vector2(0.0, sy - 2.0)
+			panels = _panels(north, mw, md, mw * 0.2, 7.0)
+			routes = [[gate_pt, Vector2(0.0, sy + 6.0), Vector2(0.0, sy - 4.0)]]
+	G.parts = parts
+	G.panels = panels   # accent zone: the recognition panel on the main roof, on whichever half is lit (draw_complex chooses)
+	G.hx = hx
+	G.hy = hy
+	G.gate = str(p.gate)
+	G.gate_half = gate_half
+	G.gate_pt = gate_pt
+	G.routes = routes
+	G.ring = _ring(hx, hy, str(p.gate), gate_half)
+	G.yard = A.rect_p(-hx + 1.0, -hy + 1.0, hx - 1.0, hy - 1.0)
+	var ext: Array = [A.rect_p(-hx - 1.0, -hy - 1.0, hx + 1.0, hy + 1.0)]
+	for pt: Dictionary in parts:
+		ext.append(pt["poly"])
+	G.ext = ext
+	return G
+
+# --- drawing -------------------------------------------------------------------------------------------------------------------
+
+static func _dir_of(V: A.View, rot: float, v: Vector2) -> Vector2:
+	return V.tv(v.rotated(rot))
+
+# A roof in the village's two halves along its long axis: the half turned from the sun in the shaded roof tone, ribs across the pitch
+# (corrugated sheet in place of the village's thatch strokes), an inset eave line, the outline, the ridge.
+static func _draw_roof(g, pn: A.Pen, V: A.View, ink: A.Ink, rl: Dictionary, part: Dictionary, barrel: bool) -> void:
+	var c: Vector2 = part["c"]
+	var w: float = part["w"]
+	var d: float = part["d"]
+	var rot: float = part["rot"]
+	var ppm := V.ppm
+	var dark: Color = rl["roof_shaded"]
+	var rib_sp := 1.5 if ppm > 3.0 else 3.0
+	var shaded_o := PackedVector2Array()
+	for sg: float in [-1.0, 1.0]:
+		var half := place(A.rect_p(-w / 2.0, minf(0.0, sg * d / 2.0), w / 2.0, maxf(0.0, sg * d / 2.0)), c.x, c.y, rot)
+		var shaded := _dir_of(V, rot, Vector2(0.0, sg)).dot(ink.sd) > 0.0
+		var o := A._path(pn, half, {"fill": dark if shaded else ink.roof, "weight": 0.0})
+		if shaded:
+			shaded_o = o
+		if ppm > 1.2:
+			var x := -w / 2.0 + 0.9
+			var rng := A._rng(pn)
+			while x < w / 2.0 - 0.6:
+				if rng.next() > 0.12:
+					A._line(pn, place(PackedVector2Array([Vector2(x, sg * 0.35), Vector2(x, sg * (d / 2.0 - 0.35))]), c.x, c.y, rot), {"alpha": 0.3, "weight": 0.45})
+				x += rib_sp
+	if barrel and ppm > 1.2:   # the vault: two lines along each half
+		for sg: float in [-1.0, 1.0]:
+			for f: float in [0.34, 0.68]:
+				A._line(pn, place(PackedVector2Array([Vector2(-w / 2.0 + 0.5, sg * d / 2.0 * f), Vector2(w / 2.0 - 0.5, sg * d / 2.0 * f)]), c.x, c.y, rot), {"alpha": 0.3, "weight": 0.45, "breaks": 0.1})
+	if shaded_o.size() > 2:
+		A.edge_hatch(g, ink, shaded_o, minf(4.0, 0.3 * ppm), A._rng(pn))
+	if ppm > 3.0 and not barrel:
+		A._path(pn, place(A.rect_p(-w / 2.0 + 1.0, -d / 2.0 + 1.0, w / 2.0 - 1.0, d / 2.0 - 1.0), c.x, c.y, rot), {"weight": 0.5, "alpha": 0.4})
+	A._path(pn, part["poly"], {"weight": 1.2})
+	A._line(pn, place(PackedVector2Array([Vector2(-w / 2.0, 0.0), Vector2(w / 2.0, 0.0)]), c.x, c.y, rot), {"weight": 1.05, "alpha": 1.0})
+	_mct("roof")
+
+# A saw-tooth roof: a long slope turned from the sun in the shaded roof tone and a narrow glazed face, over and over.
+static func _draw_saw(g, pn: A.Pen, V: A.View, ink: A.Ink, rl: Dictionary, part: Dictionary, teeth: int) -> void:
+	var c: Vector2 = part["c"]
+	var w: float = part["w"]
+	var d: float = part["d"]
+	var rot: float = part["rot"]
+	var ppm := V.ppm
+	var dark: Color = rl["roof_shaded"]
+	var pitch := d / float(teeth)
+	for i in teeth:
+		var y0 := -d / 2.0 + float(i) * pitch
+		var wide := place(A.rect_p(-w / 2.0, y0, w / 2.0, y0 + pitch * 0.62), c.x, c.y, rot)
+		var o := A._path(pn, wide, {"fill": dark, "weight": 0.0})
+		if ppm > 1.2:
+			A.hatch_lines(g, ink, o, V.tv(Vector2(1.0, 0.0).rotated(rot)), maxf(1.8, 0.14 * ppm * 6.0), {"alpha": 0.14, "weight": 0.4})
+		var glaze := place(A.rect_p(-w / 2.0, y0 + pitch * 0.62, w / 2.0, y0 + pitch), c.x, c.y, rot)
+		var go := A._path(pn, glaze, {"fill": ink.roof, "weight": 0.0})
+		if ppm > 2.0:
+			A.hatch_lines(g, ink, go, V.tv(Vector2(0.0, 1.0).rotated(rot)), maxf(3.0, 0.25 * ppm * 3.0), {"alpha": 0.4, "weight": 0.45})
+		A._line(pn, place(PackedVector2Array([Vector2(-w / 2.0, y0), Vector2(w / 2.0, y0)]), c.x, c.y, rot), {"alpha": 0.7, "weight": 0.6})
+		A._line(pn, place(PackedVector2Array([Vector2(-w / 2.0, y0 + pitch * 0.62), Vector2(w / 2.0, y0 + pitch * 0.62)]), c.x, c.y, rot), {"alpha": 0.7, "weight": 0.6})
+	A._path(pn, part["poly"], {"weight": 1.2})
+	_mct("saw")
+
+static func _draw_tank_cyl(g, pn: A.Pen, V: A.View, ink: A.Ink, part: Dictionary) -> void:
+	var c: Vector2 = part["c"]
+	var r: float = float(part["w"]) / 2.0
+	var ppm := V.ppm
+	var o := A._path(pn, part["poly"], {"fill": ink.fill, "weight": 0.0})
+	A.shade_side(g, o, V.tp(c), ink.sd, ink.fill_shaded)
+	A.edge_hatch(g, ink, o, minf(4.0, 0.3 * ppm), A._rng(pn))
+	A.stroke_o(g, ink, o, 1.1)
+	if ppm > 1.5:
+		A._path(pn, A.circ(c, r * 0.72, 20), {"weight": 0.5, "alpha": 0.45})
+	if ppm > 3.0:
+		A._path(pn, A.circ(c + Vector2(-r * 0.2, -r * 0.2), r * 0.18, 10), {"fill": ink.fill, "weight": 0.6})
+	_mct("tank")
+
+static func _draw_stack(g, pn: A.Pen, V: A.View, ink: A.Ink, part: Dictionary) -> void:
+	var c: Vector2 = part["c"]
+	var w: float = part["w"]
+	var ppm := V.ppm
+	var o := A._path(pn, part["poly"], {"fill": ink.fill, "weight": 0.0})
+	A.hatch_lines(g, ink, o, V.tv(Vector2(1.0, 1.0).normalized()), maxf(1.6, 0.15 * ppm * 4.0), {"alpha": 0.35, "weight": 0.45})
+	A.shade_side(g, o, V.tp(c), ink.sd, ink.fill_shaded)
+	A.stroke_o(g, ink, o, 1.2)
+	A._path(pn, place(A.rect_p(-w * 0.28, -w * 0.28, w * 0.28, w * 0.28), c.x, c.y, 0.0), {"fill": ink.fill_shaded, "weight": 0.8})
+	_mct("stack")
+
+static func _draw_tower(g, pn: A.Pen, V: A.View, ink: A.Ink, rl: Dictionary, part: Dictionary) -> void:
+	var c: Vector2 = part["c"]
+	var dark: Color = rl["roof_shaded"]
+	var rs := 1.7   # the hip roof of the watch platform: half its side
+	var corners := [Vector2(-rs, -rs), Vector2(rs, -rs), Vector2(rs, rs), Vector2(-rs, rs)]
+	for i in 4:
+		var a: Vector2 = corners[i]
+		var b: Vector2 = corners[(i + 1) % 4]
+		var mid := (a + b) * 0.5
+		var shaded := V.tv(mid.normalized()).dot(ink.sd) > 0.0
+		A._path(pn, PackedVector2Array([c + a, c + b, c]), {"fill": dark if shaded else ink.roof, "weight": 0.0})
+	A._path(pn, PackedVector2Array([c + corners[0], c + corners[1], c + corners[2], c + corners[3]]), {"weight": 1.0})
+	for i in 2:
+		A._line(pn, PackedVector2Array([c + corners[i], c + corners[i + 2]]), {"alpha": 0.7, "weight": 0.6})
+	_mct("tower")
+
+static func _draw_truck(g, pn: A.Pen, V: A.View, ink: A.Ink, part: Dictionary) -> void:
+	var c: Vector2 = part["c"]
+	var w: float = part["w"]
+	var d: float = part["d"]
+	var rot: float = part["rot"]
+	var ppm := V.ppm
+	var box := place(A.rect_p(-w / 2.0, -d / 2.0, w / 2.0 - 1.9, d / 2.0), c.x, c.y, rot)
+	var cab := place(A.rect_p(w / 2.0 - 1.8, -d / 2.0 + 0.1, w / 2.0, d / 2.0 - 0.1), c.x, c.y, rot)
+	var wind := place(A.rect_p(w / 2.0 - 0.7, -d / 2.0 + 0.3, w / 2.0 - 0.25, d / 2.0 - 0.3), c.x, c.y, rot)
+	var o := A._path(pn, box, {"fill": ink.fill, "weight": 0.9})
+	if ppm > 2.4:
+		for k in 3:
+			var x := -w / 2.0 + 0.9 + float(k) * 1.2
+			A._line(pn, place(PackedVector2Array([Vector2(x, -d / 2.0 + 0.2), Vector2(x, d / 2.0 - 0.2)]), c.x, c.y, rot), {"alpha": 0.35, "weight": 0.45})
+	A.edge_hatch(g, ink, o, minf(3.0, 0.2 * ppm), A._rng(pn))
+	A._path(pn, cab, {"fill": ink.fill, "weight": 0.9})
+	A._path(pn, wind, {"fill": ink.glass_lit, "weight": 0.5})
+	_mct("truck")
+
+static func _draw_crates(g, pn: A.Pen, V: A.View, ink: A.Ink, part: Dictionary) -> void:
+	var c: Vector2 = part["c"]
+	var w: float = part["w"]
+	var d: float = part["d"]
+	var cols := maxi(1, int(round(w / 2.6)))
+	var cw := w / float(cols)
+	for i in cols:
+		var q := Vector2(c.x - w / 2.0 + (float(i) + 0.5) * cw, c.y)
+		var o := A._path(pn, A.rect_p(q.x - cw * 0.46, q.y - d * 0.46, q.x + cw * 0.46, q.y + d * 0.46), {"fill": ink.fill, "weight": 0.9})
+		if V.ppm > 2.0:
+			A._line(pn, PackedVector2Array([Vector2(q.x - cw * 0.46, q.y - d * 0.46), Vector2(q.x + cw * 0.46, q.y + d * 0.46)]), {"alpha": 0.5, "weight": 0.5})
+			A._line(pn, PackedVector2Array([Vector2(q.x + cw * 0.46, q.y - d * 0.46), Vector2(q.x - cw * 0.46, q.y + d * 0.46)]), {"alpha": 0.5, "weight": 0.5})
+	_mct("crates")
+
+# A heap of coal or earth: a lumpy blob in the dirt colour with stipple and hatching on the side away from the sun.
+static func _heap_poly(c: Vector2, r: float, seed_value: int) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in 14:
+		var a := float(i) / 14.0 * TAU
+		var rr := r * (0.78 + 0.34 * ValueNoise.vnoise(cos(a) * 1.3 + 4.0, sin(a) * 1.3 + 4.0, seed_value))
+		pts.append(Vector2(c.x + cos(a) * rr, c.y + sin(a) * rr * 0.85))
+	return pts
+
+static func _draw_heap(g, pn: A.Pen, V: A.View, ink: A.Ink, rl: Dictionary, h: Dictionary, seed_value: int) -> void:
+	var poly := _heap_poly(h["c"], float(h["r"]), seed_value)
+	var o := A._path(pn, poly, {"fill": rl["heap"], "weight": 0.0})
+	A.stipple(g, ink, o, {"rng": A._rng(pn), "density": 6.0, "r": 0.5, "alpha": 0.6})
+	A.edge_hatch(g, ink, o, minf(4.0, 0.3 * V.ppm), A._rng(pn))
+	A.stroke_o(g, ink, o, 1.0)
+	_mct("heap")
+
+# Tyre tracks across the yard: two broken lines a vehicle's width apart along each route.
+static func _draw_routes(pn: A.Pen, G: Dictionary) -> void:
+	for route: Array in G.routes:
+		for side: float in [-0.9, 0.9]:
+			var pts := PackedVector2Array()
+			for i in route.size():
+				var a: Vector2 = route[i]
+				var tdir: Vector2 = (route[mini(i + 1, route.size() - 1)] - route[maxi(i - 1, 0)]).normalized()
+				pts.append(a + Vector2(-tdir.y, tdir.x) * side)
+			A._line(pn, pts, {"alpha": 0.32, "weight": 0.55, "breaks": 0.28, "freq": 0.09})
+	_mct("routes")
+
+static func _draw_fence(g, pn: A.Pen, V: A.View, ink: A.Ink, G: Dictionary, band: Dictionary, style: String) -> void:
+	var ppm := V.ppm
+	if style == "wall":
+		draw_band(g, ink, band, ink.wall, ink.wall_slope, 0.0)
+		_mct("fence")
+		return
+	var ring: PackedVector2Array = G.ring
+	A._path(pn, ring, {"closed": false, "weight": 0.7, "alpha": 0.85, "breaks": 0.06, "wob": 0.5})
+	# posts every 4 m, bigger at the corners and the gate
+	var px := resample(V.tps(ring), 4.0 * ppm, false)
+	g.fill_color = ink.ink
+	g.global_alpha = 0.9
+	g.begin_path()
+	for q in px:
+		g.move_to(q.x + 0.55, q.y)
+		g.arc(q.x, q.y, 0.55, 0.0, TAU)
+	g.fill()
+	g.global_alpha = 1.0
+	var ge: Array = [ring[0], ring[ring.size() - 1]]
+	g.fill_color = ink.ink
+	g.begin_path()
+	for q: Vector2 in ge:
+		var s := V.tp(q)
+		g.move_to(s.x + 1.3, s.y)
+		g.arc(s.x, s.y, 1.3, 0.0, TAU)
+	g.fill()
+	# the gate stands open: a leaf swung inward
+	var a: Vector2 = ring[0]
+	var inward := (Vector2(0.0, -1.0) if str(G.gate) == "south" else Vector2(1.0, 0.0))
+	A._line(pn, PackedVector2Array([a, a + inward * G.gate_half * 0.9 + (Vector2(-1.0, 0.0) if str(G.gate) == "south" else Vector2(0.0, -1.0)) * 0.6]), {"alpha": 0.85, "weight": 0.8})
+	_mct("fence")
+
+static func _wall_band(V: A.View, ink: A.Ink, G: Dictionary, seed_value: int) -> Dictionary:
+	var c := resample(V.tps(G.ring), 3.0, false)
+	var b := band_geom(c, 0.9 * V.ppm, seed_value, false, true, ink)
+	b["h"] = float(mc_val(mc_data()["fence_h_m"])) * V.ppm   # (only the shadow reads it)
+	return b
+
+# drawComplex: the ground (yard, apron, tracks, fence, vehicles) and then the buildings, one canvas.
+static func draw_complex(g, M: A.Model, V: A.View, ink: A.Ink, accent: Color, rl: Dictionary) -> void:
+	var G := M.G
+	var p := M.p
+	var pn := A.Pen.new(g, V, ink, M.seed + 5)
+	var ppm := V.ppm
+	# the yard: packed earth, a faint wash and stipple
+	var yard_o := A._path(pn, G.yard, {"fill": rl["yard"], "weight": 0.0})
+	dirt(g, ink, yard_o, A._rng(pn), 2.4)
+	_draw_routes(pn, G)
+	if (G.apron as PackedVector2Array).size() > 0:
+		var ao := A._path(pn, G.apron, {"fill": rl["concrete"], "weight": 0.8, "alpha": 0.8})
+		if ppm > 1.2:
+			var ar := _bbox_m(G.apron)
+			var x := ar.position.x + 6.0
+			while x < ar.end.x - 1.0:
+				A._line(pn, PackedVector2Array([Vector2(x, ar.position.y), Vector2(x, ar.end.y)]), {"alpha": 0.25, "weight": 0.45})
+				x += 6.0
+			A._line(pn, PackedVector2Array([Vector2(ar.position.x, ar.position.y + ar.size.y * 0.5), Vector2(ar.end.x, ar.position.y + ar.size.y * 0.5)]), {"alpha": 0.25, "weight": 0.45})
+	var band: Dictionary = _wall_band(V, ink, G, (M.seed % 99991) + 31) if str(p.fence) == "wall" else {}
+	_draw_fence(g, pn, V, ink, G, band, str(p.fence))
+	for pp: PackedVector2Array in G.pipes:
+		A._line(pn, pp, {"alpha": 0.8, "weight": 0.8})
+	for h: Dictionary in G.heaps:
+		_draw_heap(g, pn, V, ink, rl, h, M.seed % 997)
+	if G.has("flag"):
+		var fq := V.tp(G.flag)
+		g.fill_color = ink.ink
+		g.begin_path()
+		g.move_to(fq.x + 1.0, fq.y)
+		g.arc(fq.x, fq.y, 1.0, 0.0, TAU)
+		g.fill()
+	# the low things, then the buildings
+	for pt: Dictionary in G.parts:
+		match str(pt["kind"]):
+			"truck":
+				_draw_truck(g, pn, V, ink, pt)
+			"crates":
+				_draw_crates(g, pn, V, ink, pt)
+			"tank":
+				_draw_tank_cyl(g, pn, V, ink, pt)
+	for pt: Dictionary in G.parts:
+		match str(pt["kind"]):
+			"barrel":
+				_draw_roof(g, pn, V, ink, rl, pt, true)
+			"gable":
+				_draw_roof(g, pn, V, ink, rl, pt, false)
+			"saw":
+				_draw_saw(g, pn, V, ink, rl, pt, int(p.teeth))
+	for pt: Dictionary in G.parts:
+		match str(pt["kind"]):
+			"stack":
+				_draw_stack(g, pn, V, ink, pt)
+			"tower":
+				_draw_tower(g, pn, V, ink, rl, pt)
+	var lit_north := V.tv(Vector2(0.0, -1.0)).dot(ink.sd) <= 0.0
+	A.accent_panel(pn, (G.panels as Array)[0 if lit_north else 1], accent)
+	_mct("complex")
+
+static func _bbox_m(poly: PackedVector2Array) -> Rect2:
+	var lo := Vector2(1e9, 1e9)
+	var hi := Vector2(-1e9, -1e9)
+	for q in poly:
+		lo = lo.min(q)
+		hi = hi.max(q)
+	return Rect2(lo, hi - lo)
+
+# --- the cast shadow of the standing compound ----------------------------------------------------------------------------------
+
+static func complex_shadow_prims(M: A.Model, V: A.View, ink: A.Ink, st: UiStyle, band: Dictionary) -> Array:
+	var G := M.G
+	var out: Array = []
+	var k := V.ppm * st.sun_len()
+	var sd := ink.sd
+	for pt: Dictionary in G.parts:
+		var kind := str(pt["kind"])
+		var poly_px := V.tps(pt["poly"])
+		var h: float = pt["h"]
+		match kind:
+			"barrel", "gable":
+				# the walls to the eaves, the roof to the ridge: the convex hull of the footprint, the footprint at the eave height
+				# and the ridge raised to its height
+				var all := PackedVector2Array(poly_px)
+				for q in poly_px:
+					all.append(q + sd * float(pt["eave"]) * k)
+				var c: Vector2 = pt["c"]
+				var w: float = pt["w"]
+				for sx: float in [-1.0, 1.0]:
+					all.append(V.tp(c + Vector2(sx * w / 2.0, 0.0).rotated(float(pt["rot"]))) + sd * h * k)
+				out.append({"kind": "fill", "pts": Geometry2D.convex_hull(all)})
+			"saw", "stack", "truck", "crates", "tank":
+				out.append({"kind": "fill", "pts": _prism_hull(poly_px, sd * h * k)})
+			"tower":
+				var c: Vector2 = pt["c"]
+				var roof := V.tps(A.rect_p(c.x - 1.7, c.y - 1.7, c.x + 1.7, c.y + 1.7))
+				var all := PackedVector2Array(poly_px)
+				for q in roof:
+					all.append(q + sd * h * k)
+				out.append({"kind": "fill", "pts": Geometry2D.convex_hull(all)})
+	if G.has("flag"):
+		var fb := V.tp(G.flag)
+		out.append({"kind": "stroke", "pts": PackedVector2Array([fb, fb + sd * 11.0 * k]), "w": maxf(0.9, 0.12 * V.ppm)})
+	for hp: Dictionary in G.heaps:
+		out.append({"kind": "fill", "pts": _prism_hull(V.tps(_heap_poly(hp["c"], float(hp["r"]), M.seed % 997)), sd * 1.8 * k)})
+	if not band.is_empty():
+		var hh := float(mc_val(mc_data()["fence_h_m"])) * k
+		var lp: PackedVector2Array = band["L"]
+		var rp: PackedVector2Array = band["R"]
+		var n := lp.size()
+		for i in n - 1:
+			var j := i + 1
+			out.append({"kind": "fill", "pts": _raised_hull(PackedVector2Array([lp[i], lp[j], rp[j], rp[i]]), sd * hh)})
+	return out
+
+# --- the destroyed compound (R1's language) ------------------------------------------------------------------------------------
+
+static func _crater(g, pn: A.Pen, V: A.View, ink: A.Ink, rl: Dictionary, c: Vector2, r: float, rng: Mulberry32) -> void:
+	A._path(pn, A.circ(c, r * 1.2, 22), {"fill": rl["lip"], "weight": 0.0})
+	var o := A._path(pn, A.circ(c, r, 22), {"fill": rl["pit"], "weight": 0.9, "alpha": 0.85, "wob": 1.4})
+	g.fill_color = rl["scar_dot"]
+	g.begin_path()
+	var any := false
+	for _i in int(r * r * V.ppm * V.ppm * 0.05):
+		var a := rng.next() * TAU
+		var d := sqrt(rng.next()) * r * 0.95
+		var q := V.tp(c + Vector2(cos(a), sin(a)) * d)
+		g.move_to(q.x + 0.6, q.y)
+		g.arc(q.x, q.y, 0.6, 0.0, TAU)
+		any = true
+	if any:
+		g.fill()
+	A.edge_hatch(g, ink, o, minf(4.0, 0.4 * V.ppm), rng, 1)
+	_mct("crater")
+
+# A heap of broken polygons round `c` within (rx, ry): torn roof and broken masonry, a little shadow offset under each.
+static func _rubble(g, pn: A.Pen, V: A.View, ink: A.Ink, rl: Dictionary, c: Vector2, rx: float, ry: float, count: int, rng: Mulberry32, shadows: Array) -> void:
+	for j in count:
+		var a := rng.next() * TAU
+		var dd := sqrt(rng.next())
+		var q := c + Vector2(cos(a) * dd * rx, sin(a) * dd * ry)
+		var m := 5 + int(rng.next() * 3.0)
+		var rr := 0.6 + rng.next() * 1.1
+		var poly := PackedVector2Array()
+		for i in m:
+			var aa := float(i) / float(m) * TAU + (rng.next() - 0.5) * 0.7
+			poly.append(q + Vector2(cos(aa), sin(aa)) * rr * (0.55 + rng.next() * 0.45))
+		shadows.append(poly)
+		A._path(pn, poly, {"fill": rl["ruin_roof"] if j % 2 == 0 else rl["ruin_rock"], "weight": 0.8})
+	_mct("rubble")
+
+static func draw_complex_ruin(g, M: A.Model, V: A.View, ink: A.Ink, rl: Dictionary, shadows: Array) -> void:
+	var G := M.G
+	var p := M.p
+	var pn := A.Pen.new(g, V, ink, M.seed + 17)
+	var rng := Mulberry32.new(M.seed + 23)
+	var ppm := V.ppm
+	var rd: Dictionary = mc_data()["ruin"]
+	# 1. the yard still there, trodden, under the scorch
+	var yard_o := A._path(pn, G.yard, {"fill": rl["yard"], "weight": 0.0})
+	dirt(g, ink, yard_o, A._rng(pn), 1.8)
+	# 2. the scorch: dirt stipple, thick in the middle and thinning out, with ink hatch on the side away from the sun
+	var main_c := Vector2.ZERO
+	for pt: Dictionary in G.parts:
+		if str(pt["name"]) == "main":
+			main_c = pt["c"]
+	var sr: float = float(mc_val(rd["scorch_r_m"]))
+	g.fill_color = rl["scar_dot"]
+	g.begin_path()
+	var n_dots := int(PI * sr * sr * ppm * ppm * 0.16)
+	for _i in n_dots:
+		var a := rng.next() * TAU
+		var d := sr * pow(rng.next(), 0.7)
+		var q := V.tp(main_c + Vector2(cos(a), sin(a)) * d)
+		g.global_alpha = 0.3 + 0.5 * rng.next()
+		g.move_to(q.x + 0.55, q.y)
+		g.arc(q.x, q.y, 0.55, 0.0, TAU)
+	g.fill()
+	g.global_alpha = 1.0
+	# 3. what is left of the buildings
+	var keep: float = float(mc_val(rd["wall_keep"]))
+	for pt: Dictionary in G.parts:
+		var kind := str(pt["kind"])
+		var c: Vector2 = pt["c"]
+		var w: float = pt["w"]
+		var d: float = pt["d"]
+		if absf(sin(float(pt["rot"]))) > 0.5:   # turned a quarter: the footprint's extent along x and y swap
+			w = pt["d"]
+			d = pt["w"]
+		match kind:
+			"barrel", "saw":
+				# walls standing, the floor black, a torn piece of roof lying across the hole
+				var floor_o := A._path(pn, pt["poly"], {"fill": rl["ruin_char"], "weight": 0.0})
+				A.hatch_lines(g, ink, floor_o, V.tv(Vector2(1.0, 1.0).normalized()), maxf(2.0, 0.2 * ppm * 3.0), {"alpha": 0.25, "weight": 0.45})
+				var ring := PackedVector2Array(pt["poly"])
+				for i in 4:
+					if rng.next() < keep:
+						var a: Vector2 = ring[i]
+						var b: Vector2 = ring[(i + 1) % 4]
+						# a broken run of the wall: most of the side, a bite out of it
+						var t0 := rng.next() * 0.25
+						var t1 := 1.0 - rng.next() * 0.3
+						var wp := PackedVector2Array([a.lerp(b, t0), a.lerp(b, t1)])
+						A._line(pn, wp, {"weight": 2.2, "alpha": 1.0})
+						shadows.append(PackedVector2Array([wp[0], wp[1], wp[1] + Vector2(0.3, 0.3), wp[0] + Vector2(0.3, 0.3)]))
+					else:
+						A._line(pn, PackedVector2Array([ring[i].lerp(ring[(i + 1) % 4], 0.0), ring[i].lerp(ring[(i + 1) % 4], 0.22)]), {"weight": 1.6, "alpha": 0.9})
+				A._path(pn, pt["poly"], {"weight": 0.9, "alpha": 0.5, "breaks": 0.3})
+				# the torn roof lying across the hole
+				var ang := (rng.next() - 0.5) * 0.4
+				var off := Vector2(w * 0.12, d * 0.08)
+				var roof := PackedVector2Array()
+				for q in A.rect_p(-w * 0.2, -d * 0.28, w * 0.2, d * 0.28):
+					roof.append(c + off + q.rotated(ang))
+				var ro := A._path(pn, roof, {"fill": rl["ruin_roof"], "weight": 1.0})
+				A.hatch_lines(g, ink, ro, V.tv(Vector2(0.0, 1.0).rotated(ang)), maxf(2.0, 0.15 * ppm * 3.0), {"alpha": 0.3, "weight": 0.45})
+				shadows.append(roof)
+				_rubble(g, pn, V, ink, rl, c, w * 0.42, d * 0.4, int(mc_val(rd["rubble_pieces"])), rng, shadows)
+			"gable":
+				if str(pt["name"]) == "gatehouse":
+					_rubble(g, pn, V, ink, rl, c, w * 0.5, d * 0.5, 4, rng, shadows)
+				else:
+					_rubble(g, pn, V, ink, rl, c, w * 0.42, d * 0.4, 8, rng, shadows)
+					# one wall stub standing at the end
+					var e0 := c + Vector2(w * 0.5 * (1.0 if rng.next() < 0.5 else -1.0), -d * 0.5)
+					A._line(pn, PackedVector2Array([e0, e0 + Vector2(0.0, d * 0.7)]), {"weight": 1.8, "alpha": 1.0})
+			"tank":
+				# burst: the ring broken, the pit black, a piece of the shell lying aside
+				var r := w / 2.0
+				A._path(pn, A.circ(c, r, 20), {"fill": rl["ruin_char"], "weight": 1.0, "breaks": 0.3, "alpha": 0.9})
+				A._path(pn, A.circ(c, r * 0.6, 16), {"fill": rl["pit"], "weight": 0.6, "alpha": 0.6})
+				var qa := c + Vector2(r * 1.4, r * 0.9)
+				var piece := PackedVector2Array()
+				for i in 8:
+					var aa := float(i) / 8.0 * TAU
+					piece.append(qa + Vector2(cos(aa) * r * 0.7, sin(aa) * r * 0.4))
+				A._path(pn, piece, {"fill": rl["ruin_rock"], "weight": 0.9})
+				shadows.append(piece)
+			"stack":
+				# the base left, the shaft down across the yard in two pieces
+				A._path(pn, pt["poly"], {"fill": rl["ruin_rock"], "weight": 1.0, "breaks": 0.2})
+				var fa := 0.9 + (rng.next() - 0.5) * 0.4
+				var dirv := Vector2.from_angle(fa)
+				var nrm := Vector2(-dirv.y, dirv.x)
+				for seg in 2:
+					var s0: float = 2.0 + float(seg) * 11.5
+					var s1: float = s0 + (9.0 if seg == 0 else 7.5)
+					var q0: Vector2 = c + dirv * s0
+					var q1: Vector2 = c + dirv * s1
+					var rect := PackedVector2Array([q0 + nrm * 1.0, q1 + nrm * 0.9, q1 - nrm * 0.9, q0 - nrm * 1.0])
+					var ro := A._path(pn, rect, {"fill": rl["ruin_rock"], "weight": 1.0})
+					A.hatch_lines(g, ink, ro, V.tv(nrm), maxf(2.0, 0.2 * ppm * 3.0), {"alpha": 0.35, "weight": 0.45})
+					shadows.append(rect)
+			"tower":
+				if rng.next() < 0.5:
+					A._path(pn, A.rect_p(c.x - 0.7, c.y - 0.7, c.x + 0.7, c.y + 0.7), {"fill": rl["ruin_rock"], "weight": 0.9})
+					A._line(pn, PackedVector2Array([c, c + Vector2(1.4, 0.8)]), {"weight": 1.2, "alpha": 0.9})
+				else:
+					_rubble(g, pn, V, ink, rl, c, 1.4, 1.4, 3, rng, shadows)
+			"truck":
+				# a burnt-out wreck
+				var o := A._path(pn, pt["poly"], {"fill": rl["ruin_char"], "weight": 1.0, "alpha": 0.9})
+				A.hatch_lines(g, ink, o, V.tv(Vector2(1.0, 0.0)), maxf(1.8, 0.14 * ppm * 3.0), {"alpha": 0.3, "weight": 0.45})
+			"crates":
+				_rubble(g, pn, V, ink, rl, c, w * 0.5, d * 0.5, 4, rng, shadows)
+	for hp: Dictionary in G.heaps:
+		_draw_heap(g, pn, V, ink, rl, hp, M.seed % 997)
+	# 4. the apron: cracked
+	if (G.apron as PackedVector2Array).size() > 0:
+		A._path(pn, G.apron, {"fill": rl["concrete"], "weight": 0.8, "alpha": 0.8})
+		var ar := _bbox_m(G.apron)
+		for k in 3:
+			var x0 := ar.position.x + ar.size.x * (0.2 + 0.28 * float(k)) + (rng.next() - 0.5) * 3.0
+			A._line(pn, PackedVector2Array([Vector2(x0, ar.position.y), Vector2(x0 + (rng.next() - 0.5) * 6.0, ar.end.y)]), {"alpha": 0.5, "weight": 0.6, "breaks": 0.25})
+	# 5. the fence: some panels still standing
+	var fk: float = float(mc_val(rd["fence_keep"]))
+	var ring: PackedVector2Array = G.ring
+	for si in range(1, ring.size()):
+		var a: Vector2 = ring[si - 1]
+		var b: Vector2 = ring[si]
+		var seg_n := maxi(1, int(a.distance_to(b) / 4.0))
+		for t in seg_n:
+			var q0 := a.lerp(b, float(t) / float(seg_n))
+			var q1 := a.lerp(b, float(t + 1) / float(seg_n))
+			if rng.next() < fk:
+				A._line(pn, PackedVector2Array([q0, q1]), {"alpha": 0.8, "weight": 0.7})
+			elif rng.next() < 0.4:
+				A._line(pn, PackedVector2Array([q0, q0 + (q1 - q0).rotated(0.9) * 0.4]), {"alpha": 0.7, "weight": 0.6})
+	# 6. the craters, the biggest on the main building
+	var nc := int(mc_val(rd["craters"]))
+	var cr: Array = mc_val(rd["crater_r_m"])
+	for k in nc:
+		var q := main_c + (Vector2(0.0, 0.0) if k == 0 else Vector2((rng.next() - 0.5) * 18.0, (rng.next() - 0.5) * 14.0))
+		var r := _mc_lerp(float(cr[0]), float(cr[1]), 1.0 if k == 0 else rng.next() * 0.7)
+		_crater(g, pn, V, ink, rl, q, r, rng)
+	_mct("ruin")
+
+static func _mc_lerp(a: float, b: float, t: float) -> float:
+	return a + (b - a) * t
+
+# The ruin's cast shadow: the lying pieces and the stubs, low (the heights are a metre or two).
+static func complex_ruin_prims(M: A.Model, V: A.View, ink: A.Ink, st: UiStyle, pieces: Array) -> Array:
+	var out: Array = []
+	var k := V.ppm * st.sun_len()
+	for poly_m: PackedVector2Array in pieces:
+		out.append({"kind": "fill", "pts": _prism_hull(V.tps(poly_m), ink.sd * 1.4 * k)})
+	return out
+
+# --- the bake -----------------------------------------------------------------------------------------------------------------------------------
+
+# The complex baked at `ppm` (the marker's want) and already turned by `rot`; geometry at the map's scale (map_scale_factor).
+static func bake_complex(st: UiStyle, M: A.Model, accent: Color, ppm: float, rot: float, ruined: bool) -> A.Art:
+	var margin: float = st.num("unit_art.bake_margin_px")
+	var ink := A.ink_consts(st)
+	var rl := mc_roles(st)
+	var gp := ppm * mc_scale_factor()
+	var v0 := A.View.new(0.0, 0.0, gp, rot)
+	var ruin_pieces: Array = []
+	# a dry run of the ruin collects its lying pieces (for the shadow) without drawing: a throwaway canvas
+	var band0: Dictionary = _wall_band(v0, ink, M.G, (M.seed % 99991) + 31) if str(M.p.fence) == "wall" and not ruined else {}
+	var lo := Vector2(1e9, 1e9)
+	var hi := Vector2(-1e9, -1e9)
+	for poly: PackedVector2Array in M.G.ext:
+		for q in v0.tps(poly):
+			lo = lo.min(q)
+			hi = hi.max(q)
+	var prims0: Array = []
+	if not ruined:
+		prims0 = complex_shadow_prims(M, v0, ink, st, band0)
+	else:
+		var probe := InkCanvas.new(Vector2i(8, 8))
+		draw_complex_ruin(probe, M, v0, ink, rl, ruin_pieces)
+		probe.discard()
+		prims0 = complex_ruin_prims(M, v0, ink, st, ruin_pieces)
+	for pr: Dictionary in prims0:
+		var half := float(pr.get("w", 0.0)) * 0.5
+		for q: Vector2 in pr["pts"]:
+			lo = lo.min(q - Vector2(half, half))
+			hi = hi.max(q + Vector2(half, half))
+	if not band0.is_empty():
+		for q: Vector2 in band0["L"]:
+			lo = lo.min(q)
+			hi = hi.max(q)
+		for q: Vector2 in band0["R"]:
+			lo = lo.min(q)
+			hi = hi.max(q)
+	var size := Vector2i(ceili(hi.x - lo.x + 2.0 * margin), ceili(hi.y - lo.y + 2.0 * margin))
+	var v := A.View.new(-lo.x + margin, -lo.y + margin, gp, rot)
+	var canvas := InkCanvas.new(size)
+	canvas.line_cap = "round"
+	var pieces: Array = []
+	var band: Dictionary = _wall_band(v, ink, M.G, (M.seed % 99991) + 31) if str(M.p.fence) == "wall" and not ruined else {}
+	if ruined:
+		draw_complex_ruin(canvas, M, v, ink, rl, pieces)
+	else:
+		draw_complex(canvas, M, v, ink, accent, rl)
+	var mask := InkCanvas.new(size)
+	mask.line_cap = "round"
+	mask.fill_color = Color.WHITE
+	mask.stroke_color = Color.WHITE
+	var prims: Array = complex_ruin_prims(M, v, ink, st, pieces) if ruined else complex_shadow_prims(M, v, ink, st, band)
+	mask.begin_path()
+	for pr: Dictionary in prims:
+		if pr["kind"] == "fill":
+			A.add_poly(mask, pr["pts"], true)
+	mask.fill()
+	for pr: Dictionary in prims:
+		if pr["kind"] == "stroke":
+			mask.line_width = float(pr["w"])
+			mask.begin_path()
+			A.add_poly(mask, pr["pts"], false)
+			mask.stroke()
+	var imgs := InkCanvas.render_all([canvas, mask])
+	var art := A.Art.new()
+	art.ppm = ppm
+	art.origin = Vector2(v.x, v.y)
+	art.size_px = size
+	art.screen_aligned = true
+	art.rot = rot
+	var far := 0.0
+	for poly: PackedVector2Array in M.G.ext:
+		for q in poly:
+			far = maxf(far, q.length())
+	art.extent_m = far * mc_scale_factor()   # in the marker's metres: the marker multiplies by the layer's px per metre
+	if imgs.size() == 2 and imgs[0] != null and not imgs[0].is_empty():
+		art.texture = ImageTexture.create_from_image(A._straight(imgs[0], false))
+		art.mask = ImageTexture.create_from_image(A._straight(imgs[1], true))
+	return art
+
+static func _complex_cached(st: RefCounted, accent: Color, ppm: float, rot: float, ruined: bool) -> A.Art:
+	var lo: float = st.num("unit_art.min_bake_ppm")
+	var hi: float = st.num("unit_art.max_bake_ppm")
+	var q := snappedf(clampf(ppm, lo, hi), 0.01)
+	var look := mc_look_of(st)
+	rot = wrapf(rot, -PI, PI)
+	var key := "%s|%d|%s|%.2f|%s|%.3f%s" % [MC_SILHOUETTE, look, "" if ruined else accent.to_html(), q, InkCanvas.pen_key(), snappedf(rot, 0.005), "|ruin" if ruined else ""]
+	if A._art.has(key):
+		var hit: A.Art = A._art[key]
+		A._art.erase(key)   # LRU
+		A._art[key] = hit
+		return hit
+	if not A.can_bake():
+		return null
+	var art := bake_complex(st as UiStyle, mc_model(st, look), accent, q, rot, ruined)
+	A._art[key] = art
+	A._trim(int(st.num("unit_art.cache_max")))
+	return art
+
+# The standing compound for a side's accent at `ppm`, turned by `rot` (the marker's sprite angle), from the cache or baked now.
+static func complex_art(st: RefCounted, accent: Color, ppm: float, rot: float = 0.0) -> A.Art:
+	return _complex_cached(st, accent, ppm, rot, false)
+
+# The destroyed compound (R1's language), the same compound with parts taken away; for the effects layer (kind "military_complex").
+static func complex_ruin_art(st: RefCounted, ppm: float, rot: float = 0.0) -> A.Art:
+	return _complex_cached(st, Color.WHITE, ppm, rot, true)

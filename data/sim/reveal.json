@@ -1,0 +1,68 @@
+{
+  "_about": "REVEAL ON FIRING (Track M2L, 2026-10-11: the second mission, 'clear the mobile AA and their escorts to enable a bombing run of a military complex'). scripts/sim/reveal.gd reads this. THE IDEA IS THE LEAD'S, PROPOSED, NOT ALEX'S (decision suppress-mission): the guns are hidden, they MOVE (shoot and scoot), and they GIVE THEMSELVES AWAY WHEN THEY FIRE, as the Wild Weasels baited guns over Vietnam: a fighter flies into a gun's reach to make it fire, and the gun shows where it is. What Alex said (decision mixed-warfare, balance-uncalibrated): 'For now our goal is a small set of missions that are fun tactics games ... Find the fun first!'; 'a mission can always have limited units'; the balance is not calibrated, it is a playtest. THE RULE AS BUILT: a ground unit that FIRES (a 'fire' event of the turn, hit or miss) is REVEALED to the side it fired at: for reveal_s seconds of game time from the shot the side's fog opens a small patch of radius_m round the unit's position AT THE SHOT (so the unit is seen if it is still there, and the ground it stands on), and a 'last seen' mark is drawn there; for fade_s more seconds the mark stays, fading, with the fog closed again. The enemy AI's knowledge works the same way for the AI's targets (scripts/sim/ai_sense.gd: a player's unit that fired at the AI is known at its position at the shot while it is revealed). Derived from the turn's events, which every machine already has, so it is deterministic and the same on the host and on every client; a joining client is given the records in the snapshot (scripts/net/world_sync.gd). Record shape as data/sim/combat.json: {value, _proposed, _reason}.",
+
+  "reveal_s": {
+    "value": 10,
+    "_proposed": true,
+    "_reason": "how long a gun that has fired stays REVEALED: 10 s of game time, two turns of 5 s (data/sim/turn.json). A shot in the middle of turn N is revealed through the playback of the rest of N and the planning of N+1, and still at the planning of N+2: long enough for a bomber to be routed round it or onto it and for a fighter to be sent to look, short enough that a gun which relocates (data/sim/roam.json) is not pinned for ever. The dial for 'how hard it is to catch a gun'"
+  },
+  "fade_s": {
+    "value": 15,
+    "_proposed": true,
+    "_reason": "after reveal_s the 'last seen' mark fades out over this long (three turns): the fog is closed again and nothing is seen, only remembered. A quiet reminder of where the gun WAS, not a promise it is still there; the AI's own memory (data/sim/ai.json knowledge.memory_turns) is the same idea"
+  },
+  "radius_m": {
+    "value": 90,
+    "_proposed": true,
+    "_reason": "the patch of fog a revealed gun opens, round its position at the shot: about the length of a tank track run in a turn (50 m) and a half again, so a gun that has not yet moved away is seen where it stands and one that has scooted a step or two is still seen, but one that has moved on for a turn at road speed is not. Small on purpose: the shot gives away a place, not the neighbourhood"
+  },
+  "shooter_domains": {
+    "value": ["ground"],
+    "_proposed": true,
+    "_reason": "which units give themselves away: ground units (a gun on wheels or tracks, flak). Aircraft and ships are not hidden units in this sense, and a fighter that opens fire is already in the fight (its sight is its own business)"
+  },
+  "shooter_mobility": {
+    "value": ["mobile"],
+    "_proposed": true,
+    "_reason": "only MOBILE ground units: the mobile AA of the second mission. The STATIC batteries and the radio tower of the Strike are left as they were played (Alex has playtested the Strike: nothing here changes it); add \"static\" to this list to have the Strike's flak batteries show themselves when they fire too"
+  },
+  "max_shots": {
+    "value": 6,
+    "_proposed": true,
+    "_reason": "a record keeps at most this many bursts (time, place), the latest ones: flak rolls four times a second, and what the fog needs is where the gun was at each moment of a turn's playback, not every roll. Shots less than shot_gap_s apart at one place are one shot"
+  },
+  "shot_gap_s": {
+    "value": 1.0,
+    "_proposed": true,
+    "_reason": "two shots of one gun within this many seconds of each other, and within same_place_m of each other, are one BURST in the record (its first and last times, the place of the last): flak rolls up to four times a second, and the gun is revealed from the first of them and counts as still firing until the last"
+  },
+  "same_place_m": {
+    "value": 5,
+    "_proposed": true,
+    "_reason": "shots from within this many metres of one another are from one place (a gun that stands still fires from a hardpoint metre or so off its centre; one that is driving and firing moves further than this between rolls, and each place is a burst of its own, so its places are not lost)"
+  },
+
+  "ghost": {
+    "_about": "The 'last seen' mark (scripts/ui/reveal_marks.gd), drawn in the side's accent ink on the map above the fog. Proposed as 'a quiet marker that fades' (the lead); the look is not decided.",
+    "ring_px": {
+      "value": 13,
+      "_proposed": true,
+      "_reason": "the radius of the dashed ring on screen at any zoom: a little under the smallest marker, so it reads as a mark and not as a unit"
+    },
+    "line_px": {
+      "value": 1.5,
+      "_proposed": true,
+      "_reason": "the ring's ink line"
+    },
+    "alpha_revealed": {
+      "value": 0.9,
+      "_proposed": true,
+      "_reason": "the mark's strength while the gun is revealed (the fog is open there); it fades from this to 0 over fade_s"
+    },
+    "label": {
+      "value": "LAST SEEN",
+      "_proposed": true,
+      "_reason": "the word under the mark, in the map's small lettering; the unit's own name is not given away"
+    }
+  }
+}

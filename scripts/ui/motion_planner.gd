@@ -152,6 +152,7 @@ const UiInk = preload("res://scripts/ui/ui_ink.gd")
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const Roster = preload("res://scripts/ui/roster.gd")
 const BombSource = preload("res://scripts/ui/bomb_source.gd")
+const GunSource = preload("res://scripts/ui/gun_source.gd")
 const UiLabels = preload("res://scripts/ui/ui_labels.gd")
 const UiTarget = preload("res://scripts/ui/ui_target.gd")
 
@@ -162,6 +163,8 @@ var style: UiStyle = null
 var local_player: String = "local"
 # The bombs the simulation (or its stand-in) answers with; UnitUI shares one with the roster and the card.
 var bombs: BombSource = null
+# The big guns the simulation answers with (Track SH, gun_source.gd); the planner makes its own.
+var guns: GunSource = null
 # The target selection (Track T, ui_target.gd): UnitUI shares one with the map marks and the side view; a planner alone
 # makes its own.
 var target: UiTarget = null
@@ -218,6 +221,9 @@ func setup(w: World, host_mapping: Variant, sel: RefCounted, player: String = "l
 	if bombs == null:
 		bombs = BombSource.new()
 	bombs.setup(world, style)
+	if guns == null:
+		guns = GunSource.new()
+	guns.setup(world, style)
 	if target == null:
 		target = UiTarget.new()
 	if not target.changed.is_connected(_on_target_changed):
@@ -432,6 +438,8 @@ func _plan_point(k: int, world_pt: Vector2) -> Dictionary:
 		req["altitude_band"] = (plan[k] as Dictionary)["altitude_band"]
 	if k < plan.size() and (plan[k] as Dictionary).has("drop"):
 		req["drop"] = ((plan[k] as Dictionary)["drop"] as Dictionary).duplicate(true)   # a step moved keeps its drop
+	if k < plan.size() and (plan[k] as Dictionary).has("fire"):
+		req["fire"] = ((plan[k] as Dictionary)["fire"] as Dictionary).duplicate(true)   # ... and its fire (Track SH)
 	return _commit_step(id, k, req, world_pt)
 
 # World.plan_step with the map rule: a plan with a PLANNED step that ends
@@ -555,6 +563,8 @@ func drop_options(k: int = -2) -> Dictionary:
 	out["step"] = k
 	if not can_plan(id):
 		return out
+	if special_kind(id) == "gun":
+		return _fire_options(k, out)   # the unit's special is a gun salvo (Track SH): the same control, the sim's reasons
 	if not bombs.has_bombs(id):
 		out["why"] = style.text("bombs.text.no_bombs")
 		return out
@@ -589,23 +599,42 @@ func special_label(id: String = "") -> String:
 	if id == "":
 		id = unit_id()
 	if world != null and world.units.has(id):
-		var words: String = world.units[id].def.special_label("bomb")
+		var words: String = world.units[id].def.special_label(special_id(id))
 		if words != "":
 			return words
 	return style.text("bombs.text.label")
 
-# Whether the unit has a special of its own to name (the bomb drop, today).
-func has_special(id: String = "") -> bool:
+# What kind of special the unit has (Track SH): "bomb" (a bomb drop), "gun" (a gun salvo), or "" for a unit with none.
+func special_kind(id: String = "") -> String:
 	if id == "":
 		id = unit_id()
-	return world != null and world.units.has(id) and world.units[id].def.special_label("bomb") != ""
+	if world == null or not world.units.has(id):
+		return ""
+	if world.units[id].def.special_label("bomb") != "":
+		return "bomb"
+	if guns != null and guns.has_guns(id):
+		return "gun"
+	return ""
+
+# The id of the unit's special in its data ("bomb", "main_guns"), "" for none.
+func special_id(id: String = "") -> String:
+	var kind := special_kind(id)
+	if kind == "bomb":
+		return "bomb"
+	if kind == "gun":
+		return guns.special_id(id if id != "" else unit_id())
+	return ""
+
+# Whether the unit has a special of its own to name (a bomb drop or a gun salvo).
+func has_special(id: String = "") -> bool:
+	return special_kind(id) != ""
 
 # THE TARGET IN WORDS, for the orders card; always on offer while the selected unit carries a special ("" for a unit with none, or
 # one whose plan may not be shown): "target: radio tower" / "target: a point on the map" -- the SELECTED step's own target when its
 # special is on, else the target selection the special would take -- or "no target: click an enemy or right-click the map".
 func target_line() -> String:
 	var id := unit_id()
-	if world == null or not can_plan(id) or not bombs.has_bombs(id):
+	if world == null or not can_plan(id) or not (bombs.has_bombs(id) or special_kind(id) == "gun"):
 		return ""
 	var k := focus_step(id)
 	var tgt := step_target(k, id) if k >= 0 else {}
@@ -655,6 +684,8 @@ func step_target(k: int, id: String = "") -> Dictionary:
 		return {}
 	var d := step_drop(k, id)
 	if d.is_empty():
+		d = step_fire(k, id)   # (Track SH: a gun salvo's step stores its target the same way)
+	if d.is_empty():
 		return {}
 	var aim := BombSource._v2(d.get("aim"))
 	var t: Variant = d.get("target")
@@ -684,6 +715,8 @@ func toggle_drop() -> Dictionary:
 	var k := focus_step()
 	if k < 0:
 		return {}
+	if special_kind() == "gun":
+		return set_step_fire(k, not step_has_fire(k))
 	return set_step_drop(k, not step_has_drop(k))
 
 # Turn step k's drop on (aimed at the TARGET, which it stores on the step) or off. The step must be a placed step of
@@ -1319,6 +1352,7 @@ func _draw() -> void:
 	_draw_curve(sel, 1.0)
 	_draw_selected_number(sel)
 	_draw_drop_marks(sel)
+	_draw_fire_marks(sel)
 	_draw_clamps(sel)
 	_draw_hover()
 	_draw_refused()
@@ -1398,10 +1432,12 @@ func step_labels(id: String = "") -> Array:
 			lines.append(UiLabels.node_speed_text(style, float(s["speed"])))
 		if with_height:
 			lines.append(UiLabels.node_height_text(style, node_height_m(s)))   # (Track U3: every node has a height and a speed)
-		if step_has_drop(k, id):
-			lines.append(special_label(id))   # the special on this step, in the unit's own words: "Bomb Drop" (Alex: name and action, from data)
+		if step_has_special(k, id):
+			lines.append(special_label(id))   # the special on this step, in the unit's own words: "Bomb Drop", "Main Guns Fire" (Alex: name and action, from data)
 			if drop_blocked(k, id):   # its target outside its cone (Track T): "will not release" / "poor shot", by the sim's switch
 				lines.append(style.text("bombs.text.step_tag_blocked" if bombs.outside_mode() == "hold" else "bombs.text.step_tag_poor"))
+			elif fire_blocked(k, id):   # a fire that will not go off as things stand (Track SH): the guns reload, the target left the sight ...
+				lines.append(style.text("guns.text.step_tag_blocked"))
 		var band := str(s["altitude_band"])
 		if with_band and band != prev_band:
 			var up: bool = u.def.envelope.bands.find(band) > u.def.envelope.bands.find(prev_band)
@@ -1759,3 +1795,222 @@ func _draw_clamps(id: String) -> void:
 		var x := 3.5
 		draw_line(a + Vector2(-x, -x), a + Vector2(x, x), col, 1.1, true)
 		draw_line(a + Vector2(-x, x), a + Vector2(x, -x), col, 1.1, true)
+
+# --- The gun salvo (Track SH, the warship, proposed 2026-10-10; scripts/sim/guns.gd, gun_source.gd) ------------------------------
+#
+# A unit's special is the bomb drop OR a gun salvo (special_kind). The control is the same button and the same toggle_drop(); a step
+# carries {"fire": {"special": "main_guns", "target": {"unit": id} | {"point": [x, y]}, "aim": [x, y]}} where a bomb step carries "drop".
+# Alex (special-targeting, target-follows-unit, step-selection): the special is active and targeted for its step; with no target, or
+# one out of reach, it cannot be activated and the card says why; a unit target is followed (the shells are aimed at resolve); the
+# step's lettering names the special and its action ("Main Guns Fire"). The reasons are the sim's (World.gun_check): reloading, a
+# salvo already set on another step, no target, the target down or a friend, too close, out of range, inland (the guns attack the
+# coast), not spotted (a friend must see it: shared spotting). Nothing here decides; it asks the sim and words the answer.
+
+# The fire request of step k of a unit ({} when it has none): {"special", "target", "aim"?}.
+func step_fire(k: int, id: String = "") -> Dictionary:
+	if id == "":
+		id = unit_id()
+	if world == null or not world.units.has(id):
+		return {}
+	var plan: Array = world.units[id].plan
+	if k < 0 or k >= plan.size() or not (plan[k] as Dictionary).has("fire"):
+		return {}
+	var f: Variant = (plan[k] as Dictionary)["fire"]
+	return (f as Dictionary).duplicate(true) if f is Dictionary else {}
+
+func step_has_fire(k: int, id: String = "") -> bool:
+	return not step_fire(k, id).is_empty()
+
+# Whether step k carries the unit's special, whichever kind it is (a bomb drop or a fire).
+func step_has_special(k: int, id: String = "") -> bool:
+	return step_has_drop(k, id) or step_has_fire(k, id)
+
+# The target selection as the sim takes it ({"unit": id} | {"point": [x, y]}), or {}.
+func _target_request() -> Dictionary:
+	if target == null or not target.is_set():
+		return {}
+	if target.is_unit():
+		return {"unit": target.unit_id}
+	var p: Vector2 = target.point_m
+	return {"point": [p.x, p.y]} if p.is_finite() else {}
+
+# The target stored with step k's fire, as the sim takes it: {"unit": id} | {"point": [x, y]} | {}.
+func _fire_target_request(k: int, id: String) -> Dictionary:
+	var t: Variant = step_fire(k, id).get("target")
+	return (t as Dictionary).duplicate(true) if t is Dictionary else {}
+
+# What the special's control may do for step k when the unit's special is a gun salvo: drop_options' record, filled in.
+func _fire_options(k: int, out: Dictionary) -> Dictionary:
+	var id := unit_id()
+	var label := special_label(id)
+	if k < 0:
+		out["why"] = style.text("guns.text.place_first") % label
+		return out
+	var on := step_has_fire(k, id)
+	out["on"] = on
+	if on:
+		out["available"] = true   # switching a fire off is always allowed
+		return out
+	var left := guns.reload_left(id)
+	if left > 0:
+		out["why"] = (style.text("guns.text.reloading_one") % label) if left == 1 else (style.text("guns.text.reloading") % [label, left])
+		return out
+	var req := _target_request()
+	if req.is_empty():
+		out["why"] = style.text("guns.text.no_target") % label
+		return out
+	var chk := guns.check(id, k, req)
+	if chk.is_empty():
+		out["why"] = style.text("guns.text.not_a_gun")
+		return out
+	if not bool(chk["ok"]):
+		out["why"] = gun_reason_text(chk, id, label)
+		return out
+	out["available"] = true
+	return out
+
+# A reason the sim gave (a check's "reason") in the card's words.
+func gun_reason_text(chk: Dictionary, id: String, label: String) -> String:
+	var why := str(chk.get("reason", ""))
+	match why:
+		"reloading":
+			var left := int(chk.get("reload_left", 1))
+			return (style.text("guns.text.reloading_one") % label) if left <= 1 else (style.text("guns.text.reloading") % [label, left])
+		"already_planned":
+			var other := -1
+			for s in guns.fire_steps(id):
+				if s != int(chk.get("step", -1)):
+					other = s
+			return style.text("guns.text.already_planned") % [label, other + 1]
+		"too_close":
+			return style.text("guns.text.too_close") % roundi(float(chk.get("range_min_m", 0.0)))
+		"out_of_range":
+			return style.text("guns.text.out_of_range") % [roundi(float(chk.get("range_m", 0.0))), roundi(float(chk.get("range_max_m", 0.0)))]
+		"no_target":
+			return style.text("guns.text.no_target") % label
+		"target_down", "own_side", "inland", "unspotted", "unit_down", "not_a_gun":
+			return style.text("guns.text." + why)
+	return why
+
+# The sim's check for the fire step k carries (its own stored target); {} when the step has none or its plan may not be shown.
+func fire_check(k: int, id: String = "") -> Dictionary:
+	if id == "":
+		id = unit_id()
+	if not plan_shown(id) or not step_has_fire(k, id):
+		return {}
+	return guns.check(id, k, _fire_target_request(k, id))
+
+# Whether step k carries a fire that will not go off as things stand (the target out of reach or no longer spotted, the guns
+# reloading ...): its lettering says so.
+func fire_blocked(k: int, id: String = "") -> bool:
+	var chk := fire_check(k, id)
+	return not chk.is_empty() and not bool(chk["ok"])
+
+# What the card and the map say about step k's fire (-2: the step the card is about): {check (the sim's record), blocked, reason,
+# range_m, spread_m (one shell's scatter, sigma), flight_s, spotted_s, salvos}. {} when the step has none.
+func fire_info(k: int = -2) -> Dictionary:
+	var id := unit_id()
+	if k == -2:
+		k = focus_step()
+	var chk := fire_check(k, id)
+	if chk.is_empty():
+		return {}
+	return {"check": chk, "blocked": not bool(chk["ok"]), "reason": str(chk["reason"]), "range_m": float(chk["range_m"]),
+		"spread_m": float(chk["spread_m"]), "flight_s": float(chk["flight_s"]), "spotted_s": float(chk["spotted_s"]), "salvos": int(chk["salvos"])}
+
+# The line under the target's, for a unit with big guns: what the special does at the SELECTED step, or why it cannot be switched on.
+func gun_caption() -> String:
+	var id := unit_id()
+	if not can_plan(id) or special_kind(id) != "gun":
+		return ""
+	var opt := drop_options()
+	var k := int(opt["step"])
+	var label := special_label(id)
+	if k < 0:
+		return str(opt["why"])
+	if bool(opt["on"]):
+		var info := fire_info(k)
+		if info.is_empty():
+			return ""
+		if bool(info["blocked"]):
+			return style.text("guns.text.wont_fire") % gun_reason_text(info["check"], id, label)
+		return style.text("guns.text.on") % [k + 1, label, roundi(float(info["spread_m"])), roundi(float(info["range_m"]))]
+	if not bool(opt["available"]):
+		return str(opt["why"])
+	return style.text("guns.text.free") % [k + 1, label]
+
+# Turn step k's fire on (aimed at the TARGET selection, which it stores on the step) or off. The step must be a placed step of the
+# selected unit's plan and the sim must allow it (gun_check). Returns the step's state, or {} when refused.
+func set_step_fire(k: int, on: bool) -> Dictionary:
+	var id := unit_id()
+	if not can_plan(id) or k < 0 or k >= world.steps_per_turn(id) or special_kind(id) != "gun":
+		return {}
+	var plan: Array = world.units[id].plan
+	var req: Dictionary = (plan[k] as Dictionary).duplicate(true) if k < plan.size() else {}
+	if not on:
+		if not req.has("fire"):
+			return {}
+		req.erase("fire")
+	else:
+		if req.has("fire"):
+			return world.planned_states(id)[k]   # already on
+		if not bool(_fire_options(k, {"step": k, "available": false, "on": false, "why": ""})["available"]):
+			return {}
+		var at: Vector2 = target.position_m(world)
+		req["fire"] = {"special": guns.special_id(id), "target": _target_request(), "aim": [at.x, at.y]}
+	set_focus_step(k)
+	var u = world.units[id]
+	var s := _commit_step(id, k, req, Vector2(float(u.x), float(u.y)))
+	queue_redraw()
+	return s
+
+# What is drawn for the fires of the selected unit (proposed, data guns.marks): a small shell beside the node of every step whose fire
+# is on (on the shadow side, as the bomb is), a dashed line from the node to the target, a ring at the scatter's two sigma round the
+# target as it was shown, a cross at the target itself; fainter when the fire will not go off. With the pointer on the special's
+# button, the guns' reach shows as two thin dashed rings round the selected step.
+func _draw_fire_marks(id: String) -> void:
+	if special_kind(id) != "gun":
+		return
+	var ink: Color = style.color("hover_ink")
+	var paper: Color = style.color("hover_paper")
+	var s: float = style.num("planner.select.drop_mark.size_px")
+	var off: float = style.num("planner.select.node_px") + style.num("planner.select.drop_mark.offset_px")
+	var w: float = style.num("planner.select.drop_mark.line_px")
+	var halo: float = style.num("planner.select.drop_mark.halo_px")
+	for k in guns.fire_steps(id):
+		var n := node_screen(k, id)
+		if not n.is_finite():
+			continue
+		UiInk.shell_glyph(self, n + style.shadow_dir() * off, s, ink, paper, w, halo)
+		var tgt := step_target(k, id)
+		if tgt.is_empty() or not (tgt["point"] as Vector2).is_finite():
+			continue
+		var blocked := fire_blocked(k, id)
+		var fade := 0.45 if blocked else 1.0
+		var at_m: Vector2 = tgt["point"]
+		var tp := mapping.world_to_screen(at_m)
+		var line_c := _fade(ink, style.num("guns.marks.line_alpha") * fade)
+		UiInk.dashed(self, PackedVector2Array([n, tp]), line_c, w, style.num("planner.dash_px"), style.num("planner.gap_px"))
+		var info := fire_info(k)
+		var sigma_m := float(info.get("spread_m", 0.0))
+		var r := maxf(sigma_m * style.num("guns.marks.sigma_k") * mapping.px_per_m(at_m), style.num("guns.marks.ring_min_px"))
+		var ring_c := _fade(ink, style.num("guns.marks.ring_alpha") * fade)
+		draw_arc(tp, r + style.num("guns.marks.ring_line_px"), 0.0, TAU, 48, _fade(paper, 0.7 * fade), style.num("guns.marks.ring_line_px") + 1.6, true)
+		draw_arc(tp, r, 0.0, TAU, 48, ring_c, style.num("guns.marks.ring_line_px"), true)
+		var cx: float = style.num("guns.marks.target_cross_px")
+		for d: Vector2 in [Vector2(1.0, 1.0), Vector2(1.0, -1.0)]:
+			draw_line(tp - d * cx, tp + d * cx, _fade(paper, 0.8 * fade), w + 1.6, true)
+			draw_line(tp - d * cx, tp + d * cx, ring_c, w, true)
+	if _drop_hover:
+		var k := focus_step(id)
+		var st := states(id)
+		if k >= 0 and k < st.size():
+			var a: Dictionary = st[k - 1] if k > 0 else {"x": world.units[id].x, "y": world.units[id].y}
+			var c_m := Vector2((float(a["x"]) + float(st[k]["x"])) * 0.5, (float(a["y"]) + float(st[k]["y"])) * 0.5)
+			var c := mapping.world_to_screen(c_m)
+			var ppm := mapping.px_per_m(c_m)
+			var reach_c := _fade(ink, style.num("guns.marks.reach_alpha"))
+			for rm: float in [guns.range_min_m(id), guns.range_max_m(id)]:
+				var ring := UiInk.circle_pts(c, rm * ppm, 96)
+				ring.append(ring[0])
+				UiInk.dashed(self, ring, reach_c, w, style.num("guns.marks.reach_dash_px"), style.num("guns.marks.reach_gap_px"))

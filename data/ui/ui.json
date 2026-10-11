@@ -11,7 +11,14 @@
   "unit_art": {
     "_proposed": true,
     "_reason": "The unit sheet's plane generators (reference/mockups/unit_sheet.html genPlane/buildPlane/drawPlane), ported to scripts/ui/unit_marker_art.gd. variant is the sheet's variant letter as an index (0 = a, the sheet's default view of each type); stipple is the sheet's stipple knob at its default. bake_margin_px holds the wobble and line width inside the texture. A marker is baked once per type, side and scale and re-baked only when the host's scale drifts past rebake_ratio either way (a zoom), never per frame; min/max_bake_ppm bound the bake. cache_max (proposed 2026-10-09, fix pass) bounds the cache of baked arts, least recently used out first: three silhouettes x two sides at a few scales each is a dozen entries, so 48 is room to spare and a zoom can no longer grow it without limit.",
-    "variant": { "light_fighter": 0, "heavy_fighter": 0, "bomber": 0, "anti_aircraft_battery": 0, "radio_tower": 0 },
+    "variant": { "light_fighter": 0, "heavy_fighter": 0, "bomber": 0, "anti_aircraft_battery": 0, "radio_tower": 0, "small_cruiser": 0 },
+    "ship": {
+      "_proposed": true,
+      "_reason": "PROPOSED by Track SH (the warship, 2026-10-10): the small cruiser is drawn from the unit sheet's default view of it (variant 0, 'as proposed', Alex's decision unit-sheet-choices), at the planes' scale (decision water-layer: boats are drawn at the planes' marker scale). Its wake is the INK V Alex chose (decision boat-wake; scripts/render/boat_art.gd draw_wake, data/world/boats.json wakes.ink_v) on a texture of its own, shown while the ship is under way (a boat at anchor has none). wake_len_m 130: about one hull length and a bit behind the stern (the cutter's, 62 m, is 2.3 of its hulls at 10 m/s: a ship's wake is long in metres and short in hulls, and the V reads at the planning zoom). underway_mps 0.5: a ship making less way than that has none.",
+      "wake": "ink_v",
+      "wake_len_m": 130,
+      "underway_mps": 0.5
+    },
     "_variant_u3": "PROPOSED by Track U3 (the strike, 2026-10-10): the anti-aircraft battery and the radio tower are drawn from the unit sheet's default view of each, as the planes and the tank are (the tank keeps its code default of 0). Their sheet indices (feeding the seed) are 4 and 6, scripts/ui/unit_marker_art.gd STATICS.",
     "stipple": 1,
     "bake_margin_px": 4,
@@ -63,6 +70,8 @@
       "has_plan": "plan: %d of %d steps",
       "no_plan": "no plan (flies on)",
       "flying": "flying the turn",
+      "reloading": "reload %d",
+      "_reloading": "Track SH, 2026-10-11, PROPOSED: a unit whose big guns are reloading wears this at the right of its detail line, after a small shell: the turns until they are loaded (the orders card says it in full: 'Main Guns Fire: reloading, 2 turns to go'). Nothing while they are loaded.",
       "down": "down",
       "fate_exploded": "destroyed",
       "fate_out_of_control": "out of control",
@@ -171,6 +180,13 @@
     "true_scale": 1.0,
     "static_scale": 2.0,
     "_static_scale": "PROPOSED by Track U3 (the strike, 2026-10-10): a STATIC unit (the radio tower, an anti-aircraft battery) is drawn static_scale times the plane rule (true_scale) -- 'at their own scale', as the planes are. Why 2: the planes are drawn up to twice their true size so they stay findable when zoomed out (data/scenarios sandbox view.plane_px, plane_min_px), while a tower 6 m across is 4 px at the planning zoom and the TARGET must read there; 2 puts the tower about as wide as a house and a battery about a house's width. 1.0 is the plain rule. The unit's cast shadow scales with it (it is baked with the art), so the tower's long shadow is always its height x the sun's length at the drawn scale.",
+    "cast_shadow_on": true,
+    "_cast_shadow_on": "PROPOSED by Track M2U (mission 2, 2026-10-11; the lead's request, the style guide's rule 'give it a height, and let the shadow pass draw its shadow'): a unit at the SURFACE casts its shadow by its height. The altitude cue (aircraft_shadow_altitude_scale, a plane's gap from its shadow) is 0 for a unit at the surface, so a tank and the mobile gun cast none while the tower and the battery (cast shadows baked into their art) and a ship (its art's cast_height_m, Track SH) did. With this on, the layer offsets the shadow of a unit whose silhouette is in cast_height_m (or whose art carries a cast_height_m: a ship) by that height x the sun's length (1 / tan 46) away from the sun, at the unit's drawn scale: the footprint mask translated, the part of a prism's shadow that shows beyond it. false is the layer as it was: no offset for a surface unit (a ship included), planes and static units are never touched by it.",
+    "cast_height_m": {
+      "tank": 2.0,
+      "mobile_aa": 2.4
+    },
+    "_cast_height_m": "PROPOSED by Track M2U: the height the footprint's shadow is lifted by, metres, per silhouette. The tank: the sheet's hull (1.5 to 1.8 m) and half its turret (0.75 to 0.95 m), about 2.0 m, so the shadow is the hull's with some of the turret's reach (genTank hull_h, turret_h). The mobile gun: the hull and the cab at about 2 m with the mount above them, 2.4 m. The mask is the footprint, so the barrels' and the turret's longer shadows are not drawn (the cruiser's rule, Track SH). A unit not listed here and without an art cast height (the planes, the tower, the battery) keeps its own rule.",
     "ring_pad_px": 5,
     "ring_min_px": 15,
     "ring_tick_px": 4,
@@ -478,6 +494,43 @@
     "blocked": { "_about": "A drop whose target is outside its cone (it will not release, or is a poor shot): a slash across the aim's mark, and the word beside it (the step's lettering: 'will not release').", "slash_px": 9.0, "line_px": 1.6, "label_px": 14 }
   },
 
+  "guns": {
+    "_proposed": true,
+    "_reason": "THE BIG-GUN SPECIAL IN THE INTERFACE (Track SH, the warship, 2026-10-10). In force (Alex, decisions mixed-warfare, special-targeting, target-follows-unit, step-selection): the warship's main guns are a special, fired by hand with a long reload and aimed with the target selection; a special is active and targeted for its step; with no target, or one out of reach, it cannot be activated and the card says why; a unit target is followed; the step's lettering names the special and its action ('Main Guns Fire'). EVERYTHING ELSE HERE (the words, the marks) is PROPOSED by Track SH. The control is the bomb drop's own button (buttons()['drop']) wearing the special's words; the planner dispatches on what the unit's special is (MotionPlanner.special_kind).",
+    "text": {
+      "_about": "The orders card's words for the special of a unit with big guns, and the lettering at a step with its fire on. %s is the special's label ('Main Guns Fire'). The lines are kept under ~40 characters: the card's line is 258 px of 12 px italic (a longer one shrinks to fit).",
+      "place_first": "%s: place a step first",
+      "no_target": "%s needs a target",
+      "reloading": "%s: reloading, %d turns to go",
+      "reloading_one": "%s: reloading, ready next turn",
+      "already_planned": "%s: already set on step %d",
+      "target_down": "target is already down",
+      "own_side": "target is a friend",
+      "too_close": "target is too close (under %d m)",
+      "out_of_range": "target is out of range (%d of %d m)",
+      "inland": "target is inland: the guns reach the coast",
+      "unspotted": "target is not spotted: a friend must see it",
+      "unit_down": "this unit is down",
+      "not_a_gun": "no guns",
+      "free": "step %d: press %s  ·  loaded",
+      "on": "step %d: %s  ·  spread %d m  ·  %d m",
+      "wont_fire": "will not fire: %s",
+      "step_tag_blocked": "will not fire"
+    },
+    "marks": {
+      "_about": "What the map draws for a step whose fire is on (MotionPlanner._draw_fire_marks), in the planner's own ink and paper (no new colour): a dashed line from the step's node to the target, a ring at the scatter's two sigma (the shells' 86 percent), a small shell beside the node, the target's mark. While the pointer is on the special's button the guns' reach shows as two thin rings round the step (min and max range). PROPOSED.",
+      "line_alpha": 0.8,
+      "ring_alpha": 0.85,
+      "ring_line_px": 1.3,
+      "sigma_k": 2.0,
+      "ring_min_px": 5.0,
+      "target_cross_px": 5.0,
+      "reach_alpha": 0.5,
+      "reach_dash_px": 6.0,
+      "reach_gap_px": 5.0
+    }
+  },
+
   "bombs": {
     "_proposed": true,
     "_reason": "THE BOMB DROP IN THE INTERFACE (Track U3, the strike, 2026-10-10). In force (Alex 2026-10-10, decisions bomb-release and bomb-load): a drop is 'per step, just like diving. You set the intent in the cone. The accuracy is based on how close you are to the ideal release angle', height is a factor, and a bomber makes several drops ('multiple passes make sense'; smaller bombers carry fewer, per drop and in drops). So: the orders card's Drop control turns a drop on for the step it acts on (the last placed step, or the step whose handle was grabbed last); with it on, the map shows that step's BOMB CONE (World.drop_cone: where this step's release can put the bombs) and the player places the AIM POINT in it, a handle like a step's with the same grow-and-fill hover (Alex's node-hover pick); the planner shows the expected spread at the aim and how close the release is to ideal. EVERY VALUE HERE IS PROPOSED by Track U3; nothing is chosen. The enemy's drops are never shown (the one rule is motion_planner.gd plan_shown).",
@@ -655,6 +708,9 @@
       "level_within_m": 5,
       "drop_line": "%s · %d m · falls %d s",
       "drop_line_free": "lands %d m on · falls %d s",
+      "fire_line": "%s · %d m · flies %d s",
+      "fire_line_free": "lands %d m on · flies %d s",
+      "_fire": "Track SH, 2026-10-11, PROPOSED wording for a step with Main Guns Fire: the quiet line under the picture says the target, the distance and how long the shells fly (the drop's, with 'flies' for 'falls').",
       "point": "point",
       "unseen": "target out of sight"
     }
@@ -724,6 +780,8 @@
         { "pattern": "^(.+) came within .* of the target$", "text": "the %s reached its target" },
         { "pattern": "^all player units are down$", "text": "both fighters down" },
         { "pattern": "^(radio_tower_\\d+) is down$", "text": "the %s is destroyed" },
+        { "pattern": "^(military_complex_\\d+) is down$", "text": "the %s is destroyed" },
+        { "pattern": "^(military_complex_\\d+) still stands after turn \\d+$", "text": "the %s still stands" },
         { "pattern": "^turn (\\d+) was played without the objective$", "text": "the tower still stands after turn %s" },
         { "pattern": "^(.+) is down$", "text": "%s down" }
       ]

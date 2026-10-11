@@ -210,6 +210,17 @@ func fall_wobble(id: String) -> float:
 	var w := amp * sin(TAU * style.num("combat.fall.wobble_hz") * game_t + phase)
 	return w + deg_to_rad(style.num("combat.fall.spin_dps")) * maxf(playback_t - UiFate.falls_from(u), 0.0)
 
+# The height a surface unit's shadow is lifted by, metres (0: the layer's old rule, the altitude cue). A ship's art carries its own
+# (Art.cast_height_m); a vehicle is listed by silhouette in ui.json marker.cast_height_m; a plane, the tower and the battery are in neither
+# (the planes' gap is the altitude cue, the static units' shadows are baked into their art). Off when marker.cast_shadow_on is false.
+static func cast_height_m(st: UiStyle, m: UnitMarker) -> float:
+	if not st.flag("marker.cast_shadow_on"):
+		return 0.0
+	if m.art != null and m.art.cast_height_m > 0.0:
+		return m.art.cast_height_m
+	var v: Variant = st.lookup("marker.cast_height_m." + m.silhouette)
+	return float(v) if (v is float or v is int) else 0.0
+
 func update_poses() -> void:
 	if world == null:
 		return
@@ -231,7 +242,14 @@ func update_poses() -> void:
 		var sp: Vector2 = mapping.world_to_screen(wp)
 		var falling := UiFate.falling_at(u, playback_t, playing)
 		var h := fall_height_above_ground(pose) if falling else height_above_ground(pose)
+		m.underway = absf(float(pose.get("speed", 0.0))) > style.num("unit_art.ship.underway_mps")
 		var off: Vector2 = shadow_offset_px(wp, h, m.draw_scale)
+		var cast_h := cast_height_m(style, m)
+		if cast_h > 0.0:
+			# A unit at the surface stands cast_height_m high and casts its shadow by the sheet's rule (castShadows): that height x the
+			# sun's length, away from the sun, at the drawn scale -- not the planes' altitude cue, which is 0 at the surface (Track SH for a
+			# ship's art height; Track M2U for the tank's and the mobile gun's, ui.json marker.cast_height_m, behind marker.cast_shadow_on).
+			off = style.shadow_dir() * style.sun_len() * cast_h * mapping.px_per_m(wp) * style.num("marker.true_scale") * m.draw_scale
 		m.set_pose(sp, mapping.screen_angle(wp, float(pose["heading"])), mapping.px_per_m(wp), off, fall_wobble(id))
 	_marks.queue_redraw()
 	if not (_standout["ring"] as Dictionary).is_empty() or _ring_drawn:

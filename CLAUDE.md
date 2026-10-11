@@ -120,6 +120,24 @@ a patrolling fighter, by a turn limit.
   `data/sim/bombs.json` outside_cone_mode (`test_ui_target`,
   `test_bomb_target`, `test_net_target`). The side view sits in the orders
   card (`scripts/ui/side_view*.gd`, `test_side_view`).
+
+**Water, ground and mixed units** (2026-10-11; decisions water-layer,
+mixed-warfare): water is generated per seed (`scripts/world/water_gen.gd`,
+`WaterGen.shared`) and baked with the ground; the terrain is capped by it.
+- Sea units keep to water deeper than their draught (`scripts/sim/sea_rules.gd`);
+  ground units keep to dry land, cross height steps only on roads and rivers
+  only over an intact bridge (`ground_rules.gd`, `scripts/world/ground_map.gd`);
+  `World.reachable` clips the planner's fan to both.
+- Units: the cutter, the barge and the bridge (`test_water_units`), the tank and
+  its "drive" AI role (`test_tank`), the cruiser with its "Main Guns Fire"
+  special (`scripts/sim/guns.gd`, shared spotting in `spotting.gd`;
+  `test_cruiser`, `test_ui_guns`), the mobile AA and the military complex
+  (`test_mission2_units`).
+- Suppress, the second mission profile (`data/scenarios/suppress.json`): guns
+  hide in woods (`concealment.gd`), give themselves away when they fire
+  (`reveal.gd`) and shoot and scoot (`ai_roam.gd`) (`test_suppress`).
+- The Style guide is the design doc's "Style guide" tab: read it before drawing
+  anything new.
 Work on a track stays inside the folders it owns and reads other tracks' data
 and public APIs, not their code.
 
@@ -430,7 +448,7 @@ is made in BOTH twins; `tar_pack.ps1` is the one Windows-only helper, because
   networking bug. Allocated: `test_enet_loopback` 28777,
   `test_network_session` 28778, `test_world_sync` 28779, `test_net_sandbox`
   28780; the manual two-window check (`tmp/net/run_check.ps1`, not in the
-  gate) uses 28790. `test_net_join_ready` 28781, `test_intercept` 28782, `test_strike` 28783, `test_net_target` 28784. Pick
+  gate) uses 28790. `test_net_join_ready` 28781, `test_intercept` 28782, `test_strike` 28783, `test_net_target` 28784, `test_suppress` 28785. Pick
   the next free one and add it here.
 - **Only `scripts/net/steam_manager.gd` calls `Steam.*`.** Everything else asks
   `NetworkManager`, because the gate may have no Steam client and anything that

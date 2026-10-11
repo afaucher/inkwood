@@ -219,6 +219,16 @@
     "escape_speed_fraction": { "value": 0.5, "_proposed": true, "_reason": "when the World had to slow or hold a boat to keep it afloat (it was put, or driven, close to the shore) it BACKS AWAY at this share of its reverse speed (data/units: speed_min_mps), its bow swinging toward the nearest waypoint; if that too is refused it stops. A boat on its route never needs this: the routes keep a margin from the shore" }
   },
 
+  "drive": {
+    "_about": "Role drive (a GROUND unit: the tank; Track TK2, proposed 2026-10-11: the first mixed mission, holding the bridge, Alex's 'build it like that'). A tank follows a COURSE: its waypoints in order, and/or the road to a target point (the road from where it starts, or from its last waypoint, to the road point nearest the target, then straight to the target), by pure pursuit: it steers for the point on the course 'lookahead_m' ahead of its own foot on it, at its top speed (the road speed; the World's ground rule, data/sim/ground.json, slows it off the road), and stops at the end. A 'start_turn' in the orders makes it wait where it is until then (a wave out of sight). It fires on its own by the engagement rules (combat.gd) and has no other tactics: it does not seek, dodge, or turn back (scripts/sim/ai_drive.gd).",
+    "capture_radius_m": { "value": 15, "_proposed": true, "_reason": "the course is done when the tank is within this of its end along it: it brakes to stop there (the speed it asks for falls as sqrt(2 x decel x the distance left beyond this), so it does not overrun at 10 m/s) and holds. A little over its 6 m length and a step's 12 m at 5 m/s off the road" },
+    "speed_fraction_of_max": { "value": 1.0, "_proposed": true, "_reason": "a tank drives at its top speed (data/units/tank.json 10 m/s): the road speed. The ground rule's cap does the rest off the road; there is no reason to loiter on the way to the bridge" },
+    "lookahead_m": { "value": 40, "_proposed": true, "_reason": "the point it steers for is this far ahead along the course of the tank's foot on it: a step is up to 25 m, the turn radius 19 m at top speed, and the road's bends are gentle (hundreds of metres), so 40 m takes a bend without cutting it and brings a tank that starts off the road onto it in about two steps" },
+    "progress_back_m": { "value": 40, "_proposed": true, "_reason": "where the tank is on its course is looked for from this far behind its last progress to progress_ahead_m ahead of it, so a road that bends back near itself does not pull it onto the wrong stretch" },
+    "progress_ahead_m": { "value": 250, "_proposed": true, "_reason": "see progress_back_m: ten steps at top speed" },
+    "stray_m": { "value": 120, "_proposed": true, "_reason": "when no part of the course within the window is this near the tank (it was held, pushed or placed off its course) the whole course is searched for the nearest foot instead" }
+  },
+
   "mission": {
     "_about": "Read by scripts/sim/mission.gd.",
     "sample_dt_s": {

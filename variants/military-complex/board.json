@@ -1,0 +1,265 @@
+{
+  "id": "military-complex",
+  "date": "2026-10-11",
+  "area": "Units, Missions",
+  "question": "How does the military complex look, whole and destroyed? Alex's second mission profile (decision suppress-mission): 'Clear mobile Aa units and their escorts to enable a bombing run of a military complex.'",
+  "source": "scripts/ui/boards/military_complex_board_shot.gd: the new generator in scripts/ui/unit_marker_art_static.gd (the military complex section), drawn through the game's own markers (scripts/ui/unit_marker.gd) and baked art by scripts/ui/boards/m2_frame.gd, on the game's own paper and road; the ruin is the art UnitMarkerArtStatic.complex_ruin_art bakes, placed as the effects layer would place a ruin. No sandbox is stood up and nothing in the game changes but the art cache",
+  "seed": 20261009,
+  "held_constant": {
+    "scale": "the MAP's (2 px per metre x zoom: 2 at zoom 1, 4 at zoom 2, about 0.8 at the planning zoom 0.35, a little over the map's 0.7 because the planes' 14 px floor holds the marker rule), data military_complex.map_scale_factor 0.5 of the marker rule (PROPOSED); the tower and the battery beside it at the game's rule for static units (twice the planes')",
+    "footprint": "80 x 60 m with the fence 4 m inside it (data military_complex.footprint_m, PROPOSED)",
+    "light": "the map's sun (north-west, elevation 46, shadow strength 0.44), every part cast by its height (data heights_m)",
+    "pen": "the game's own pen (render_defaults linework.pen, shadow side)",
+    "accent": "one zone per look: a recognition panel on the main roof, on the lit half, in the enemy's slate blue (side_b)",
+    "destroyed": "R1's language (the tower's ruin: scorch, pale-lipped craters, the hall roofless with a torn roof lying across it, heaps, the fence half down), no fire; the smoke column is the effects layer's",
+    "data_that_changes_between_options": "ui.json unit_art.variant.military_complex (the look index) and nothing else"
+  },
+  "parameter": "data/ui/unit_art_mission2.json military_complex.default_look (PROPOSED: 0, the hangar yard) until Alex picks; ui.json unit_art.variant.military_complex overrides it once the pick is made",
+  "options": [
+    {
+      "name": "A",
+      "title": "Hangar yard",
+      "look": "hangar_yard",
+      "ui.json unit_art.variant.military_complex": 0,
+      "proposed": true,
+      "files": [
+        "hangar_yard_z1.png",
+        "hangar_yard_ruin_z1.png",
+        "hangar_yard_plan.png",
+        "hangar_yard_ruin_plan.png",
+        "hangar_yard_z2.png",
+        "hangar_yard_ruin_z2.png",
+        "hangar_yard_turned_z1.png"
+      ],
+      "description": "A big barrel-roofed hangar on a pale concrete apron in the north of the fence, two sheds and two round fuel tanks, trucks in the packed-earth yard, a gatehouse on the south fence, and watch towers at two corners. The accent is a recognition panel on the hangar roof.",
+      "accent_zone": "hangar roof panel",
+      "drawn_as": {
+        "look": 0,
+        "kind": "hangar_yard",
+        "fw": 80.0,
+        "fd": 60.0,
+        "fence": "wire",
+        "gate": "south",
+        "main_w": 35.55,
+        "main_d": 17.67,
+        "shed_w": 10.82,
+        "shed_d": 5.54,
+        "tank_r": 3.38,
+        "apron_extra": 4.7,
+        "trucks": 3.5,
+        "jitter": 1.48,
+        "jseed": 417147055
+      },
+      "seed": 2070348688,
+      "parameters": {
+        "main": {
+          "w": [
+            32.0,
+            38.0
+          ],
+          "d": [
+            16.0,
+            20.0
+          ]
+        },
+        "ranges": {
+          "shed_w": [
+            9.0,
+            12.0
+          ],
+          "shed_d": [
+            5.5,
+            7.5
+          ],
+          "tank_r": [
+            2.6,
+            3.4
+          ],
+          "apron_extra": [
+            4.0,
+            7.0
+          ],
+          "trucks": [
+            2.0,
+            4.0
+          ],
+          "jitter": [
+            0.0,
+            1.5
+          ]
+        },
+        "fence": "wire",
+        "gate": "south"
+      }
+    },
+    {
+      "name": "B",
+      "title": "Works with a saw-tooth hall",
+      "look": "works",
+      "ui.json unit_art.variant.military_complex": 1,
+      "proposed": true,
+      "files": [
+        "works_z1.png",
+        "works_ruin_z1.png",
+        "works_plan.png",
+        "works_ruin_plan.png",
+        "works_z2.png",
+        "works_ruin_z2.png",
+        "works_turned_z1.png"
+      ],
+      "description": "A long factory hall with a saw-tooth roof (a shaded strip and a lit strip, repeated), a tall chimney whose long shadow is the tell at the planning zoom, a boiler house, a coal heap and three long sheds, inside a wire fence with a gate on the west. The accent is a recognition panel on the hall's roof.",
+      "accent_zone": "hall roof panel",
+      "drawn_as": {
+        "look": 1,
+        "kind": "works",
+        "fw": 80.0,
+        "fd": 60.0,
+        "fence": "wire",
+        "gate": "west",
+        "main_w": 42.04,
+        "main_d": 20.36,
+        "shed_w": 16.26,
+        "shed_d": 4.56,
+        "boiler_w": 10.52,
+        "boiler_d": 8.34,
+        "stack_w": 2.46,
+        "heap_r": 4.52,
+        "teeth": 6.68,
+        "jitter": 1.09,
+        "jseed": 2009168707
+      },
+      "seed": 1018351472,
+      "parameters": {
+        "main": {
+          "w": [
+            38.0,
+            44.0
+          ],
+          "d": [
+            20.0,
+            24.0
+          ]
+        },
+        "ranges": {
+          "shed_w": [
+            14.0,
+            18.0
+          ],
+          "shed_d": [
+            4.5,
+            6.0
+          ],
+          "boiler_w": [
+            10.0,
+            13.0
+          ],
+          "boiler_d": [
+            8.0,
+            10.0
+          ],
+          "stack_w": [
+            2.0,
+            2.6
+          ],
+          "heap_r": [
+            3.5,
+            5.0
+          ],
+          "teeth": [
+            6.0,
+            8.0
+          ],
+          "jitter": [
+            0.0,
+            1.5
+          ]
+        },
+        "fence": "wire",
+        "gate": "west"
+      }
+    },
+    {
+      "name": "C",
+      "title": "Barracks and depot",
+      "look": "depot",
+      "ui.json unit_art.variant.military_complex": 2,
+      "proposed": true,
+      "files": [
+        "depot_z1.png",
+        "depot_ruin_z1.png",
+        "depot_plan.png",
+        "depot_ruin_plan.png",
+        "depot_z2.png",
+        "depot_ruin_z2.png",
+        "depot_turned_z1.png"
+      ],
+      "description": "Three long barracks ranges round a three-sided yard, a depot shed closing the fourth side, with a flagpole, parked vehicles and stacked crates, inside a low wall (the village's compound wall) with a gatehouse on the south. The accent is a recognition panel on the middle range's roof.",
+      "accent_zone": "barracks roof panel",
+      "drawn_as": {
+        "look": 2,
+        "kind": "depot",
+        "fw": 80.0,
+        "fd": 60.0,
+        "fence": "wall",
+        "gate": "south",
+        "main_w": 34.99,
+        "main_d": 8.11,
+        "side_d": 31.44,
+        "side_w": 9.49,
+        "depot_w": 18.18,
+        "depot_d": 7.39,
+        "trucks": 3.36,
+        "jitter": 0.45,
+        "jseed": 89127670
+      },
+      "seed": 1909060208,
+      "parameters": {
+        "main": {
+          "w": [
+            34.0,
+            40.0
+          ],
+          "d": [
+            8.0,
+            9.5
+          ]
+        },
+        "ranges": {
+          "side_d": [
+            28.0,
+            34.0
+          ],
+          "side_w": [
+            8.0,
+            9.5
+          ],
+          "depot_w": [
+            16.0,
+            20.0
+          ],
+          "depot_d": [
+            7.0,
+            9.0
+          ],
+          "trucks": [
+            2.0,
+            4.0
+          ],
+          "jitter": [
+            0.0,
+            1.2
+          ]
+        },
+        "fence": "wall",
+        "gate": "south"
+      }
+    }
+  ],
+  "palette_check": "No option adds a hue and the only accent is the one roof panel (side_b L 0.551 C 0.100). Surfaces are the paper ramp the village uses (roof lit L 0.922, roof shaded L 0.752, wall fill L 0.880, object fill L 0.925 against paper L 0.847); the ruin uses R1's roles (char = dirt at 0.55 L 0.632 over paper, pit = ink at 0.17). Material is linework.",
+  "recommendation_proposed": "A, the hangar yard, as the working default (PROPOSED by Track M2U, Alex decides): the clearest silhouette at the planning zoom (one long pale roof, a pale apron, round tanks) and the most obviously a target for a bomber; its blue panel sits on the lit half of a big pale roof where it reads best. B is the most distinctive at distance (the saw-tooth block and the chimney's long shadow, the same kind of tell as the tower's lattice) at the price of the most drawing; C is the quietest and the most like the village.",
+  "wiring_note": "The standing complex is wired through unit_marker_art.gd's one dispatch line (silhouette military_complex). The DESTROYED look is baked by UnitMarkerArtStatic.complex_ruin_art(style, ppm, rot) and is NOT wired: a destroyed static unit's marker goes at its down_at and the effects layer's ruin (scripts/fx, fx.ruin(unit, pos, t, kind, size, heading)) takes its place, so the effects layer needs a kind 'military_complex' that blits this art in place of its battery scorch.",
+  "frames": "frames.json (every frame whole, native size)",
+  "sheet": "board.png (each look whole and destroyed at zoom 1, the planning zoom 1:1 and 3x, zoom 2, and turned; a palette strip)",
+  "chosen": "A, the hangar yard (Alex 2026-10-11: 'And the hanger yard')",
+  "chosen_by": null
+}

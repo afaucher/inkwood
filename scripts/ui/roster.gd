@@ -75,6 +75,7 @@ const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
 const UiHealth = preload("res://scripts/ui/ui_health.gd")
 const BombSource = preload("res://scripts/ui/bomb_source.gd")
+const GunSource = preload("res://scripts/ui/gun_source.gd")
 
 var world: World = null
 var selection: RefCounted = null
@@ -87,6 +88,10 @@ var health: UiHealth = null
 # The bombs the rows show (UnitUI shares one with the planner and the orders card): a unit with a bomb
 # load shows its drops left and the bombs in each, as marks, at the right of its second line.
 var bombs: BombSource = null
+# The big guns' reload (Track SH): GunSource asks the World; _guns_start holds each unit's reload as it was when this turn's planning
+# began, which a playback shows (a resolve does not spoil a salvo before it is seen fired).
+var guns: GunSource = null
+var _guns_start: Dictionary = {}
 
 # The grouping this player chose: an id of ui.json roster.group.modes.
 var group_by: String = "none"
@@ -116,6 +121,9 @@ func setup(w: World, sel: RefCounted, st: RefCounted = null) -> void:
 	if bombs == null:
 		bombs = BombSource.new()
 	bombs.setup(w, style)
+	if guns == null:
+		guns = GunSource.new()
+	guns.setup(w, style)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	group_by = style.text("roster.group.default")
 	if not selection.changed.is_connected(_on_changed_id):
@@ -215,6 +223,7 @@ func rows() -> Array[Dictionary]:
 			"health": health.shown(id, playing),
 			"health_max": int(u.def.health),
 			"bombs": _bombs_of(id, playing),
+			"guns": _guns_of(id, playing),
 			"down": status == "down",
 			"fate": health.shown_fate(id, playing),
 			"status": status,
@@ -250,6 +259,20 @@ func header_status() -> String:
 	else:
 		txt = style.text("roster.text.needs_orders_many") % n
 	return "Turn %d · %s" % [world.turn, txt]
+
+# The guns' reload a row shows: {special, left (turns until loaded)} while the unit's guns are reloading, else {} (a unit with no
+# guns, or loaded ones). A playback shows the turn's start.
+func _guns_of(id: String, playing: bool) -> Dictionary:
+	if guns == null or not guns.has_guns(id):
+		return {}
+	var left := guns.reload_left(id)
+	if world.phase == World.PHASE_PLANNING and not playing:
+		_guns_start[id] = left
+	elif playing and _guns_start.has(id):
+		left = int(_guns_start[id])
+	if left <= 0:
+		return {}
+	return {"special": guns.special_id(id), "left": left}
 
 # The bomb load a row shows ({} for a unit with no bombs).
 func _bombs_of(id: String, playing: bool) -> Dictionary:
@@ -635,6 +658,19 @@ func _draw_heading(e: Dictionary, soft: Color, faint: Color, italic: Font) -> vo
 	var x0 := pad + UiInk.text_width(italic, txt, px) + 8.0
 	draw_line(Vector2(x0, base - 3.0), Vector2(size.x - pad, base - 3.0), faint, 0.6, true)
 
+# The big guns' reload, right-aligned at `at` (x = the right edge, y = the line's baseline): a small shell and "reload n" in the detail
+# lettering (Track SH). Returns the left edge of what it drew.
+func _draw_reload(at: Vector2, g: Dictionary, ink: Color, soft: Color, italic: Font) -> float:
+	var st := style
+	var px: float = st.num("fonts.detail_px")
+	var txt := st.text("roster.text.reloading") % int(g["left"])
+	var tw := UiInk.text_width(italic, txt, px)
+	UiInk.text(self, italic, Vector2(at.x - tw, at.y), txt, px, soft)
+	var s: float = st.num("planner.select.drop_mark.size_px") * 1.1
+	var gx := at.x - tw - 6.0 - s
+	UiInk.shell_glyph(self, Vector2(gx, at.y - px * 0.3), s, ink, st.color("card_fill"), 1.0, 1.0)
+	return gx - s
+
 # The bomb load, right-aligned at `at` (x = the right edge, y = the line's baseline): "x n" (bombs in
 # a drop), and before it one small bomb per drop the type carries, filled while the drop is still to
 # make, an outline once spent. Ink only. Returns the left edge of what it drew.
@@ -708,9 +744,12 @@ func _draw_row(i: int, row: Dictionary, ink_c: Color, soft_c: Color, faint: Colo
 	if down:
 		detail = str(row["type"])
 	var detail_right := right
+	var gun_row: Dictionary = row.get("guns", {})
+	if not gun_row.is_empty() and not down:
+		detail_right = _draw_reload(Vector2(detail_right, y2), gun_row, ink, txt, italic) - 8.0
 	var bomb_row: Dictionary = row.get("bombs", {})
 	if not bomb_row.is_empty() and not down:
-		detail_right = _draw_bombs(Vector2(right, y2), bomb_row, ink, txt, italic) - 8.0
+		detail_right = _draw_bombs(Vector2(detail_right, y2), bomb_row, ink, txt, italic) - 8.0
 	UiInk.text(self, italic, Vector2(tx, y2), detail, st.num("fonts.detail_px"), txt, HORIZONTAL_ALIGNMENT_LEFT, detail_right - tx)
 	# Line 3: the plan status; a down unit has the word instead and no step pips.
 	var detail_px: float = st.num("fonts.detail_px")

@@ -1,0 +1,317 @@
+{
+  "id": "mobile-aa",
+  "date": "2026-10-11",
+  "area": "Units, Missions",
+  "question": "How does the mobile anti-aircraft gun look? Alex's second mission profile (decision suppress-mission): 'Clear mobile Aa units and their escorts to enable a bombing run of a military complex.'",
+  "source": "scripts/ui/boards/mobile_aa_board_shot.gd: the new generator scripts/ui/unit_marker_art_mobile_aa.gd drawn through the game's own markers (scripts/ui/unit_marker.gd) and baked art (unit_marker_art.gd) by scripts/ui/boards/m2_frame.gd, on the game's own paper and road; no sandbox is stood up and nothing in the game changes but the art cache",
+  "seed": 20261009,
+  "held_constant": {
+    "scale": "the sandbox's plane rule (a light fighter 36 px across at zoom 1, never under 14 px): the vehicle about 4 px per metre at zoom 1, 8 at zoom 2 and 1.6 at the planning zoom 0.35; the battery at twice that (marker.static_scale 2)",
+    "light": "the map's sun (north-west, elevation 46, shadow strength 0.44), one merged shadow tint",
+    "pen": "the game's own pen (render_defaults linework.pen, shadow side)",
+    "accent": "one zone per look in the side's colour: the enemy's slate blue (side_b) on most frames, the players' brick red (side_a) on one vehicle in the zoom-1 and zoom-2 frames",
+    "beside": "a tank and the anti-aircraft battery, the game's own, at the same zoom",
+    "data_that_changes_between_options": "ui.json unit_art.variant.mobile_aa (the look index) and nothing else"
+  },
+  "parameter": "data/ui/unit_art_mission2.json mobile_aa.default_look (PROPOSED: 0, the half-track) until Alex picks; ui.json unit_art.variant.mobile_aa overrides it once the pick is made",
+  "options": [
+    {
+      "name": "A",
+      "title": "Half-track with a quad mount",
+      "look": "halftrack",
+      "ui.json unit_art.variant.mobile_aa": 0,
+      "proposed": true,
+      "files": [
+        "halftrack_z1.png",
+        "halftrack_plan.png",
+        "halftrack_z2.png"
+      ],
+      "description": "The narrowest and longest of the three: a cab and bonnet over two front wheels, two short tracks at the back, and an open gun bed with a four-barrel mount whose barrels are drawn raised and foreshortened over the cab. The accent is a recognition panel on the cab roof.",
+      "accent_zone": "cab roof panel",
+      "drawn_as": {
+        "look": 0,
+        "kind": "halftrack",
+        "length": 6.23,
+        "width": 2.33,
+        "track_w": 0.53,
+        "track_len": 2.96,
+        "wheel_len": 1.03,
+        "wheel_w": 0.34,
+        "bonnet": 1.39,
+        "cab": 1.93,
+        "mount_r": 0.93,
+        "mount_y": 1.42,
+        "barrel_len": 2.17,
+        "elev_deg": 57.51,
+        "crates": 1,
+        "guns": 4,
+        "rivets": false
+      },
+      "seed": 770032877,
+      "parameters": {
+        "ranges": {
+          "length": [
+            6.2,
+            6.8
+          ],
+          "width": [
+            2.1,
+            2.4
+          ],
+          "track_w": [
+            0.46,
+            0.58
+          ],
+          "track_len": [
+            2.6,
+            3.1
+          ],
+          "wheel_len": [
+            0.9,
+            1.05
+          ],
+          "wheel_w": [
+            0.28,
+            0.36
+          ],
+          "bonnet": [
+            1.3,
+            1.6
+          ],
+          "cab": [
+            1.6,
+            1.95
+          ],
+          "mount_r": [
+            0.8,
+            0.95
+          ],
+          "mount_y": [
+            1.3,
+            1.7
+          ],
+          "barrel_len": [
+            2.0,
+            2.4
+          ],
+          "elev_deg": [
+            45.0,
+            60.0
+          ],
+          "crates": [
+            1.0,
+            3.0
+          ]
+        },
+        "guns": [
+          [
+            2.0,
+            0.35
+          ],
+          [
+            4.0,
+            0.65
+          ]
+        ],
+        "rivets_chance": 0.6
+      }
+    },
+    {
+      "name": "B",
+      "title": "Tracked hull with an open twin turret",
+      "look": "turret",
+      "ui.json unit_art.variant.mobile_aa": 1,
+      "proposed": true,
+      "files": [
+        "turret_z1.png",
+        "turret_plan.png",
+        "turret_z2.png"
+      ],
+      "description": "The nearest to the tank: a wide tracked hull with the engine deck at the back, but the turret is an open-topped eight-sided tub with the crew's heads in it, and the weapon is a pair of barrels drawn raised and foreshortened with flash hiders. The accent is the engine-deck panel, as on the tank.",
+      "accent_zone": "engine-deck panel",
+      "drawn_as": {
+        "look": 1,
+        "kind": "turret",
+        "length": 6.16,
+        "width": 2.97,
+        "track_w": 0.6,
+        "glacis": 0.85,
+        "deck": 1.76,
+        "turret_r": 1.19,
+        "turret_y": 0.16,
+        "wall": 0.2,
+        "barrel_len": 2.65,
+        "elev_deg": 48.87,
+        "crates": 0,
+        "guns": 2,
+        "rivets": true
+      },
+      "seed": 1781532685,
+      "parameters": {
+        "ranges": {
+          "length": [
+            6.0,
+            6.6
+          ],
+          "width": [
+            2.9,
+            3.2
+          ],
+          "track_w": [
+            0.5,
+            0.62
+          ],
+          "glacis": [
+            0.6,
+            0.9
+          ],
+          "deck": [
+            1.5,
+            1.9
+          ],
+          "turret_r": [
+            1.05,
+            1.25
+          ],
+          "turret_y": [
+            0.1,
+            0.4
+          ],
+          "wall": [
+            0.16,
+            0.22
+          ],
+          "barrel_len": [
+            2.4,
+            3.0
+          ],
+          "elev_deg": [
+            35.0,
+            55.0
+          ],
+          "crates": [
+            0.0,
+            2.0
+          ]
+        },
+        "guns": [
+          [
+            2.0,
+            0.7
+          ],
+          [
+            4.0,
+            0.3
+          ]
+        ],
+        "rivets_chance": 0.6
+      }
+    },
+    {
+      "name": "C",
+      "title": "Light carrier with a ring mount",
+      "look": "carrier",
+      "ui.json unit_art.variant.mobile_aa": 2,
+      "proposed": true,
+      "files": [
+        "carrier_z1.png",
+        "carrier_plan.png",
+        "carrier_z2.png"
+      ],
+      "description": "The battery that moves: a short tracked carrier with a cab block at the front and a flat rear deck holding a round armour ring (the battery's sandbag ring in steel) round a pedestal mount with twin barrels, with ammunition crates beside it. The accent is a panel on the deck behind the ring.",
+      "accent_zone": "deck panel",
+      "drawn_as": {
+        "look": 2,
+        "kind": "carrier",
+        "length": 5.82,
+        "width": 2.37,
+        "track_w": 0.54,
+        "cab": 1.89,
+        "ring_r": 1.17,
+        "ring_w": 0.23,
+        "mount_r": 0.59,
+        "mount_y": 0.76,
+        "barrel_len": 2.46,
+        "elev_deg": 52.62,
+        "crates": 3,
+        "guns": 2,
+        "rivets": true
+      },
+      "seed": 659240211,
+      "parameters": {
+        "ranges": {
+          "length": [
+            5.8,
+            6.4
+          ],
+          "width": [
+            2.3,
+            2.7
+          ],
+          "track_w": [
+            0.46,
+            0.56
+          ],
+          "cab": [
+            1.5,
+            1.9
+          ],
+          "ring_r": [
+            1.05,
+            1.2
+          ],
+          "ring_w": [
+            0.22,
+            0.3
+          ],
+          "mount_r": [
+            0.55,
+            0.7
+          ],
+          "mount_y": [
+            0.7,
+            1.0
+          ],
+          "barrel_len": [
+            2.0,
+            2.6
+          ],
+          "elev_deg": [
+            40.0,
+            60.0
+          ],
+          "crates": [
+            2.0,
+            4.0
+          ]
+        },
+        "guns": [
+          [
+            2.0,
+            0.7
+          ],
+          [
+            4.0,
+            0.3
+          ]
+        ],
+        "rivets_chance": 0.5
+      }
+    }
+  ],
+  "shadow_rule": {
+    "before": "the marker layer's shadow offset for a unit at the surface was 0: a ground vehicle's shadow was under it (the tank's too)",
+    "now": "ui.json marker.cast_shadow_on (PROPOSED, on) lifts a surface unit's shadow by its marker.cast_height_m (tank 2.0 m, mobile_aa 2.4 m, PROPOSED) x the sun's length away from the sun; the planes, the tower and the battery are untouched",
+    "files": [
+      "shadow_rule_today.png",
+      "shadow_rule_sun.png"
+    ],
+    "question_for_alex": "keep ground vehicles casting a shadow by that rule (it is on)? The heights are proposed."
+  },
+  "palette_check": "No option adds a hue. The hull is the object fill (L 0.925) a step off the paper (L 0.847); tracks and tyres the rock fill (L 0.887); the windscreen the planes' glass roles; a shaded face the one mix toward the shadow tint; the accent zone the side's colour (side_b L 0.551 C 0.100, side_a L 0.551 C 0.100: equal lightness and chroma). Material is linework.",
+  "recommendation_proposed": "A, the half-track, as the working default (PROPOSED by Track M2U, Alex decides): it is the look least like the tank at the planning zoom (a long narrow bar against a squat block), and a half-track with a quad mount is the vehicle people picture for the job. C is the one that tells what it does fastest (the battery's ring), at the price of the smallest accent. B is the likeliest to be taken for a tank, which could be wanted (it is a hull the tank track can draw from) or not (the player is meant to find and hunt it).",
+  "frames": "frames.json (every frame whole, native size)",
+  "sheet": "board.png (each look at the planning zoom 1:1 and 3x, zoom 1 and zoom 2 beside a tank and the battery; the shadow rule; a palette strip)",
+  "chosen": "A, the half-track with a quad mount (Alex 2026-10-11: 'I like the half track with quad Mount')",
+  "chosen_by": null
+}

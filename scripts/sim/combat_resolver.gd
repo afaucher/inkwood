@@ -43,6 +43,24 @@ extends RefCounted
 #
 # A unit that goes down and is not an aircraft is DESTROYED (Unit.FATE_DESTROYED): no fate roll, it
 # stays where it is.
+#
+# SHELLS (Track SH, the warship, 2026-10-10; scripts/sim/guns.gd has the model and the events). The same walk also fires the BIG-GUN
+# SPECIALS: the histories' step states carry the "fire" a unit planned (its special, its target, the moment); a unit that is up at
+# the start of the tick the moment falls in, is loaded, and whose target is still in range and SPOTTED (spot_fn, the World's
+# shared-spotting query) fires its salvo (shell_fire, the shells seeded and scattered); otherwise nothing is spent and a gun_hold
+# says why. A shell whose impact moment falls in a tick lands (shell_impact) and hurts the units that were up at the start of the
+# tick and stand at the surface within the blast -- the very blast code a bomb uses (_blast_at), with the special's own table.
+# Shells that land in a later turn are returned in `shells`; the ones carried from earlier turns come in as `shells_in`. Without gun
+# rules (a resolver built with fewer arguments) there are no shells.
+#
+#   var fight := CombatResolver.new(rules, bomb_rules, gun_rules).run(units, histories, turn, rng_seed, turn_seconds,
+#       sampler, band_height, bombs_in, shells_in, spot_fn)
+#   spot_fn(side: String, target: Dictionary, t: float, down_at: Dictionary, special_id: String) -> {spotted: bool, run_s: float, salvos: int, spotter_ratio: float}
+#       (run_s: seconds the target has been spotted without a break; salvos: fired at it before this turn, the bracketing)
+#   reach_fn(special_id: String, from: Vector2, target_pos: Vector2) -> String   "" or why the target is out of reach beyond the range
+#       (the World's coastal strip: Guns.WHY_INLAND)
+#   fight.shells      the shells still in the air at the end of the turn (records: guns.gd header)
+#   fight.fired       unit id -> the special ids it fired this turn (the World sets their reload)
 
 const Combat = preload("res://scripts/sim/combat.gd")
 const CombatRules = preload("res://scripts/sim/combat_rules.gd")
@@ -51,9 +69,12 @@ const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
 const Bombs = preload("res://scripts/sim/bombs.gd")
 const BombRules = preload("res://scripts/sim/bomb_rules.gd")
+const Guns = preload("res://scripts/sim/guns.gd")
+const GunRules = preload("res://scripts/sim/gun_rules.gd")
 
 var rules: CombatRules
 var bomb_rules: BombRules = null
+var gun_rules: GunRules = null
 
 # One run's working state (reset by run()).
 var _units: Dictionary = {}
@@ -72,12 +93,19 @@ var _released: Dictionary = {}  # unit id -> drops released this turn
 var _pending: Array = []        # bombs that land this turn and have not landed yet
 var _carry: Array = []          # bombs still falling at the end of the turn
 var _drop_plan: Array = []      # [{unit, t, tick, drop}] the releases of this turn, in order
+var _fire_plan: Array = []      # [{unit, special, step, t, tick, target}] the gun specials planned this turn, in order
+var _shell_pending: Array = []  # shells that land this turn and have not landed yet
+var _shell_carry: Array = []    # shells still in the air at the end of the turn
+var _fired: Dictionary = {}     # unit id -> [special ids fired this turn]
+var _spot_fn: Callable = Callable()
+var _reach_fn: Callable = Callable()
 
-func _init(combat_rules: CombatRules, bombing_rules: BombRules = null) -> void:
+func _init(combat_rules: CombatRules, bombing_rules: BombRules = null, gunnery_rules: GunRules = null) -> void:
 	rules = combat_rules
 	bomb_rules = bombing_rules
+	gun_rules = gunnery_rules
 
-func run(units: Dictionary, histories: Dictionary, turn: int, rng_seed: int, turn_seconds: float, sampler: Callable, band_height: Callable, bombs_in: Array = []) -> Dictionary:
+func run(units: Dictionary, histories: Dictionary, turn: int, rng_seed: int, turn_seconds: float, sampler: Callable, band_height: Callable, bombs_in: Array = [], shells_in: Array = [], spot_fn: Callable = Callable(), reach_fn: Callable = Callable()) -> Dictionary:
 	_units = units
 	_ids = units.keys()
 	_index = {}
@@ -94,6 +122,12 @@ func run(units: Dictionary, histories: Dictionary, turn: int, rng_seed: int, tur
 	_pending = []
 	_carry = []
 	_drop_plan = []
+	_fire_plan = []
+	_shell_pending = []
+	_shell_carry = []
+	_fired = {}
+	_spot_fn = spot_fn
+	_reach_fn = reach_fn
 	for i in _ids.size():
 		var id: String = _ids[i]
 		var u: Unit = units[id]
@@ -103,6 +137,8 @@ func run(units: Dictionary, histories: Dictionary, turn: int, rng_seed: int, tur
 	var n_ticks := maxi(1, roundi(turn_seconds / rules.tick_seconds))
 	if bomb_rules != null:
 		_start_bombs(histories, bombs_in, n_ticks)
+	if gun_rules != null:
+		_start_guns(histories, shells_in, n_ticks)
 	var t_prev := 0.0
 	for tick in range(1, n_ticks + 1):
 		var t := turn_seconds * float(tick) / float(n_ticks)
@@ -127,9 +163,11 @@ func run(units: Dictionary, histories: Dictionary, turn: int, rng_seed: int, tur
 						_fire_hardpoint(active, states, sid, w_i, weapon, h_i, n_rolls, tick, t)
 		if bomb_rules != null:
 			_bombs_tick(active, tick, n_ticks, sampler)
+		if gun_rules != null:
+			_guns_tick(active, tick, n_ticks, sampler)
 		t_prev = t
 	return {"events": _sorted_events(), "health": _health, "down_at": _down_at, "fates": _fates,
-		"bombs": _carry, "released": _released}
+		"bombs": _carry, "released": _released, "shells": _shell_carry, "fired": _fired}
 
 # One hardpoint's rolls in one tick: pick the target (best odds among the enemy
 # units in the cone), then roll n_rolls times at it.
@@ -284,35 +322,170 @@ func _release(uid: String, drop: Dictionary, step: int) -> void:
 # A bomb lands: the bomb_impact event, then the blast on every unit that was up when the tick began.
 func _land(b: Dictionary, active: Array[String], tick: int, sampler: Callable) -> void:
 	var t := float(b["impact_t"])
-	var bx := float(b["x"])
-	var by := float(b["y"])
 	var radius := bomb_rules.blast_radius_m()
 	_events.append({
 		"type": "bomb_impact", "turn": _turn, "unit": b["unit"], "bomb": int(b["bomb"]), "drop_index": int(b["drop_index"]),
 		"stick": "%s/%d/%d" % [b["unit"], int(b["release_turn"]), int(b["drop_index"])],
-		"t": t, "x": bx, "y": by, "blast_m": radius, "released_turn": int(b["release_turn"]), "released_t": float(b["release_t"]),
+		"t": t, "x": float(b["x"]), "y": float(b["y"]), "blast_m": radius, "released_turn": int(b["release_turn"]), "released_t": float(b["release_t"]),
 	})
-	var bomber_side := ""
-	if _units.has(b["unit"]):
-		bomber_side = (_units[b["unit"]] as Unit).side
+	_blast_at(str(b["unit"]), "bomb", float(b["x"]), float(b["y"]), t, active, tick, sampler, bomb_rules)
+
+# THE BLAST, a bomb's or a shell's: every unit that was up when the tick began, at the surface (blast_height_m) and inside the
+# blast table of `blast` (a BombRules or a GunRules.Spec: both answer blast_damage, blast_height_m and blast_hits_own_side), is
+# hurt by the pips of the tier its centre falls in, `by_id` being the unit that fired and `weapon_id` what it fired with.
+func _blast_at(by_id: String, weapon_id: String, bx: float, by: float, t: float, active: Array[String], tick: int, sampler: Callable, blast: Object) -> void:
+	var shooter_side := ""
+	if _units.has(by_id):
+		shooter_side = (_units[by_id] as Unit).side
 	for tid: String in active:
 		var target: Unit = _units[tid]
-		if not bomb_rules.blast_hits_own_side and bomber_side != "" and target.side == bomber_side:
+		if not blast.blast_hits_own_side and shooter_side != "" and target.side == shooter_side:
 			continue
 		var ts: Dictionary = sampler.call(tid, t)
-		if float(ts.get("height_m", 0.0)) > bomb_rules.blast_height_m:
+		if float(ts.get("height_m", 0.0)) > blast.blast_height_m:
 			continue
 		var dist := Vector2(float(ts["x"]) - bx, float(ts["y"]) - by).length()
-		var pips := bomb_rules.blast_damage(dist)
+		var pips: int = blast.blast_damage(dist)
 		if pips <= 0:
 			continue
-		_hurt(tid, str(b["unit"]), "bomb", pips, t, tick, ts)
+		_hurt(tid, by_id, weapon_id, pips, t, tick, ts)
+
+# --- Shells (the big-gun specials; guns.gd) ----------------------------------------------------------
+
+# Lay out the turn's gunnery: the gun specials planned in the histories (every step state that carries a "fire"), and the shells
+# carried in from earlier turns (the ones landing this turn go to _shell_pending, the rest stay _shell_carry).
+func _start_guns(histories: Dictionary, shells_in: Array, n_ticks: int) -> void:
+	for id: String in _ids:
+		var h: Array = histories[id]
+		for k in range(1, h.size()):
+			var f: Variant = (h[k] as Dictionary).get("fire")
+			if f is Dictionary and (f as Dictionary).has("fire_t") and (f as Dictionary).get("target") is Dictionary and not ((f as Dictionary)["target"] as Dictionary).is_empty() 					and gun_rules.has_special(str((f as Dictionary).get("special", ""))):
+				var ft := float((f as Dictionary)["fire_t"])
+				_fire_plan.append({"unit": id, "special": str((f as Dictionary)["special"]), "step": int((h[k] as Dictionary).get("step", k - 1)),
+					"t": ft, "tick": _tick_of(ft, n_ticks), "target": (f as Dictionary)["target"]})
+	for s: Dictionary in shells_in:
+		_shell_land_or_carry(s.duplicate(true))
+
+func _shell_land_or_carry(s: Dictionary) -> void:
+	if int(s["impact_turn"]) <= _turn:
+		if int(s["impact_turn"]) < _turn:
+			s["impact_turn"] = _turn
+			s["impact_t"] = 0.0
+		_shell_pending.append(s)
+	else:
+		_shell_carry.append(s)
+
+# One tick of gunnery, after the bombs: the salvos that fall in it, then the shells that land in it.
+func _guns_tick(active: Array[String], tick: int, n_ticks: int, sampler: Callable) -> void:
+	for entry: Dictionary in _fire_plan:
+		if int(entry["tick"]) != tick:
+			continue
+		# Only a unit that was up when the tick began fires (as for the guns and the bombs: simultaneous).
+		if not active.has(str(entry["unit"])):
+			continue
+		_fire_salvo(entry, active, sampler)
+	var due: Array = []
+	var rest: Array = []
+	for s: Dictionary in _shell_pending:
+		if int(s["impact_turn"]) == _turn and _tick_of(float(s["impact_t"]), n_ticks) == tick:
+			due.append(s)
+		else:
+			rest.append(s)
+	_shell_pending = rest
+	if due.is_empty():
+		return
+	due.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if float(a["impact_t"]) != float(b["impact_t"]):
+			return float(a["impact_t"]) < float(b["impact_t"])
+		return str(a["id"]) < str(b["id"]))
+	for s: Dictionary in due:
+		var spec: GunRules.Spec = gun_rules.special(str(s["special"]))
+		if spec == null:
+			continue
+		var t := float(s["impact_t"])
+		_events.append({
+			"type": "shell_impact", "turn": _turn, "unit": s["unit"], "special": s["special"], "shell": int(s["shell"]), "step": int(s["step"]),
+			"t": t, "x": float(s["x"]), "y": float(s["y"]), "blast_m": spec.blast_radius_m(), "released_turn": int(s["release_turn"]), "released_t": float(s["release_t"]),
+		})
+		_blast_at(str(s["unit"]), str(s["special"]), float(s["x"]), float(s["y"]), t, active, tick, sampler, spec)
+
+# A unit fires the salvo it planned, if it can: loaded, its target there, in range and spotted at this moment. Otherwise a
+# gun_hold event says why and nothing is spent.
+func _fire_salvo(entry: Dictionary, active: Array[String], sampler: Callable) -> void:
+	var uid: String = entry["unit"]
+	var sid: String = entry["special"]
+	var u: Unit = _units[uid]
+	var t := float(entry["t"])
+	var target: Dictionary = entry["target"]
+	var spec: GunRules.Spec = gun_rules.special(sid)
+	if spec == null:
+		return
+	var fired: Array = _fired.get(uid, [])
+	if fired.has(sid) or u.gun_ready_turn(sid) > _turn:
+		_hold(entry, Guns.WHY_RELOADING)
+		return
+	var from_s: Dictionary = sampler.call(uid, t)
+	var from := Vector2(float(from_s["x"]), float(from_s["y"]))
+	var tpos := Vector2.ZERO
+	var tvel := Vector2.ZERO
+	if target.has("unit"):
+		var tid := str(target["unit"])
+		if not _units.has(tid):
+			_hold(entry, Guns.WHY_NO_TARGET)
+			return
+		if (_units[tid] as Unit).side == u.side:
+			_hold(entry, Guns.WHY_OWN_SIDE)
+			return
+		if not _up.get(tid, false):
+			_hold(entry, Guns.WHY_TARGET_DOWN)
+			return
+		var ts: Dictionary = sampler.call(tid, t)
+		tpos = Vector2(float(ts["x"]), float(ts["y"]))
+		tvel = Vector2(cos(float(ts["heading"])), sin(float(ts["heading"]))) * float(ts["speed"])
+	else:
+		var p: Variant = target["point"]
+		tpos = (p as Vector2) if p is Vector2 else Vector2(float(p[0]), float(p[1]))
+	var why := Guns.range_error(from.distance_to(tpos), spec)
+	if why == "" and _reach_fn.is_valid():
+		why = str(_reach_fn.call(sid, from, tpos))
+	if why != "":
+		_hold(entry, why)
+		return
+	var spot: Dictionary = {"spotted": true, "run_s": 0.0, "salvos": 0, "spotter_ratio": 0.0}
+	if _spot_fn.is_valid():
+		spot = _spot_fn.call(u.side, target, t, _down_at, sid)
+	if not bool(spot["spotted"]):
+		_hold(entry, Guns.WHY_UNSPOTTED)
+		return
+	var aim := Guns.aim_for(from, tpos, tvel, spec)
+	var salvos_before := int(spot.get("salvos", 0))
+	var spotter_ratio := float(spot.get("spotter_ratio", 0.0))
+	var sigma := Guns.sigma_m(float(aim["range_m"]), float(spot["run_s"]), spec, salvos_before, spotter_ratio)
+	var shells := Guns.make_salvo({"unit": uid, "special": sid, "step": int(entry["step"]), "t": t, "from": from, "aim": aim["aim"],
+		"range_m": aim["range_m"], "flight_s": aim["flight_s"], "sigma_m": sigma}, spec, _seed, _turn, int(_index[uid]))
+	fired.append(sid)
+	_fired[uid] = fired
+	var a: Vector2 = aim["aim"]
+	var first_impact := t + float(aim["flight_s"])
+	_events.append({
+		"type": "shell_fire", "turn": _turn, "unit": uid, "special": sid, "t": t, "x": from.x, "y": from.y, "step": int(entry["step"]),
+		"target": target.duplicate(true), "aim": [a.x, a.y], "shells": shells.size(), "range_m": aim["range_m"], "flight_s": aim["flight_s"],
+		"impact_t": first_impact, "spread_m": sigma, "spotted_s": float(spot["run_s"]), "salvos_before": salvos_before, "spotter_ratio": spotter_ratio, "followed": target.has("unit"),
+	})
+	for sh: Dictionary in shells:
+		_shell_land_or_carry(Bombs.schedule(sh, _turn_seconds))
+
+func _hold(entry: Dictionary, reason: String) -> void:
+	_events.append({
+		"type": "gun_hold", "turn": _turn, "unit": entry["unit"], "special": entry["special"], "t": float(entry["t"]), "step": int(entry["step"]),
+		"target": (entry["target"] as Dictionary).duplicate(true), "reason": reason,
+	})
 
 # The events in time order: by t, and by the order they were made within a moment. (The guns' events
 # carry their tick's end, a bomb's its own moment, so a bomb's event may be made after a later-stamped
 # one of the same tick.) Array.sort_custom is not stable, so the order made is the second key.
 func _sorted_events() -> Array:
-	if bomb_rules == null:
+	if bomb_rules == null and gun_rules == null:
 		return _events
 	var keyed: Array = []
 	for i in _events.size():

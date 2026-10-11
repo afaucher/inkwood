@@ -192,7 +192,10 @@ func _check_plan_readers() -> void:
 	# drawing (test_ui_bombs checks that an AI bomber's drop never reaches bomb_marks()).
 	# bomb_aim_board_shot.gd and bomb_ui_shot.gd: windowed shots that set a player bomber's drop up
 	# and play it themselves.)
-	var allowed := ["motion_planner.gd", "roster.gd", "node_hover_board_shot.gd", "bomb_source.gd", "bomb_aim_board_shot.gd", "bomb_ui_shot.gd"]
+	# gun_source.gd (Track SH, the warship): bomb_source's twin for the big guns -- it lists a unit's planned fires and asks the World for a
+	# step's gun_check; it draws nothing, only reads a PLAYER unit's plan (it refuses any other) and the planner hands what it reads to a
+	# drawing only behind plan_shown (test_ui_guns).
+	var allowed := ["motion_planner.gd", "roster.gd", "node_hover_board_shot.gd", "bomb_source.gd", "gun_source.gd", "bomb_aim_board_shot.gd", "bomb_ui_shot.gd"]
 	var checked := 0
 	for root: String in ["res://scripts/ui", "res://scripts/fx"]:
 		for f: String in _gd_files(root):

@@ -16,9 +16,9 @@ const CombatWeapon = preload("res://scripts/sim/combat_weapon.gd")
 
 # The demo's air units (design doc, Initial unit roster). More files may exist;
 # these must.
-const REQUIRED := ["light_fighter", "heavy_fighter", "bomber", "radio_tower", "anti_aircraft_battery"]
+const REQUIRED := ["light_fighter", "heavy_fighter", "bomber", "radio_tower", "anti_aircraft_battery", "mobile_aa", "military_complex"]
 # The static ground units: never move, never plan (the tower, the batteries, and since Track WS's water the bridge).
-const STATIC_UNITS := ["radio_tower", "anti_aircraft_battery", "bridge"]
+const STATIC_UNITS := ["radio_tower", "anti_aircraft_battery", "bridge", "military_complex"]
 # The water's units (Track WS, 2026-10-10): two sea units with a draught, and the bridge.
 const WATER_UNITS := ["patrol_boat", "supply_boat", "bridge"]
 
@@ -313,6 +313,19 @@ func _check_weapons(def: UnitDef) -> void:
 			eq(ids, [] as Array[String], "radio tower: no weapons")
 		"bridge":
 			eq(ids, [] as Array[String], "bridge: no weapons")
+		"military_complex":
+			# Track M2U (mission 2): the target of 'clear the guns to bomb the complex': static, unarmed, tougher than the tower
+			eq(ids, [] as Array[String], "military complex: no weapons")
+		"mobile_aa":
+			# Track M2U (mission 2): a ground vehicle that shoots up: one weapon, the battery's light flak's shape (all around, aimed up,
+			# short: the low band and not the medium)
+			eq(ids, ["aa_guns"] as Array[String], "mobile AA gun: one weapon, the light AA guns")
+			eq(def.weapons[0].half_across_deg, 180.0, "...all around")
+			check(def.weapons[0].elevation_deg > 0.0 and def.weapons[0].elevation_deg + def.weapons[0].half_height_deg >= 90.0, "...aimed up, reaching straight overhead")
+			# (the brief's 320 m kept the gun to the low band; Track M2L widened the reach to contest a medium approach: the figure is theirs,
+			# what is held is that it is at least the battery's light flak's 320 m and that the high band, 1,000 m, stays out of its reach)
+			check(def.weapons[0].effective_range_m >= 320.0 and def.weapons[0].effective_range_m * 1.2 < 997.0, "...at least the battery's light flak's 320 m, and the high band out of its reach (%s m effective)" % str(def.weapons[0].effective_range_m))
+			check(def.domain == "ground" and not def.is_static(), "...on a ground unit that moves")
 		"supply_boat":
 			eq(ids, [] as Array[String], "supply boat: unarmed")
 		"patrol_boat":

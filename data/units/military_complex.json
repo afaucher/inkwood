@@ -1,0 +1,36 @@
+{
+  "_about": "Military complex: the second mission's target (Track M2U, mission 2, 2026-10-11). ALEX'S: 'Clear mobile Aa units and their escorts to enable a bombing run of a military complex' (decision suppress-mission; the target is Alex's, everything below is PROPOSED by Track M2U). A STATIC unit (mobility 'static'), like the radio tower and the bridge: it never moves, turns or plans, has NO weapons, and goes down with the fate 'destroyed' when its health reaches 0, from bombs (scripts/sim/bombs.gd; the blast table of data/sim/bombs.json measures from the unit's centre). A fenced compound of a main building, sheds, a yard: bigger and tougher than the tower, which is the whole difference, so that clearing the guns first pays: the bomber must put several sticks on it, and from the medium band it does so slowly. THE ART: drawn at the MAP's scale (not the units') from a seeded generator with three looks on the board variants/military-complex (A hangar yard, B works with a saw-tooth hall and a chimney, C barracks and depot; nothing is chosen: scripts/ui/unit_marker_art_static.gd, data/ui/unit_art_mission2.json), and destroyed in R1's language. Record shape: data/units/_schema.json.",
+  "id": "military_complex",
+  "name": "Military complex",
+  "domain": "ground",
+  "mobility": "static",
+  "size_m": { "value": 80, "_proposed": true, "_reason": "the footprint's long side: the compound is 80 x 60 m (the lead's brief), the fence inside it. For scale: the radio tower is 12 m, the anti-aircraft battery 14, the bridge 40, a village house 20 x 11. NOTE for the sim: bombs and the ground rule measure from the unit's CENTRE (and the bridge's span is its size_m along its heading), so the 80 m is what the art and the hit radius use; a bomb that lands on a far shed, 35 m from the centre, counts as 1 pip (the blast table is 12 / 25 / 45 m for 3 / 2 / 1)" },
+  "draught_m": { "value": 0, "_proposed": true, "_reason": "a unit that does not float needs no water under it (the water rule applies to domain sea only): 0" },
+  "actions_per_turn": { "value": 1, "_proposed": true, "_reason": "a static unit has nothing to plan: one step a turn that stands still" },
+  "health": { "value": 12, "_proposed": true, "_reason": "pips the bombs must take (3 for a hit within 12 m, 2 within 25 m, 1 within 45 m: data/sim/bombs.json): 12 is four direct hits, or a dozen and more near misses, against the tower's 8 and the bridge's 10. The tower dies to a bomber's first stick 62 percent of the time from the low band (7.9 pips on average, strike_tuning.gd table B); MEASURED (scripts/test_support/mission2_unit_tuning.gd table B, a bomber's stick of four on a perfect line at the centre, 300 seeds): from the LOW band 7.9 pips a stick, 2.0 sticks to destroy it on average (destroyed within the bomber's three drops 100 percent of the time, 99 percent with the release half way to the cone's rim, 57 percent at the rim); from the MEDIUM band 4.8 pips a stick, 3.0 sticks (78 percent within three drops on a perfect line, 35 percent half way to the rim); from the HIGH band 1.8 pips a stick, 7.6 sticks (2 percent). The tower (8 pips) is 1.4 sticks low and 2.2 medium: this is about half as much work again" },
+  "sight_range_m": { "value": 500, "_proposed": true, "_reason": "guards on the fence and a watch tower on the corner: the radio tower's 500 m. The enemy AI counts what its units see (scripts/sim/ai_sense.gd), including its static units, so this is how far the complex warns the patrol" },
+  "drawing": { "silhouette": "military_complex" },
+  "envelope": {
+    "speed_min_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "speed_cruise_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "speed_max_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "dive_speed_max_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "accel_mps2": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "decel_mps2": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "reverse_from_stop": { "value": false, "_proposed": true, "_reason": "static: never moves" },
+    "turn_rate_curve_dps": { "value": [[0, 0]], "_proposed": true, "_reason": "static: never turns" },
+    "turn_bleed_mps2": { "value": 0, "_proposed": true, "_reason": "static: never turns" },
+    "turn_bleed_exponent": { "value": 1, "_proposed": true, "_reason": "static: never turns (the exponent is unused; it must be a number)" },
+    "altitude_bands": { "value": ["surface"], "_proposed": true, "_reason": "it stands on the ground: the surface band (data/sim/altitude.json)" },
+    "start_band": { "value": "surface", "_proposed": true, "_reason": "it stands on the ground" },
+    "bands_per_step": { "value": 0, "_proposed": true, "_reason": "static: never changes band" },
+    "climb_speed_cost_mps": { "value": 0, "_proposed": true, "_reason": "static: never changes band" },
+    "dive_speed_gain_mps": { "value": 0, "_proposed": true, "_reason": "static: never changes band" }
+  },
+  "weapons": [],
+  "bomb_load": {
+    "drops": { "value": 0, "_proposed": true, "_reason": "a compound drops nothing" },
+    "per_drop": { "value": 0, "_proposed": true, "_reason": "a compound drops nothing" }
+  },
+  "specials": []
+}

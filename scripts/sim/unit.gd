@@ -79,6 +79,14 @@ var fall_dir: int = 0
 # Drops (passes) the unit has left to make (Track S2, 2026-10-10: bomb_load in the type's data,
 # set by World.add_unit, one fewer for each drop it releases). 0 for a unit that carries no bombs.
 var drops_left: int = 0
+# The big-gun specials' reload (Track SH, the warship, 2026-10-10; data/sim/guns.json reload_turns): special id -> the first turn the
+# guns may be fired again. A special with no entry is loaded. Set by World.resolve() for each salvo fired (turn + reload_turns + 1) and
+# carried in the net state, so a client's planning agrees with the host's.
+var gun_ready: Dictionary = {}
+
+# The first turn this unit's gun special may be fired in (1 or less: loaded now).
+func gun_ready_turn(special_id: String) -> int:
+	return int(gun_ready.get(special_id, 0))
 
 func state() -> Dictionary:
 	return {"x": x, "y": y, "heading": heading, "speed": speed, "altitude_band": altitude_band}
@@ -113,6 +121,7 @@ func to_dict() -> Dictionary:
 		"fall_height_m": fall_height_m,
 		"fall_dir": fall_dir,
 		"drops_left": drops_left,
+		"gun_ready": gun_ready.duplicate(),
 	}
 
 # Everything a resolve changes, for sending a resolved turn over the network
@@ -124,7 +133,7 @@ func net_state() -> Dictionary:
 	var s := {
 		"x": x, "y": y, "heading": heading, "speed": speed, "altitude_band": altitude_band,
 		"out_of_bounds": out_of_bounds, "health": health, "down": down, "down_at": down_at,
-		"fate": fate, "fall_dir": fall_dir, "drops_left": drops_left,
+		"fate": fate, "fall_dir": fall_dir, "drops_left": drops_left, "gun_ready": gun_ready.duplicate(),
 	}
 	if is_finite(fall_height_m):
 		s["fall_height_m"] = fall_height_m
@@ -139,4 +148,5 @@ func apply_net_state(s: Dictionary) -> void:
 	fate = str(s.get("fate", ""))
 	fall_dir = int(s.get("fall_dir", 0))
 	drops_left = int(s.get("drops_left", drops_left))
+	gun_ready = (s.get("gun_ready", {}) as Dictionary).duplicate()
 	fall_height_m = float(s.get("fall_height_m", NAN))

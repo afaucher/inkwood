@@ -64,6 +64,12 @@ const LIMIT_BAND := "band"
 const LIMIT_CLIMB := "climb"
 # Track WS (water): the World keeps a sea unit on water (World.set_water); a step it slowed or held to stay afloat carries this limit.
 const LIMIT_SHORE := "shore"
+# Track TK2 (the ground rule, data/sim/ground.json; World.set_ground): a step of a ground unit the rule slowed or held carries one of
+# these. CLIFF: it would have crossed a height step off the road. WATER: it would have driven into water with no intact bridge under
+# it. TERRAIN: the going (open ground, woods) held the end speed under what was asked (soft: the unit brakes no faster than its decel).
+const LIMIT_CLIFF := "cliff"
+const LIMIT_WATER := "water"
+const LIMIT_TERRAIN := "terrain"
 
 var speed_min: float
 var speed_cruise: float
@@ -317,6 +323,11 @@ static func point_on_step(from: Dictionary, to: Dictionary, step_dt: float, f: f
 	var v1 := _num(to, "speed")
 	var turn := _num(to, "turn")
 	var h0 := _num(from, "heading")
+	# A step the World HELD (the water rule's, the ground rule's: the unit could not stop before the shore, the cliff, the river and so
+	# stays where it was, speed 0) goes nowhere: without this its arc would still be (v0 + 0) / 2 x dt long and the unit would slide
+	# past the place it was held at, and be drawn doing it, and snap back (Track TK2, 2026-10-11).
+	if to.get("held", false) == true:
+		return {"x": _num(from, "x"), "y": _num(from, "y"), "heading": h0, "speed": v0 + (v1 - v0) * f}
 	var p := advance(_num(from, "x"), _num(from, "y"), h0, turn * f, (v0 + v1) * 0.5 * step_dt * f)
 	return {
 		"x": p[0],

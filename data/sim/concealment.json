@@ -1,0 +1,29 @@
+{
+  "_about": "CONCEALMENT (Track M2L, 2026-10-11, at the coordinator's brief after the first Suppress report): a mobile ground unit standing in WOODS is seen only within a short radius of the observer, whatever the observer's sight. scripts/sim/concealment.gd reads this and holds the rule; the player's fog (scripts/render/fog_vision.gd shows_unit), the enemy AI's knowledge (scripts/sim/ai_sense.gd) and shared spotting (scripts/sim/spotting.gd) ask it, so all three agree. WHY (the lead's proposal, not Alex's; decision suppress-mission): the units track's mobile AA reaches a few hundred metres and a plane sees 800, so with plain circles every gun that can fire is already in sight and 'the guns are hidden, they move, and they give themselves away when they fire' (scripts/sim/reveal.gd) has nothing to give away. With cover, a gun in a grove is found only by flying almost over it, or when it fires. Alex's rules for now: 'Find the fun first!' and the balance is not calibrated (decisions mixed-warfare, balance-uncalibrated). Alex's own, earlier: trees do not block sight 'for now' (data/view/fog.json vision.trees_block); this is not a line of sight, it is a SPOTTING radius for small ground units, so that rule stands. The rule needs the World's ground eyes (World.set_ground: the tree density, scripts/world/ground_map.gd); a scenario with no mobile ground unit never gives the World them, so nothing is concealed in the Strike or the Intercept. A gun that has FIRED is seen where it fired from (reveal records): the fog patch, the AI's knowledge, the spotting of a revealed target. Record shape as data/sim/combat.json: {value, _proposed, _reason}.",
+
+  "on": {
+    "value": true,
+    "_proposed": true,
+    "_reason": "the switch: false and nothing is concealed anywhere (every observer sees to its own sight, as before this rule)"
+  },
+  "radius_m": {
+    "value": 200,
+    "_proposed": true,
+    "_reason": "an observer sees a unit in cover only within this distance of itself (or within its own sight, if that is shorter): a fighter at 100 m/s crosses 200 m in two seconds, so a plane has to pass almost over a gun in a grove to find it by sight. The coordinator's proposal, about 200 m. A dial for how hard the guns are to find; with \"on\" false it is moot"
+  },
+  "cover_density_min": {
+    "value": 0.5,
+    "_proposed": true,
+    "_reason": "the tree density (0 to 1, the chance a dart becomes a tree: terrain.gd's rule, read by scripts/world/ground_map.gd woods_at) at or above which a point is woods: the same 0.5 the ground rule uses to slow a vehicle in woods (data/sim/ground.json woods_density_min), so 'in a grove' means the same to the going and to sight"
+  },
+  "domains": {
+    "value": ["ground"],
+    "_proposed": true,
+    "_reason": "which units can hide in cover: ground units. A plane is never hidden by the trees below it"
+  },
+  "mobility": {
+    "value": ["mobile"],
+    "_proposed": true,
+    "_reason": "only MOBILE ground units: the mobile AA, and the tanks of the bridge mission (hidden in woods too, which is intended). The static batteries, the tower and the complex are as they were: the Strike stands in a village the layout keeps clear of trees, and Alex has playtested it"
+  }
+}

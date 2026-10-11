@@ -692,6 +692,9 @@ func _draw_strike_ground(item: CanvasItem, view: Rect2) -> void:
 			continue
 		var ppm := drawn_ppm(wp)
 		var q := quantize(ppm)
+		if str(r.get("kind", "")) == "military_complex":
+			_blit_complex_ruin(item, r, sp, ppm, q, Color(1.0, 1.0, 1.0, a), false)   # mission 2: the compound's own destroyed art
+			continue
 		# the foot is baked ALREADY TURNED by the unit's heading (as the static markers are: the light is the map's at any heading)
 		var rs := _ruin_set_for(q, mapping.screen_angle(wp, float(r["heading"])) + PI / 2.0)
 		if rs == null or rs.remains.is_empty():
@@ -710,8 +713,30 @@ func _draw_strike_ground(item: CanvasItem, view: Rect2) -> void:
 		elif field.ruin_lying(r, now) and rs.lying[v] != null:
 			_blit(item, rs.lying[v], rs.lying_origin, sp, rot, ppm / q, Color.WHITE)
 
+# THE DESTROYED MILITARY COMPLEX (mission 2, Track M2U): the art unit_marker_art_static.gd bakes (complex_ruin_art), already turned by
+# the unit's heading as its marker was (the sprite angle heading + 90 degrees), at the drawn scale, with its low cast shadow as the mask.
+# `shadow` draws the mask (in the shadow pass) in place of the sprite.
+func _blit_complex_ruin(item: CanvasItem, r: Dictionary, sp: Vector2, ppm: float, q: float, mod: Color, shadow: bool) -> void:
+	var ui: RefCounted = load("res://scripts/ui/ui_style.gd").shared()
+	var rot := mapping.screen_angle(r["pos"], float(r["heading"])) + PI / 2.0
+	var art = load("res://scripts/ui/unit_marker_art_static.gd").complex_ruin_art(ui, q, rot)
+	if art == null or art.texture == null:
+		return
+	var tex: Texture2D = art.mask if shadow else art.texture
+	_blit(item, tex, art.origin, sp, 0.0, ppm / art.ppm, mod)
+
 # Bombs in the air cast their shadow by the altitude rule, the gap closing as they fall.
 func _draw_strike_shadows(item: CanvasItem, view: Rect2) -> void:
+	for r in field.ruins:
+		if str(r.get("kind", "")) != "military_complex":
+			continue
+		var ra := field.ruin_alpha(r, now)
+		var rp: Vector2 = r["pos"]
+		var rsp := mapping.world_to_screen(rp)
+		if ra <= 0.0 or not view.grow(160.0).has_point(rsp):
+			continue
+		var rppm := drawn_ppm(rp)
+		_blit_complex_ruin(item, r, rsp, rppm, quantize(rppm), Color(_tint.r, _tint.g, _tint.b, ra), true)
 	for d in field.drops:
 		var s := field.drop_state(d, now)
 		if not bool(s["alive"]):

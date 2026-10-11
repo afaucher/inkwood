@@ -87,6 +87,14 @@ const STATICS := {
 	"radio_tower": 6,
 }
 
+# THE SHIPS (Track SH, the warship, 2026-10-10): silhouette id -> the sheet's UNITS index. The small cruiser (unit sheet index 5),
+# drawn by unit_marker_art_ship.gd (loaded with load(), like the statics': it preloads this file). A ship is baked nose up and
+# turned by the marker like a plane; its art also carries a WAKE texture (shown while it is under way) and the height its hull
+# casts its shadow from.
+const SHIPS := {
+	"small_cruiser": 5,
+}
+
 class Art:
 	var texture: Texture2D = null   # the plane, straight alpha
 	var mask: Texture2D = null      # the silhouette, white, straight alpha (a static unit's: its cast shadow)
@@ -99,6 +107,11 @@ class Art:
 	# sprite or the mask. False for the planes and the tank (nose up, turned by the marker).
 	var screen_aligned: bool = false
 	var rot: float = 0.0
+	# A SHIP's (Track SH): the ink V wake on a texture of its own (drawn under the ship while it is under way), its origin in that
+	# texture's px (the same ppm as the art), and the height the hull casts its shadow from, metres (the marker lifts the shadow by it).
+	var wake: Texture2D = null
+	var wake_origin := Vector2.ZERO
+	var cast_height_m: float = 0.0
 
 class Model:
 	var silhouette: String
@@ -187,6 +200,17 @@ static func is_tank(silhouette: String) -> bool:
 static func is_static(silhouette: String) -> bool:
 	return STATICS.has(silhouette)
 
+static func is_ship(silhouette: String) -> bool:
+	return SHIPS.has(silhouette)
+
+static var _ship_script: GDScript = null
+
+# unit_marker_art_ship.gd, loaded the first time a ship needs it.
+static func _ships() -> GDScript:
+	if _ship_script == null:
+		_ship_script = load("res://scripts/ui/unit_marker_art_ship.gd")
+	return _ship_script
+
 static var _static_script: GDScript = null
 
 # unit_marker_art_static.gd, loaded the first time a static unit needs it.
@@ -211,7 +235,9 @@ static func _variant_of(st: RefCounted, silhouette: String) -> int:
 # (anti-aircraft battery, radio tower): the sprite angle it is baked turned by (heading + 90 degrees),
 # part of its cache key; the planes and the tank are baked nose up and ignore it.
 static func art_for(st: RefCounted, silhouette: String, accent: Color, ppm: float, rot: float = 0.0) -> Art:
-	if not (is_plane(silhouette) or is_tank(silhouette) or is_static(silhouette)):
+	if silhouette == "mobile_aa": return load("res://scripts/ui/unit_marker_art_mobile_aa.gd").art_for(st, accent, ppm)   # Track M2U, mission 2: the mobile gun (its own file, its own cache entries here)
+	if silhouette == "military_complex": return _statics().complex_art(st, accent, ppm, rot)   # Track M2U, mission 2: the military complex, drawn at the map's scale (unit_marker_art_static.gd)
+	if not (is_plane(silhouette) or is_tank(silhouette) or is_static(silhouette) or is_ship(silhouette)):
 		return null
 	var lo: float = st.num("unit_art.min_bake_ppm")
 	var hi: float = st.num("unit_art.max_bake_ppm")
@@ -260,6 +286,10 @@ static func model_for(st: RefCounted, silhouette: String, variant: int = -1) -> 
 		m.seed = unit_seed(st.scene_seed, int(TANKS[silhouette]), variant)
 		m.p = gen_tank(Mulberry32.new(m.seed))
 		m.G = build_tank(m.p)
+	elif is_ship(silhouette):
+		m.seed = unit_seed(st.scene_seed, int(SHIPS[silhouette]), variant)
+		m.p = _ships().gen_cruiser(Mulberry32.new(m.seed))
+		m.G = _ships().build_cruiser(m.p)
 	elif is_static(silhouette):
 		m.seed = unit_seed(st.scene_seed, int(STATICS[silhouette]), variant)
 		if silhouette == "anti_aircraft_battery":
@@ -1351,6 +1381,8 @@ static func extent_box(M: Model) -> Rect2:
 static func _bake(st: RefCounted, M: Model, accent: Color, ppm: float, rot: float = 0.0) -> Art:
 	if is_static(M.silhouette):
 		return _statics().bake(st, M, accent, ppm, rot)
+	if is_ship(M.silhouette):
+		return _ships().bake(st, M, accent, ppm)
 	var margin: float = st.num("unit_art.bake_margin_px")
 	var box := extent_box(M)
 	var size := Vector2i(ceili(box.size.x * ppm + 2.0 * margin), ceili(box.size.y * ppm + 2.0 * margin))

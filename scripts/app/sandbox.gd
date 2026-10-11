@@ -81,9 +81,11 @@ const SandboxKnobs = preload("res://scripts/app/sandbox_knobs.gd")
 const SandboxLoading = preload("res://scripts/app/sandbox_loading.gd")
 const SandboxHint = preload("res://scripts/app/sandbox_hint.gd")
 const SandboxClock = preload("res://scripts/app/sandbox_clock.gd")
+const RevealMarks = preload("res://scripts/ui/reveal_marks.gd")
 const SandboxSession = preload("res://scripts/app/sandbox_session.gd")
 const World = preload("res://scripts/sim/world.gd")
 const Mission = preload("res://scripts/sim/mission.gd")
+const Spotting = preload("res://scripts/sim/spotting.gd")
 const Terrain = preload("res://scripts/world/terrain.gd")
 const WaterGen = preload("res://scripts/world/water_gen.gd")
 const MapView = preload("res://scripts/render/map_view.gd")
@@ -113,6 +115,7 @@ var ctl: CameraController = null
 var fog: FogLayer = null
 var ui: UnitUI = null
 var tracks: SandboxTracks = null
+var reveal_marks: RevealMarks = null    # the "last seen" rings of the guns that fired at the players (Track M2L, proposed)
 var knobs: SandboxKnobs = null
 var loading: SandboxLoading = null    # the blocking card, then hidden
 var note: SandboxLoading = null       # the small "redrawing" note
@@ -222,8 +225,9 @@ func _build() -> void:
 		return
 	_ref_size = INF
 	for id: String in ids:
-		# (A tower or a battery is drawn at its own scale rule, marker.static_scale; the planes' size rule is the smallest PLANE's.)
-		if not world.units[id].def.is_static():
+		# (A tower or a battery is drawn at its own scale rule, marker.static_scale; the planes' size rule is the smallest PLANE's: a 6 m tank or a
+		# 6.5 m gun is a smaller MOBILE unit but must not become the reference and enlarge every plane -- Track M2L, 2026-10-11.)
+		if world.units[id].def.domain == "air":
 			_ref_size = minf(_ref_size, float(world.units[id].def.size_m))
 		if world.units[id].controller == World.CONTROLLER_PLAYER:
 			_revealing[str(world.units[id].side)] = true
@@ -314,6 +318,9 @@ func _build() -> void:
 	map_view.bake_hold = _playback_running   # the background bake waits while a turn plays back
 	_data["fog_edge"] = fog.edge_mode
 	_data["line_of_sight"] = fog.vision.line_of_sight
+	# The main guns' spotting is the player's fog: the same sight scale and the fog's own line of sight (it follows the knob at run time).
+	world.set_sight_scale(fog.vision.sight_scale)
+	world.set_sight_los(Spotting.los_from_vision(fog.vision, world))
 
 	# The interface, in screen space above the map: the tracks first (below the
 	# markers), then Track U's planner and markers in the same layer.
@@ -329,6 +336,9 @@ func _build() -> void:
 	tracks = SandboxTracks.new()
 	tracks.name = "Tracks"
 	_mount.add_child(tracks)
+	reveal_marks = RevealMarks.new()
+	_mount.add_child(reveal_marks)
+	reveal_marks.setup(map_view, _style, fog.vision, world)
 	ui = UnitUI.new()
 	ui.name = "UnitUI"
 	add_child(ui)
@@ -790,6 +800,8 @@ func _set_fog(on: bool) -> void:
 		map_view.hidden_test = fog.rect_out_of_sight if on else Callable()
 		map_view.sight_changed()
 	fog.visible = on
+	if reveal_marks != null:
+		reveal_marks.enabled = on
 	fog.process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
 	# Switched on in play with the contour map not made (it was off from the start, so nothing baked it): the redraw
 	# note stands for it, with its progress, instead of a plain square (Alex, 2026-10-10: never an unpainted area).

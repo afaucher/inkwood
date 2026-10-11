@@ -413,7 +413,7 @@ func _local() -> bool:
 	var sel: OptionButton = _main.scenario_select
 	if not check(sel != null, "5. the menu has a scenario selector"):
 		return false
-	eq(sel.item_count, 3, "5. it lists the three scenarios")
+	check(sel.item_count >= 3, "5. it lists the scenarios (at least the three: strike, intercept, sandbox; more are added as missions are built)")
 	eq(str(sel.get_item_metadata(sel.selected)), "strike", "5. and shows the Strike (the knob says so)")
 	eq(_main.selected_scenario(), "strike", "5. the Strike is what Local would start")
 	# Intercept, chosen on the menu, is what Local starts; the knob follows the selector.

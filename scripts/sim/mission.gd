@@ -30,6 +30,8 @@ extends RefCounted
 #       the game has reached the end of turn n: it holds when the turn just resolved is n or
 #       later, at the END of that turn (t = turn_seconds), so a win earlier in turn n still
 #       beats it. Meant as a LOSE condition ("lose at a turn limit", Alex's strike-plan).
+#       Optional "unit": id (Track M2L, 2026-10-11): the objective unit that still stands at the limit; the reason then
+#       names it ("military_complex_1 still stands after turn 28"), for the result card's words. Nothing else changes.
 #
 #   var m := Mission.new(world, spec)       # spec: see intercept()
 #   m.attach()                              # evaluates after every turn_resolved
@@ -191,6 +193,10 @@ func _check(c: Dictionary) -> Dictionary:
 			# The end of turn n: the turn just resolved is n or later (a turn after the limit, if the
 			# mission is only evaluated late, still holds).
 			if turn >= int(c["turn"]):
+				# (Track M2L, the second mission: an optional "unit" names the objective that still stands, so the card can say which
+				# -- "military_complex_1 still stands after turn 28" -- instead of the Strike's generic words. Without it: as before.)
+				if c.has("unit"):
+					return {"t": world.rules.turn_seconds, "reason": "%s still stands after turn %d" % [str(c["unit"]), int(c["turn"])]}
 				return {"t": world.rules.turn_seconds, "reason": "turn %d was played without the objective" % int(c["turn"])}
 	return {}
 
@@ -303,6 +309,8 @@ func _validate_condition(c: Variant, label: String) -> void:
 		TYPE_TURN_LIMIT:
 			if not ((d.get("turn") is float or d.get("turn") is int) and float(d["turn"]) >= 1.0 and float(d["turn"]) == floorf(float(d["turn"]))):
 				_err("%s: 'turn' must be a whole number of turns, 1 or more" % label)
+			if d.has("unit"):
+				_need_unit(d, "unit", label)
 		TYPE_UNIT_WITHIN:
 			_need_unit(d, "unit", label)
 			var of: Variant = d.get("of")

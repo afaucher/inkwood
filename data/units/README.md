@@ -37,3 +37,16 @@ unit afloat (`World.set_water`, `data/sim/sea.json`: a step that would leave the
 then held, with the limit `shore`); the boats sail their routes under the AI's `sail` role
 (`data/sim/ai.json`). Where they and the bridge stand is `WaterGen.sites()`; `data/scenarios/strike.json`
 carries them behind its `"water"` switch, off until the drawing can show them. All values are proposed.
+
+## The tank (Track TK2, 2026-10-11)
+
+`tank.json` is the first `"domain": "ground"` unit that MOVES (`"mobility": "mobile"`; the tower, the batteries and the
+bridge are ground units that stand). Alex's decision `mixed-warfare` is why it exists ("tanks move inland to spot for a ship
+offshore"); the unit sheet's tank is its drawing; every number is proposed. It moves by the planes' envelope with a tank's
+numbers (top speed 10 m/s, which is its speed ON A ROAD; pivot steering, one turn rate at any speed; two steps a turn) and one
+turret gun that fires on its own by the engagement rules (a level cone all round, 350 m, one pip a hit; it never answers a plane).
+Where it may go is the GROUND RULE (`data/sim/ground.json`, `scripts/sim/ground_rules.gd`, applied by the World like the water
+rule): dry land only; no height step off the road (Alex's decision `terrain-passability` A: "every height step is a cliff");
+no river but over an intact bridge unit; half speed off the road, a third in woods (trees slow it, they never block it). The
+AI drives it with the `drive` role (`scripts/sim/ai_drive.gd`, `data/sim/ai.json` `drive`): waypoints and/or the road to a target,
+from a start turn. A scenario with a tank gives its World the ground (`SandboxScenario.populate`, `scripts/world/ground_map.gd`).

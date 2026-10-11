@@ -17,6 +17,7 @@ extends RefCounted
 #   a point        a small ink cross
 #   beyond the picture   an arrow on the edge, toward it
 #   a drop         the fall arc, where it lands and the spread on the ground
+#   a fire         (Track SH) the same, for a gun salvo: the shell's flight (guns.gd's arc), where it lands and the scatter on the ground
 #
 # The model (side_view.gd model()) holds px positions in the PICTURE's own space: (0, 0) its top-left.
 # Each sub-draw returns true as its last act, so a runtime error that ends one early is counted
@@ -33,7 +34,7 @@ static func paint(ci: CanvasItem, m: Dictionary, st: UiStyle) -> int:
 	var size: Vector2 = m["size"]
 	ci.draw_rect(Rect2(Vector2.ZERO, size), _role(st, "paper_role"))
 	failed += 0 if _ground(ci, m, st) else 1
-	if str(m["mode"]) == "drop":
+	if str(m["mode"]) == "drop" or str(m["mode"]) == "fire":
 		failed += 0 if _drop(ci, m, st) else 1
 	else:
 		failed += ConeOverlay.draw_cones(ci, m["cones"], st, st.text("side_view.cone_mode"), "all")

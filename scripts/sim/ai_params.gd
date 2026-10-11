@@ -68,6 +68,14 @@ const SHAPE := {
 		"side_probe_turn_radii": ["n", 0.5, 10.0],
 		"escape_speed_fraction": ["n", 0.0, 1.0],
 	},
+	"drive": {
+		"capture_radius_m": ["n", 1.0, INF],
+		"speed_fraction_of_max": ["n", 0.1, 3.0],
+		"lookahead_m": ["n", 1.0, INF],
+		"progress_back_m": ["n", 0.0, INF],
+		"progress_ahead_m": ["n", 1.0, INF],
+		"stray_m": ["n", 1.0, INF],
+	},
 	"mission": {
 		"sample_dt_s": ["n", 0.01, INF],
 		"target_radius_m": ["n", 1.0, INF],

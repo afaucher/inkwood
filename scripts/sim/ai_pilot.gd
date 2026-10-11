@@ -37,6 +37,14 @@ extends RefCounted
 #       A SEA unit (the patrol boat, the supply boat) sails the route: "loop" round it in order, the last waypoint back to
 #       the first; "shuttle" to the last and back to the first, and so on. It plans only on water (World.set_water): see
 #       _plan_sail. It never engages (its guns fire on their own) and has no part in any mission.
+#   {"role": "drive", "route": [[x, y], ...], "to": [x, y], "start_turn": N}          (Track TK2, 2026-10-11: the tanks)
+#       A GROUND unit (the tank) follows a course of waypoints and/or the road to a target point, from turn `start_turn` (it waits
+#       out of sight until then), at its top speed, and stops at the end; its gun fires on its own by the engagement rules. No other
+#       tactics. The role is scripts/sim/ai_drive.gd; the ground rule (data/sim/ground.json) keeps it on land and on the road's bridge.
+#   {"role": "roam", "route": [[x, y], ...]}          (Track M2L, 2026-10-11, PROPOSED: the second mission, the mobile AA)
+#       A MOBILE GROUND GUN shoots and scoots among the hide points of `route`: it holds still while planes are in reach, and once it has
+#       fired (and so, scripts/sim/reveal.gd, given itself away) it relocates to the next hide point after a delay, by the drive role's
+#       pursuit under the ground rule. The role is scripts/sim/ai_roam.gd (data/sim/roam.json).
 # An AI-controlled unit with NO assignment flies straight and keeps off the
 # map edge (role "idle"); a down unit is not planned. A STATIC unit (a tower, a
 # battery) is never planned and takes no assignment: it has no plan to make.
@@ -112,11 +120,14 @@ const AiParams = preload("res://scripts/sim/ai_params.gd")
 const AiSense = preload("res://scripts/sim/ai_sense.gd")
 const AiSteer = preload("res://scripts/sim/ai_steer.gd")
 const AiCone = preload("res://scripts/sim/ai_cone.gd")
+const AiDrive = preload("res://scripts/sim/ai_drive.gd")
+const AiRoam = preload("res://scripts/sim/ai_roam.gd")   # role "roam" (Track M2L, proposed): shoot and scoot; its orders and plan are that file's
 
 const ROLE_STRIKE := "strike"
 const ROLE_ESCORT := "escort"
 const ROLE_PATROL := "patrol"
 const ROLE_SAIL := "sail"
+const ROLE_DRIVE := "drive"
 const ROLE_IDLE := "idle"
 
 const S_ROUTE := "route"
@@ -128,6 +139,8 @@ const S_RETURN := "return"
 const S_FREE := "free"
 const S_PATROL := "patrol"
 const S_SAIL := "sail"
+const S_DRIVE := "drive"
+const S_WAIT := "wait"
 const S_IDLE := "idle"
 
 # Transition reason codes (a transition also carries a `detail` sentence).
@@ -148,6 +161,7 @@ var world: World = null
 var params: AiParams = null
 var sense: AiSense = AiSense.new()
 var steer: AiSteer = null
+var drive: AiDrive = null              # the drive role's courses (scripts/sim/ai_drive.gd), made by attach()
 var assignments: Dictionary = {}       # unit id -> normalised orders
 var errors: Array[String] = []         # data or assignment problems; see ok()
 var warnings: Array[String] = []       # e.g. a waypoint inside the edge margin
@@ -178,6 +192,7 @@ func attach(target: World, assigned: Dictionary) -> bool:
 	if not params.ok():
 		return false
 	steer = AiSteer.new(world, params.num("common", "edge_margin_turn_radii"))
+	drive = AiDrive.new(world, steer, params, Callable(self, "_enter"))
 	sense = AiSense.new()
 	assignments.clear()
 	_mem.clear()
@@ -275,8 +290,16 @@ func assign(id: String, spec: Variant) -> bool:
 				course.append(q4)
 			orders["route"] = course
 			orders["mode"] = mode
+		ROLE_DRIVE:
+			var why := drive.take(id, s, orders)
+			if why != "":
+				return _refuse("%s: %s" % [label, why])
+		AiRoam.ROLE:
+			var why_roam := AiRoam.take(self, id, s, orders)
+			if why_roam != "":
+				return _refuse("%s: %s" % [label, why_roam])
 		_:
-			return _refuse("%s: role '%s' is not '%s', '%s', '%s' or '%s'" % [label, role, ROLE_STRIKE, ROLE_ESCORT, ROLE_PATROL, ROLE_SAIL])
+			return _refuse("%s: role '%s' is not '%s', '%s', '%s', '%s' or '%s'" % [label, role, ROLE_STRIKE, ROLE_ESCORT, ROLE_PATROL, ROLE_SAIL, ROLE_DRIVE])
 	assignments[id] = orders
 	_mem.erase(id)
 	_mem_start.erase(id)
@@ -339,6 +362,10 @@ func _plan_unit(id: String) -> void:
 			_plan_patrol(id, a, m)
 		ROLE_SAIL:
 			_plan_sail(id, a, m)
+		ROLE_DRIVE:
+			drive.plan(id, a, m)
+		AiRoam.ROLE:
+			AiRoam.plan(self, id, a, m)
 		_:
 			_plan_idle(id, m)
 	_mem[id] = m
@@ -364,6 +391,8 @@ func _fresh_memory(id: String, a: Dictionary) -> Dictionary:
 		state = S_PATROL
 	elif str(a["role"]) == ROLE_SAIL:
 		state = S_SAIL
+	elif str(a["role"]) == ROLE_DRIVE:
+		state = S_DRIVE
 	return {
 		"state": state, "reason": "", "detail": "", "since": world.turn,
 		"target": "", "wp": 0, "no_chance": 0, "chance": false, "alarm": 0,

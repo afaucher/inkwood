@@ -1546,13 +1546,58 @@
         "alex": "the mission idea, and the goal 'build the second mission profile' (2026-10-11)",
         "proposed_fun": "PROPOSED by the lead: the guns are hidden, move (shoot and scoot) and give themselves away when they fire (the Wild Weasels); the fighters bait and hunt them past the escorts while the bomber holds off",
         "proposed_units": "players: 2 fighters and 1 bomber; enemy: 3 mobile AA, 2 escort fighters, the military complex",
-        "proposed_end": "win: the complex destroyed; lose: the bomber down or a turn limit"
+        "proposed_end": "win: the complex destroyed; lose: the bomber down or a turn limit",
+        "proposed_tuning": "PROPOSED: mobile guns in woods are seen only within 200 m until they fire (concealment); their reach 600 m contests the medium band; hide points 100-200 m apart; turn limit 28"
       },
       "applied_to": [
-        "in progress: Tracks M2U (units and art) and M2L (rules, AI, scenario)"
+        "data/scenarios/suppress.json, scripts/sim/reveal.gd, ai_roam.gd, concealment.gd, data/units/mobile_aa.json, military_complex.json (built 2026-10-11)"
       ],
       "status": "building on Alex's idea; the details are proposed",
       "notes": "Alex listed it second of his four mission ideas; the lead recommended it as the quickest to playtest. He then set the goal 'build the second mission profile'."
+    },
+    {
+      "id": "mobile-aa-look",
+      "date": "2026-10-11",
+      "area": "Units",
+      "question": "How does the mobile anti-aircraft gun look (variants/mobile-aa/)?",
+      "board": "variants/mobile-aa/ (the Inkwood Mission 2 Units viewer)",
+      "options": [
+        "A half-track with a quad mount",
+        "B tracked hull with an open twin turret",
+        "C light carrier with a ring mount"
+      ],
+      "chosen": "A, the half-track with a quad mount (accent on the cab roof)",
+      "parameters": {
+        "default_look": 0
+      },
+      "applied_to": [
+        "data/ui/unit_art_mission2.json mobile_aa.default_look",
+        "variants/mobile-aa/board.json chosen"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'I like the half track with quad Mount'."
+    },
+    {
+      "id": "complex-look",
+      "date": "2026-10-11",
+      "area": "Units, Structures",
+      "question": "How does the military complex look (variants/military-complex/)?",
+      "board": "variants/military-complex/ (the Inkwood Mission 2 Units viewer)",
+      "options": [
+        "A hangar yard",
+        "B works with a saw-tooth hall and chimney",
+        "C barracks and depot inside a low wall"
+      ],
+      "chosen": "A, the hangar yard (a barrel-roofed hangar, an apron, round fuel tanks, a wire fence)",
+      "parameters": {
+        "default_look": 0
+      },
+      "applied_to": [
+        "data/ui/unit_art_mission2.json military_complex.default_look",
+        "variants/military-complex/board.json chosen"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'And the hanger yard'."
     }
   ]
 }

@@ -30,6 +30,12 @@ extends RefCounted
 const World = preload("res://scripts/sim/world.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
 const SightRules = preload("res://scripts/sim/sight_rules.gd")
+const RevealRules = preload("res://scripts/sim/reveal.gd")
+const ConcealRules = preload("res://scripts/sim/concealment.gd")
+
+# REVEAL ON FIRING (Track M2L, PROPOSED; scripts/sim/reveal.gd): a unit of another side that FIRED at this one's side is known at the
+# place of its shot while it is revealed (data/sim/reveal.json reveal_s), whether or not it is inside any sight circle -- the same
+# rule the player's fog follows, so both sides are shown the same thing. After that the usual memory applies.
 
 var seen: Dictionary = {}     # unit id -> entry
 var _rules: SightRules = null  # data/sim/sight.json, read on the first update
@@ -50,24 +56,51 @@ func update(world: World, memory_turns: int) -> void:
 		if o.down and r <= 0.0:
 			continue
 		observers.append([o, r])
+	# the guns that fired at the AI's side and are still revealed: unit id -> Reveal.marks entry
+	var revealed := {}
+	var rv: Variant = RevealRules.of(world)
+	if rv != null and rv.ok():
+		var asked := {}
+		for ob: Array in observers:
+			var oside: String = (ob[0] as Unit).side
+			if asked.has(oside):
+				continue
+			asked[oside] = true
+			for m: Dictionary in rv.marks(oside, rv.now_s(world)):
+				if bool(m["revealed"]):
+					revealed[str(m["unit"])] = m
 	for id: String in world.units:
 		var t: Unit = world.units[id]
 		if t.controller == World.CONTROLLER_AI:
 			continue
 		var spotted := false
+		var shot: Dictionary = {}
+		# CONCEALMENT (Track M2L, proposed; scripts/sim/concealment.gd): a unit in cover is seen only inside the rule's radius, whatever the sight
+		var cover_limit: float = ConcealRules.shared().sight_limit_m(world, t, t.x, t.y, INF)
 		for ob: Array in observers:
 			var o: Unit = ob[0]
 			if o.side == t.side:
 				continue
 			var dx := t.x - o.x
 			var dy := t.y - o.y
-			var r: float = ob[1]
+			var r: float = minf(float(ob[1]), cover_limit)
 			if dx * dx + dy * dy <= r * r:
 				spotted = true
 				break
+		if not spotted and revealed.has(id):
+			# fired at the AI's side: known where the shot came from (and not moving: a gun that has just fired)
+			shot = revealed[id]
+			spotted = true
 		if spotted:
 			if t.down:
 				seen.erase(id)
+			elif not shot.is_empty():
+				seen[id] = {
+					"id": id, "type": t.type, "side": t.side,
+					"x": float(shot["x"]), "y": float(shot["y"]), "heading": float(shot["heading"]), "speed": 0.0,
+					"altitude_band": t.altitude_band,
+					"turn": world.turn, "visible": true,
+				}
 			else:
 				seen[id] = {
 					"id": id, "type": t.type, "side": t.side,

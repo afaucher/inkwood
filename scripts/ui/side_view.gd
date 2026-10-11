@@ -48,6 +48,11 @@ extends Control
 #               the expected spread, and the target on the ground. The aim is the target's SHOWN position, so a
 #               moving target is followed and the release point is the one drop_spread gives for it (the sim
 #               picks the release moment itself at resolve). The arc is Bombs.bomb_position's own.
+#   a fire      (Track SH, the warship) a step with Main Guns Fire shows the shell's flight instead of the cones, in the drop's own
+#               frame: the ship on the ground line, the arc the shell flies (guns.gd's own model: level across, a parabola up to
+#               apex_per_range x the range), where it lands (the target as it is shown) with the expected scatter (two sigma, the
+#               card's number) on the ground, and the target indicator as ever; faint when the sim says the salvo would not go
+#               off (planner.fire_check: unspotted, out of range, reloading ...). Indicators only: the same wash and ink.
 #   the words   at most one quiet line under the picture (distance and height difference); data side_view.text.
 #
 # WHEN. Planning, for a friendly mobile unit that takes orders; and, while a turn plays back
@@ -66,6 +71,7 @@ const ConeOverlay = preload("res://scripts/ui/cone_overlay.gd")
 const SideViewArt = preload("res://scripts/ui/side_view_art.gd")
 const Combat = preload("res://scripts/sim/combat.gd")
 const Bombs = preload("res://scripts/sim/bombs.gd")
+const Guns = preload("res://scripts/sim/guns.gd")
 
 var world: World = null
 var planner: Object = null            # MotionPlanner (duck-typed: so Track T's edits cannot break this file's compile)
@@ -305,12 +311,16 @@ func _compute() -> Dictionary:
 		"mode": "guns", "cones": [], "drop": {}, "target": {}, "target_hidden": bool(tgt.get("hidden", false)),
 		"ref": pose, "ppm": 1.0, "origin": Vector2.ZERO, "ground_y": INF, "arcs": {}}
 	var drop := {}
+	var mode := "drop"
 	if not live and k >= 0 and planner.step_has_drop(k, id):
 		drop = _drop_frame(id, k, tgt, pose, pic, m)
+	elif not live and k >= 0 and planner.has_method("step_has_fire") and planner.step_has_fire(k, id):
+		drop = _fire_frame(id, k, tgt, pic, m)
+		mode = "fire"
 	if drop.is_empty():
 		_guns_frame(id, u, pose, pic, m, tgt)
 	else:
-		m["mode"] = "drop"
+		m["mode"] = mode
 		m["drop"] = drop
 	if not tgt.is_empty() and not tgt.has("hidden"):
 		m["target"] = _place_target(tgt, m, pic)
@@ -561,6 +571,52 @@ func _drop_frame(id: String, k: int, tgt: Dictionary, pose: Dictionary, pic: Vec
 		"releases": bool(d.get("releases", true)), "poor_shot": bool(d.get("poor_shot", false)),
 	}
 
+# THE SHELL'S FLIGHT (Track SH): the salvo planned at step k as the drop's frame: the ship at the origin on the ground line, the arc the
+# shells fly to where they land (the target as it is shown; the sim leads a moving one only at resolve, as it does a bomb's aim), the
+# expected scatter on the ground. The arc is guns.gd's own: Guns.shell_position's level line across and parabola in height, apex
+# apex_per_range x the range. Returns the same record the fall does (arc, land, land_m, fall_s, spread_px, ...) plus "releases": whether the
+# sim would fire it as things stand, or {} when there is none. Fills the frame keys. One scale for both axes, so the angles are true.
+func _fire_frame(id: String, k: int, tgt: Dictionary, pic: Vector2, m: Dictionary) -> Dictionary:
+	var chk: Dictionary = planner.fire_check(k, id) if planner.has_method("fire_check") else {}
+	if chk.is_empty() or not world.guns.has_special(str(chk.get("special", ""))):
+		return {}
+	var spec: Object = world.guns.special(str(chk["special"]))
+	var from: Vector2 = chk["from"]
+	var aim: Vector2 = chk["target_pos"]
+	if not tgt.is_empty() and not tgt.has("hidden"):
+		aim = tgt["pos"]
+	var land_m := from.distance_to(aim)
+	var flight := Guns.flight_time(land_m, spec)
+	var apex: float = float(spec.apex_per_range) * land_m
+	var extent: float = style.num("guns.marks.sigma_k") * float(chk["spread_m"])
+	var need := land_m + extent
+	if not tgt.is_empty() and not tgt.has("hidden"):
+		need = maxf(need, minf(((tgt["pos"] as Vector2) - from).length(), need * style.num("side_view.drop.fit_target_max_factor")))
+	need = maxf(need * style.num("side_view.frame.span_margin"), 1.0)
+	var top: float = style.num("side_view.drop.top_px")
+	var left: float = style.num("side_view.drop.left_px")
+	var bottom: float = style.num("side_view.drop.bottom_px")
+	var ppm := minf((pic.x - left - style.num("side_view.drop.right_px")) / need, (pic.y - top - bottom) / maxf(apex, 1.0))
+	var origin := Vector2(left, pic.y - bottom)
+	var heading := (aim - from).angle() if land_m > 1e-6 else 0.0
+	var shell := {"x0": from.x, "y0": from.y, "x": aim.x, "y": aim.y, "fall_s": flight, "apex_m": apex, "release_turn": 0, "release_t": 0.0}
+	var n := maxi(int(style.num("side_view.drop.samples")), 4)
+	var arc := PackedVector2Array()
+	for i in n + 1:
+		var p: Dictionary = Guns.shell_position(shell, 0, flight * float(i) / float(n), world.rules.turn_seconds)
+		var across_m := Vector2(float(p["x"]), float(p["y"])).distance_to(from)
+		arc.append(origin + Vector2(across_m, -float(p["height_m"])) * ppm)
+	m["ppm"] = ppm
+	m["origin"] = origin
+	m["ref"] = {"x": from.x, "y": from.y, "heading": heading, "height_m": 0.0, "pitch": 0.0}
+	m["ground_y"] = origin.y
+	return {
+		"arc": arc, "land": origin + Vector2(land_m, 0.0) * ppm, "land_m": land_m, "fall_s": flight,
+		"spread_px": Vector2(origin.x + (land_m - extent) * ppm, origin.x + (land_m + extent) * ppm),
+		"release": from, "aim": aim, "release_height_m": 0.0, "extent_m": extent, "apex_m": apex,
+		"clamped": false, "outside": false, "releases": bool(chk["ok"]), "poor_shot": false, "fire": true,
+	}
+
 # --- The target --------------------------------------------------------------------------------------------
 
 # Which target the picture is about: {"unit": id or "", "point": Vector2, "source": "step"|"aim"|"selection"} or {}.
@@ -694,6 +750,10 @@ func _line(m: Dictionary, tgt_raw: Dictionary) -> String:
 		return style.text("side_view.text.unseen")
 	var t: Dictionary = m["target"]
 	var drop: Dictionary = m["drop"]
+	if not drop.is_empty() and str(m["mode"]) == "fire":
+		if t.is_empty():
+			return style.text("side_view.text.fire_line_free") % [roundi(float(drop["land_m"])), roundi(float(drop["fall_s"]))]
+		return style.text("side_view.text.fire_line") % [str(t["name"]), roundi(float(t["dist"])), roundi(float(drop["fall_s"]))]
 	if not drop.is_empty():
 		if t.is_empty():
 			return style.text("side_view.text.drop_line_free") % [roundi(float(drop["land_m"])), roundi(float(drop["fall_s"]))]

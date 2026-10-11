@@ -1,0 +1,116 @@
+{
+  "id": "mobile-aa",
+  "about": "Every frame of the mobile anti-aircraft gun board as its own PNG at native size, with its zoom and a caption. board.png is the sheet; the 3x copies on it are nearest-neighbour copies of the *_plan.png frames.",
+  "frames": [
+    {
+      "file": "halftrack_z1.png",
+      "look": "halftrack",
+      "zoom": 1.0,
+      "caption": "A  Half-track with a quad mount at zoom 1 (the vehicle 4 px per metre, the battery 8): a tank, the vehicle at three headings in the enemy's slate blue and once in the players' brick red, the battery",
+      "size": [
+        420,
+        150
+      ]
+    },
+    {
+      "file": "halftrack_plan.png",
+      "look": "halftrack",
+      "zoom": 0.35,
+      "caption": "A  Half-track with a quad mount at the planning zoom 0.35 (the planes' 14 px floor: the vehicle about 1.6 px per metre)",
+      "size": [
+        240,
+        70
+      ]
+    },
+    {
+      "file": "halftrack_z2.png",
+      "look": "halftrack",
+      "zoom": 2.0,
+      "caption": "A  Half-track with a quad mount at zoom 2, the camera's closest (the vehicle 8 px per metre)",
+      "size": [
+        520,
+        170
+      ]
+    },
+    {
+      "file": "turret_z1.png",
+      "look": "turret",
+      "zoom": 1.0,
+      "caption": "B  Tracked hull with an open twin turret at zoom 1 (the vehicle 4 px per metre, the battery 8): a tank, the vehicle at three headings in the enemy's slate blue and once in the players' brick red, the battery",
+      "size": [
+        420,
+        150
+      ]
+    },
+    {
+      "file": "turret_plan.png",
+      "look": "turret",
+      "zoom": 0.35,
+      "caption": "B  Tracked hull with an open twin turret at the planning zoom 0.35 (the planes' 14 px floor: the vehicle about 1.6 px per metre)",
+      "size": [
+        240,
+        70
+      ]
+    },
+    {
+      "file": "turret_z2.png",
+      "look": "turret",
+      "zoom": 2.0,
+      "caption": "B  Tracked hull with an open twin turret at zoom 2, the camera's closest (the vehicle 8 px per metre)",
+      "size": [
+        520,
+        170
+      ]
+    },
+    {
+      "file": "carrier_z1.png",
+      "look": "carrier",
+      "zoom": 1.0,
+      "caption": "C  Light carrier with a ring mount at zoom 1 (the vehicle 4 px per metre, the battery 8): a tank, the vehicle at three headings in the enemy's slate blue and once in the players' brick red, the battery",
+      "size": [
+        420,
+        150
+      ]
+    },
+    {
+      "file": "carrier_plan.png",
+      "look": "carrier",
+      "zoom": 0.35,
+      "caption": "C  Light carrier with a ring mount at the planning zoom 0.35 (the planes' 14 px floor: the vehicle about 1.6 px per metre)",
+      "size": [
+        240,
+        70
+      ]
+    },
+    {
+      "file": "carrier_z2.png",
+      "look": "carrier",
+      "zoom": 2.0,
+      "caption": "C  Light carrier with a ring mount at zoom 2, the camera's closest (the vehicle 8 px per metre)",
+      "size": [
+        520,
+        170
+      ]
+    },
+    {
+      "file": "shadow_rule_today.png",
+      "look": "shadow_rule",
+      "zoom": 2.0,
+      "caption": "A ground vehicle's shadow as the marker layer drew it before this change: its footprint offset by the layer's shadow offset for its height, which is 0 at the surface, so the shadow hides under it",
+      "size": [
+        280,
+        110
+      ]
+    },
+    {
+      "file": "shadow_rule_sun.png",
+      "look": "shadow_rule",
+      "zoom": 2.0,
+      "caption": "The same vehicles with the marker layer's rule now (ui.json marker.cast_shadow_on, PROPOSED, on): the footprint offset by height x 0.97 m away from the sun (marker.cast_height_m: 2.0 m for the tank, 2.4 m for the gun)",
+      "size": [
+        280,
+        110
+      ]
+    }
+  ]
+}

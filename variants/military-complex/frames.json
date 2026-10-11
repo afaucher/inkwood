@@ -1,0 +1,216 @@
+{
+  "id": "military-complex",
+  "about": "Every frame of the military complex board as its own PNG at native size, with its zoom and a caption. board.png is the sheet; the 3x copies on it are nearest-neighbour copies of the *_plan.png frames.",
+  "frames": [
+    {
+      "file": "hangar_yard_z1.png",
+      "look": "hangar_yard",
+      "zoom": 1.0,
+      "caption": "A  Hangar yard whole at zoom 1 (2 px per metre, the map's scale): beside the radio tower and the anti-aircraft battery (at the units' scale, as in the game) and a light fighter at the low band",
+      "size": [
+        460,
+        240
+      ]
+    },
+    {
+      "file": "hangar_yard_ruin_z1.png",
+      "look": "hangar_yard",
+      "zoom": 1.0,
+      "caption": "A  Hangar yard destroyed at zoom 1 (R1's language: scorch, craters, the main building roofless, heaps, the fence half down; no fire)",
+      "size": [
+        460,
+        240
+      ]
+    },
+    {
+      "file": "hangar_yard_plan.png",
+      "look": "hangar_yard",
+      "zoom": 0.35,
+      "caption": "A  Hangar yard whole at the planning zoom 0.35 (about 0.8 px per metre: the planes' floor holds the marker rule above the map's 0.7)",
+      "size": [
+        150,
+        80
+      ]
+    },
+    {
+      "file": "hangar_yard_ruin_plan.png",
+      "look": "hangar_yard",
+      "zoom": 0.35,
+      "caption": "A  Hangar yard destroyed at the planning zoom 0.35",
+      "size": [
+        150,
+        80
+      ]
+    },
+    {
+      "file": "hangar_yard_z2.png",
+      "look": "hangar_yard",
+      "zoom": 2.0,
+      "caption": "A  Hangar yard whole at zoom 2, the camera's closest (4 px per metre)",
+      "size": [
+        440,
+        340
+      ]
+    },
+    {
+      "file": "hangar_yard_ruin_z2.png",
+      "look": "hangar_yard",
+      "zoom": 2.0,
+      "caption": "A  Hangar yard destroyed at zoom 2",
+      "size": [
+        440,
+        340
+      ]
+    },
+    {
+      "file": "hangar_yard_turned_z1.png",
+      "look": "hangar_yard",
+      "zoom": 1.0,
+      "caption": "A  Hangar yard turned by its heading (about 51 degrees clockwise), baked already turned: the light and the shadows stay the map's",
+      "size": [
+        330,
+        240
+      ]
+    },
+    {
+      "file": "works_z1.png",
+      "look": "works",
+      "zoom": 1.0,
+      "caption": "B  Works with a saw-tooth hall whole at zoom 1 (2 px per metre, the map's scale): beside the radio tower and the anti-aircraft battery (at the units' scale, as in the game) and a light fighter at the low band",
+      "size": [
+        460,
+        240
+      ]
+    },
+    {
+      "file": "works_ruin_z1.png",
+      "look": "works",
+      "zoom": 1.0,
+      "caption": "B  Works with a saw-tooth hall destroyed at zoom 1 (R1's language: scorch, craters, the main building roofless, heaps, the fence half down; no fire)",
+      "size": [
+        460,
+        240
+      ]
+    },
+    {
+      "file": "works_plan.png",
+      "look": "works",
+      "zoom": 0.35,
+      "caption": "B  Works with a saw-tooth hall whole at the planning zoom 0.35 (about 0.8 px per metre: the planes' floor holds the marker rule above the map's 0.7)",
+      "size": [
+        150,
+        80
+      ]
+    },
+    {
+      "file": "works_ruin_plan.png",
+      "look": "works",
+      "zoom": 0.35,
+      "caption": "B  Works with a saw-tooth hall destroyed at the planning zoom 0.35",
+      "size": [
+        150,
+        80
+      ]
+    },
+    {
+      "file": "works_z2.png",
+      "look": "works",
+      "zoom": 2.0,
+      "caption": "B  Works with a saw-tooth hall whole at zoom 2, the camera's closest (4 px per metre)",
+      "size": [
+        440,
+        340
+      ]
+    },
+    {
+      "file": "works_ruin_z2.png",
+      "look": "works",
+      "zoom": 2.0,
+      "caption": "B  Works with a saw-tooth hall destroyed at zoom 2",
+      "size": [
+        440,
+        340
+      ]
+    },
+    {
+      "file": "works_turned_z1.png",
+      "look": "works",
+      "zoom": 1.0,
+      "caption": "B  Works with a saw-tooth hall turned by its heading (about 51 degrees clockwise), baked already turned: the light and the shadows stay the map's",
+      "size": [
+        330,
+        240
+      ]
+    },
+    {
+      "file": "depot_z1.png",
+      "look": "depot",
+      "zoom": 1.0,
+      "caption": "C  Barracks and depot whole at zoom 1 (2 px per metre, the map's scale): beside the radio tower and the anti-aircraft battery (at the units' scale, as in the game) and a light fighter at the low band",
+      "size": [
+        460,
+        240
+      ]
+    },
+    {
+      "file": "depot_ruin_z1.png",
+      "look": "depot",
+      "zoom": 1.0,
+      "caption": "C  Barracks and depot destroyed at zoom 1 (R1's language: scorch, craters, the main building roofless, heaps, the fence half down; no fire)",
+      "size": [
+        460,
+        240
+      ]
+    },
+    {
+      "file": "depot_plan.png",
+      "look": "depot",
+      "zoom": 0.35,
+      "caption": "C  Barracks and depot whole at the planning zoom 0.35 (about 0.8 px per metre: the planes' floor holds the marker rule above the map's 0.7)",
+      "size": [
+        150,
+        80
+      ]
+    },
+    {
+      "file": "depot_ruin_plan.png",
+      "look": "depot",
+      "zoom": 0.35,
+      "caption": "C  Barracks and depot destroyed at the planning zoom 0.35",
+      "size": [
+        150,
+        80
+      ]
+    },
+    {
+      "file": "depot_z2.png",
+      "look": "depot",
+      "zoom": 2.0,
+      "caption": "C  Barracks and depot whole at zoom 2, the camera's closest (4 px per metre)",
+      "size": [
+        440,
+        340
+      ]
+    },
+    {
+      "file": "depot_ruin_z2.png",
+      "look": "depot",
+      "zoom": 2.0,
+      "caption": "C  Barracks and depot destroyed at zoom 2",
+      "size": [
+        440,
+        340
+      ]
+    },
+    {
+      "file": "depot_turned_z1.png",
+      "look": "depot",
+      "zoom": 1.0,
+      "caption": "C  Barracks and depot turned by its heading (about 51 degrees clockwise), baked already turned: the light and the shadows stay the map's",
+      "size": [
+        330,
+        240
+      ]
+    }
+  ]
+}

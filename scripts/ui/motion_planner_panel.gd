@@ -229,7 +229,7 @@ func step_marks() -> Array:
 	for i in total:
 		var state := "planned" if i < placed else ("next" if i == placed else "later")
 		var c := Vector2(x0 + float(i) * pitch, cy)
-		out.append({"index": i, "state": state, "selected": i == cur, "special": state == "planned" and planner.step_has_drop(i, id),
+		out.append({"index": i, "state": state, "selected": i == cur, "special": state == "planned" and planner.step_has_special(i, id),
 			"enabled": state != "later" and not locked, "center": c, "rect": Rect2(c - Vector2(r + gap, r + gap), Vector2(2.0 * (r + gap), 2.0 * (r + gap)))})
 	return out
 
@@ -306,7 +306,10 @@ func _draw_strip(ink: Color) -> void:
 		UiInk.text(self, font, c + Vector2(-w * 0.5, float(px) * 0.36), txt, px, paper_text if selected else (ink if state != "later" else quiet),
 			HORIZONTAL_ALIGNMENT_LEFT, -1.0, "mark_number")
 		if bool(m["special"]):
-			UiInk.bomb_glyph(self, c + Vector2(r + 1.5, r - 2.5), st.num("orders.strip.bomb_px"), ink, paper, 1.1, 1.4)
+			if planner.special_kind(selection.unit_id) == "gun":
+				UiInk.shell_glyph(self, c + Vector2(r + 1.5, r - 2.5), st.num("orders.strip.bomb_px") * 0.8, ink, paper, 1.1, 1.4)
+			else:
+				UiInk.bomb_glyph(self, c + Vector2(r + 1.5, r - 2.5), st.num("orders.strip.bomb_px"), ink, paper, 1.1, 1.4)
 
 # --- Drawing -------------------------------------------------------------------------
 
@@ -461,6 +464,8 @@ func bomb_caption() -> String:
 	var id: String = selection.unit_id if selection != null else ""
 	if planner == null or id == "" or not world.units.has(id) or planner.bombs == null:
 		return ""
+	if planner.special_kind(id) == "gun":
+		return planner.gun_caption()   # a unit with big guns (Track SH): the same line, the sim's reasons
 	if not planner.bombs.has_bombs(id) or not planner.can_plan(id):
 		return ""
 	var opt: Dictionary = planner.drop_options()
@@ -524,5 +529,7 @@ func _draw_button(b: Dictionary, big: bool, font: Font, hovered: bool = false) -
 		# The pointer is on it: a second rule round the button (enabled or not: the special's hover outlines its cone on the map).
 		UiInk.ink_line(self, UiInk.rect_pts(r.grow(2.5)), true, ink if enabled else st.color("ink_soft"), 0.9, int(r.position.y * 3.0 + r.position.x), 0.2)
 	var size_px: float = st.num("fonts.name_px") if big else st.num("fonts.button_px")
+	# A special's name and action ("Main Guns Fire") may be wider than its button: shrunk to fit, never under the lettering floor (Track SH).
+	size_px = UiInk.fit_px(font, str(b["label"]), size_px, r.size.x - 6.0, st.fit_floor_px())
 	var base := r.position.y + r.size.y * 0.5 + size_px * 0.34
 	UiInk.text(self, font, Vector2(r.position.x, base), str(b["label"]), size_px, txt, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
