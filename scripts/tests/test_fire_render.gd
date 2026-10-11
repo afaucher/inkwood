@@ -16,6 +16,11 @@ extends "res://scripts/test_support/test_case.gd"
 #      lands, and a bake that read the set before the change is baked again
 #   7. FxFireView: the feed is handed over once per fire revision, the burnt set to the map when the game time reaches the end of the
 #      turn a tree burns out in and not again, and a World without a fire does nothing
+#   9. THE WIND (decision coastal-wind; a FAKE Wind, the sim's is scripts/sim/wind.gd): with one set a burning tree's column leans and trails
+#      downwind (the centre of its mass is wind x the sim's drift_s from the tree, whichever way it blows and however fast), a puff takes the
+#      air as it blew at its birth, a damaged plane's trail and a crash's burst, plume and wreck column drift with it, thick smoke keeps its
+#      shadow (the shadows are drawn from the same drifted puffs), the layer hands it to both; with none every run is exactly what it was
+#      (the two random numbers a puff's drift draws are drawn either way)
 #   8. THE SANDBOX: with the fire knob on (Suppress), the real sandbox makes the view, the layer holds the World's feed and the map's
 #      provider the trunks of the trees already out; with the fire off the sandbox makes none and the map and the layer are untouched
 
@@ -32,8 +37,25 @@ const MapView = preload("res://scripts/render/map_view.gd")
 const RenderParams = preload("res://scripts/world/render_params.gd")
 const ChunkTerrainProvider = preload("res://scripts/render/chunk_terrain_provider.gd")
 
+const FxField = preload("res://scripts/fx/fx_field.gd")
+const WindScript = preload("res://scripts/sim/wind.gd")
+
 const SEED := 20261009
 const TS := 5.0
+
+# The air: constant, plus `ramp` more m/s for every game second (so a puff born later feels more). Wind.at(game_s) -> Vector2, mean().
+class FakeWind extends RefCounted:
+	var v := Vector2(3.0, 0.0)
+	var ramp := Vector2.ZERO
+	var calls := 0
+	func _init(velocity: Vector2 = Vector2(3.0, 0.0), per_second: Vector2 = Vector2.ZERO) -> void:
+		v = velocity
+		ramp = per_second
+	func at(t: float) -> Vector2:
+		calls += 1
+		return v + ramp * t
+	func mean() -> Vector2:
+		return v
 
 class FakeFire extends RefCounted:
 	var revision := 0
@@ -70,6 +92,8 @@ func setup(main) -> void:
 	_check_trunk_ink()
 	_check_map_view()
 	_check_view()
+	check(_check_wind(main, data), "9. the wind section ran to its end (a runtime error aborts a function in silence)")
+	check(_check_real_wind(data), "9. the real Wind section ran to its end")
 	await _check_sandbox(main)
 	check(FxData.shared().ok(), "no data error was raised by any of the above: %s" % str(FxData.shared().errors))
 	finish()
@@ -587,6 +611,7 @@ func _check_sandbox(main: Node) -> void:
 		await get_tree().process_frame
 		await get_tree().process_frame
 		check(sb.get("fire_view") != null, "8. the sandbox made the fire view on first need")
+		eq(sb.ui.fx.wind, sb.world.get("wind"), "8. the effects layer has the World's wind (none while the World has none)")
 		eq(int(sb.ui.fx.stats()["fire_trees"]), 2, "8. the layer holds the World's feed")
 		eq(int(sb.map_view.provider.burnt_count()), 1, "8. the map holds the one tree that is out at the game time on show (turn 1, planning)")
 		eq(sb.ui.fx.fire.columns_at(sb.ui.game_time()), 0, "8. nothing smokes yet: the burning tree is lit later in turn 1 and the other is out")
@@ -601,3 +626,211 @@ func _check_sandbox(main: Node) -> void:
 	await get_tree().process_frame
 	DebugSettings.set_choice("scenario", saved_scenario)
 	DebugSettings.set_choice("fire", saved_fire)
+
+# --- 9. the wind ---------------------------------------------------------------------------------------------------------------
+
+# The centre of mass of a column's puffs relative to its tree: positions weighted by what the eye sees (alpha x area).
+func _mass_centre(puffs: Array, tree: Vector2) -> Vector2:
+	var sum := Vector2.ZERO
+	var w := 0.0
+	for p: Dictionary in puffs:
+		var wt: float = float(p["alpha"]) * float(p["r_m"]) * float(p["r_m"])
+		sum += ((p["pos"] as Vector2) - tree) * wt
+		w += wt
+	return sum / maxf(w, 1e-9)
+
+func _strip_wind(puffs: Array) -> String:
+	var copy: Array = []
+	for p: Dictionary in puffs:
+		var q := p.duplicate()
+		q.erase("wind")
+		copy.append(q)
+	return JSON.stringify(copy)
+
+func _check_wind(main: Node, data: FxData) -> bool:
+	var tree := Vector2(100.0, 200.0)
+	var feed := [_tree("a", tree.x, tree.y, 2, 1.5, 4)]
+	var t := 12.0
+	# a burning column in a calm, in the data's own wind (no Wind), and in a Wind
+	var fire := FxFire.new(data)
+	fire.set_feed(feed)
+	check(fire.wind == null, "9. no wind unless one is set")
+	var plain := fire.puffs_at(t)
+	var plain_json := JSON.stringify(plain)
+	check(fire.zone_age_s() > 0.5 and fire.zone_age_s() < FxData.f(fire.cfg, "life_s"), "9. the column's visual mass sits at an age inside a puff's life (%.2f s)" % fire.zone_age_s())
+	var calm_wind := FakeWind.new(Vector2.ZERO)
+	fire.set_wind(calm_wind)
+	var calm_puffs := fire.puffs_at(t)
+	var calm := _mass_centre(calm_puffs, tree)
+	# the drift_s the sim reads: fix one (the data's is read at start; this makes the test independent of the number)
+	fire.set_drift_s(3.0)
+	check(fire.drift_gain() > 0.25 and fire.drift_gain() < 4.0, "9. the gain on the wind that follows from drift_s is sane (%.2f)" % fire.drift_gain())
+	for v: Vector2 in [Vector2(4.0, 0.0), Vector2(-4.0, 0.0), Vector2(0.0, 4.0), Vector2(2.5, -2.5), Vector2(1.0, 0.0)]:
+		fire.set_wind(FakeWind.new(v))
+		var wp := fire.puffs_at(t)
+		eq(wp.size(), calm_puffs.size(), "9. the same puffs in a wind and in a calm")
+		var dir := v.normalized()
+		var reach := 0.0
+		var across := 0.0
+		for k in mini(wp.size(), calm_puffs.size()):
+			var d := (wp[k]["pos"] as Vector2) - (calm_puffs[k]["pos"] as Vector2)
+			across = maxf(across, absf(d.cross(dir)))
+			if float(wp[k]["alpha"]) >= FxFire.THICK_ALPHA:
+				reach = maxf(reach, d.dot(dir))
+		var far := 3.0 * v.length()
+		check(reach <= far + 0.05 and reach >= far * 0.6, "9. wind %s: the farthest puff that still reads as smoke is %.1f m downwind, drift_s (3 s) of wind = %.1f m: it fills the zone and no more" % [v, reach, far])
+		check(across < 0.02, "9. and it drifts straight along the wind (%.3f m across)" % across)
+		var c := _mass_centre(wp, tree) - calm
+		if v.length() >= 2.0:
+			check(c.dot(dir) > 0.0, "9. the column's mass is DOWNWIND of its tree (%s)" % v)
+	# the column leans further in a stronger wind and trails the other way in the opposite one
+	fire.set_wind(FakeWind.new(Vector2(2.0, 0.0)))
+	var weak := _mass_centre(fire.puffs_at(t), tree).x
+	fire.set_wind(FakeWind.new(Vector2(5.0, 0.0)))
+	var strong := _mass_centre(fire.puffs_at(t), tree).x
+	check(strong > weak + 2.0, "9. a stronger breeze leans the column further (%.1f m against %.1f m)" % [strong, weak])
+	# near calm (dawn): the column stands on its tree
+	fire.set_wind(FakeWind.new(Vector2(0.2, 0.1)))
+	check(_mass_centre(fire.puffs_at(t), tree).length() < 2.5, "9. in a near calm the smoke stays over its tree")
+	# a puff takes the air as it blew when it was BORN: the same column in a steady wind and in one that grows with game time differs, puff
+	# by puff, by exactly the extra the air had gained at that puff's birth, over its age (the spread and the rest are the same hashes)
+	var gain: float = fire.drift_gain()
+	fire.set_wind(FakeWind.new(Vector2(3.0, 0.0)))
+	var steady := fire.puffs_at(t)
+	fire.set_wind(FakeWind.new(Vector2(3.0, 0.0), Vector2(0.4, 0.0)))
+	var growing := fire.puffs_at(t)
+	var life: float = FxData.f(fire.cfg, "life_s")
+	eq(growing.size(), steady.size(), "9. the same puffs in either wind")
+	var worst := 0.0
+	var wrong_way := 0.0
+	for k in mini(growing.size(), steady.size()):
+		var age: float = float(steady[k]["u"]) * life
+		var born := t - age
+		var extra := ((growing[k]["pos"] as Vector2) - (steady[k]["pos"] as Vector2))
+		worst = maxf(worst, absf(extra.x - gain * 0.4 * born * age))
+		wrong_way = maxf(wrong_way, absf(extra.y))
+	check(worst < 0.4, "9. each puff took the air of its BIRTH time, not of now (worst error %.2f m)" % worst)
+	check(wrong_way < 1e-3, "9. and only along the wind (%.4f m across)" % wrong_way)
+	var puffs := growing
+	# thick smoke keeps its shadow (the shadows are drawn from these same puffs): still tone 2 shadow casters, now drifted
+	var casters := 0
+	for p: Dictionary in puffs:
+		if FxPuff.casts_shadow(fire.option, int(p["tone"])) and float(p["alpha"]) >= 0.25:
+			casters += 1
+	check(casters > 0, "9. thick smoke still casts a shadow, on the drifted puffs (%d)" % casters)
+	# a Wind changed in place is noticed: the column follows
+	var live := FakeWind.new(Vector2(4.0, 0.0))
+	fire.set_wind(live)
+	var east := _mass_centre(fire.puffs_at(t), tree).x
+	live.v = Vector2(-4.0, 0.0)
+	var west := _mass_centre(fire.puffs_at(t), tree).x
+	check(east > 3.0 and west < -3.0, "9. a wind changed in place turns the column (%.1f -> %.1f m)" % [east, west])
+	# the wind is sampled on a grid and cached, not asked for every puff of every frame
+	var counted := FakeWind.new(Vector2(3.0, 1.0))
+	fire.set_wind(counted)
+	fire.puffs_at(t)
+	var first_calls := counted.calls
+	fire.puffs_at(t + 0.05)
+	check(counted.calls - first_calls < 20, "9. the wind is cached on a grid (%d calls for a frame's puffs)" % (counted.calls - first_calls))
+	# no wind again: exactly what it was (and a fresh run agrees)
+	fire.set_wind(null)
+	eq(JSON.stringify(fire.puffs_at(t)), plain_json, "9. wind removed: the very same puffs as before any wind was set")
+	var fresh := FxFire.new(data)
+	fresh.set_feed(feed)
+	eq(JSON.stringify(fresh.puffs_at(t)), plain_json, "9. and as a fresh run with none")
+	# the drift_s the data holds is what is read (the sim adds smoke.drift_s to data/sim/fire.json; until then none)
+	var fd := FxFire.read_drift_s()
+	eq(FxFire.new(data).drift_s(), fd, "9. the drift_s used is the one data/sim/fire.json holds (%.2f; -1 while the sim has none)" % fd)
+	eq(FxFire.read_drift_s("res://data/no/such/file.json"), -1.0, "9. no file, no drift_s")
+
+	# --- the effects field: a damaged plane's trail and a crash's smoke ---
+	var field := FxField.new(data)
+	var plain_field := FxField.new(data)
+	plain_field.emit_damage_smoke("p1", Vector2(500.0, 500.0), 120.0, 0.4, 10.0, 9.0, 0.0)
+	plain_field.emit_damage_smoke("p1", Vector2(560.0, 500.0), 120.0, 0.4, 14.0, 9.0, 0.0)
+	var j: float = FxData.f(plain_field.smoke_o, "wind_jitter_mps")
+	var dw := FxData.arr(plain_field.smoke_o, "wind_mps")
+	check(plain_field.puffs.size() > 3, "9. a damaged plane leaves a trail (%d puffs)" % plain_field.puffs.size())
+	for p: Dictionary in plain_field.puffs:
+		var d: Vector2 = (p["wind"] as Vector2) - Vector2(float(dw[0]), float(dw[1]))
+		check(absf(d.x) <= j + 1e-6 and absf(d.y) <= j + 1e-6, "9. with no wind a puff drifts on the option's own data wind, as before")
+	var ramp_air := FakeWind.new(Vector2(1.0, -1.0), Vector2(0.2, 0.0))
+	field.wind = ramp_air
+	field.emit_damage_smoke("p1", Vector2(500.0, 500.0), 120.0, 0.4, 10.0, 9.0, 0.0)
+	field.emit_damage_smoke("p1", Vector2(560.0, 500.0), 120.0, 0.4, 14.0, 9.0, 0.0)
+	eq(field.puffs.size(), plain_field.puffs.size(), "9. the same trail, wind or not")
+	var off := 0
+	for p: Dictionary in field.puffs:
+		var air: Vector2 = ramp_air.at(float(p["born"]))
+		var d2: Vector2 = (p["wind"] as Vector2) - air
+		if absf(d2.x) > j + 1e-6 or absf(d2.y) > j + 1e-6:
+			off += 1
+	eq(off, 0, "9. with a wind every puff of a plane's trail drifts with the air as it blew at its birth (plus the option's spread)")
+	var pf: Dictionary = field.puffs[0]
+	var drifted := (field.puff_state(pf, float(pf["born"]) + 4.0)["pos"] as Vector2) - (pf["pos"] as Vector2)
+	check((drifted - (pf["wind"] as Vector2) * 4.0).length() < 1e-3, "9. and is drawn where that drift puts it")
+	eq(_strip_wind(field.puffs), _strip_wind(plain_field.puffs), "9. nothing else about a puff changes with the wind: the random numbers drawn are the same")
+	# a crash: burst, plume and wreck column
+	var cf := FxField.new(data)
+	cf.wind = FakeWind.new(Vector2(-2.0, 1.5), Vector2(0.05, 0.0))
+	cf.impact("u1", Vector2(800.0, 800.0), 20.0, 9.0, 0.0)
+	var kinds := {}
+	var bad := 0
+	for p: Dictionary in cf.puffs:
+		var kind := str(p["kind"])
+		kinds[kind] = int(kinds.get(kind, 0)) + 1
+		var po: Dictionary = cf.set_defs.get(p["set"], cf.smoke_o)
+		var jj: float = FxData.f(po, "wind_jitter_mps")
+		var dd: Vector2 = (p["wind"] as Vector2) - (cf.wind as FakeWind).at(float(p["born"]))
+		if absf(dd.x) > jj + 1e-6 or absf(dd.y) > jj + 1e-6:
+			bad += 1
+	check(kinds.has("burst") and kinds.has("plume") and kinds.has("smolder"), "9. a crash makes a burst, a plume and a wreck column (%s)" % str(kinds))
+	eq(bad, 0, "9. and all of its smoke drifts with the wind at each puff's birth")
+	# the layer hands the wind to both
+	var layer := FxLayer.new()
+	main.add_child(layer)
+	layer.setup(Transform2D.IDENTITY, SEED)
+	check(layer.wind == null and layer.field.wind == null and layer.fire.wind == null, "9. a layer has no wind unless it is given one")
+	var air := FakeWind.new(Vector2(2.0, 2.0))
+	layer.set_wind(air)
+	check(layer.wind == air and layer.field.wind == air and layer.fire.wind == air, "9. set_wind reaches the effects field and the fire's smoke")
+	layer.set_wind(null)
+	check(layer.wind == null and layer.field.wind == null and layer.fire.wind == null, "9. set_wind(null) is today's behaviour again")
+	layer.queue_free()
+	return true
+
+# The sim's own Wind (scripts/sim/wind.gd, from its params as a client builds it) through the same drawing: the day's sea breeze, the night's land breeze
+# and the dawn calm lean the smoke the way each blows, by the amounts the regimes give.
+func _check_real_wind(data: FxData) -> bool:
+	var tree := Vector2(100.0, 200.0)
+	var feed := [_tree("a", tree.x, tree.y, 2, 1.5, 4)]
+	var t := 12.0
+	var leans := {}
+	for pair: Array in [["day", 14.0], ["night", 1.5], ["dawn", 7.5]]:
+		var w: Object = WindScript.from_params({"hour": pair[1], "toward_sea": [-0.93, 0.37], "seed": SEED, "v": 1}, WindScript.PATH, true)
+		if not check(w != null and bool(w.call("ok")), "9. the sim's %s wind builds from its params" % pair[0]):
+			return false
+		var fire := FxFire.new(data)
+		fire.set_feed(feed)
+		fire.set_wind(w)
+		var plain := FxFire.new(data)
+		plain.set_feed(feed)
+		plain.set_wind(FakeWind.new(Vector2.ZERO))   # (the same column in dead air: only the wind differs)
+		var c := _mass_centre(fire.puffs_at(t), tree) - _mass_centre(plain.puffs_at(t), tree)
+		leans[pair[0]] = c
+		var mean: Vector2 = w.call("mean")
+		if mean.length() > 1.0:
+			check(c.dot(mean.normalized()) > 0.0, "9. the %s wind (mean %s): the smoke leans the way the regime blows (%s)" % [pair[0], mean.round(), c.round()])
+		var field := FxField.new(data)
+		field.wind = w
+		field.emit_damage_smoke("p1", Vector2(500.0, 500.0), 120.0, 0.4, 10.0, 9.0, 0.0)
+		var j: float = FxData.f(field.smoke_o, "wind_jitter_mps")
+		var off := 0
+		for p: Dictionary in field.puffs:
+			var dd: Vector2 = (p["wind"] as Vector2) - (w.call("at", float(p["born"])) as Vector2)
+			if absf(dd.x) > j + 1e-6 or absf(dd.y) > j + 1e-6:
+				off += 1
+		check(not field.puffs.is_empty() and off == 0, "9. the %s wind: a damaged plane's trail drifts with the sim's Wind at each puff's birth" % pair[0])
+	check((leans["day"] as Vector2).length() > (leans["dawn"] as Vector2).length() * 2.0, "9. a day's sea breeze leans the smoke much further than a dawn calm (%.1f m against %.1f m)" % [(leans["day"] as Vector2).length(), (leans["dawn"] as Vector2).length()])
+	check((leans["day"] as Vector2).dot((leans["night"] as Vector2)) < 0.0, "9. and the night's land breeze leans it the other way")
+	return true

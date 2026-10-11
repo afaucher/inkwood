@@ -6,7 +6,9 @@ extends RefCounted
 #
 #   var rules := FireRules.new()                  # data/sim/fire.json (a Dictionary also works: a test's variant)
 #   rules.ok()  rules.errors
-#   rules.spread_p(gap_m)                         # the chance one burning tree lights one unlit tree `gap_m` away
+#   rules.spread_p(gap_m)                         # the chance one burning tree lights one unlit tree `gap_m` away (in a calm)
+#   rules.spread_p_dir(gap_m, cos_phi, skew)      # ... with the wind: the reach leans downwind (decision coastal-wind): 45 m downwind, 20 m upwind, 30 m
+#                                                 # all round in a calm; skew is 0 (calm) .. 1 (full wind, rules.full_skew_mps)
 #   rules.damage_p(edge_m)                        # the chance (one tree) a unit `edge_m` beyond a burning canopy loses a pip
 #   rules.out_turn(lit_turn)                      # the last turn a tree lit in `lit_turn` burns
 
@@ -19,16 +21,17 @@ const MOBILITY := ["mobile", "static"]
 const GAP_MEASURES := ["canopy_edge", "centre"]
 const STARTS := ["next_turn", "same_turn"]
 const LIT_T := ["seeded_in_turn", "turn_start"]
+const WIND_AT := ["turn_start", "turn_middle"]
 const SHAPES := ["linear"]
 const COMBINES := ["independent"]
 const KNOWN := ["ignite", "spread", "burn", "damage", "smoke", "burnt_cover"]
 # The fields of each section (an unknown one is an error, like a misspelt top-level one).
 const SECTION_KEYS := {
 	"ignite": ["chance", "events", "radius_field", "crash_radius_m"],
-	"spread": ["chance_touching", "reach_m", "fall", "gap_measure", "starts", "lit_t"],
+	"spread": ["chance_touching", "reach_m", "reach_downwind_m", "reach_upwind_m", "full_skew_mps", "wind_at", "fall", "gap_measure", "starts", "lit_t"],
 	"burn": ["turns", "counts_lit_turn"],
 	"damage": ["domains", "pips", "chance_near", "reach_m", "fade", "combine", "max_pips_per_unit_turn", "sample_s"],
-	"smoke": ["denies_tracking", "reach_m", "domains", "mobility", "entry_step_s"],
+	"smoke": ["denies_tracking", "reach_m", "drift_s", "domains", "mobility", "entry_step_s"],
 	"burnt_cover": ["share_radius_m"],
 }
 
@@ -42,6 +45,10 @@ var crash_radius_m: float = NAN
 # spread
 var spread_chance: float = NAN
 var spread_reach_m: float = NAN
+var spread_reach_down_m: float = NAN
+var spread_reach_up_m: float = NAN
+var full_skew_mps: float = NAN
+var wind_at_mode: String = ""
 var gap_measure: String = ""
 var spread_starts: String = ""
 var lit_t_mode: String = ""
@@ -58,6 +65,7 @@ var max_pips_per_unit_turn: int = 0
 # smoke
 var denies_tracking: bool = false
 var smoke_reach_m: float = NAN
+var drift_s: float = NAN
 var smoke_domains: Array[String] = []
 var smoke_mobility: Array[String] = []
 var entry_step_s: float = NAN
@@ -84,6 +92,12 @@ func _init(source: Variant = PATH, quiet: bool = false) -> void:
 		var sp := r.section(d, "spread", "spread")
 		spread_chance = r.number(sp, "chance_touching", "spread.chance_touching", 0.0, 1.0)
 		spread_reach_m = r.number(sp, "reach_m", "spread.reach_m", 0.001)
+		spread_reach_down_m = r.number(sp, "reach_downwind_m", "spread.reach_downwind_m", 0.001)
+		spread_reach_up_m = r.number(sp, "reach_upwind_m", "spread.reach_upwind_m", 0.001)
+		full_skew_mps = r.number(sp, "full_skew_mps", "spread.full_skew_mps", 0.001)
+		wind_at_mode = r.id_value(sp, "wind_at", "spread.wind_at", WIND_AT)
+		if is_finite(spread_reach_m) and is_finite(spread_reach_down_m) and is_finite(spread_reach_up_m) and not (spread_reach_up_m <= spread_reach_m and spread_reach_m <= spread_reach_down_m):
+			r.err("spread reaches must be upwind <= calm <= downwind (got %s, %s, %s)" % [spread_reach_up_m, spread_reach_m, spread_reach_down_m])
 		r.id_value(sp, "fall", "spread.fall", SHAPES)
 		gap_measure = r.id_value(sp, "gap_measure", "spread.gap_measure", GAP_MEASURES)
 		spread_starts = r.id_value(sp, "starts", "spread.starts", STARTS)
@@ -103,6 +117,7 @@ func _init(source: Variant = PATH, quiet: bool = false) -> void:
 		var sm := r.section(d, "smoke", "smoke")
 		denies_tracking = r.boolean(sm, "denies_tracking", "smoke.denies_tracking")
 		smoke_reach_m = r.number(sm, "reach_m", "smoke.reach_m", 0.0)
+		drift_s = r.number(sm, "drift_s", "smoke.drift_s", 0.0)
 		smoke_domains = r.id_list(sm, "domains", "smoke.domains", DOMAINS)
 		smoke_mobility = r.id_list(sm, "mobility", "smoke.mobility", MOBILITY)
 		entry_step_s = r.number(sm, "entry_step_s", "smoke.entry_step_s", 0.01)
@@ -155,6 +170,34 @@ func spread_p(gap_m: float) -> float:
 	if g >= spread_reach_m:
 		return 0.0
 	return spread_chance * (1.0 - g / spread_reach_m)
+
+# THE WIND'S LEAN (decision coastal-wind; Alex: "45 m downwind, 20 m upwind instead of 30 m all round, the same 40%"). How far a fire reaches from a burning
+# tree in a direction: `cos_phi` is the cosine of the angle between the direction from the burning tree to the target and the direction the wind blows TOWARD
+# (1 straight downwind, -1 straight upwind, 0 across it); `skew` is 0 in a calm and 1 at full wind. The reach is spread.reach_m all round in a calm and
+# along the wind at full skew spread.reach_downwind_m downwind and spread.reach_upwind_m upwind; across the wind it is always spread.reach_m, and between
+# the directions it follows the cosine (an egg-shaped reach: PROPOSED).
+func spread_reach(cos_phi: float, skew: float) -> float:
+	var k := clampf(skew, 0.0, 1.0)
+	var c := clampf(cos_phi, -1.0, 1.0)
+	if c >= 0.0:
+		return spread_reach_m + k * (spread_reach_down_m - spread_reach_m) * c
+	return spread_reach_m + k * (spread_reach_m - spread_reach_up_m) * c
+
+# The skew of a wind of this speed: full at spread.full_skew_mps (PROPOSED about 4 m/s), in proportion below it.
+func skew_of(speed_mps: float) -> float:
+	return clampf(speed_mps / full_skew_mps, 0.0, 1.0)
+
+# The farthest any direction reaches, for the search radius.
+func spread_reach_max() -> float:
+	return maxf(maxf(spread_reach_m, spread_reach_down_m), spread_reach_up_m)
+
+# spread_p with the wind: the touching chance falling linearly to 0 at the reach in that direction.
+func spread_p_dir(gap_m: float, cos_phi: float, skew: float) -> float:
+	var reach := spread_reach(cos_phi, skew)
+	var g := maxf(gap_m, 0.0)
+	if g >= reach:
+		return 0.0
+	return spread_chance * (1.0 - g / reach)
 
 # The chance (one burning tree) that a unit `edge_m` beyond its canopy edge (0 or less: under the canopy) loses a pip: damage.chance_near at the
 # edge, falling linearly to 0 at damage.reach_m beyond it.

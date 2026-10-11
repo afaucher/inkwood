@@ -116,6 +116,7 @@ var ctl: CameraController = null
 var fog: FogLayer = null
 var ui: UnitUI = null
 var tracks: SandboxTracks = null
+var _wind_seen: Variant = null           # the World's wind the effects layer was last given (a Wind, or null)
 var fire_view: FxFireView = null        # the forest fire's smoke and trunks (scripts/fx/fx_fire_view.gd): made when the World has a fire
 var reveal_marks: RevealMarks = null    # the "last seen" rings of the guns that fired at the players (Track M2L, proposed)
 var knobs: SandboxKnobs = null
@@ -450,6 +451,7 @@ func _process(delta: float) -> void:
 	_pause_baking_at_overview()
 	_update_fog()
 	_sync_fire()
+	_sync_wind()
 	if not is_playable:
 		_check_loading()
 	elif _rebaking:
@@ -498,6 +500,17 @@ func _update_plane_scale() -> void:
 	if _last_k < 0.0 or absf(k - _last_k) > _last_k * 0.004:
 		_last_k = k
 		_style.set_num("marker.true_scale", k)
+
+# THE WIND (decision coastal-wind): all smoke -- a burning tree's, a damaged plane's trail, a wreck's and a ruin's column -- drifts with the World's
+# wind. `world.wind` is a Wind (scripts/sim/wind.gd) or null; the effects layer is given it when the World has one and again whenever the World's
+# changes (a client takes the host's from the snapshot after its sandbox was built). With none, the layer keeps each option's own data wind.
+func _sync_wind() -> void:
+	var w: Variant = world.get("wind")
+	if w == _wind_seen:
+		return
+	_wind_seen = w
+	if ui != null and ui.fx != null:
+		ui.fx.set_wind(w)
 
 # THE FOREST FIRE (decision forest-fire; track 'Forest fire'): with a fire in the World (`world.get("fire") != null`: null when it is off, and
 # then this does nothing) the sim's feed reaches the effects layer's smoke and, as trees burn out, the map's trunks. The view is made on

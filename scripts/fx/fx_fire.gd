@@ -28,6 +28,14 @@ extends RefCounted
 # burn-out; it rises and drifts on the W1 option's wind, and thick smoke casts a shadow by the planes' altitude rule
 # (decision smoke-shadow). Sizes follow the MAP's metres (a column stands on a tree), not the planes' drawn scale.
 #
+# THE WIND (decision coastal-wind, 2026-10-11): with a wind set (set_wind: a Wind, scripts/sim/wind.gd, at(game_s) -> the air's velocity in
+# m/s, world axes) a puff drifts with the air as it blows at the puff's BIRTH time, times a gain that makes the drawn column reach where the
+# sim puts its smoke zone: the sim sweeps the untrackable zone (the canopy grown by reach_m) downwind by `smoke.drift_s` seconds of wind
+# (data/sim/fire.json, read here, not copied), so the far end of the zone is wind x drift_s from the tree. The gain is drift_s over the age
+# a puff stays thick enough to read as smoke (its alpha at or above the shadow threshold, zone_age_s()), so the farthest puff that still
+# reads is wind x drift_s from its tree -- the picture fills the zone, no further. No wind, or no drift_s in the data: the option's own data
+# wind is used, or the gain is 1. The wind is sampled on a 0.25 s grid and cached (a puff is made again every frame).
+#
 # COST. The puffs of a frame are made once per game time (not per pass, not per camera move) into packed arrays,
 # and drawn with one draw call each. Past forest_fire.smoke.draw_budget puffs in a frame, a fixed share (chosen by a
 # hash of the puff, so a puff is kept or dropped for its whole life) is skipped and the rest drawn larger
@@ -37,6 +45,7 @@ const FxData = preload("res://scripts/fx/fx_data.gd")
 const FxPuff = preload("res://scripts/fx/fx_puff.gd")
 
 const SET_ID := "forest_fire"
+const THICK_ALPHA := 0.25   # the alpha under which a puff is "mostly gone" (the layer casts no shadow from it, fx_layer.gd): the far end of the smoke
 const TONES := 3
 
 var data: FxData
@@ -47,6 +56,8 @@ var visible_at: Callable = Callable()
 # () -> Variant: changes when what visible_at answers changes (the fog's circles); the frame's puffs are made again then.
 var sight_sig: Callable = Callable()
 
+# The air: a Wind (at(game_s) -> Vector2 m/s) or null (the option's own data wind). Set through set_wind().
+var wind: Object = null
 var cfg: Dictionary = {}               # forest_fire.smoke, unwrapped
 var option: Dictionary = {}            # the smoke option the set is baked from (W1 + the block's shadow and strength keys)
 var errors: Array[String] = []
@@ -81,6 +92,11 @@ var _variants := 1
 var _steps: Array = []
 var _wind := Vector2.ZERO
 var _wind_jitter := 0.0
+var _drift_s := -1.0                   # data/sim/fire.json smoke.drift_s (-1: the sim does not have it yet)
+var _zone_age := 1.0                   # the age (s) up to which a puff still reads as thick smoke (alpha >= THICK_ALPHA)
+var _drift_gain := 1.0                 # the wind's gain on a puff's drift: drift_s / _zone_age (1 when drift_s is not known)
+var _wind_cache: Dictionary = {}       # int (0.25 s) -> Vector2: wind.at() x the gain
+var _wind_probe := Vector2.INF         # the wind at a fixed time: a Wind changed in place empties the cache
 var _iv := 1.2
 var _jit := 0.3
 var _life := 6.0
@@ -183,8 +199,71 @@ func reload() -> void:
 	_hidden_ok = FxData.b(cfg, "smoke_when_hidden")
 	_shadow = FxData.b(cfg, "ground_shadow")
 	_shadow_min_tone = FxData.i(cfg, "shadow_min_tone")
+	_zone_age = _column_zone_age()
+	set_drift_s(read_drift_s())
 	_rebuild_times()
 	_dirty_frame()
+
+# The sim's drift_s (seconds of wind by which its smoke zone sits downwind; -1: none) and the gain on the wind that follows from it. reload() reads
+# the data's; a board or a test may set another.
+func set_drift_s(s: float) -> void:
+	_drift_s = s
+	_drift_gain = clampf(_drift_s / _zone_age, 0.25, 4.0) if _drift_s > 0.0 else 1.0
+	_wind_cache.clear()
+	_dirty_frame()
+
+# data/sim/fire.json smoke.drift_s: the seconds of drift by which the sim places the untrackable smoke zone downwind of the smoking trees
+# (decision coastal-wind). -1 when the file does not have it. Read, never copied: the sim's number is the one the drawing follows.
+static func read_drift_s(path: String = "res://data/sim/fire.json") -> float:
+	if not FileAccess.file_exists(path):
+		return -1.0
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not (raw is Dictionary):
+		return -1.0
+	var sm: Variant = (raw as Dictionary).get("smoke")
+	if not (sm is Dictionary):
+		return -1.0
+	var rec: Variant = (sm as Dictionary).get("drift_s")
+	var v: Variant = (rec as Dictionary).get("value") if rec is Dictionary else rec
+	return float(v) if (v is float or v is int) else -1.0
+
+# The age (s) up to which a puff still reads as thick smoke: where its fade (the option's hold and power, the column's peak alpha) crosses
+# THICK_ALPHA. Past it the puff is a faint wisp; the zone the sim draws round the smoke ends where this ends.
+func _column_zone_age() -> float:
+	var n := 480
+	for i in n + 1:
+		var u := float(i) / float(n)
+		var a := 1.0
+		if u > _hold:
+			a = pow(1.0 - (u - _hold) / maxf(1.0 - _hold, 1e-6), _fade_pow)
+		if a * _peak < THICK_ALPHA:
+			return maxf(u * _life, 0.1)
+	return _life
+
+# The wind (null: the option's own data wind). The frame's puffs are made again.
+func set_wind(w: Object) -> void:
+	wind = w
+	_wind_cache.clear()
+	_wind_probe = Vector2.INF
+	_dirty_frame()
+
+# The air's drift velocity for a puff born at game time b (m/s): the wind there times the gain, on a 0.25 s grid.
+func _wind_at(b: float) -> Vector2:
+	var key := roundi(b * 4.0)
+	var v: Variant = _wind_cache.get(key)
+	if v == null:
+		v = (wind.at(float(key) * 0.25) as Vector2) * _drift_gain
+		_wind_cache[key] = v
+	return v
+
+func drift_s() -> float:
+	return _drift_s
+
+func zone_age_s() -> float:
+	return _zone_age
+
+func drift_gain() -> float:
+	return _drift_gain
 
 # --- The feed ------------------------------------------------------------------------------------------------------
 
@@ -307,6 +386,13 @@ func burning_count(t: float) -> int:
 # Makes the puffs of game time t (cached by t, the feed and the sight signature).
 func _compute(t: float) -> void:
 	var sig: Variant = sight_sig.call() if sight_sig.is_valid() else null
+	var windy := wind != null
+	if windy:
+		var probe: Vector2 = wind.at(1234.5)
+		if probe != _wind_probe:   # (a Wind changed in place, or a new one: what was cached is the old air)
+			_wind_probe = probe
+			_wind_cache.clear()
+			_key_t = NAN
 	if t == _key_t and _version == _key_ver and sig == _key_sig:
 		return
 	var t0 := Time.get_ticks_usec()
@@ -401,8 +487,9 @@ func _compute(t: float) -> void:
 				tone = _tone_dying
 			var ang := float(h2 & 0xFFFF) / 65536.0 * TAU
 			var dist := sqrt(float((h2 >> 16) & 0x7FFF) / 32768.0) * _spread * r
-			var wx := _wind.x + (float(h3 & 0x7FFF) / 32768.0 - 0.5) * 2.0 * _wind_jitter
-			var wy := _wind.y + (float((h3 >> 15) & 0xFFFF) / 65536.0 - 0.5) * 2.0 * _wind_jitter
+			var base_w := _wind_at(b) if windy else _wind
+			var wx := base_w.x + (float(h3 & 0x7FFF) / 32768.0 - 0.5) * 2.0 * _wind_jitter
+			var wy := base_w.y + (float((h3 >> 15) & 0xFFFF) / 65536.0 - 0.5) * 2.0 * _wind_jitter
 			# the option's growth and fade at this age (fx_puff.gd grow_at / alpha_at / stage_of, inlined)
 			var e := (1.0 - exp(-u / _gtau)) / _gnorm
 			var grow := _g0 + (_g1 - _g0) * e

@@ -552,6 +552,8 @@ func snapshot() -> Dictionary:
 		"reveal": Reveal.of(world).net_state(),
 		# The forest fire (the trees lit and when; empty while it is off): a joiner must see the same smoke and the same trunks.
 		"fire": world.net_fire(),
+		# The coastal wind's parameters (empty with no wind): a client builds the host's wind, never its own (its clock may say another hour).
+		"wind": world.net_wind(),
 	}
 
 # --- Client: messages from the host ----------------------------------------------------------------
@@ -696,6 +698,7 @@ func apply_snapshot(s: Dictionary) -> void:
 	world.apply_net_guns(s.get("guns", {}))
 	Reveal.of(world).apply_net_state(s.get("reveal", {}))
 	world.apply_net_fire(s.get("fire", {}))
+	world.apply_net_wind(s.get("wind", {}))
 	var flags: Dictionary = s["ready"]
 	for p: Variant in flags:
 		_apply_ready(str(p), bool(flags[p]))

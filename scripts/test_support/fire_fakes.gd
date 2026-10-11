@@ -37,10 +37,26 @@ class FakeTrees:
 static func rules() -> FireRules:
 	return FireRules.new(FireRules.PATH, true)
 
-static func state(source: Object = null) -> FireState:
-	var f := FireState.new(rules(), 5.0)
+static func state(source: Object = null, fire_rules: FireRules = null, wind: RefCounted = null) -> FireState:
+	var f := FireState.new(fire_rules if fire_rules != null else rules(), 5.0)
 	f.source = source
+	f.wind = wind
 	return f
+
+# A wind by hand (the two calls the fire makes of one): the same velocity at every game second, or `v_after` from `switch_s` on.
+class FakeWind:
+	extends RefCounted
+	var v := Vector2.ZERO
+	var v_after := Vector2.ZERO
+	var switch_s := INF
+
+	func _init(velocity: Vector2 = Vector2.ZERO, after: Vector2 = Vector2.ZERO, at_s: float = INF) -> void:
+		v = velocity
+		v_after = after
+		switch_s = at_s
+
+	func at(game_s: float) -> Vector2:
+		return v if game_s < switch_s else v_after
 
 static func tree(n: int, x: float, y: float, r: float) -> Dictionary:
 	return {"id": "f%d" % n, "x_m": x, "y_m": y, "r_m": r, "kx": n, "ky": n * 7 + 3}

@@ -83,6 +83,11 @@ extends RefCounted
 #                                          seven): a Strike at dawn, a Bridge at noon. Without it the sun takes the host's clock at the mission's
 #                                          start (scripts/world/sun.gd). main.gd hands it to Sun.begin_mission; a client gets the host's.
 #
+# THE COASTAL WIND (decision coastal-wind, 2026-10-11; scripts/sim/wind.gd): one switch, ON unless the file says otherwise --
+#
+#   "wind": false                          (optional; absent is true) populate() gives the World a Wind (World.set_wind) built from the sun's hour and the water's
+#                                          sea round the mission's centre; false leaves world.wind null. The wind moves only smoke (fire, drawn smoke) for now.
+#
 # `sc.water_on`, `sc.water()` (the shared WaterGen, or null with the switch off) and `sc.water_site(name)` are what the
 # drawing asks. A test may switch it without editing the file: SandboxScenario.new("strike", true, {"water": true}) --
 # the third argument is a Dictionary of top-level keys that replace the file's.
@@ -96,6 +101,7 @@ const WaterGen = preload("res://scripts/world/water_gen.gd")
 const GroundMap = preload("res://scripts/world/ground_map.gd")
 const Reveal = preload("res://scripts/sim/reveal.gd")
 const FireTrees = preload("res://scripts/sim/fire_trees.gd")
+const Wind = preload("res://scripts/sim/wind.gd")
 
 const WATER_PREFIX := "water."
 const SCENARIO_DIR := "res://data/scenarios"
@@ -116,6 +122,7 @@ var objective_spec: Dictionary = {}   # the "objective" block: {unit, radius_m, 
 var local_player: String = ""
 var water_on := false                 # the "water" switch: the scenario's water units are in `units` when it is on
 var fire_on := false                  # the "fire" switch: populate() gives the World a forest fire (scripts/sim/fire.gd)
+var wind_on := true                   # the "wind" switch: populate() gives the World the coastal wind (scripts/sim/wind.gd); on unless the file says false
 var sides: Dictionary = {}            # scenario side -> {world_side, callsign_pool}
 var units: Array[Dictionary] = []     # World.add_unit specs, callsigns resolved
 var view: Dictionary = {}             # name -> value (value records flattened)
@@ -137,6 +144,7 @@ func _init(scenario_id: String = "sandbox", quiet: bool = false, overrides: Dict
 		d[k] = overrides[k]
 	_read_water(d, quiet)
 	_read_fire(d, quiet)
+	_read_wind(d, quiet)
 	seed_value = int(_num(d, "seed", quiet))
 	rng_seed = int(_num(d, "rng_seed", quiet))
 	local_player = _str(d, "local_player", quiet)
@@ -195,6 +203,14 @@ func _init(scenario_id: String = "sandbox", quiet: bool = false, overrides: Dict
 
 func ok() -> bool:
 	return errors.is_empty()
+
+# THE WIND SWITCH (see the header): "wind" must be true or false when it is there; absent is true.
+func _read_wind(d: Dictionary, quiet: bool) -> void:
+	var sw: Variant = d.get("wind", true)
+	if not (sw is bool):
+		_err("'wind' must be true or false", quiet)
+		return
+	wind_on = sw
 
 # THE FIRE SWITCH (see the header): "fire" must be true or false when it is there.
 func _read_fire(d: Dictionary, quiet: bool) -> void:
@@ -310,7 +326,30 @@ func populate(world: Object) -> Array[String]:
 	world.add_player(local_player)
 	for spec: Dictionary in units:
 		ids.append(str(world.add_unit(spec)))
+	# THE COASTAL WIND (decision coastal-wind): one wind for the map, from the sun's hour at the mission start and where the sea lies from the mission's centre
+	# (the water's sea, if the scenario has water; else the light prevailing wind of data/sim/wind.json).
+	if wind_on:
+		var wnd: RefCounted = Wind.for_mission(_wind_centre(world), Callable(water(), "sea_s") if water() != null else Callable(), rng_seed ^ seed_value, world.bounds)
+		if wnd.ok():
+			world.set_wind(wnd as Wind)
+		else:
+			_err("the wind's data did not load: %s" % str(wnd.errors), false)
 	return ids
+
+# The centre of the battle area, for the wind to look for the sea from: the objective's unit, else the mean of where the units start, else the map's centre.
+func _wind_centre(world: Object) -> Vector2:
+	var obj := objective()
+	var uid := str(obj.get("unit", ""))
+	if uid != "" and world.units.has(uid):
+		return Vector2(float(world.units[uid].x), float(world.units[uid].y))
+	if obj.get("point") is Vector2:
+		return obj["point"]
+	var sum := Vector2.ZERO
+	var n := 0
+	for id: String in world.units:
+		sum += Vector2(float(world.units[id].x), float(world.units[id].y))
+		n += 1
+	return sum / float(n) if n > 0 else world.bounds_center()
 
 # Does the scenario have a unit that drives (domain ground, not static)? Then the World is given the ground (populate).
 func _has_ground_mover(world: Object) -> bool:

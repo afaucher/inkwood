@@ -26,6 +26,12 @@ extends RefCounted
 #                    plane the sim is flying
 #   impact           the crash: a burst on the ground, a plume, the scar that stays
 #
+# THE WIND (decision coastal-wind, 2026-10-11): with `wind` set -- a Wind (scripts/sim/wind.gd): wind.at(game_s) -> the air's velocity in m/s,
+# world axes -- every puff of smoke drifts with the air as it blows at the puff's BIRTH (a damaged plane's trail, a crash's burst, plume and
+# wreck column, a bomb's and a flak shell's smoke, a ruin's column), plus the option's own small per-puff spread so a trail does not slide as
+# one sheet. With no wind (the boards, a shot without a World) the option's own data wind is used, exactly as before: _wind() draws the
+# same two random numbers either way, so nothing else in a run changes. Set it through FxLayer.set_wind().
+#
 # Colours and looks are not here; only numbers and ids.
 
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
@@ -58,6 +64,9 @@ var ruin_name: String = "R1"
 var flak_o: Dictionary = {}
 var bomb_o: Dictionary = {}
 var ruin_o: Dictionary = {}
+
+# The air (a Wind: at(game_s) -> Vector2 m/s) every puff drifts with, or null for the option's own data wind (see THE WIND above).
+var wind: Object = null
 
 var puffs: Array[Dictionary] = []
 var bursts: Array[Dictionary] = []
@@ -225,7 +234,7 @@ func _add_trail_puff(unit_id: String, kind: String, o: Dictionary, set_id: Strin
 	var tail := Vector2.ZERO
 	if not is_nan(heading):
 		tail = -Vector2.from_angle(heading) * FxData.f(o, "tail_frac") * size_m
-	var wind := _wind(o, rng)
+	var drift := _wind(o, rng, t)
 	var r_m := FxPuff.radius_m(o, i, size_m) * (0.8 + rng.next() * 0.4)
 	var p := {
 		"id": _new_id(), "unit": unit_id, "kind": kind, "set": set_id, "born": t,
@@ -234,15 +243,22 @@ func _add_trail_puff(unit_id: String, kind: String, o: Dictionary, set_id: Strin
 		"r_m": r_m,
 		"tone": tone, "variant": int(rng.next() * float(FxData.i(o, "variants"))),
 		"life": fixed_life if fixed_life > 0.0 else FxPuff.life_s(o, i),
-		"wind": wind, "dir": 0.0 if is_nan(heading) else heading,
+		"wind": drift, "dir": 0.0 if is_nan(heading) else heading,
 	}
 	_add_puff(p)
 	return 1
 
-func _wind(o: Dictionary, rng: Mulberry32) -> Vector2:
-	var w := FxData.arr(o, "wind_mps")
+# A puff's drift velocity (m/s, world axes): the air at its birth game time `born` plus the option's per-puff spread when a wind is set, else
+# the option's data wind plus the same spread. The two random numbers are drawn in both cases.
+func _wind(o: Dictionary, rng: Mulberry32, born: float = NAN) -> Vector2:
 	var j := FxData.f(o, "wind_jitter_mps")
-	return Vector2(float(w[0]) + (rng.next() - 0.5) * 2.0 * j, float(w[1]) + (rng.next() - 0.5) * 2.0 * j)
+	var jx := (rng.next() - 0.5) * 2.0 * j
+	var jy := (rng.next() - 0.5) * 2.0 * j
+	if wind != null and not is_nan(born):
+		var v: Vector2 = wind.at(born)
+		return Vector2(v.x + jx, v.y + jy)
+	var w := FxData.arr(o, "wind_mps")
+	return Vector2(float(w[0]) + jx, float(w[1]) + jy)
 
 func _new_id() -> int:
 	_next_id += 1
@@ -443,7 +459,7 @@ func _add_plume(unit_id: String, phase: String, pl: Dictionary, pos: Vector2, h:
 			"pos": pos + Vector2.from_angle(a) * d, "h": maxf(h, 0.0), "size_m": size_m,
 			"r_m": lerpf(float(rf[0]), float(rf[1]), rng.next()) * unit_m,
 			"tone": FxData.i(pl, "tone"), "variant": int(rng.next() * float(FxData.i(o, "variants"))),
-			"life": FxData.f(pl, "life_s"), "wind": _wind(o, rng),
+			"life": FxData.f(pl, "life_s"), "wind": _wind(o, rng, born),
 		})
 
 # The wreck keeps smoking (Alex 2026-10-09: "an explosion, then smoking"): a column of puffs from
@@ -488,7 +504,7 @@ func _add_smolder(unit_id: String, sm: Dictionary, pos: Vector2, t: float, size_
 			"pos": pos + Vector2.from_angle(a) * d, "h": 0.0, "rise": FxData.f(sm, "rise_mps"), "size_m": size_m,
 			"r_m": lerpf(float(rf[0]), float(rf[1]), fr) * unit_m * (0.8 + rng.next() * 0.4),
 			"tone": tone, "variant": int(rng.next() * float(FxData.i(o, "variants"))),
-			"life": FxData.f(sm, "life_s"), "wind": _wind(o, rng),
+			"life": FxData.f(sm, "life_s"), "wind": _wind(o, rng, t + el),
 		})
 		# the interval stretches from its first value to its second over the duration
 		el += lerpf(float(iv[0]), float(iv[1]), fr)
@@ -527,7 +543,7 @@ func _add_smoke_burst(unit_id: String, phase: String, sb: Dictionary, pos: Vecto
 			"rise": FxData.f(sb, "rise_mps"), "size_m": size_m,
 			"r_m": lerpf(float(rf[0]), float(rf[1]), rng.next()) * unit_m,
 			"tone": FxData.i(sb, "tone"), "variant": int(rng.next() * float(FxData.i(o, "variants"))),
-			"life": FxData.f(sb, "life_s"), "wind": _wind(o, rng),
+			"life": FxData.f(sb, "life_s"), "wind": _wind(o, rng, t + FxData.f(sb, "delay_s") + float(k) * FxData.f(sb, "interval_s")),
 			"vel": Vector2.from_angle(a) * v, "vel_tau": FxData.f(sb, "vel_tau_s"),
 		})
 
@@ -687,7 +703,7 @@ func flak_burst(target_pos: Vector2, height_m: float, t: float, hit: bool, shot_
 			"r_m": lerpf(float(rf[0]), float(rf[1]), rng.next()) * size * rs,
 			"tone": FxData.i(bg, "tone_hit") if hit else FxData.i(bg, "tone_miss"),
 			"variant": int(rng.next() * float(FxData.i(po2, "variants"))),
-			"life": life * (0.9 + rng.next() * 0.2), "wind": _wind(po2, rng),
+			"life": life * (0.9 + rng.next() * 0.2), "wind": _wind(po2, rng, t + FxData.f(bg, "delay_s") + float(k) * FxData.f(bg, "interval_s")),
 		})
 
 # --- Bombs --------------------------------------------------------------------------------------------------------------------
