@@ -1982,7 +1982,7 @@
         "when": "fixed at mission start",
         "what_follows": "every shadow (trees, terrain, structures, planes' altitude shadows, effects)",
         "still_open": "the look across the hours (the board), the clock source in co-op (proposed: the host's), night hours",
-        "model": "PROPOSED: bearing 90 at 06:00, 180 at noon, 270 at 18:00; elevation a sine arc peaking at 60 degrees; shadow length 1/tan(elevation), clamped at 3; data/params/sun.json, scripts/world/sun.gd",
+        "model": "PROPOSED: bearing 45 (NE) at 06:00, 0 (N) at noon, 315 (NW, today's fixed sun) at 18:00; elevation a sine arc peaking at 60; shadow length 1/tan(elevation) clamped at 2.0",
         "recommendations": "PROPOSED: (a) the host's clock, sent with mission start, and a scenario may pin an hour; (b) fold the 24 hours onto the day (clamp gives half of all real hours the longest shadows); planes' altitude-shadow gap held at today's length",
         "rebake": "measured: about 37 to 45 s for all 100 chunks, the same as today's sun; fixed at start means one bake",
         "night": "fold (Alex)",
@@ -1990,7 +1990,13 @@
         "length": "shorter than the board (Alex: 'reduce the distance a bit'); PROPOSED: the clamp 2.0 instead of 3.0",
         "plane_gap": "accurate: a plane's altitude shadow keeps following the sun's length, like every shadow (Alex), not held at today's length"
       },
-      "applied_to": [],
+      "applied_to": [
+        "data/params/sun.json (mode clock_at_start, the north-side arc, clamp 2.0, night fold)",
+        "scripts/world/sun.gd",
+        "scripts/net/mission_start.gd (the host's hour to clients)",
+        "scripts/test_support/test_case.gd (tests on the fixed sun)",
+        "variants/sun-time/board.json"
+      ],
       "status": "chosen by Alex; the numbers proposed; the co-op clock proposed",
       "notes": "Alex: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.' PROPOSED: every shadow follows one sun, not the trees alone. Then: 'Fixed time at start' and 'Every shadow follows'. Then, on the board: he chose fold for the night hours (quoting the proposal), and: 'But let's reduce the distance a bit and the sun should be coming from north side to keep shadows below the objects not above'. On the proposal to hold the planes' shadow gap at today's length: 'No, make them accurate'."
     },

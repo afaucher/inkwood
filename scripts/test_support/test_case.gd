@@ -20,6 +20,8 @@ extends Node
 # Carried over from Bridge to Friendship without its game-mode stamping, which
 # has nothing to stamp here yet.
 
+const _SunPin = preload("res://scripts/world/sun.gd")   # (a name no test declares: a test may have const Sun of its own)
+
 var test_name: String = ""
 
 # Backstop for a test that waits for something that never arrives. The runner
@@ -33,6 +35,12 @@ var _elapsed: float = 0.0
 var _finished: bool = false
 
 func _ready() -> void:
+	# THE SUN IS PINNED for every test (decision sun-time): the game's sun comes from the machine's clock, so a test that
+	# builds a map, a marker or a shadow would draw a different one at every hour and could not be compared with the
+	# prototype or with a stored hash. Pinned = "fixed" (today's 315 and 46) and a stand-in for the clock; a test that wants
+	# the time-of-day model asks for it (Sun.set_override, Sun.begin_mission). finish() fails a test that reached the real
+	# clock. Nothing a test does may depend on what time it is.
+	_SunPin.enter_test_harness()
 	if test_name == "":
 		var path: String = get_script().resource_path
 		test_name = path.get_file().get_basename()
@@ -79,6 +87,8 @@ func finish() -> void:
 	if _finished:
 		return
 	_finished = true
+	if _SunPin.real_clock_reads() > 0:
+		fail("the test read the machine's clock %d time(s): a test must not depend on the time of day (the harness pins the sun, scripts/world/sun.gd)" % _SunPin.real_clock_reads())
 	if _failures.is_empty():
 		print(">>> [TEST PASSED] %s <<<" % test_name)
 		get_tree().quit(0)
