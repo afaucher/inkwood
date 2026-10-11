@@ -2027,15 +2027,16 @@
         "T4 bunches of ink dots",
         "T5 an ink streak with a dot for a hit and a tick for a miss"
       ],
-      "chosen": null,
+      "chosen": "T5, an ink streak with a dot for a hit and a tick for a miss",
       "parameters": {
-        "working_default": "T2 (PROPOSED)"
+        "value": "T5"
       },
       "applied_to": [
-        "data/fx/fx.json working_default.tracers"
+        "data/fx/fx.json working_default.tracers",
+        "variants/tracers/board.json chosen"
       ],
-      "status": "open",
-      "notes": "Alex asked for tracers in the second playtest; the look is open. T2 is the working default so the next playtest has them."
+      "status": "chosen by Alex",
+      "notes": "Alex asked for tracers in the second playtest; the look is open. T2 is the working default so the next playtest has them. Alex chose: 'T5 · Ink streak, hit and miss marks'. Then: 'No need to rerender'."
     },
     {
       "id": "map-border",
