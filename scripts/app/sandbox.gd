@@ -275,7 +275,14 @@ func _build() -> void:
 	fog.auto_bake = not headless
 	fog.controller = ctl
 	map_view.live_layer.add_child(fog)
-	map_view.hidden_test = fog.rect_under_fog   # chunks wholly under the fog's opaque layer bake last
+	if not headless:
+		map_view.prebuild_pool()   # the global tree set: made first, behind the loading card (the chunks stamp sprites from it)
+	map_view.hidden_test = fog.rect_out_of_sight   # chunks out of sight (the opaque topographic layer covers them) bake last, in the background
+	map_view.sight_sig = fog.hidden_signature   # (and are classified again only when sight or the zoom changes)
+	map_view.anchor_points = fog.anchor_points_px   # the background works outward from the units
+	fog.map_ready = map_view.covers_px   # the floor: where the ground is not baked the contour map shows, never a plain square
+	fog.map_serial = map_view.chunk_gen
+	map_view.bake_hold = _playback_running   # the background bake waits while a turn plays back
 	_data["fog_edge"] = fog.edge_mode
 	_data["line_of_sight"] = fog.vision.line_of_sight
 
@@ -359,11 +366,11 @@ func _build() -> void:
 	if not ui.roster.ordered_ids().is_empty():
 		ui.select(ui.roster.ordered_ids()[0])
 	_load_t0 = Time.get_ticks_msec()
-	_load_total = _view_chunk_total()
+	_load_total = _sight_chunk_total()
 	_update_plane_scale()
 	_bake_pause_overview = scenario.view_num("bake_pause_overview")
 	_lock_input(true)   # until the first view is baked (_finish_loading)
-	map_view.bake_boost = not headless   # the loading card is up: nobody is playing, so bake in big slices
+	_set_bake_boost(not headless)   # the loading card is up: nobody is playing, so bake in big slices
 	if announce_restart and session != null:
 		session.announce_restart()
 
@@ -412,11 +419,11 @@ func _process(delta: float) -> void:
 func _pause_baking_at_overview() -> void:
 	if headless:
 		return
-	var want: bool = ctl.overview_amount() < _bake_pause_overview
+	var want: bool = ctl.overview_amount() < _bake_pause_overview or map_view.background_baking()
 	if map_view.bake_enabled != want:
 		map_view.bake_enabled = want
 		if want and (_rebaking or not is_playable):
-			_load_total = _view_chunk_total()   # baking resumes: the card counts this view's chunks
+			_load_total = _sight_chunk_total()   # baking resumes: the card counts this view's chunks
 
 # Controls mounted straight in a CanvasLayer (Track U's HUD, the loading card)
 # take their size from the viewport through anchors, and in the real window
@@ -461,7 +468,41 @@ func _update_fog() -> void:
 # "Redrawing the map..." up for ever.
 # Chunks wholly under the fog's opaque layer do not count: nobody sees them yet (map_view.hidden_test).
 func _missing() -> int:
-	return map_view.missing_in_view(true) if map_view.bake_enabled else 0
+	if not map_view.bake_enabled:
+		return 0
+	# BAKED BY SIGHT (Track P): every chunk of the map that sight reaches, not just this view's -- a player who
+	# pans to a unit's far side must not find unpainted ground. Otherwise the view's own.
+	if map_view.background_baking() and map_view.load_whole_map():
+		return map_view.missing_total()   # (PROPOSED switch, data map_view.background_baking.load_whole_map: the card waits for every chunk)
+	return map_view.missing_sighted() if map_view.background_baking() else map_view.missing_in_view(true)
+
+# Is the fog's topographic layer made for the whole map at every level of detail (FogLayer.bake_complete)? Headless
+# bakes nothing, fog off draws nothing.
+func _fog_ready() -> bool:
+	return headless or fog == null or not _fog_on or fog.bake_complete()
+
+# The card's numbers: the map's chunks (done, total), the fog's chunks and the global tree set, each with its share of the bar.
+func _show_progress(card: SandboxLoading, missing: int, secs: float) -> void:
+	_load_total = maxi(_load_total, missing)
+	card.set_progress(maxi(_load_total - missing, 0), _load_total, secs)
+	if fog != null and _fog_on:
+		card.set_fog_progress(fog.bake_done(), fog.bake_total(), fog.load_share)
+	var baker = map_view.baker
+	card.set_pool_progress(baker.pool_done(), baker.pool_total(), float((map_view.cfg.get("tree_pool", {}) as Dictionary).get("load_share", 0.1)))
+
+# Is a turn's playback running? (MapView.bake_hold: the background bake waits for it.)
+func _playback_running() -> bool:
+	return ui != null and ui.is_playing()
+
+# Is the global tree set made (ChunkBaker.prebuild_pool)? Headless bakes nothing.
+func _pool_ready() -> bool:
+	return headless or not map_view.bake_enabled or map_view.baker.pool_ready()   # (nothing bakes with the map's baking paused: nothing to wait for)
+
+# Both bakers spend a bigger slice of the frame while a card is up (nobody is playing).
+func _set_bake_boost(on: bool) -> void:
+	map_view.bake_boost = on
+	if fog != null:
+		fog.bake_boost = on
 
 # Locks (or unlocks) the keys the loading card cannot catch: Track U's and the camera's.
 func _lock_input(locked: bool) -> void:
@@ -473,15 +514,15 @@ func _lock_input(locked: bool) -> void:
 func _check_loading() -> void:
 	var missing: int = _missing()
 	var secs := (Time.get_ticks_msec() - _load_t0) / 1000.0
-	loading.set_progress(maxi(_load_total - missing, 0), _load_total, secs)
-	if headless or (missing == 0 and _frames > 3):
+	_show_progress(loading, missing, secs)
+	if headless or (missing == 0 and _fog_ready() and _pool_ready() and _frames > 3):
 		_finish_loading()
 
 func _finish_loading() -> void:
 	is_playable = true
 	_lock_input(false)
 	loading.visible = false
-	map_view.bake_boost = _rebaking and not headless   # the loading card is gone (a redraw note may be up)
+	_set_bake_boost(_rebaking and not headless)   # the loading card is gone (a redraw note may be up)
 	hint.start()
 	load_ms = float(Time.get_ticks_msec() - created_ms)
 	print("[Sandbox] first playable frame %.0f ms after the sandbox was created (building the parts %.0f ms; first view of %d chunks, %s)" % [
@@ -493,10 +534,10 @@ func _finish_loading() -> void:
 func _check_rebake() -> void:
 	var missing: int = _missing()
 	var secs := (Time.get_ticks_msec() - _rebake_t0) / 1000.0
-	note.set_progress(maxi(_load_total - missing, 0), _load_total, secs)
-	if headless or (missing == 0 and _frames > 3):
+	_show_progress(note, missing, secs)
+	if headless or (missing == 0 and _fog_ready() and _pool_ready() and _frames > 3):
 		_rebaking = false
-		map_view.bake_boost = false   # the redraw note is gone
+		_set_bake_boost(false)   # the redraw note is gone
 		note.visible = false
 		last_rebake_s = secs
 		print("[Sandbox] map redrawn in %.1f s" % secs)
@@ -507,11 +548,18 @@ func _begin_rebake(clear_chunks: bool = true) -> void:
 	if headless:
 		return
 	_rebaking = true
-	map_view.bake_boost = true   # the redraw note is up: spend the loading budget until it goes
+	_set_bake_boost(true)   # the redraw note is up: spend the loading budget until it goes
 	_rebake_t0 = Time.get_ticks_msec()
-	_load_total = _view_chunk_total()
+	_load_total = _sight_chunk_total()
 	note.set_progress(0, _load_total, 0.0)
 	note.visible = true
+
+# How many chunks the card waits for at the start: those sight reaches anywhere on the map when the map bakes by sight,
+# else the view's own.
+func _sight_chunk_total() -> int:
+	if map_view.background_baking() and map_view.load_whole_map():
+		return map_view.missing_total()
+	return map_view.missing_sighted() if map_view.background_baking() else _view_chunk_total()
 
 # How many baked chunks the current view needs.
 func _view_chunk_total() -> int:
@@ -707,8 +755,17 @@ func _apply_knob(key: String, startup: bool) -> void:
 
 func _set_fog(on: bool) -> void:
 	_fog_on = on
+	# With the fog the map bakes by sight (the chunks out of sight in the background); without it every chunk is
+	# in sight and the view-and-ring rule is the one that makes sense.
+	if map_view != null:
+		map_view.hidden_test = fog.rect_out_of_sight if on else Callable()
+		map_view.sight_changed()
 	fog.visible = on
 	fog.process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
+	# Switched on in play with the contour map not made (it was off from the start, so nothing baked it): the redraw
+	# note stands for it, with its progress, instead of a plain square (Alex, 2026-10-10: never an unpainted area).
+	if on and is_playable and not headless and not fog.bake_complete():
+		_begin_rebake(false)
 	fog.mask_viewport().render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 	if on:
 		_update_fog()

@@ -62,13 +62,18 @@ extends RefCounted
 # first. A canopy that reaches into two chunks is built once. (Not atlas
 # pages: see _start_pages for why.)
 #
-# THE TREE POOL (map_view.tree_pool, PROPOSED, a data switch, default off):
-# instead of one sprite per tree, `variants` sprites per radius bucket of
-# `bucket_px`, drawn by every tree in the bucket (each tree's variant is its
-# seed modulo `variants`). No rotation or mirroring: a sprite's lit side,
-# shadow-side stipple and shadow-side pen are baked in world orientation, and
-# any rotation would turn them away from the sun. It CHANGES THE LOOK (trees
-# repeat at that rate); see the report's side-by-side.
+# THE TREE POOL = ONE GLOBAL SET OF TREES (map_view.tree_pool; Track P2, 2026-10-10). Alex: "At the very
+# least, we could do one set of globally unique trees of a large amount and sample from that." Instead of one
+# sprite per tree (~370 a chunk at ~5.6 ms each: two thirds of a chunk's bake), a SET of `variants` sprites per
+# radius bucket of `bucket_px` -- every bucket from prebuild_radius_px[0] to [1], the sizes the map's trees come
+# in -- is made ONCE per game and pen (prebuild_pool(): on workers, behind the loading card, first in line) and KEPT;
+# each map tree samples from it: the CLOSEST SIZE (its radius rounded to a bucket: never more than bucket_px / 2
+# off, 0.25 px of a radius of 11 to 38, and the sprite is not scaled, so the ink line keeps its width) and, among
+# the set's trees of that size, the one its own seed picks (seed modulo `variants`). The chunks then stamp those
+# sprites instead of drawing trees. No rotation or mirroring: a sprite's lit side, shadow-side stipple and
+# shadow-side pen are baked in world orientation, and any rotation would turn them away from the sun. It CHANGES
+# THE LOOK (trees repeat at the set's rate; docs/proposals/map-performance.md has the side-by-side). enabled false:
+# a sprite per tree, as before (the "unique" setting). A tree outside the prebuilt radii builds on demand, once.
 
 const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
 const InkSprites = preload("res://scripts/render/ink_sprites.gd")
@@ -91,6 +96,7 @@ var warm_paused := false
 var pool_enabled := false
 var pool_variants := 16
 var pool_bucket_px := 0.5
+var pool_radius_px := Vector2(11.0, 39.0)   # tree_pool.prebuild_radius_px: the sizes the set covers
 var stats: Dictionary = {}
 
 var _stages: Array = []
@@ -98,6 +104,8 @@ var _queue: Dictionary = {}       # Vector2i -> priority (not started)
 var _jobs: Array = []             # started jobs
 var _sprites: Dictionary = {}     # key -> [AtlasTexture or Texture2D, half, last_used]
 var _pending: Dictionary = {}     # key -> the page being built for it (true until the page exists)
+var _pool_keys: Array = []        # the global set's keys (the pen it was made for): prebuild_pool
+var _pool_todo: Array = []        # the set's trees not asked for yet: step() asks a few pages' worth a frame
 var _pages_touched: Dictionary = {}  # page id -> true: pages that submitted this frame (the cap)
 var _page_ids := 0
 var _pages: Array = []            # pages being recorded / rendered
@@ -107,6 +115,7 @@ var _lanes: Dictionary = {}       # lane name -> tasks running in it (at most on
 var _warm: Dictionary = {}        # Vector2i -> priority: content to generate ahead (provider.warm_chunk)
 var _warmed: Dictionary = {}      # Vector2i -> true: generated or being generated
 var _warm_task := -1
+var _warm_lane := ""              # the lane the running warm task holds
 var _lane_wanted: Dictionary = {} # lanes a job could not start in this frame
 # Extra frames between the frame that draws a submitted canvas and the request
 # for its pixels (map_view.collect_delay_frames). The read-back is
@@ -142,6 +151,29 @@ func apply_config(cfg: Dictionary) -> void:
 	pool_enabled = bool(pool.get("enabled", false))
 	pool_variants = int(pool.get("variants", 16))
 	pool_bucket_px = float(pool.get("bucket_px", 0.5))
+	var pr: Variant = pool.get("prebuild_radius_px", [11.0, 39.0])
+	if pr is Array and (pr as Array).size() == 2:
+		pool_radius_px = Vector2(float((pr as Array)[0]), float((pr as Array)[1]))
+
+# BAKES PER CHUNK (Track P2, 2026-10-10; Alex: "we seem to be regenerating map sections we should already have"):
+# how many times each chunk finished a bake, and how many times each worker stage ran, since the last
+# reset_bake_counts(). Every static piece is meant to be made ONCE per game and kept, so a count above 1 is a
+# bug unless the look changed (a scale or pen knob: MapView.rebake). The pan probe and the tests read them.
+var bake_counts: Dictionary = {}    # Vector2i -> int
+var stage_runs: Dictionary = {}     # stage name -> int (worker stages; one run per chunk bake each)
+
+func reset_bake_counts() -> void:
+	bake_counts = {}
+	stage_runs = {}
+
+# Chunks baked more than once since the last reset: [chunk, count], most first.
+func rebaked() -> Array:
+	var out: Array = []
+	for c: Vector2i in bake_counts:
+		if int(bake_counts[c]) > 1:
+			out.append([c, int(bake_counts[c])])
+	out.sort_custom(func(a: Array, b: Array) -> bool: return a[1] > b[1])
+	return out
 
 func reset_stats() -> void:
 	stats = {"chunks": 0, "chunk_ms_total": 0.0, "chunk_ms_max": 0.0, "sprites_built": 0, "pages": 0,
@@ -183,7 +215,9 @@ func pending() -> int:
 
 # Everything dropped: requests, jobs (their canvases freed), sprites. For a
 # change of scale or style; the next request starts over.
-func clear() -> void:
+func clear(keep_sprites: bool = false) -> void:
+	# keep_sprites: what changed does not touch how a sprite looks (the map's scale: a sprite is a tree drawn in px,
+	# the same at any scale), so the sprites made stay. A new pen does: they all go, and the global set is made again.
 	_queue.clear()
 	for j: Dictionary in _jobs:
 		_discard_job(j)
@@ -195,10 +229,14 @@ func clear() -> void:
 			for e: Array in pg.entries:
 				(e[3] as InkCanvas).discard()
 	_pages.clear()
-	_sprites.clear()
+	if not keep_sprites:
+		_sprites.clear()
 	_pending.clear()
+	_pool_keys = []
+	_pool_todo = []
+	_pool_total = 0
 	if _warm_task >= 0:
-		_collected(_warm_task, provider.warm_lane() if provider.has_method("warm_lane") else "")
+		_collected(_warm_task, _warm_lane)
 		_warm_task = -1
 	_warm.clear()
 	_warmed.clear()
@@ -217,6 +255,7 @@ func step(budget_usec: int) -> Array:
 	var done: Array = []
 	_lane_wanted.clear()
 	_pages_touched.clear()
+	_step_pool_requests()
 	_start_jobs()
 	# STRICT NEAREST FIRST. Jobs and sprite pages are ONE list ordered by the
 	# priority the requester gave the chunk (a page has its requester's, lowered
@@ -322,14 +361,15 @@ func _step_job(j: Dictionary) -> Variant:
 				if parallel:
 					view_job = j.duplicate()
 					view_job.data = (j.data as Dictionary).duplicate()
+				var lane := _lane_of(j, st)
 				var task := _launch(func() -> void:
 					var tw := Time.get_ticks_usec()
 					box[0] = fn.call(view_job)
-					box[1] = (Time.get_ticks_usec() - tw) / 1000.0, str(st.get("lane", "")))
+					box[1] = (Time.get_ticks_usec() - tw) / 1000.0, lane)
 				if task < 0:
 					return null  # no free worker: next frame
 				if parallel:
-					j.bg[st.name] = [task, box, str(st.get("lane", ""))]
+					j.bg[st.name] = [task, box, lane]
 					return _advance(j)
 				j.task = task
 				j.box = box
@@ -346,7 +386,7 @@ func _step_job(j: Dictionary) -> Variant:
 			if not WorkerThreadPool.is_task_completed(j.task):
 				return null
 			var st: Dictionary = _stages[j.stage]
-			_collected(j.task, str(st.get("lane", "")))
+			_collected(j.task, _lane_of(j, st))
 			var box: Array = j.box
 			j.erase("task")
 			j.erase("box")
@@ -402,6 +442,7 @@ func _step_job(j: Dictionary) -> Variant:
 				_add_stage_ms("collect_final", (Time.get_ticks_usec() - tm) / 1000.0)
 				var ms: float = (Time.get_ticks_usec() - int(j.t0)) / 1000.0
 				stats.chunks += 1
+				bake_counts[j.c] = int(bake_counts.get(j.c, 0)) + 1
 				stats.chunk_ms_total += ms
 				stats.chunk_ms_max = maxf(stats.chunk_ms_max, ms)
 				return {"c": j.c, "texture": tex, "ms": ms}
@@ -447,6 +488,14 @@ func _advance(j: Dictionary) -> Variant:
 # A stage with a `lane` runs only when no other task of that lane does: the
 # terrain generator is serialized behind its own lock anyway, and a task
 # blocked on that lock would hold a worker slot that sprites could use.
+# The lane a stage runs in for this job's chunk: the stage's own name, unless the provider has several
+# (chunk_terrain_provider.gd keeps one terrain per band of rows, each a lane of its own).
+func _lane_of(j: Dictionary, st: Dictionary) -> String:
+	var lane := str(st.get("lane", ""))
+	if lane != "" and provider.has_method("lane_for"):
+		return str(provider.lane_for(j.c, lane))
+	return lane
+
 func _launch(fn: Callable, lane: String = "") -> int:
 	if _busy >= max_workers or (lane != "" and int(_lanes.get(lane, 0)) > 0):
 		if lane != "":
@@ -473,24 +522,29 @@ func warm(c: Vector2i, priority: float) -> void:
 func _step_warm() -> void:
 	if not provider.has_method("warm_chunk"):
 		return
-	var lane: String = provider.warm_lane()
 	if _warm_task >= 0:
 		if not WorkerThreadPool.is_task_completed(_warm_task):
 			return
-		_collected(_warm_task, lane)
+		_collected(_warm_task, _warm_lane)
 		_warm_task = -1
-	if _warm.is_empty() or _lane_wanted.has(lane) or not _queue.is_empty() or warm_paused:
-		return  # bakes first: a job is waiting for the lane, or chunks wait to start (or MapView says wait)
+	if _warm.is_empty() or not _queue.is_empty() or warm_paused:
+		return  # bakes first: chunks wait to start (or MapView says wait)
 	var best: Vector2i = _warm.keys()[0]
 	for k: Vector2i in _warm:
 		if _warm[k] < _warm[best]:
 			best = k
+	var lane: String = provider.warm_lane()
+	if provider.has_method("lane_for"):
+		lane = str(provider.lane_for(best, lane))
+	if _lane_wanted.has(lane):
+		return  # a job is waiting for the lane
 	var prov := provider
 	var task := _launch(func() -> void: prov.warm_chunk(best), lane)
 	if task >= 0:
 		_warm.erase(best)
 		_warmed[best] = true
 		_warm_task = task
+		_warm_lane = lane
 
 # A stage's {data: {...}} into job.data (main thread).
 static func _merge_out(j: Dictionary, out: Variant) -> void:
@@ -498,6 +552,7 @@ static func _merge_out(j: Dictionary, out: Variant) -> void:
 		(j.data as Dictionary).merge((out as Dictionary).get("data", {}), true)
 
 func _add_worker_ms(name: String, ms: float) -> void:
+	stage_runs[name] = int(stage_runs.get(name, 0)) + 1
 	var ws: Dictionary = stats.worker_ms
 	ws[name] = float(ws.get(name, 0.0)) + ms
 
@@ -514,7 +569,7 @@ func _add_stage_ms(name: String, ms: float) -> void:
 
 func _discard_job(j: Dictionary) -> void:
 	if j.has("task"):
-		_collected(j.task, str((_stages[j.stage] as Dictionary).get("lane", "")))
+		_collected(j.task, _lane_of(j, _stages[j.stage] as Dictionary))
 	for name: String in j.bg:
 		if j.bg[name][0] >= 0:
 			_collected(j.bg[name][0], j.bg[name][2])
@@ -561,6 +616,57 @@ func _pool_tree(o: Dictionary) -> Dictionary:
 	t.r = float(b) * pool_bucket_px
 	t.seed = 0x5EED0000 + b * 977 + v
 	return t
+
+# The global set as tree objects: one per (bucket, variant) from pool_radius_px[0] to [1]. sprite_key() of each is
+# that sprite's key, and _pool_tree() makes the tree it is drawn from.
+func pool_objects() -> Array:
+	var out: Array = []
+	var b0 := roundi(pool_radius_px.x / pool_bucket_px)
+	var b1 := roundi(pool_radius_px.y / pool_bucket_px)
+	for b in range(b0, b1 + 1):
+		for v in pool_variants:
+			out.append({"kind": "tree", "r": float(b) * pool_bucket_px, "seed": v})
+	return out
+
+# Makes the global set (see the header): asks for every sprite of it, a few pages a frame, ahead of every chunk
+# (prio, lower first). Call it once the baker exists and again after anything that changes the sprites' key (the
+# pen) or empties the cache. Returns the size of the set; 0 with the pool off.
+func prebuild_pool(prio: float = -100.0) -> int:
+	_pool_keys = []
+	_pool_todo = []
+	_pool_total = 0
+	if not pool_enabled:
+		return 0
+	_pool_todo = pool_objects()
+	_pool_total = _pool_todo.size()
+	_pool_prio = prio
+	return _pool_total
+
+var _pool_prio := -100.0
+var _pool_total := 0
+
+# Asks for the next slice of the set (step() calls it every frame until the set is all asked for).
+func _step_pool_requests() -> void:
+	if _pool_todo.is_empty():
+		return
+	var n := mini(_pool_todo.size(), maxi(sprite_batch, 1) * 8)
+	var slice: Array = _pool_todo.slice(0, n)
+	_pool_todo = _pool_todo.slice(n)
+	_pool_keys.append_array(_request_sprites(slice, _pool_prio))   # (keyed now, with the pen as it is now)
+
+func pool_total() -> int:
+	return _pool_total
+
+func pool_done() -> int:
+	var n := 0
+	for k: String in _pool_keys:
+		if _sprites.has(k):
+			n += 1
+	return n
+
+# Is the set all made (true with no set asked for)?
+func pool_ready() -> bool:
+	return _pool_todo.is_empty() and pool_done() == _pool_total
 
 # Keys for `objs`, and pages started for any not cached or on the way. `prio` is
 # the requesting chunk's priority: its new pages take it, and a page already on
@@ -721,13 +827,34 @@ func _page_may_submit(pg: Dictionary) -> bool:
 	_pages_touched[id] = true
 	return true
 
+# Over the cap, drop the least recently used QUARTER of it in one pass (Track P, 2026-10-10). This used
+# to sort every key with a lambda each frame the cache was over the cap: ~16,000 keys, 100-250 ms of main
+# thread a frame, which is what the frames of 100+ ms were while a pan baked chunks under the fog (the
+# sprite cache fills in a minute of baking and then sits at the cap). Now: the stamps are sorted as plain
+# integers (native, about a millisecond), everything strictly older than the cut goes, and the cache then
+# has a quarter of a cap's room before the next pass.
 func _evict_sprites() -> void:
 	if _sprites.size() <= sprite_cache_max:
 		return
-	var keys := _sprites.keys()
-	keys.sort_custom(func(a: String, b: String) -> bool: return _sprites[a][2] < _sprites[b][2])
-	for i in keys.size() - sprite_cache_max:
-		_sprites.erase(keys[i])
+	var target := sprite_cache_max - maxi(1, sprite_cache_max / 4)
+	var stamps := PackedInt32Array()
+	for ref: Array in _sprites.values():
+		stamps.append(int(ref[2]))
+	stamps.sort()
+	var cut := stamps[_sprites.size() - target - 1]   # this many (plus ties) are the oldest
+	var over := _sprites.size() - target
+	for k: String in _sprites.keys():
+		if int((_sprites[k] as Array)[2]) < cut:
+			_sprites.erase(k)
+			over -= 1
+	if over > 0:
+		for k: String in _sprites.keys():
+			if over <= 0:
+				break
+			if int((_sprites[k] as Array)[2]) == cut:
+				_sprites.erase(k)
+				over -= 1
+	stats.sprites_evicted = int(stats.get("sprites_evicted", 0)) + (stamps.size() - _sprites.size())
 
 func sprite_count() -> int:
 	return _sprites.size()

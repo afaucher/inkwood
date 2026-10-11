@@ -1,15 +1,250 @@
-# Map performance: findings for a later milestone -- RECORDED, NOT DECIDED
+# Map and fog performance: what was wrong, what is built, what it measures
 
-Alex, 2026-10-09: "Let's do the easy ones and record the findings for execution as a later
-milestone with decisions made then (not now)." The easy ones (the fog layer's async read-back
-and off-main-thread recording; scheduling quick wins) are being built in the first-fight pass.
-Everything below waits for that later milestone, and every choice in it is Alex's to make then.
+Written 2026-10-10 by the map-performance tracks (Track P, finished by Track P2). Everything marked PROPOSED is the
+tracks' choice, not Alex's; the data records that carry it say so (`data/params/render_defaults.json`,
+`data/view/fog.json`). Alex's own words are quoted where they decided something.
 
-Source: an Opus investigation on 2026-10-09. Probes and logs are in `tmp/perf/` (gitignored;
-`bake_probe.gd`, `probe_baker.gd`, `cached_baker.gd`, `priority_baker.gd`, `sandbox_probe.gd`,
-`sprite_bench.gd`). Numbers vary by about +-2 s between runs (other agents shared the machine).
+## What Alex saw
 
-## What was measured
+Playtest of the Strike (decision `playtest-strike-1`): "Drawing the fog is still extremely slow. I thought we
+prerendered everything? Just scrolling around a map while the game is paused hangs and slowly paints in the colors
+then the contour lines. The issue is that basically nothing changed. This is a turn based game and the ONLY thing
+happening is a little smoke. This should be cheap to render." Then: "We have to be throwing out work we can reuse ...
+we seem to be regenerating map sections we should already have." And: "At the very least, showing a stale map seems
+better then a plain brown square." And about the trees: "At the very least, we could do one set of globally unique
+trees of a large amount and sample from that."
+
+Earlier decisions this work follows: `map-layers` ("The fog layer should also be static and can be done completely
+ahead of time"), `memory-budget` ("Honestly I am not worried about ram footprint for now"), `perf-secondary`
+("smooth enough to play").
+
+## The cause, with numbers
+
+Measured with `scripts/render/pan_probe.gd` (below) on the real sandbox (the Strike), the game paused, panning and
+zooming over the whole map at 1920x1080 on the dev box (RTX 3080, 32 logical cores), the committed code `ec21dcd`:
+
+- **Every slow frame was the map baker's main-thread work.** In `pan_mid` 174 frames were over 50 ms and 172 of them
+  had more than 8 ms of baker time on the main thread (mean 70 ms on those frames, up to 158 ms); the fog's own bake
+  was over 4 ms in 5 of them. The baker ran because the map was baked for the *view*, not the *map*: every pan asked for
+  chunks (about 3 s of worker time and 0.3 s of main thread each: the earlier measurements below), the cache held 64 chunks
+  and the fog's contour cache 600 pieces, so a pan back to a place baked it again, and over its cap the sprite cache
+  sorted its 16,000 keys with a lambda every frame (100 to 250 ms each).
+- **The paint-in was the demand baking.** The fog's contour map was baked as the view needed it, one recording at a
+  time on a worker: the plain sheet, then a coarser level's colours, then the lines (the "slowly paints in the colors
+  then the contour lines"). 15.8% of the 5,764 frames of the session had a chunk painting in; 343 had an area with
+  nothing made at all (the plain square).
+- **Work was thrown away and made again.** Counted per chunk (`MapView.baker.bake_counts`, `FogLayer.bake_counts`),
+  one session of panning and zooming baked the fog's contour pieces 976 times for 778 distinct pieces (162 of them
+  more than once, one four times) and the map 75 times for 74 chunks; the sprite cache built 24,804 tree sprites and
+  held 16,000.
+
+## What is built
+
+Track P left the first half in the tree uncommitted; Track P2 checked it against the numbers, kept it, and added the rest.
+Kept, changed and added are marked.
+
+1. **The fog's contour map is made for the whole map ahead of play** (`scripts/render/fog_topo_baker.gd`, data
+   `topo.whole_map`): 400 chunks at three levels of detail, 1,200 pieces, on `topo.twins` recorder threads each with
+   a private twin of the terrain, in about 5 s, behind the loading card. KEPT. After it a pan or a zoom only composites.
+2. **Sight is analytic** (`mask.mode`, `fog_composite.gdshader`): the vision circles are uniforms and the compositor takes
+   the distance itself, so no mask is rendered at all and a pan redraws nothing for sight; `_draw` runs again only
+   when the chunks in view, the level, the circles or a texture change. KEPT. (A unit with a viewshed shape still uses
+   the mask texture, per frame; `vision.line_of_sight` is "none" in the data.)
+3. **The map is baked by sight, not by camera** (`map_view.background_bake`): every chunk the fog does not cover is
+   baked first, wherever the camera is; the chunks under the fog bake in the background, nearest the units first.
+   KEPT. The loading card waits for the chunks sight reaches (21 on the Strike) and the whole contour map.
+4. **The map's terrain is generated by 8 terrains in 8 lanes** (`map_view.terrain_lanes`, bands of chunk rows):
+   KEPT; one lane was the serial part of every bake. A chunk's pixels do not depend on the lane (test_map_view 9).
+5. **The sprite cache evicts in one cheap pass.** KEPT, and now moot: `sprite_cache_max` is 100,000 (never reached).
+6. **A baked piece is kept, never dropped for a cap** (ADDED, Alex: "we have to be throwing out work we can reuse"):
+   `max_cached_chunks` 64 -> 1000 (a 4 px/m map is 400 chunks), the fog's `cache_chunks` 600 -> 1500 and its coarsest
+   level is never evicted, the sprite cache 16,000 -> 100,000. A change of the map scale keeps the sprites made (a sprite is a
+   tree drawn in px). Bakes per chunk are counted; the probe prints them and `test_map_view` section 11 holds the API.
+7. **The floor: nothing is ever unpainted** (ADDED, Alex: "showing a stale map seems better then a plain brown square").
+   - A rebake (map scale, pen, tree pool) keeps the chunks on screen as stale sprites, scaled to the new scale, under the
+     fresh ones, and drops each when the chunks covering it are baked (`MapView._stale`, `covers_px`).
+   - The fog's `set_terrain` keeps the old contour textures as stale ones until the whole new set is made (`_stale`,
+     `_best`).
+   - Where the ground is not baked yet (sight reached a place before the baker did) the contour map shows there even
+     inside vision, forced (a one-texel-per-chunk mask, `forced_mask` in `fog_composite.gdshader`, made again only when the map layer's chunks change), and the swap is the chunk landing. No fade;
+     PROPOSED: a cross-fade over a quarter second would read softer, but the swap is the cheapest and the rule says swap.
+   - A chunk the layer has any texture of always draws one: its own level, else the nearest other level, else the
+     stale one. `FogLayer.unpainted_in_view()` counts the places in view where none of this holds; the probe counts the
+     frames where it is above 0 ("BLANK"), and `test_fog` (FLOOR) asserts it is 0 with only the coarsest level made, at five
+     views and every zoom, and after a rebake.
+   - Switching the fog on in play with its contour map not made puts the redraw note up with its progress.
+8. **One global set of trees** (ADDED, Alex: "one set of globally unique trees of a large amount and sample from that";
+   by extending the tree pool, `ChunkBaker.prebuild_pool`, `map_view.tree_pool`): see its section below. ON by default.
+9. **The background bake waits for the camera** (ADDED, PROPOSED, `background_bake.yield_to_camera_ms` 300): while the camera
+   moves and every chunk sight reaches is baked, the baker's main-thread work waits, so a pan or a zoom costs
+   compositing and nothing else. Chunks anyone needs never wait. `yield_to_playback` (the same wait during a turn's
+   playback) is built and OFF: see "Measured".
+10. **The loading card shows the work honestly** (KEPT, extended): the line fills by shares (`topo.load_share` 0.2 for the
+    1,200 contour pieces, `tree_pool.load_share` 0.12 for the tree set, the rest the map's chunks); the numbers are on the
+    card ("trees 504 of 1596 · map 0 of 21 · contours 141 of 1200 · 3 s"). `background_bake.load_whole_map` (PROPOSED switch,
+    off) makes it wait for every chunk of the map.
+11. **Water goes through the same pipeline** (ADDED, a seam, nothing wired): `ChunkTerrainProvider.set_terrain_maker` and
+    `FogLayer.set_terrain_maker` take a `(seed, data_path, params) -> Terrain` that makes every bundle's and every
+    twin's terrain, so a terrain whose height field is capped (`WaterGen.field_cap`, `set_cap` before its first chunk) is
+    the same terrain everywhere; without one the twin is made from the layer's own terrain class. Water as a static
+    layer is one more stage in `ChunkTerrainProvider.stages()`, baked with the ground, kept like the rest.
+
+## The global tree set
+
+Trees were two thirds of a chunk's bake (21 chunks: 38.7 s of the 70 s of worker time was sprite recording). The tree pool
+existed (off): one sprite per (radius bucket, variant) instead of one per tree. Extended, not duplicated:
+
+- **The set** is every bucket of `bucket_px` 0.5 from `prebuild_radius_px` [11, 39] times `variants` 28 = 57 x 28 = **1,596 trees**
+  (the middle of "about 1,000 to 2,000"; the map's trees are 11.4 to 38.5 px at any map scale, measured on 7,300 of them
+  with `scripts/render/tree_pool_stats.gd`; 99% fall in 42 buckets and the dense sizes, 12 to 26 px, hold about 900 trees
+  each on the whole map, so each sprite stands about 30 times). It is made once per game and pen, on workers, first in line,
+  behind the loading card, and kept; a rebake that does not change the pen keeps it.
+- **Sampling**: a map tree takes the closest size (its radius rounded to a bucket: never more than 0.25 px off a radius of
+  11 to 38, so 0.7% to 2.2%) and, among the set's trees of that size, the one its own seed picks (seed modulo 28).
+  **Nothing is scaled**, so the ink line keeps its width exactly. No rotation or mirroring: the lit side and the shadow-side
+  stipple and pen face the sun. A tree outside the radii builds on demand, once.
+- `tree_pool.enabled` false is the unique-per-tree look (the F2 knob `tree_pool` -> off).
+- The look changes: trees repeat at this rate. Side by side, the same views with a sprite per tree and with the set, at the
+  planning zoom and at zoom 1: `tmp/perf2/look_unique/` and `tmp/perf2/look_pool/` (`forest_plan.png`, `forest_close.png`,
+  `village_close.png`, `opening.png`). What the comparison showed is under "Look unchanged, and the look that changes" below.
+
+## Measured
+
+`scripts/render/pan_probe.gd` builds the real sandbox, times Local to playable, then pans and zooms over the whole map with the
+game paused, a serpentine at two zooms, a zoom sweep, a diagonal and an overview route, recording every frame (vsync on, so a
+frame is 16.7 ms or a multiple). Runs are in `tmp/perf2/` (gitignored; `before_*`, `after*`, `steady*`, `play_*`, `rebake_*`,
+the JSON of every frame beside each log). "Before" is a clean tree of the committed code (`ec21dcd`) with only the
+probe and the bake counters added. Numbers move a few percent between runs.
+
+### Frames while panning and zooming paused (1920x1080, the camera moves from the moment the card goes)
+
+| | before | after, background still baking | after, everything baked |
+| --- | --- | --- | --- |
+| frames | 5,764 | 7,354 | 7,372 |
+| p99 | 98.9 ms | 34.7 ms | 18.0 ms |
+| worst | 192.4 ms | 113.9 ms | 88.9 ms |
+| over 33 ms | 407 (7.1%) | 80 (1.1%) | 19 (0.26%) |
+| over 100 ms | 53 | 1 | 0 |
+| frames with a place painting in | 908 (15.8%) | 0 | 0 |
+| frames with a BLANK area | 343 | 0 | 0 |
+
+Phase by phase, before to after (p99, worst, frames over 33 ms): `pan_mid` 105.5 / 185 / 201 of 790 -> 18.0 / 88 / 2 of
+1,649; `pan_close` 118 / 192 / 145 of 617 -> 18.0 / 67 / 1 of 1,231; `overview` 20.5 / 139 / 25 -> 36.8 / 114 / 64 (the
+background baking through the zoomed-out route: about one missed frame, 34 to 39 ms, for each of the 79 chunks it
+finishes; 18.0 / 58 / 3 once it is done).
+The frames that remain over 33 ms in the everything-baked column are 13 of the `zoom` phase, 64 ms each, every other
+zoom notch of the FIRST pass of the sweep only (none on the second and third): they are not baking (no bake runs, 0
+ms of baker time), not the map and not the fog (hiding either leaves them), and 5 of the 13 go with the unit markers'
+scale rule (`marker.true_scale`, `unit_art.rebake_ratio`); the rest is unattributed. Proposed follow-up, outside these folders:
+warm the unit-marker art cache for the zoom range behind the card.
+
+1280x720 (the same route; before 3,006 frames, after 5,032, the background never got a still moment so it baked nothing
+and the session is the "everything is there" case): p99 102.0 -> 17.0 ms, worst 135.4 -> 104.2 ms (one frame), over 33 ms 635
+(21%) -> 16, over 100 ms 37 -> 1, frames with a place painting in 966 (32%) -> 0, BLANK 562 (19%) -> 0.
+
+### Local to playable
+
+| | before | after |
+| --- | --- | --- |
+| 1920x1080 | 20.0 s (a first view of 40 chunks) | 14.0 s (13.7, 14.0, 15.3 in three runs; 21 chunks, the 1,200 contour pieces and the 1,596 trees) |
+| 1280x720 | 30.7 s | 14.5 s |
+| the same, the card waiting for the WHOLE map (`load_whole_map`) | - | 36.7 s (100 chunks, 1,200 contour pieces, 1,596 trees) |
+
+Without the tree set (P's schedule alone) the first view took 20.8 s: the by-sight schedule and the whole contour map cost
+nothing against the old first view, and the set takes 7 s of the new load to make beside the contours and the first chunks
+(2.2 s alone). The rest of the map (79 chunks) then bakes in the background in 46 s of an idle camera (112 s before
+the tree set).
+
+### The tree set, the chunk bake and the whole map up front (`scripts/render/map_bake_bench.gd`, the baker alone)
+
+| | a sprite per tree | the global set |
+| --- | --- | --- |
+| the set made | - | 2.2 to 2.4 s (1,596 trees) |
+| the 21 first chunks | 15.5 s, mean job 2,690 ms | 9.5 s (set included), mean job 1,669 ms |
+| the whole map, 100 chunks | 53.0 s | 30.6 s (set included) |
+| workers recording sprites, whole map | 142.1 s | 10.5 s |
+| the main thread in the baker, whole map | 16.7 s | 5.3 s |
+| tree sprites built / held | 29,414 / 29,414 | 1,705 / 1,705 |
+| video memory taken by the map | +1,368 MB | +838 MB |
+
+What is left of a chunk is the terrain generation (27 s of worker time over the map) and the ground (36 s).
+
+### Memory (video, with the whole contour map and the map baked)
+
+615 MB at playable before (a first view and its ring); 1,048 MB after, the contour map at three levels being 440 MB of it;
+1,275 MB when the whole map is baked (the map 840 MB of it with the tree set, 1,370 MB with a sprite per tree). Static RAM
+199 MB at playable, 344 MB settled. The whole map at the default scale (2 px/m) fits the decision's
+estimate (about 2 GB). A 4 px/m map is 400 chunks and its finest contour level 4x the pixels: about 4 GB (ESTIMATED), of this card's 10 to 12.
+
+### Bakes per chunk
+
+Over a session of panning and zooming over the whole map: before, the fog's contour pieces 976 bakes for 778 pieces (162
+more than once) and the map 75 for 74 chunks; after, the map 100 bakes for 100 chunks and the contour pieces 1,200 for
+1,200, **none twice**, every worker stage (gather, terrain_sil, struct_sil, tree_sil, ground, linework) run exactly 100 times.
+
+### A turn played back (the first two turns, the moment the card goes: the worst case, no planning time to bake in)
+
+Before: 400 frames, mean 27.7 ms, p99 54.6, worst 76.9, 111 over 33 ms (28%), 332 frames with a BLANK area. After: 557 frames, mean 19.8,
+p99 33.6, worst 105, 6 over 33 ms (1.1%), BLANK 0, 40 frames with the contour map standing in for a place still baking.
+`yield_to_playback` (the background waits during playback) gave 6 over 33 ms of 599 and a worst of 61 ms, but 375 frames with the contour
+map showing where ground was still baking, because the background did not bake ahead of the units; it is OFF (PROPOSED), the switch is in
+the data.
+
+### A knob that redraws the map (the scale, the pen)
+
+The F2 knobs redraw the whole map with the camera still (`phases=rescale,repen`). Before, the map was blank while it redrew: the scale to 3 px/m
+took 15.7 s with **632 of 663 frames (95%) with a BLANK area**, the pen 16.0 s with 693 of 724 (96%). After, the stale map stays and the contour
+map stands in: the scale 13.5 s, the pen 17.9 s, **BLANK 0 in both** (4 frames over 33 ms of 831 for the scale; the pen costs one 673 ms frame at the
+moment of the switch, where `fog.shutdown()` waits for the recording threads, then 88 of 843 over 33 ms while 1,237 contour pieces and the map
+bake again). Unit tests: `test_map_view` section 11, `test_fog` FLOOR.
+
+### Look unchanged, and the look that changes
+
+With the tree set OFF (a sprite per tree) the new code draws what the committed code drew, pixel for pixel: `map_chunk_hash.gd` 19 of 19
+tiles identical (the two the village reaches included), `map_look_hash.gd` 597 hashes identical (three map chunks, 76 contour chunks through
+the new pipeline against `FogTopo.bake_chunk`, every contour chunk of three views), and `look_probe.gd` PNGs (`tmp/perf2/look_before/` and
+`look_unique/`): the village at zoom 1 and 0.5 and the far corner identical to the pixel, the opening view and the fog edge differing in
+0.006% and 0.004% of their pixels by more than 8/255 (the smoke). The scene generator and the prototype port tests are untouched
+(`test_scene_gen`, `test_render_layer`, `test_port_utils` pass).
+
+With the tree set ON the trees change (all 19 tiles hash differently, by design). The same views, a sprite per tree against the set:
+`tmp/perf2/look_unique/` and `tmp/perf2/look_pool/` (`forest_plan.png` at the planning zoom 0.3, `forest_close.png` at zoom 1, `opening.png`,
+`fog_edge.png`), and 2x crops side by side in `tmp/perf2/compare_forest_close.png`, `compare_forest_plan.png`, `compare_opening.png`. Repetition,
+counted rather than judged by eye (`tree_pool_stats.gd`, the densest wood near the map's centre): a 1920x1080 screen at zoom 1 holds 675 trees
+drawn from 459 distinct sprites, and 6 of them (0.9%) have a tree of the very same sprite standing within 60 px; at the planning zoom 6,863
+trees from 1,003 sprites, 58 (0.8%). A larger set is one number (`tree_pool.variants`): 48 per size would be 2,736 trees for about 3.9 s of
+making (estimated from the 2.3 s of the 1,596). The loading card, mid-load, with the set in its line: `tmp/perf2/loadcard_final/loading_5s.png`.
+
+## How to run the probes
+
+All windowed (the console build, `INKWOOD_STEAM=off`); `tmp/perf2/run_probe.sh <tree> <name> <args>` is the wrapper used here.
+
+- `scripts/render/pan_probe.gd` -- `size=1920x1080 settle=S phases=pan_start,zoom,pan_mid,pan_close,overview,playback,rescale,repen
+  turns=N out=file.json loadshot=DIR loadwhole=1 bgyield=0 without=fog|ui|map|scale`; prints Local to playable, memory, the bakes per
+  chunk, and per phase p99, worst, frames over 33/50/100 ms, frames with paint-in and BLANK frames.
+- `scripts/render/map_bake_bench.gd` -- `pool=on|off chunks=21|all variants=N`: the map's bake alone.
+- `scripts/render/tree_pool_stats.gd` -- the map's tree sizes, headless.
+- `scripts/render/look_probe.gd` + `look_compare.py` -- the same views as PNGs before and after; `INKWOOD_TREE_POOL=off` for a sprite
+  per tree. `map_chunk_hash.gd` and `map_look_hash.gd` take `pool=off|on` and hash the pixels.
+- `scripts/render/fog_bake_bench.gd` -- the contour map's whole-map bake alone, by recorder threads.
+
+## What is left
+
+- The first-pass zoom hitch (above). Warm the unit-marker art for the zoom range behind the card (PROPOSED; scripts/ui is not here).
+- Terrain is generated several times: the map's 8 lanes, the fog's 4 twins and the sandbox's own. One thread-safe terrain, or
+  a generated-cells cache shared between them, would take the 27 s of `gather` out of the whole-map bake (option 4 below).
+- A disk cache of the finished chunks and contour textures would take a repeat game to a second or two (option 1 below);
+  inside one run nothing is made twice now, but a restarted scenario builds a new sandbox and bakes the same map again.
+  PROPOSED: keep the map view and fog layer alive across a restart of the same seed.
+- `line_of_sight` on makes sight a per-frame texture pass again (a viewshed is a screen-space shape): a world-anchored
+  viewshed mask is the way to make it free on a pan.
+- Water: one more stage and one more static layer baked with the ground, and a `terrain_maker` that installs the cap; nothing else changes.
+
+## The earlier findings (Opus investigation, 2026-10-09), kept as they were, with what became of each
+
+Alex, 2026-10-09: "Let's do the easy ones and record the findings for execution as a later milestone with decisions made
+then (not now)." Probes and logs of that investigation are in `tmp/perf/` (gitignored: `bake_probe.gd`, `probe_baker.gd`,
+`cached_baker.gd`, `priority_baker.gd`, `sandbox_probe.gd`, `sprite_bench.gd`).
 
 Per chunk at 2 px/m (1024 px chunks, 4096 px supersampled targets), cold; mean of 30 chunks:
 
@@ -24,52 +259,17 @@ Per chunk at 2 px/m (1024 px chunks, 4096 px supersampled targets), cold; mean o
 | GPU: the chunk's canvases / its sprites | GPU | 5.4 / ~185 (28.5 canvas groups per sprite) |
 | Render and read-back round trips | frames | 6 per chunk, 2-3 frames each |
 
-- Totals: ~3.1 s worker CPU per chunk (sprites 67%), ~0.28 s main thread, ~0.19 s GPU.
-- Worker slots were 47% busy: the rest waited on the serial terrain lane (53% busy), the
-  main-thread budget and render round trips. More threads would not help.
-- Real sandbox: first view at 1280x720 playable after 9.6-15.2 s (6 chunks); maximized at
-  3840x2054, 28.4 s (15 chunks). A map-scale change: 15-25 s.
-- Pop-in: unbaked chunks inside vision show blank paper; outside vision the fog's opaque
-  topographic layer covers them (but they are still baked at full cost). Views land in bursts
-  because up to 8 jobs advance round-robin and sprite pages take every free worker slot.
-- Choppy frames after pans: every frame over 50 ms had a fog topographic bake in it
-  (synchronous `texture_2d_get`). Async read-back alone: 24 -> 6 such frames per two pans.
-- The sandbox builds two Terrain instances (map provider; fog/camera/UI), so terrain is
-  generated twice, the fog's copy on the main thread.
+Options recorded then, and what became of them:
 
-## Options recorded for the milestone (gain / cost / risk as estimated then)
+1. **Disk cache of finished chunks** (keyed by seed, scale, pen, tree pool and a hash of the code and data): NOT built. Still the
+   answer for a repeat game. *To decide: whether to build it, the cap, where it lives.*
+2. **What unbaked ground shows meanwhile**: DECIDED by Alex 2026-10-10 (stale, a coarser level, or the overview, never a plain
+   square) and built (the floor, above).
+3. **A new seed's first view**: the tree set took the biggest part of it (the sprites were 67% of a chunk); a GDExtension is not needed
+   for this. The rest is terrain generation and the ground.
+4. **Unserialize the terrain lane**: partly built (8 terrains in 8 lanes); sharing one thread-safe terrain is still open.
+5. **One render round trip per chunk instead of six**: not built.
+6. **GDScript thread contention** (on hold, Alex 2026-10-10): the tree set removed most of the thread-heavy work; not revisited.
 
-1. **Disk cache of finished chunks**, keyed by seed, scale, pen, tree pool and a hash of the
-   code and data inputs. Prototype: repeat views and scale switches 15-20 s -> about 0.2 s.
-   Cost: ~25 ms per chunk to write; 2.4 MB per chunk; ~240 MB per seed at 2 px/m, ~1.3 GB for
-   all four scales, so it needs a size cap with oldest-first eviction. Risk: a stale cache if
-   the key misses an input. No help for a new seed's first view.
-   *To decide then: whether to build it, the cap, where it lives.*
-2. **What unbaked ground shows meanwhile**: blank paper (today), the topographic map resolving
-   into ink (the design doc's fog rule), or stretched old chunks after a scale change.
-   *To decide then, from a variant board.*
-3. **A new seed's first view**: a GDExtension in C++ for InkCanvas tessellation and the
-   sprite, ground and terrain loops (estimated 15 s -> 2-4 s, not measured; large cost;
-   reopens the build-tooling decision and the GDScript question); the tree pool (2.5x faster,
-   trees repeat: a look change); or accept 10-15 s behind the loading card.
-   *To decide then.*
-4. **Unserialize the terrain lane**: tessellate outside the lock, generate in parallel, share
-   one Terrain between map, fog and UI. Becomes the limit as soon as sprites get cheaper.
-   Medium cost and risk (thread safety; `test_terrain` covers determinism).
-5. **One render round trip per chunk instead of six** (chain the mask viewports in a frame):
-   at most ~30% judging by a vsync-off run. Medium cost and risk.
-6. **GDScript thread contention** (Alex, 2026-10-10: "we have more than 8 cores for the thread
-   pool" -- this machine has 32 logical cores; the cap of 8 comes from the measured slowdown,
-   not from the hardware. Alex then questioned the copying idea: read-only data cannot contend
-   without a synchronization point. Agreed, and in Godot the hidden writes are the candidates:
-   atomic reference counts on shared Arrays, Dictionaries and RefCounted objects (every
-   iteration or argument pass bumps them -- the tree records are shared Dictionaries), the
-   global ObjectDB lock on creating and freeing objects, the StringName table's lock, and the
-   memory allocator under many threads. Per-thread copies address only the first. Revised
-   first step: PROFILE a 32-thread load with a native profiler to find where threads wait, then
-   fix that cause; only then time 1/2/4/8/16/32 threads. On hold (Alex, 2026-10-10).) (3.15 ms per sprite alone vs 5.6 ms on 8 threads; suspected
-   shared refcounts): small cost, unknown gain.
-
-Not worth it (measured or reasoned then): more threads or another pool; a lower-resolution
-first pass (cost is per object, not per pixel); bigger chunks; recording geometry once in metres
-(trees are placed per scale).
+Not worth it (measured or reasoned then): more threads or another pool; a lower-resolution first pass (cost is per object, not per
+pixel); bigger chunks; recording geometry once in metres (trees are placed per scale).

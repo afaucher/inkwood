@@ -10,6 +10,10 @@ extends Control
 #   layer.add_child(card)                    # a CanvasLayer above everything
 #   card.setup(style, true)                  # blocking
 #   card.set_progress(done, total, seconds)  # a line of ink fills as chunks bake
+#   card.set_pool_progress(done, total, share) # ... and as the global tree set is made (Track P2: first in line, a few seconds)
+#   card.set_fog_progress(done, total, share)  # ... and as the fog's contour map is made for the whole map
+#       (share: the part of the line it has; the rest is the map's chunks. Honest, not even: a contour
+#       chunk is milliseconds of worker time, a map chunk about a second - data/view/fog.json topo.load_share)
 
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UiInk = preload("res://scripts/ui/ui_ink.gd")
@@ -21,6 +25,12 @@ var done := 0
 var total := 0
 var seconds := 0.0
 var seed_text: Variant = ""
+var fog_done := 0
+var fog_total := 0
+var fog_share := 0.0
+var pool_done := 0
+var pool_total := 0
+var pool_share := 0.0
 
 func setup(st: RefCounted, is_blocking: bool, text: String = "") -> void:
 	style = st as UiStyle
@@ -36,6 +46,30 @@ func set_progress(d: int, t: int, secs: float) -> void:
 	total = t
 	seconds = secs
 	queue_redraw()
+
+func set_fog_progress(d: int, t: int, share: float) -> void:
+	fog_done = d
+	fog_total = t
+	fog_share = share
+	queue_redraw()
+
+func set_pool_progress(d: int, t: int, share: float) -> void:
+	pool_done = d
+	pool_total = t
+	pool_share = share
+	queue_redraw()
+
+# How far along the line of ink is: the map's pieces, the contour pieces and the tree set, each by its share.
+func fraction() -> float:
+	var f_map := clampf(float(done) / float(total), 0.0, 1.0) if total > 0 else 0.0
+	var s_fog := fog_share if fog_total > 0 else 0.0
+	var s_pool := pool_share if pool_total > 0 else 0.0
+	var f := (1.0 - s_fog - s_pool) * f_map
+	if fog_total > 0:
+		f += s_fog * clampf(float(fog_done) / float(fog_total), 0.0, 1.0)
+	if pool_total > 0:
+		f += s_pool * clampf(float(pool_done) / float(pool_total), 0.0, 1.0)
+	return f
 
 func _process(_delta: float) -> void:
 	if visible:
@@ -65,19 +99,38 @@ func _draw() -> void:
 	var x1 := r.end.x - pad - 6.0
 	var y := ty + (22.0 if blocking else 16.0)
 	UiInk.ink_line(self, PackedVector2Array([Vector2(x0, y), Vector2(x1, y)]), false, faint, 0.8, 7, 0.5)
-	if total > 0:
-		var f := clampf(float(done) / float(total), 0.0, 1.0)
+	if total > 0 or fog_total > 0 or pool_total > 0:
+		var f := fraction()
 		if f > 0.0:
 			UiInk.ink_line(self, PackedVector2Array([Vector2(x0, y), Vector2(lerpf(x0, x1, f), y)]), false, ink, 2.0, 9, 0.8)
 	else:
 		var u := fmod(Time.get_ticks_msec() / 1000.0, 1.6) / 1.6
 		var a := lerpf(x0, x1 - 40.0, u)
 		UiInk.ink_line(self, PackedVector2Array([Vector2(a, y), Vector2(a + 40.0, y)]), false, ink, 2.0, 9, 0.8)
-	var detail := "%d of %d pieces" % [done, total] if total > 0 else "starting"
+	# What is being made, in pieces: the tree set (until it is done), the map's chunks, the contour chunks. Three
+	# counts do not fit one line of the card, so while the tree set is in the list the blocking card breaks them over two.
+	var parts: Array[String] = []
+	if pool_total > 0 and pool_done < pool_total:
+		parts.append("trees %d of %d" % [pool_done, pool_total])
+	if fog_total > 0:
+		parts.append("map %d of %d" % [done, total] if total > 0 else "starting")
+		parts.append("contours %d of %d" % [fog_done, fog_total])
+	else:
+		parts.append("%d of %d pieces" % [done, total] if total > 0 else "starting")
 	if blocking:
-		detail += "  ·  %.0f s" % seconds
-		UiInk.text(self, italic, Vector2(r.position.x, y + 26.0), detail, style.num("fonts.detail_px"), ink,
+		var second := "%.0f s" % seconds
+		var first_line := "  ·  ".join(parts)
+		var seed_y := y + 44.0
+		if parts.size() >= 3:
+			first_line = "  ·  ".join(parts.slice(0, 2))
+			second = "%s  ·  %s" % [parts[2], second]
+			UiInk.text(self, italic, Vector2(r.position.x, y + 44.0), second, style.num("fonts.detail_px"), ink,
+				HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+			seed_y = y + 62.0
+		else:
+			first_line += "  ·  " + second
+		UiInk.text(self, italic, Vector2(r.position.x, y + 26.0), first_line, style.num("fonts.detail_px"), ink,
 			HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 		if style.flag("lettering.show.loading_seed"):   # (PROPOSED removal, Track L: off by default)
-			UiInk.text(self, italic, Vector2(r.position.x, y + 44.0), "the same map every time: seed %s" % str(seed_text),
+			UiInk.text(self, italic, Vector2(r.position.x, seed_y), "the same map every time: seed %s" % str(seed_text),
 				style.num("fonts.small_px"), ink, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)

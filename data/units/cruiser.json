@@ -1,0 +1,56 @@
+{
+  "_about": "Small cruiser (Track SH, the warship, 2026-10-10). ALEX'S (decision mixed-warfare): 'You have a huge ship parked off the coast but you need tanks to move inland to spot the aa batteries for the ship', and the warship is 'not a full battleship, something smaller that would operate more independently'; its main guns are a special, 'fired by hand with a long reload, aimed with the target selection', and a long-range gun needs a SPOTTED target (shared spotting: 'Yes'); the unit sheet's small cruiser is his choice 'as proposed' (decision unit-sheet-choices; reference/mockups/unit_sheet.html genCruiser: 112 to 128 m, turrets fore and aft, its accent on the quarterdeck panel); the boats are drawn at the planes' scale (decision water-layer) with an ink V wake (decision boat-wake). EVERYTHING ELSE HERE IS PROPOSED by Track SH. The planes' movement system with a heavy ship's numbers, as the patrol boat's (data/units/patrol_boat.json) with more of everything: on the surface band, a slow turn that needs way on, a speed of 12 m/s cruise and 15 m/s flat out (about 23 and 29 knots) against the cutter's 10 and 15 and a fighter's 100: a ship covers 30 m in a 2.5 s step and 60 m in a turn, a kilometre in 17 turns. Its turn is wide: a rudder needs flow and a 120 m hull needs room, 191 m radius at cruise (1.6 hull lengths, a circle of 100 s, twenty turns). The WATER RULE (World.set_water, data/sim/sea.json) keeps it on water at least draught_m deep, at its centre and at both ends of its hull (60 m fore and aft), so it keeps out of the shallows (0 to 6 m, data/world/water.json) by its own length: the centre about 160 m off a straight coast. Its guns: auto-firing light anti-aircraft guns (the battery's light flak on four mounts: two abeam of the bridge, two aft), all around, aimed up, short (320 m, so they reach the low band over the ship and never the medium band) -- like the cutter's, twice as many; and ONE special, 'main_guns' (Main Guns Fire): data/sim/guns.json says what it does. One special makes it a single unit, not a nest. It carries no bombs. At 0 health it is DESTROYED (fate 'destroyed': it stays where it was, down; the drawing may sink it).",
+  "id": "cruiser",
+  "name": "Small cruiser",
+  "domain": "sea",
+  "mobility": "mobile",
+  "size_m": { "value": 120, "_proposed": true, "_reason": "the unit sheet's small cruiser: genCruiser draws a length of 112 to 128 m; 120 is the middle, the length it is drawn at and the hull the water rule checks" },
+  "draught_m": { "value": 6.0, "_proposed": true, "_reason": "a light cruiser draws 5 to 6.5 m. 6 m is exactly the top of the generator's shallows step (0 to 6 m; data/world/water.json depth steps): the ship keeps to the shelf and the deep, never the shallows, and with its 60 m of hull each side of the centre it stays 160 m or so off a straight coast" },
+  "actions_per_turn": { "value": 2, "_proposed": true, "_reason": "a slow unit plans two points a turn (2.5 s steps, data/sim/turn.json), as the boats: a step is 30 m at cruise, a quarter of its own length" },
+  "health": { "value": 12, "_proposed": true, "_reason": "the hardest unit to sink: more than the bomber (8) and the radio tower (8), with the bridge (10) near it. A bomb's direct hit is 3 pips (data/sim/bombs.json) and a bomber has three drops of four bombs: one pass of a full stick leaves a hole in it, not a wreck. Light fighters' guns do 1 a hit" },
+  "sight_range_m": { "value": 1000, "_proposed": true, "_reason": "a LONG sight, as a bridge twenty metres up has: over a fighter's 800 m and a patrol boat's 450 m. Spotters on land still matter: the guns reach 3 km (data/sim/guns.json)" },
+  "drawing": { "silhouette": "small_cruiser" },
+  "envelope": {
+    "speed_min_mps": { "value": -3, "_proposed": true, "_reason": "slow astern: a ship can reverse once stopped (design doc, Motion and inertia: ships can reverse once stopped), which is also how it backs off a shore the water rule has held it at" },
+    "speed_cruise_mps": { "value": 12, "_proposed": true, "_reason": "about 23 knots: a cruiser's steady speed, scaled to the 5 km map like the cutter's 10 m/s (a heavy ship is not faster than a launch in a game where a plane crosses a map in eight turns)" },
+    "speed_max_mps": { "value": 15, "_proposed": true, "_reason": "about 29 knots: flat out (the lead's brief: about 15 m/s)" },
+    "dive_speed_max_mps": { "value": 15, "_proposed": true, "_reason": "a ship cannot dive: equal to speed_max_mps" },
+    "accel_mps2": { "value": 0.6, "_proposed": true, "_reason": "from a stop to cruise in twenty seconds (four steps, two turns): a heavy hull, half the cutter's 1.2" },
+    "decel_mps2": { "value": 1.0, "_proposed": true, "_reason": "water drag and the engines astern: a ship stops from cruise in twelve seconds, quicker than it gets going" },
+    "reverse_from_stop": { "value": true, "_proposed": true, "_reason": "design doc, Motion and inertia: ships can reverse once stopped; speed cannot cross zero within a step" },
+    "turn_rate_curve_dps": { "value": [[0, 0], [3, 1.2], [8, 3.2], [12, 3.6], [15, 3.2]], "_proposed": true, "_reason": "a rudder needs flow (data/units/_schema.json): no turn with no way on, 3.6 deg/s at cruise, a little less flat out. At cruise that is a turn radius of 191 m (1.6 hull lengths) and a full circle in 100 s, twenty turns: a wide turn beside the cutter's 57 m radius and a fighter's 286 m at ten times the speed. A step can turn it 9 degrees" },
+    "turn_bleed_mps2": { "value": 0.3, "_proposed": true, "_reason": "a ship loses little way in a turn (a heavy hull): at the full rate 0.3 m/s per second, 0.75 m/s over a step" },
+    "turn_bleed_exponent": { "value": 2, "_proposed": true, "_reason": "as the planes' (induced drag): gentle turns are nearly free" },
+    "altitude_bands": { "value": ["surface"], "_proposed": true, "_reason": "it rides the sea: the surface band (data/sim/altitude.json). The bombs reach it (they hurt a unit at the surface)" },
+    "start_band": { "value": "surface", "_proposed": true, "_reason": "it rides the sea" },
+    "bands_per_step": { "value": 0, "_proposed": true, "_reason": "a ship never changes band" },
+    "climb_speed_cost_mps": { "value": 0, "_proposed": true, "_reason": "a ship never changes band" },
+    "dive_speed_gain_mps": { "value": 0, "_proposed": true, "_reason": "a ship never changes band" }
+  },
+  "weapons": [
+    {
+      "id": "aa_guns",
+      "name": "Light AA guns",
+      "kind": "flexible",
+      "hardpoints": { "value": [[22, 5, 6], [22, -5, 6], [-26, 5, 6], [-26, -5, 6]], "_proposed": true, "_reason": "four gun mounts: two to port and starboard abeam of the bridge (22 m forward of the middle, 5 m out, 6 m above the water) and two aft (26 m abaft the middle). Each mount rolls on its own" },
+      "mount_deg": { "value": 0, "_proposed": true, "_reason": "the cone is all around (half_across_deg 180), so the mount does not matter; 0 is the bow" },
+      "half_across_deg": { "value": 180, "_proposed": true, "_reason": "all around, as the battery's flak and the cutter's: the guns fire at anything above them whichever way the ship points" },
+      "elevation_deg": { "value": 46, "_proposed": true, "_reason": "the battery's flak cone, so the ship and the battery agree on what is above them: centred 46 degrees above the horizon" },
+      "half_height_deg": { "value": 44, "_proposed": true, "_reason": "from 2 degrees above the horizon to straight up, as the battery's flak: nothing is out of the cone for being low" },
+      "effective_range_m": { "value": 320, "_proposed": true, "_reason": "the battery's LIGHT flak and the cutter's: short, so it covers the low band (120 m) round the ship and not the medium band (400 m). A plane at medium is never touched by a cruiser's light guns" },
+      "base_hit_chance": { "value": 0.07, "_proposed": true, "_reason": "the battery's light flak's own per-roll chance" },
+      "rim_odds_factor": { "value": 1, "_proposed": true, "_reason": "flat, as every flexible gun: a gun crew aims within the arc" },
+      "falloff_exponent": { "value": 1, "_proposed": true, "_reason": "no effect while the factor is flat (rim_odds_factor 1)" },
+      "tracking_dps": { "value": 60, "_proposed": true, "_reason": "the battery's light flak: fast tracking, a light gun" },
+      "damage_pips": { "value": 1, "_proposed": true, "_reason": "one pip a hit like every other gun" },
+      "rolls_per_second": { "value": 2, "_proposed": true, "_reason": "the cutter's: two a second on each of FOUR mounts, so the cruiser puts out twice the cutter's volume (0.56 hits a second on a plane in range before the other factors), the battery's light flak's 0.28 doubled" }
+    }
+  ],
+  "bomb_load": {
+    "drops": { "value": 0, "_proposed": true, "_reason": "a cruiser drops nothing" },
+    "per_drop": { "value": 0, "_proposed": true, "_reason": "a cruiser drops nothing" }
+  },
+  "specials": [
+    { "id": "main_guns", "name": "Main Guns", "action": "Fire" }
+  ]
+}

@@ -25,14 +25,18 @@ extends Node2D
 # live knob: when terrain.px_per_m changes the layer rebuilds its topographic
 # layer and re-bakes (set_terrain() does the same for a new Terrain object).
 #
-# HOW IT DRAWS, every frame:
-#   1 MASK. A SubViewport at mask.scale of the screen runs fog_mask.gdshader:
-#     a clamped signed distance field of the vision circles (fog_vision.gd
-#     mask_circles(), through this node's canvas transform). Sub-viewports draw
-#     before their parent, so the mask is this frame's.
+# HOW IT DRAWS (Track P rework, 2026-10-10: a pan or a zoom composites textures that already exist):
+#   1 SIGHT. The vision circles (fog_vision.gd) are handed to fog_composite.gdshader as uniforms in
+#     MAP px, and the shader takes the clamped signed distance to the union of the circles per fragment
+#     (mask.mode "analytic", the default): there is no mask to render, so a pan costs no mask pass
+#     and a change of sight costs one uniform update. mask.mode "texture" is the old way: a SubViewport
+#     at mask.scale of the screen runs fog_mask.gdshader every frame (a clamped signed distance field
+#     of the circles through this node's canvas transform) and the compositor reads it back through
+#     SCREEN_UV; tests and fog_shot.gd use it to hold the shader to the CPU formula.
 #     LINE OF SIGHT (vision.line_of_sight not "none"): a unit with a viewshed
 #     (fog_viewshed.gd) is drawn as a SHAPE, not a circle. The mask viewport then
-#     runs three passes in tree order: (a) the shapes, each unit's viewshed
+#     runs three passes in tree order, EVERY FRAME (the mask is in screen px; a world-anchored
+#     shape mask is a later step): (a) the shapes, each unit's viewshed
 #     straight from a texture of per-ray visible runs, in the child viewport
 #     "VisionShapes" (fog_los_shape.gdshader; a child viewport draws before its
 #     parent); (b) the columns of an exact distance transform of that coverage
@@ -40,34 +44,42 @@ extends Node2D
 #     without a viewshed, joined by max (fog_mask_los.gdshader, reading (b)
 #     through the viewport's screen texture). The result is the same clamped
 #     signed distance field, so the compositor does not change. With no shape
-#     the old circle pass runs alone.
+#     the circles are evaluated as above.
 #   2 OVERLAY. _draw() puts the topographic chunks of the view (fog_topo.gd,
 #     the level of detail for the zoom) as textured quads in map px, with
 #     fog_composite.gdshader as this node's material: topographic map outside
 #     vision, nothing inside, the edge treatment between (edge.mode "inked" or
-#     "soft"), the overview amount from the zoom. A chunk not baked yet draws
-#     as the plain map sheet; a chunk wholly inside vision is skipped.
-#   3 BAKE. Missing chunks (nearest the view centre first, the view's own before
-#     the ring round it) are baked by a small pipeline that never waits for the GPU
-#     and, with topo.worker_recording, keeps the recording off the main thread:
-#       recording    GDScript, on a WORKER thread (FogTopo.make_canvas_threaded, one
-#                    chunk at a time on a private twin of the terrain); or on the
-#                    main thread when topo.worker_recording is false
-#       submitting   the recorded canvas into canvas items, a slice of
-#                    topo.main_budget_ms a frame (InkCanvas.begin_submit / submit_some)
-#       render       the engine draws it with the next frame
-#       arriving     the pixels read back ASYNCHRONOUSLY (InkCanvas.collect_async;
-#                    the old collect_image() was a synchronous read-back that waits
-#                    for every frame in flight - measured 2026-10-09 as most of
-#                    the choppy frames after a pan), then mipmaps and the texture
-#     at most topo.max_inflight bakes at once, topo.bakes_per_frame started a frame.
-#     The main thread's share of a chunk is the submission and the texture
-#     (stats.main_ms). shutdown() waits for the workers, and runs on leaving the
-#     tree: a quit with a worker task still running GDScript crashes the engine.
+#     "soft"), the overview amount from the zoom. _draw() runs again only when
+#     what it draws changes (the chunks in view, the level of detail, the circles,
+#     a new texture), never on a plain pan: the quads live in map px under the camera.
+#     A chunk not baked yet draws as the plain map sheet; a chunk wholly inside vision is skipped.
+#   3 WHOLE-MAP BAKE. The whole map is baked at every level of detail AHEAD OF PLAY (topo.whole_map):
+#     scripts/render/fog_topo_baker.gd records the chunks on topo.twins worker threads (each a private
+#     twin of the terrain), submits them in a slice of the main thread's frame, reads the pixels back
+#     asynchronously and makes the textures; the order is the current zoom's level first, nearest the
+#     view's centre first. The sandbox waits for it behind the loading card (bake_remaining()).
+#     The old demand baking (topo.whole_map false) asks the same pipeline for the view's chunks only.
+#     At most topo.max_inflight chunks are past the queue at once, topo.bakes_per_frame recordings begin
+#     a frame, and the main thread spends topo.main_budget_ms a frame on it (main_budget_loading_ms
+#     while `bake_boost` is set: a card is up). shutdown() waits for the workers, and runs on leaving
+#     the tree: a quit with a worker task still running GDScript crashes the engine.
 #     Track V's baker can take the bakes over instead: set auto_bake = false and
 #     hand textures in with set_topo_chunk(c, lod, texture) from FogTopo's
 #     provider (record_chunk / bake_topo_chunk). prebake() bakes synchronously
-#     (loading, shots).
+#     (shots).
+#
+# THE FLOOR (Track P2, 2026-10-10; Alex: "showing a stale map seems better then a plain brown square"): no area
+# of the screen is ever left unpainted; it shows the best thing already made for that place.
+#   - The contour map is made for the whole map at every level of detail before play. A chunk's own level is
+#     drawn when it is there, else the nearest other level (_best): the coarsest, 32 texels a chunk, is the
+#     whole-map overview, the first thing baked of each chunk and never evicted.
+#   - Where the MAP under a chunk is not baked yet (map_ready says no: sight reached a place faster than the baker,
+#     or a rebake is under way and nothing stale covers it) the chunk is drawn FORCED: the contour map shows
+#     there even inside vision (a one-texel-per-chunk mask, forced_mask, which fog_composite.gdshader reads).
+#     The swap to the real ground is the map layer's chunk landing (map_serial moves, the mask is made again).
+#   - A change that alters the look (the map's scale, the pen: set_terrain) keeps the earlier contour textures as
+#     STALE, drawn wherever the new ones are not made yet, and drops them when the whole new set is.
+#   unpainted_in_view() counts the chunks in view where none of this holds: 0, always (test_fog, pan_probe.gd).
 #
 # HIDDEN CHUNKS: rect_under_fog(rect_px) says whether a map-px rectangle lies wholly
 # under the opaque topographic layer (no vision circle within the edge's reach of
@@ -88,9 +100,12 @@ const LOS_SHAPE_SHADER = preload("res://scripts/render/fog_los_shape.gdshader")
 const LOS_COLS_SHADER = preload("res://scripts/render/fog_los_cols.gdshader")
 const LOS_MASK_SHADER = preload("res://scripts/render/fog_mask_los.gdshader")
 const FogViewshed = preload("res://scripts/render/fog_viewshed.gd")
+const FogTopoBaker = preload("res://scripts/render/fog_topo_baker.gd")
 
 const EDGE_INKED := "inked"
 const EDGE_SOFT := "soft"
+const MASK_ANALYTIC := "analytic"
+const MASK_TEXTURE := "texture"
 
 var terrain: Terrain
 var P: RenderParams
@@ -103,12 +118,17 @@ var markers: Node2D             # THE SLOT: drawn above the map and the fog
 var errors: Array = []
 
 var edge_mode: String
+var mask_mode: String           # "analytic": the shader takes the circles' distance itself; "texture": the mask viewport (see the header)
 var mask_scale: float
 var range_px: float
-var bakes_per_frame: int        # bakes STARTED per frame
+var bakes_per_frame: int        # recordings STARTED per frame (0: no baking)
 var max_inflight: int           # bakes in the pipeline at once
-var worker_recording: bool      # record on a worker thread (else on the main thread)
+var worker_recording: bool      # record on worker threads (else on the main thread)
 var main_budget_ms: float       # main-thread ms a frame the pipeline may spend (submission, textures)
+var main_budget_loading_ms: float   # ... while bake_boost is set (a loading card is up)
+var load_share: float           # the share of the loading card's bar the whole-map bake has (the rest is the map's chunks)
+var whole_map: bool             # bake the whole map at every level of detail ahead of play (else only what the view needs)
+var twin_count: int             # recorder threads, each with a private Terrain
 var cache_cap: int
 var overview_edge: bool
 var far_mode: String
@@ -116,15 +136,24 @@ var topo_below: float
 var full_above: float
 var overview_override := -1.0   # >= 0 forces the overview amount (shots, tests)
 var auto_bake := true
+var terrain_maker: Callable = Callable()   # see set_terrain_maker()
+# (rect_px: Rect2) -> bool: does the map layer show something (fresh or stale) over this map-px rectangle? And
+# () -> int, moving when that changes (MapView.covers_px, MapView.chunk_serial). Unset: the map is taken as there.
+var map_ready: Callable = Callable()
+var map_serial: Callable = Callable()
+# The sandbox sets this while its loading card is up: the pipeline then spends main_budget_loading_ms of
+# main-thread time a frame instead of main_budget_ms (nobody is playing, so a long frame costs nothing).
+var bake_boost := false
 
 # Timings and counts for the report: mask_us (last mask update, CPU side),
 # draw_us (last _draw, CPU side), record_ms / record_ms_max (chunk recording,
 # GDScript; on a worker unless topo.worker_recording is off), bakes (chunks
 # baked), finished (bakes that left the pipeline, with or without pixels), main_ms /
 # main_ms_max_frame (main-thread time of the bake pipeline: submission and
-# textures), draw_chunks (quads last frame).
+# textures), draw_chunks (quads last frame), draws (times _draw ran), redraws_skipped
+# (frames that needed none).
 var stats := {"mask_us": 0, "draw_us": 0, "record_ms": 0.0, "record_ms_max": 0.0, "bakes": 0, "finished": 0, "main_ms": 0.0,
-	"main_ms_max_frame": 0.0, "draw_chunks": 0, "los_us": 0, "los_uploads": 0, "los_shapes": 0}
+	"main_ms_max_frame": 0.0, "draw_chunks": 0, "los_us": 0, "los_uploads": 0, "los_shapes": 0, "draws": 0, "redraws_skipped": 0}
 
 var _mask_vp: SubViewport
 var _mask_rect: ColorRect
@@ -138,10 +167,28 @@ var _final_mat: ShaderMaterial
 var _los_items := {}                # circle id -> {rect, mat, tex, serial}
 var _mat: ShaderMaterial
 var _cache := {}                # Vector3i(cx, cy, lod) -> ImageTexture
-var _jobs: Array = []           # bakes in flight (see _start_bake)
+var _forced := {}               # Vector2i -> true: chunks the map layer shows nothing over (the contours show there whatever the sight says)
+var _forced_serial := -1        # the map_serial the set was made for
+var _forced_img: Image = null
+var _forced_tex: ImageTexture = null
+var _stale := {}                # an earlier bake's textures (another scale or pen), kept under the new ones until they are made
+# Bakes per chunk and level (Vector3i(cx, cy, lod) -> times it finished): a static piece is made ONCE per game and
+# kept (Alex: "we seem to be regenerating map sections we should already have"), so a count above 1 is a bug unless
+# the look changed. The pan probe and the tests read it.
+var bake_counts: Dictionary = {}
+var _baker: FogTopoBaker = null  # the pipeline (built on the first frame that bakes)
+var _baker_topo: FogTopo = null  # the FogTopo the baker was built for (a new one means a new baker)
+var _enqueued_for: FogTopo = null  # the FogTopo whose whole map has been queued
 var _xf := Transform2D.IDENTITY # local (map px) -> screen px, this frame
 var _zoom := 1.0
 var _overview := 0.0
+var _cache_serial := 0          # counts textures arriving: part of what _draw draws
+var _circles_map := PackedVector4Array()   # the plain circles (map px): what the composite shader gets, analytic mode
+var _circles_all := PackedVector4Array()   # every circle, viewshed units included
+var _circle_serial := 0
+var _hidden_serial := 0
+var _redraw_sig: Array = []
+var _last_analytic := false
 
 func setup(t: Terrain, params: RenderParams = null, fog: CameraData = null, cam: CameraData = null) -> void:
 	terrain = t
@@ -155,10 +202,18 @@ func setup(t: Terrain, params: RenderParams = null, fog: CameraData = null, cam:
 	errors.append_array(topo.errors)
 	mask_scale = fog_data.num("mask.scale")
 	range_px = fog_data.num("mask.range_px")
+	mask_mode = fog_data.text("mask.mode")
+	if mask_mode != MASK_ANALYTIC and mask_mode != MASK_TEXTURE:
+		_err("mask.mode must be '%s' or '%s', not '%s'" % [MASK_ANALYTIC, MASK_TEXTURE, mask_mode])
+		mask_mode = MASK_TEXTURE
 	bakes_per_frame = fog_data.integer("topo.bakes_per_frame")
 	max_inflight = fog_data.integer("topo.max_inflight")
 	worker_recording = fog_data.flag("topo.worker_recording")
 	main_budget_ms = fog_data.num("topo.main_budget_ms")
+	main_budget_loading_ms = fog_data.num("topo.main_budget_loading_ms")
+	load_share = fog_data.num("topo.load_share")
+	whole_map = fog_data.flag("topo.whole_map")
+	twin_count = maxi(1, fog_data.integer("topo.twins"))
 	cache_cap = fog_data.integer("topo.cache_chunks")
 	overview_edge = fog_data.flag("overview.vision_edge")
 	far_mode = cam_data.text("far_zoom.mode")
@@ -198,29 +253,41 @@ func set_terrain(t: Terrain) -> void:
 	terrain = t
 	vision.attach_terrain(t)
 	topo = FogTopo.new(t, fog_data, P)
+	topo.terrain_maker = terrain_maker
 	errors.append_array(topo.errors)
 	_apply_style()
 	shutdown()   # bakes in flight are for the old layer
-	_cache.clear()
+	_baker = null
+	_baker_topo = null
+	# What is on screen stays, as STALE, until its replacement is made (a chunk is the same 256 m cell at any
+	# scale, so its old texture is drawn into the new rectangle). A second change before the first was made keeps
+	# the fuller of the two.
+	if _cache.size() >= _stale.size():
+		_stale = _cache
+	_cache = {}
+	_cache_serial += 1
+	_forced_serial = -1   # (the chunks are another size now)
 	queue_redraw()
+
+# How the recorder twins' private terrains are made, for a layer that changes the ground after a Terrain is
+# constructed (the water's capped height field): (seed, data_path, params) -> Terrain, called on the main thread.
+# Set it before the first frame that bakes (see FogTopo.terrain_maker). Unset: the same class as the layer's terrain.
+func set_terrain_maker(fn: Callable) -> void:
+	terrain_maker = fn
+	topo.terrain_maker = fn
 
 func _ready() -> void:
 	process_priority = 100   # after the camera has moved this frame
 
-# Waits for the worker tasks and drops every bake in flight. A quit with a task
+# Waits for the worker tasks and drops every bake in flight and in the queue (the next frame that
+# bakes queues the map again, minus what is cached). A quit with a task
 # still running GDScript crashes the engine, so a quit must not skip this; it
 # also runs when the layer leaves the tree. A bake whose pixels are already on
 # their way keeps its canvas (the read-back frees it) and its result is dropped.
 func shutdown() -> void:
-	for job: Dictionary in _jobs:
-		if job.has("task"):
-			WorkerThreadPool.wait_for_task_completion(job.task)
-		if job.has("box"):
-			if job.box[0] is InkCanvas:
-				(job.box[0] as InkCanvas).discard()
-		elif job.has("canvas") and job.state != "arriving":
-			(job.canvas as InkCanvas).discard()
-	_jobs.clear()
+	if _baker != null:
+		_baker.clear()
+	_enqueued_for = null
 
 func _exit_tree() -> void:
 	shutdown()
@@ -284,17 +351,58 @@ func _process(_delta: float) -> void:
 	_zoom = _xf.x.length()
 	_overview = overview_amount()
 	update_mask(vsize)
-	_mat.set_shader_parameter("zoom", _zoom)
-	_mat.set_shader_parameter("overview", _overview)
-	_mat.set_shader_parameter("show_edge", 1.0 if overview_edge else 1.0 - _overview)
-	_pump()
+	_set_param("zoom", _zoom)
+	_set_param("overview", _overview)
+	_set_param("show_edge", 1.0 if overview_edge else 1.0 - _overview)
+	if _baker != null:
+		_baker.boost = bake_boost
 	if auto_bake:
 		_schedule()
-	queue_redraw()
+	if _baker != null:
+		_baker.step()
+		_sync_stats()
+		if whole_map and _enqueued_for == topo and _baker.remaining() == 0:
+			_baker.release_twins()   # the whole map is made: the twins' terrains are not needed again
+			if not _stale.is_empty():
+				_stale = {}   # ... and nothing of the earlier bake is wanted any more
+				_cache_serial += 1
+	_update_forced()
+	_redraw_if_changed()
 
-# The mask's size and uniforms for a screen of `vsize`: the circles in mask px.
+var _params := {}
+
+# A shader parameter set only when it changes: a material that is poked every frame re-uploads its
+# uniforms every frame, and a paused map should cost nothing.
+func _set_param(name: String, value: Variant) -> void:
+	if _params.get(name) != value or not _params.has(name):
+		_params[name] = value
+		_mat.set_shader_parameter(name, value)
+
+# The sight for this frame. Analytic (mask.mode "analytic", no viewshed shapes): the circles are
+# uniforms of the composite shader in MAP px and the shader takes their distance itself, so nothing is
+# rendered for the mask and a pan changes nothing here; only a change of sight (a unit moved, a
+# plan preview, a unit downed) uploads anything. Otherwise (mask.mode "texture", or a unit with a
+# viewshed) the mask viewport is sized and fed for a screen of `vsize`: the circles in mask px.
 func update_mask(vsize: Vector2) -> void:
 	var t0 := Time.get_ticks_usec()
+	_scan_circles()
+	var analytic := mask_mode == MASK_ANALYTIC and vision.los_circles().is_empty()
+	if analytic != _last_analytic or not _params.has("analytic"):
+		_last_analytic = analytic
+		_set_param("analytic", analytic)
+	var want_mode := SubViewport.UPDATE_DISABLED if analytic else SubViewport.UPDATE_ALWAYS
+	if _mask_vp.render_target_update_mode != want_mode:
+		_mask_vp.render_target_update_mode = want_mode
+	if analytic:
+		if _circles_uploaded != _circles_map:
+			_circles_uploaded = _circles_map
+			var padded := _circles_map.duplicate()
+			padded.resize(FogVision.MAX_SHADER_CIRCLES)
+			_mat.set_shader_parameter("circle_count", _circles_map.size())
+			_mat.set_shader_parameter("circles", padded)
+		_update_los(_mask_vp.size, 1.0)   # (hides the shape nodes, if any were up)
+		stats.mask_us = Time.get_ticks_usec() - t0
+		return
 	var msize := Vector2i(maxi(1, roundi(vsize.x * mask_scale)), maxi(1, roundi(vsize.y * mask_scale)))
 	if _mask_vp.size != msize:
 		_mask_vp.size = msize
@@ -310,6 +418,70 @@ func update_mask(vsize: Vector2) -> void:
 		m.set_shader_parameter("mask_size", Vector2(msize))
 	_update_los(msize, k)
 	stats.mask_us = Time.get_ticks_usec() - t0
+
+var _circles_uploaded := PackedVector4Array()
+
+# The vision circles in MAP px (x, y, r): _circles_map the plain ones (the composite shader's), _circles_all
+# every one, a unit with a viewshed shape included (what rect_under_fog and the background bake go by).
+# Each has a serial that moves when its list does.
+func _scan_circles() -> void:
+	var plain := PackedVector4Array()
+	var all := PackedVector4Array()
+	var ppm := terrain.px_per_m
+	var limit := mini(vision.max_circles, FogVision.MAX_SHADER_CIRCLES)
+	for c: Dictionary in vision.circles:
+		var v := Vector4(float(c.x) * ppm, float(c.y) * ppm, float(c.r) * ppm, 0.0)
+		all.append(v)
+		if plain.size() < limit and not c.has("shed"):
+			plain.append(v)
+	if plain != _circles_map:
+		_circles_map = plain
+		_circle_serial += 1
+	if all != _circles_all:
+		_circles_all = all
+		_hidden_serial += 1
+
+# What rect_out_of_sight() depends on, for a caller that caches its answers (MapView.sight_sig): the circles,
+# the zoom (the edge's reach in map px) and the edge mode.
+func hidden_signature() -> Array:
+	return [_hidden_serial, _zoom, edge_mode]
+
+# Where the units are, map px: the points the map's background bake works outward from.
+func anchor_points_px() -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for c: Vector4 in _circles_all:
+		out.append(Vector2(c.x, c.y))
+	return out
+
+# The signed distance the compositor takes to the union of the circles at map-px point `p`, in SCREEN
+# px, clamped to +/- range_px: positive inside. The CPU twin of the analytic branch of
+# fog_composite.gdshader (test_fog holds the two mask formulas to each other).
+static func analytic_sdf_px(circles_map: PackedVector4Array, p: Vector2, zoom: float, range_px_v: float) -> float:
+	var best := -1.0e9
+	for c: Vector4 in circles_map:
+		best = maxf(best, c.z - p.distance_to(Vector2(c.x, c.y)))
+	return clampf(best * zoom, -range_px_v, range_px_v)
+
+# queue_redraw() only when what _draw draws has changed: the chunks in view, the level of detail, the
+# zoom (the skip test depends on it), the circles, a texture that arrived. A plain pan changes none.
+func _redraw_if_changed() -> void:
+	var r := view_rect_px()
+	var cs := topo.chunk_px
+	var sig: Array = [floori(r.position.x / cs), floori(r.position.y / cs), floori((r.end.x - 0.001) / cs), floori((r.end.y - 0.001) / cs),
+		_zoom, _overview > 0.0, _circle_serial, _cache_serial, int(map_serial.call()) if map_serial.is_valid() else 0]
+	if sig != _redraw_sig:
+		_redraw_sig = sig
+		queue_redraw()
+	else:
+		stats.redraws_skipped = int(stats.redraws_skipped) + 1
+
+func _sync_stats() -> void:
+	var bs: Dictionary = _baker.stats
+	stats.record_ms = bs.record_ms
+	stats.record_ms_max = bs.record_ms_max
+	stats.finished = bs.finished
+	stats.main_ms = bs.main_ms
+	stats.main_ms_max_frame = bs.main_ms_max_frame
 
 # --- line of sight: the shapes and the distance transform ---------------------------------
 
@@ -445,12 +617,13 @@ func _draw() -> void:
 	if topo == null:
 		return
 	var t0 := Time.get_ticks_usec()
+	stats.draws = int(stats.draws) + 1
 	var lod := topo.lod_for_zoom(_zoom)
 	var n := 0
 	for c in terrain.chunks_in_rect_px(view_rect_px()):
-		if _overview <= 0.0 and _inside_vision(c):
-			continue
 		var r := topo.chunk_rect_px(c)
+		if _overview <= 0.0 and not _forced.has(c) and _inside_vision(c):
+			continue
 		var tex: Texture2D = _best(c, lod)
 		if tex != null:
 			draw_texture_rect(tex, r, false)
@@ -459,6 +632,54 @@ func _draw() -> void:
 		n += 1
 	stats.draw_chunks = n
 	stats.draw_us = Time.get_ticks_usec() - t0
+
+# The chunks of the map the map layer shows nothing over, as a set and as the shader's mask: made again only when the
+# map layer's chunks changed (map_serial), so a pan costs nothing here.
+func _update_forced() -> void:
+	var serial := int(map_serial.call()) if map_serial.is_valid() else 0
+	if serial == _forced_serial and _forced_tex != null:
+		return
+	_forced_serial = serial
+	var range_c: Rect2i = terrain.map_chunk_range()
+	var w := maxi(range_c.size.x, 1)
+	var h := maxi(range_c.size.y, 1)
+	if _forced_img == null or _forced_img.get_width() != w or _forced_img.get_height() != h:
+		_forced_img = Image.create(w, h, false, Image.FORMAT_R8)
+		_forced_tex = null
+	_forced = {}
+	for cy in range(range_c.position.y, range_c.position.y + range_c.size.y):
+		for cx in range(range_c.position.x, range_c.position.x + range_c.size.x):
+			var c := Vector2i(cx, cy)
+			var forced := map_ready.is_valid() and not bool(map_ready.call(topo.chunk_rect_px(c)))
+			if forced:
+				_forced[c] = true
+			_forced_img.set_pixel(cx - range_c.position.x, cy - range_c.position.y, Color.WHITE if forced else Color.BLACK)
+	if _forced_tex == null:
+		_forced_tex = ImageTexture.create_from_image(_forced_img)
+		_mat.set_shader_parameter("forced_mask", _forced_tex)
+	else:
+		_forced_tex.update(_forced_img)
+	var o := Vector2(range_c.position) * topo.chunk_px
+	_mat.set_shader_parameter("forced_rect", Vector4(o.x, o.y, w * topo.chunk_px, h * topo.chunk_px))
+
+# Does the map layer show something over this map-px rectangle (the floor: if not, the contours show)?
+func _map_there(r: Rect2) -> bool:
+	return not map_ready.is_valid() or bool(map_ready.call(r))
+
+# Chunks of the view where nothing is painted: no contour texture at any level (fresh or stale), and the map
+# layer does not show the place either (inside vision with the ground baked). 0 is the rule.
+func unpainted_in_view() -> int:
+	if topo == null:
+		return 0
+	var n := 0
+	for c in terrain.chunks_in_rect_px(view_rect_px()):
+		if _best(c, topo.lod_for_zoom(_zoom)) != null:
+			continue
+		var r := topo.chunk_rect_px(c)
+		if _overview <= 0.0 and _map_there(r) and _inside_vision(c):
+			continue
+		n += 1
+	return n
 
 # Is chunk c wholly inside one vision circle, with the mask's whole range to
 # spare (so no edge effect can reach it)?
@@ -499,15 +720,51 @@ func rect_under_fog(rect_px: Rect2) -> bool:
 			return false
 	return true
 
-# The baked texture for c at `lod`, else the nearest other level that is baked.
+# How far past the vision edge the full render can still show through the compositor, in SCREEN px: the
+# inked edge cuts at the edge moved by its wobble (a 1 px antialiased cut); the soft one fades over
+# feather_px with two octaves of noise on the edge. Plus a pixel of slack.
+func edge_reach_px() -> float:
+	if edge_mode == EDGE_SOFT:
+		return fog_data.num("edge.soft.feather_px") * 0.5 + 1.5 * fog_data.num("edge.soft.wobble_px") + 1.0
+	return fog_data.num("edge.inked.wobble_px") + 1.0
+
+# Is a map-px rectangle OUT OF SIGHT: no vision circle comes within the edge's reach of it, so the full
+# render can show nowhere on it (the topographic layer is opaque there)? Unlike rect_under_fog() it does not
+# depend on the overview: the full render shows through the fade of the overview wherever sight reaches, so
+# these are the chunks whose ground is ever seen. A circle with a viewshed counts as its full circle (the
+# shape lies inside it), so this is conservative: a rectangle it calls out of sight is. MapView bakes
+# everything else first and the rest in the background (map_view.hidden_test).
+func rect_out_of_sight(rect_px: Rect2) -> bool:
+	if topo == null:
+		return false
+	var r := rect_px.grow(edge_reach_px() / maxf(_zoom, 1e-6))
+	var ppm := terrain.px_per_m
+	for circ: Dictionary in vision.circles:
+		var cx: float = circ.x * ppm
+		var cy: float = circ.y * ppm
+		var rr: float = circ.r * ppm
+		var q := Vector2(clampf(cx, r.position.x, r.end.x), clampf(cy, r.position.y, r.end.y))
+		if (q.x - cx) * (q.x - cx) + (q.y - cy) * (q.y - cy) <= rr * rr:
+			return false
+	return true
+
+# The baked texture for c at `lod`, else the nearest other level that is baked, else (a rebake under way) the
+# same from the earlier bake. The coarsest level, the whole-map overview, is made first, so a chunk the layer has
+# anything of has it.
 func _best(c: Vector2i, lod: int) -> Texture2D:
-	var hit: Variant = _cache.get(Vector3i(c.x, c.y, lod))
+	var hit: Variant = _find(_cache, c, lod)
+	if hit == null and not _stale.is_empty():
+		hit = _find(_stale, c, lod)
+	return hit
+
+func _find(cache: Dictionary, c: Vector2i, lod: int) -> Variant:
+	var hit: Variant = cache.get(Vector3i(c.x, c.y, lod))
 	if hit != null:
 		return hit
 	for d in range(1, topo.lods.size()):
 		for l: int in [lod + d, lod - d]:
 			if l >= 0 and l < topo.lods.size():
-				hit = _cache.get(Vector3i(c.x, c.y, l))
+				hit = cache.get(Vector3i(c.x, c.y, l))
 				if hit != null:
 					return hit
 	return null
@@ -517,6 +774,7 @@ func _best(c: Vector2i, lod: int) -> Texture2D:
 # A texture baked elsewhere (Track V's baker) for chunk c at level `lod`.
 func set_topo_chunk(c: Vector2i, lod: int, tex: Texture2D) -> void:
 	_cache[Vector3i(c.x, c.y, lod)] = tex
+	_cache_serial += 1
 	queue_redraw()
 
 func has_topo_chunk(c: Vector2i, lod: int) -> bool:
@@ -543,6 +801,7 @@ func prebake(rect_px: Rect2, lod: int, batch: int = 48) -> Dictionary:
 		for i in imgs.size():
 			var c: Vector2i = part[i]
 			_cache[Vector3i(c.x, c.y, lod)] = FogTopo.texture_from(imgs[i])
+			_cache_serial += 1
 		var t2 := Time.get_ticks_usec()
 		rec += (t1 - t0) / 1000.0
 		ren += (t2 - t1) / 1000.0
@@ -551,17 +810,14 @@ func prebake(rect_px: Rect2, lod: int, batch: int = 48) -> Dictionary:
 
 # The chunks to bake at `lod`, nearest the view's centre first, the view's own
 # before the ring round it (a ring chunk a hair nearer the centre must not go
-# first): not cached, not in flight, and not wholly inside vision (the full
+# first): not cached, not queued or in flight, and not wholly inside vision (the full
 # render shows there, unless the overview is on).
 func wanted_chunks(view: Rect2, lod: int) -> Array[Vector2i]:
 	var centre := view.get_center()
-	var inflight := {}
-	for job: Dictionary in _jobs:
-		inflight[job.key] = true
 	var scored: Array = []   # [distance, chunk]
 	for c in terrain.chunks_in_rect_px(view.grow(topo.chunk_px)):
 		var key := Vector3i(c.x, c.y, lod)
-		if _cache.has(key) or inflight.has(key):
+		if _cache.has(key) or (_baker != null and _baker.is_queued_or_running(key)):
 			continue
 		if _overview <= 0.0 and _inside_vision(c):
 			continue
@@ -573,106 +829,87 @@ func wanted_chunks(view: Rect2, lod: int) -> Array[Vector2i]:
 		out.append(e[1])
 	return out
 
-# Starts bakes for the chunks the view needs (see the header). Recording on a
-# worker is one chunk at a time (the twin's lock), so a second one would only
-# wait holding a thread: at most one bake is in its recording state.
+# The pipeline, built on the first frame that bakes. A baker belongs to one FogTopo (one scale):
+# a new FogTopo (set_terrain) means new twins.
+func _ensure_baker() -> void:
+	if _baker != null and _baker_topo == topo:
+		return
+	if _baker != null:
+		_baker.shutdown()
+	var twins: Array = []
+	for _i in (twin_count if worker_recording else 1):
+		twins.append(topo.make_twin())
+	_baker = FogTopoBaker.new(topo, twins, max_inflight, bakes_per_frame, main_budget_ms, main_budget_loading_ms, worker_recording)
+	_baker.on_done = _on_baked
+	_baker_topo = topo
+	_enqueued_for = null
+
+func _on_baked(key: Vector3i, tex: Texture2D) -> void:
+	_cache[key] = tex
+	bake_counts[key] = int(bake_counts.get(key, 0)) + 1
+	_cache_serial += 1
+	stats.bakes = int(stats.bakes) + 1
+	_evict()
+
+# Every chunk of the map at every level of detail not cached yet: the zoom's level of detail first,
+# then the others by how far they are from it (the next zoom out or in); nearest the view's centre
+# first within a level. (The twins deal them out in bands of rows, so each makes the terrain it needs once.)
+func whole_map_keys() -> Array[Vector3i]:
+	var centre := view_rect_px().get_center()
+	var cur := topo.lod_for_zoom(_zoom)
+	var scored: Array = []   # [lod distance, chunk distance, key]
+	for c in terrain.chunks_in_rect_px(terrain.map_rect_px()):
+		var d := topo.chunk_rect_px(c).get_center().distance_squared_to(centre)
+		for lod in topo.lods.size():
+			var key := Vector3i(c.x, c.y, lod)
+			if not _cache.has(key):
+				scored.append([absi(lod - cur), d, key])
+	scored.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1]))
+	var out: Array[Vector3i] = []
+	for e: Array in scored:
+		out.append(e[2])
+	return out
+
+# Queues what has to be baked (see the header): the whole map once, or with topo.whole_map false the
+# chunks the view wants at the zoom's level of detail, as they come.
 func _schedule() -> void:
-	if bakes_per_frame <= 0 or _jobs.size() >= max_inflight:
+	if bakes_per_frame <= 0:
+		return
+	_ensure_baker()
+	if whole_map:
+		if _enqueued_for != topo:
+			_enqueued_for = topo
+			_baker.enqueue(whole_map_keys())
 		return
 	var lod := topo.lod_for_zoom(_zoom)
 	var want := wanted_chunks(view_rect_px(), lod)
-	if want.is_empty():
-		return
-	var recording := 0
-	for job: Dictionary in _jobs:
-		if job.state == "recording":
-			recording += 1
-	var started := 0
-	for c in want:
-		if started >= bakes_per_frame or _jobs.size() >= max_inflight:
-			break
-		if worker_recording and recording > 0:
-			break
-		_start_bake(c, lod)
-		started += 1
-		recording += 1
+	if not want.is_empty():
+		var keys: Array = []
+		for c in want:
+			keys.append(Vector3i(c.x, c.y, lod))
+		_baker.enqueue(keys)
 
-func _start_bake(c: Vector2i, lod: int) -> void:
-	var s: float = topo.lods[lod]
-	var job := {"key": Vector3i(c.x, c.y, lod), "c": c, "s": s, "state": "recording"}
-	if worker_recording:
-		topo.prepare_threaded()   # main thread: the twin reads the shared CameraData
-		var tp := topo
-		var box := [null, 0.0]   # [canvas, ms]: written by the worker only
-		job["box"] = box
-		job["task"] = WorkerThreadPool.add_task(func() -> void:
-			var tw := Time.get_ticks_usec()
-			box[0] = tp.make_canvas_threaded(c, s)
-			box[1] = (Time.get_ticks_usec() - tw) / 1000.0, true)
-	else:
-		var tr := Time.get_ticks_usec()
-		var g := topo.make_canvas(c, s)
-		var ms := (Time.get_ticks_usec() - tr) / 1000.0
-		job["box"] = [g, ms]
-		stats.main_ms += ms
-		stats.main_ms_max_frame = maxf(stats.main_ms_max_frame, ms)
-	_jobs.append(job)
-
+# Bakes in the pipeline now (recording, submitting, drawing, being read back).
 func bakes_in_flight() -> int:
-	return _jobs.size()
+	return 0 if _baker == null else _baker.in_flight()
 
-# Advances every bake in flight, at most main_budget_ms of main-thread time a
-# frame (and at least one action, so a bake always progresses).
-func _pump() -> void:
-	if _jobs.is_empty():
-		return
-	var t0 := Time.get_ticks_usec()
-	var budget := int(main_budget_ms * 1000.0)
-	var slice := maxi(500, budget / 2)
-	var acted := false
-	for job: Dictionary in _jobs.duplicate():
-		if acted and Time.get_ticks_usec() - t0 > budget:
-			break
-		match job.state:
-			"recording":
-				if job.has("task"):
-					if not WorkerThreadPool.is_task_completed(job.task):
-						continue
-					WorkerThreadPool.wait_for_task_completion(job.task)
-					job.erase("task")
-				var box: Array = job.box
-				job.erase("box")
-				job["canvas"] = box[0]
-				stats.record_ms = box[1]
-				stats.record_ms_max = maxf(stats.record_ms_max, box[1])
-				(job.canvas as InkCanvas).begin_submit()
-				job.state = "submitting"
-				acted = true
-			"submitting":
-				acted = true
-				if (job.canvas as InkCanvas).submit_some(slice):
-					job["frame"] = Engine.get_frames_drawn()
-					job.state = "render"
-			"render":
-				if Engine.get_frames_drawn() > job.frame:
-					(job.canvas as InkCanvas).collect_async(func(img: Image) -> void: job["img"] = img)
-					job.state = "arriving"
-					acted = true
-			"arriving":
-				if not job.has("img"):
-					continue
-				var img: Image = job.img
-				_jobs.erase(job)
-				stats.finished += 1
-				acted = true
-				if img != null and not img.is_empty():
-					_cache[job.key] = FogTopo.texture_from(img)
-					stats.bakes += 1
-					_evict()
-					queue_redraw()
-	var spent := (Time.get_ticks_usec() - t0) / 1000.0
-	stats.main_ms += spent
-	stats.main_ms_max_frame = maxf(stats.main_ms_max_frame, spent)
+# What is left of the work the layer asked for, how much there was, and how much is done: the
+# loading card's numbers. With topo.whole_map, total counts every chunk at every level of detail.
+func bake_remaining() -> int:
+	return 0 if _baker == null else _baker.remaining()
+
+func bake_total() -> int:
+	return 0 if _baker == null else _baker.total()
+
+func bake_done() -> int:
+	return bake_total() - bake_remaining()
+
+# Has everything been made: the whole map at every level of detail cached (topo.whole_map), or at
+# least nothing waits? False before the first frame that bakes.
+func bake_complete() -> bool:
+	if not whole_map:
+		return bake_remaining() == 0
+	return _baker != null and _enqueued_for == topo and _baker.remaining() == 0
 
 # Over the cap: drop the chunks farthest from the view, finer levels first.
 func _evict() -> void:
@@ -686,7 +923,9 @@ func _evict() -> void:
 		var ca := topo.chunk_rect_px(Vector2i(a.x, a.y)).get_center().distance_squared_to(centre)
 		var cb := topo.chunk_rect_px(Vector2i(b.x, b.y)).get_center().distance_squared_to(centre)
 		return ca > cb)
+	var coarsest := topo.lods.size() - 1
 	var i := 0
 	while _cache.size() > cache_cap and i < keys.size():
-		_cache.erase(keys[i])
+		if keys[i].z != coarsest:   # the whole-map overview is the floor: never dropped
+			_cache.erase(keys[i])
 		i += 1

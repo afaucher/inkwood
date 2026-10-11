@@ -122,6 +122,17 @@ var chunk_px := 1024
 # topographic layer (FogLayer.rect_under_fog)? Chunks that are hidden bake after the
 # visible ones. Unset: nothing is hidden.
 var hidden_test: Callable = Callable()
+# BACKGROUND BAKING (Track P, 2026-10-10; data map_view.background_bake): with hidden_test set the map
+# is baked as one thing, not as a view that follows the camera. Sight decides what is NEEDED: every chunk
+# the fog does not cover (the opaque topographic layer hides the rest) is baked first, wherever the camera
+# is, view first -- a pan never meets unpainted ground in sight. The chunks under the fog follow in the
+# background, nearest the units first, a couple at a time, on a smaller share of the frame, so a pan costs
+# only compositing. () -> PackedVector2Array: the points (map px) the background works outward from (the
+# vision circles' centres); unset, the view's centre.
+var anchor_points: Callable = Callable()
+# () -> Variant: changes when what hidden_test answers changes (the fog's circles, zoom, overview). With it
+# the classification of the map's chunks is redone only then, or when the view crosses a chunk border.
+var sight_sig: Callable = Callable()
 # The sandbox sets this while its loading card is up: the baker then spends
 # map_view.bake_budget_loading_ms of main-thread time a frame instead of
 # bake_budget_ms (nobody is playing, so a long frame costs nothing).
@@ -131,9 +142,29 @@ var bake_boost := false
 var motion_px_s := Vector2.ZERO
 var _motion: Array = []       # [[seconds, view centre]]
 var _chunks: Dictionary = {}  # Vector2i -> Sprite2D
+# THE FLOOR (Track P2, 2026-10-10; Alex: "showing a stale map seems better then a plain brown square"): a rebake
+# (a scale, pen or tree-pool knob) does not blank the map. The sprites of the earlier bake stay on screen,
+# under the fresh ones, until the chunks that cover their place are baked, and then go (at a new scale
+# they are scaled to it). Nothing baked is ever thrown away for a replacement that has not landed.
+var _stale: Array = []        # Sprite2D of an earlier bake, oldest first
+# Moves whenever what the map layer can show changes (a chunk shown or dropped, stale sprites kept or freed): a
+# layer above that depends on it (the fog's forced contours) redraws on it, and no other time.
+var chunk_serial := 0
+var _pool_asked := false
+# () -> bool: true while something else needs the frames (the sandbox: a turn's playback is running). The
+# background bake waits then, as it does for the camera (see _bg_yielding).
+var bake_hold: Callable = Callable()
+var _cam_sig := Vector3.ZERO      # the camera (x, y, zoom) the last frame saw, and when it last changed
+var _cam_moved_ms := -1000000
 var _target: Variant = null   # Vector2 (map px) to ease to, or null
 var _dragging := false
 var _errors: Array[String] = []
+var _bg_only := false          # every chunk that sight reaches is baked: only the background is running
+var _sched_sig: Array = []     # what the last classification was made from
+var _sighted: Array = []       # [priority, chunk] sight reaches them (not under the fog), cheapest first
+var _rest: Array = []          # [priority, chunk] under the fog: the background, first first
+var _in_view_n := 0
+var _idle_at := -1             # the cache size at which the last fogged pass found nothing to do (-1: it had work)
 
 # seed: the world's seed; bounds_m: the map in metres (empty: from data);
 # px_per_m: map pixels per metre (0: from data); kind: "terrain" or "scene"
@@ -319,22 +350,96 @@ func set_px_per_m(v: float) -> void:
 		return
 	var centre_m := map_to_m(camera.position)
 	var target_m: Variant = null if _target == null else map_to_m(_target)
+	var ratio := v / px_per_m
 	px_per_m = v
+	# what is on screen is kept, scaled to the new scale, until its replacement lands (rebake keeps it as stale)
+	for sp: Sprite2D in _stale:
+		sp.position *= ratio
+		sp.scale *= ratio
+	for c: Vector2i in _chunks:
+		var sp: Sprite2D = _chunks[c]
+		sp.position *= ratio
+		sp.scale *= ratio
 	if provider.has_method("set_px_per_m"):
 		provider.set_px_per_m(v)
-	rebake()
+	rebake(true)   # (a sprite is a tree drawn in px: the same at any scale)
 	_update_background()
 	camera.position = m_to_map(centre_m)
 	if target_m != null:
 		_target = m_to_map(target_m)
 
-# Drops every baked chunk and sprite and bakes again (a scale, pen or
-# parameter change).
-func rebake() -> void:
-	baker.clear()
+# Makes the global tree set (ChunkBaker.prebuild_pool) -- ahead of every chunk, on workers; the sandbox calls it
+# behind its loading card -- and from now on after every rebake. 0 with map_view.tree_pool off.
+func prebuild_pool() -> int:
+	_pool_asked = true
+	return baker.prebuild_pool()
+
+# Bakes every chunk again (a scale, pen or parameter change): the baker's work is dropped, and the chunks on
+# screen stay as STALE sprites until their replacements land (see _stale).
+func rebake(keep_sprites: bool = false) -> void:
+	baker.clear(keep_sprites)
+	if _pool_asked:
+		baker.prebuild_pool()   # the global tree set again (what is still cached is not made twice)
+	_sched_sig = []
+	_idle_at = -1
 	for c: Vector2i in _chunks:
-		(_chunks[c] as Node).queue_free()
+		_stale.append(_chunks[c])
 	_chunks.clear()
+	chunk_serial += 1
+
+# Is the map-px rectangle shown by the map layer, a fresh chunk or a stale one, wherever it lies on the map? A
+# layer above uses it to show something else (the fog's contour map) where this says no.
+func covers_px(rect: Rect2) -> bool:
+	var mr := map_rect()
+	var r := rect.intersection(mr)
+	if not r.has_area():
+		return true
+	for cy in range(floori(r.position.y / chunk_px), floori((r.end.y - 0.001) / chunk_px) + 1):
+		for cx in range(floori(r.position.x / chunk_px), floori((r.end.x - 0.001) / chunk_px) + 1):
+			if _chunks.has(Vector2i(cx, cy)):
+				continue
+			var centre := (Vector2(cx, cy) + Vector2(0.5, 0.5)) * float(chunk_px)
+			var held := false
+			for sp: Sprite2D in _stale:
+				if _sprite_rect(sp).has_point(centre):
+					held = true
+					break
+			if not held:
+				return false
+	return true
+
+# Where a chunk sprite is, map px (a sprite without a texture, as the tests fake them, is one chunk).
+func _sprite_rect(sp: Sprite2D) -> Rect2:
+	var size := sp.texture.get_size() if sp.texture != null else Vector2(chunk_px, chunk_px)
+	return Rect2(sp.position, size * sp.scale)
+
+func stale_count() -> int:
+	return _stale.size()
+
+# chunk_serial as a call, for a layer that takes a Callable (FogLayer.map_serial).
+func chunk_gen() -> int:
+	return chunk_serial
+
+# A fresh chunk has landed: stale sprites whose place is now wholly covered by fresh chunks go.
+func _drop_covered_stale() -> void:
+	if _stale.is_empty():
+		return
+	var mr := map_rect()
+	var keep: Array = []
+	for sp: Sprite2D in _stale:
+		var r := _sprite_rect(sp).intersection(mr)
+		var covered := true
+		if r.has_area():
+			for cy in range(floori(r.position.y / chunk_px), floori((r.end.y - 0.001) / chunk_px) + 1):
+				for cx in range(floori(r.position.x / chunk_px), floori((r.end.x - 0.001) / chunk_px) + 1):
+					if not _chunks.has(Vector2i(cx, cy)):
+						covered = false
+		if covered:
+			sp.queue_free()
+		else:
+			keep.append(sp)
+	if keep.size() != _stale.size():
+		_stale = keep
 
 func _update_background() -> void:
 	var r := map_rect()
@@ -363,11 +468,46 @@ func _process(delta: float) -> void:
 		var z := camera.zoom.x
 		camera.position = (camera.position * z).round() / z
 	if bake_enabled:
-		track_motion()
+		if not background_baking():
+			track_motion()   # (the prefetch ring leans along it; the fogged schedule has no ring)
 		_schedule()
 		var budget_ms := float(cfg.get("bake_budget_loading_ms", 6.0)) if bake_boost else float(cfg.get("bake_budget_ms", 6.0))
+		if background_baking():
+			if _bg_only and not bake_boost:
+				# only the background is baking: a smaller share of the frame, fewer sprite pages onto the GPU at once
+				var bg: Dictionary = cfg.get("background_bake", {})
+				budget_ms = minf(budget_ms, float(bg.get("budget_ms", budget_ms)))
+				baker.pages_per_frame = int(bg.get("sprite_pages_per_frame", cfg.get("sprite_pages_per_frame", 0)))
+			else:
+				baker.pages_per_frame = int(cfg.get("sprite_pages_per_frame", 0))
+		if _bg_yielding():
+			return   # the camera is moving and nothing in sight is missing: a pan costs compositing only (see _bg_yielding)
 		for r: Dictionary in baker.step(int(budget_ms * 1000.0)):
 			_show(r.c, r.texture)
+
+# Has the camera moved or zoomed within the last `window_ms`? (Called once a frame by _bg_yielding.)
+func camera_moved_within(window_ms: int) -> bool:
+	var sig := Vector3(camera.position.x, camera.position.y, camera.zoom.x)
+	var now := Time.get_ticks_msec()
+	if sig != _cam_sig:
+		_cam_sig = sig
+		_cam_moved_ms = now
+	return now - _cam_moved_ms < window_ms
+
+# THE BACKGROUND WAITS FOR THE CAMERA AND THE PLAYBACK (Track P2, 2026-10-10, proposed; data
+# map_view.background_bake.yield_to_camera_ms and yield_to_playback): while the camera pans or zooms (or, with
+# yield_to_playback, while bake_hold says a turn is playing back), and every chunk sight reaches is baked, the baker's
+# main-thread work (sprite pages to the GPU, read-backs, textures) waits, so a pan or a zoom costs compositing and
+# nothing else; it goes on a moment after the camera stops. The chunks anyone needs (sight reached them) never wait,
+# and neither does a loading card (bake_boost). Worker threads already running carry on.
+func _bg_yielding() -> bool:
+	var bg: Dictionary = cfg.get("background_bake", {})
+	if not _bg_only or bake_boost:
+		return false
+	if bool(bg.get("yield_to_playback", false)) and bake_hold.is_valid() and bool(bake_hold.call()):
+		return true   # a turn is playing back: the frames are the player's (and the background goes on when it ends)
+	var window := int(bg.get("yield_to_camera_ms", 0))
+	return window > 0 and camera_moved_within(window)
 
 func _pan_input(delta: float) -> void:
 	var d := Vector2.ZERO
@@ -424,6 +564,9 @@ func _unhandled_input(event: InputEvent) -> void:
 # threads and the main thread's budget from the chunk the player is waiting
 # for (and the ring's terrain generation waits too).
 func _schedule() -> void:
+	if background_baking():
+		_schedule_fogged()
+		return
 	var view := view_rect()
 	var pre := int(cfg.get("prefetch_chunks", 1))
 	var c0 := Vector2i(floori(view.position.x / chunk_px), floori(view.position.y / chunk_px))
@@ -506,6 +649,113 @@ func _schedule() -> void:
 			baker.cancel(c)
 	_evict(view, wanted, cap)
 
+# Sight changed in a way the signature does not see (the fog went on or off, hidden_test was replaced):
+# classify the map again on the next schedule.
+func sight_changed() -> void:
+	_sched_sig = []
+	_idle_at = -1
+
+# Is the map baked by sight, not by camera (see anchor_points)? Needs hidden_test: without a fog every
+# chunk is in sight and the view-and-ring rule is the only sensible one.
+func background_baking() -> bool:
+	return hidden_test.is_valid() and bool((cfg.get("background_bake", {}) as Dictionary).get("enabled", false))
+
+# THE FOGGED SCHEDULE (see anchor_points). Three groups, each requested in full before the next:
+#   1 the view's chunks that sight reaches, nearest the view's centre first;
+#   2 the other chunks that sight reaches, nearest the view's centre first (the player may pan there);
+#   3 the background: every chunk under the fog, nearest a unit first (a view chunk a little sooner), at
+#     most background_bake.jobs at a time and only once 1 and 2 are all baked.
+# max_cached_chunks holds as before (the map fits under it at 2 px/m; a bigger map keeps the nearest).
+func _schedule_fogged() -> void:
+	var view := view_rect()
+	var mr := map_rect()
+	var m0 := Vector2i(floori(mr.position.x / chunk_px), floori(mr.position.y / chunk_px))
+	var m1 := Vector2i(ceili(mr.end.x / chunk_px) - 1, ceili(mr.end.y / chunk_px) - 1)
+	var c0 := Vector2i(floori(view.position.x / chunk_px), floori(view.position.y / chunk_px))
+	var c1 := Vector2i(floori(view.end.x / chunk_px), floori(view.end.y / chunk_px))
+	var sig: Array = [c0, c1, m0, m1, sight_sig.call() if sight_sig.is_valid() else randf()]
+	if sig == _sched_sig and _idle_at == _chunks.size() and baker.pending() == 0:
+		return   # nothing to ask for, nothing changed since: a paused map costs this much
+	if sig != _sched_sig:
+		_sched_sig = sig
+		_classify(view, m0, m1, c0, c1)
+	var bg: Dictionary = cfg.get("background_bake", {})
+	var cap := maxi(int(cfg.get("max_cached_chunks", 64)), _in_view_n)
+	var kept := 0
+	var requested: Dictionary = {}
+	var keep_set: Dictionary = {}    # chunk -> priority: what the cache may hold
+	var near_missing := 0
+	for e: Array in _sighted:
+		var c: Vector2i = e[1]
+		kept += 1
+		keep_set[c] = float(e[0])
+		if _chunks.has(c):
+			continue
+		near_missing += 1
+		baker.request(c, float(e[0]), true)
+		requested[c] = true
+	_bg_only = near_missing == 0
+	var jobs := int(bg.get("jobs", 2))
+	if bake_boost:
+		jobs = maxi(jobs, baker.max_jobs)   # a loading card is up (it may be waiting for the whole map): nobody is playing
+	var busy := 0
+	var rest_missing := false
+	for e: Array in _rest:
+		var c: Vector2i = e[1]
+		if kept >= cap:
+			break
+		kept += 1
+		keep_set[c] = float(e[0])
+		if _chunks.has(c):
+			continue
+		rest_missing = true
+		if near_missing > 0 or busy >= jobs:
+			continue
+		busy += 1
+		baker.request(c, float(e[0]), true)
+		requested[c] = true
+	baker.warm_paused = true
+	for c: Vector2i in baker.queued():
+		if not requested.has(c):
+			baker.cancel(c)
+	_evict(view, keep_set, cap)
+	_idle_at = _chunks.size() if (near_missing == 0 and not rest_missing) else -1
+
+# Splits the map's chunks by sight (hidden_test) into _sighted and _rest, each with its priority.
+func _classify(view: Rect2, m0: Vector2i, m1: Vector2i, c0: Vector2i, c1: Vector2i) -> void:
+	var bg: Dictionary = cfg.get("background_bake", {})
+	var offs: Dictionary = cfg.get("priority_offsets", {})
+	var off_sight := float(offs.get("sighted_offscreen", 30.0))
+	var off_bg := float(offs.get("background", 100.0))
+	var away := float(bg.get("offscreen_penalty_chunks", 6.0))
+	var centre := view.get_center() / float(chunk_px)
+	var anchors: Array[Vector2] = []
+	if anchor_points.is_valid():
+		for p: Vector2 in (anchor_points.call() as PackedVector2Array):
+			anchors.append(p / float(chunk_px))
+	if anchors.is_empty():
+		anchors.append(centre)
+	_sighted = []
+	_rest = []
+	_in_view_n = 0
+	for cy in range(m0.y, m1.y + 1):
+		for cx in range(m0.x, m1.x + 1):
+			var c := Vector2i(cx, cy)
+			var in_view := cx >= c0.x and cx <= c1.x and cy >= c0.y and cy <= c1.y
+			var cc := Vector2(cx, cy) + Vector2(0.5, 0.5)
+			if in_view:
+				_in_view_n += 1
+			if bool(hidden_test.call(Rect2(Vector2(c * chunk_px), Vector2(chunk_px, chunk_px)))):
+				var a := INF
+				for p: Vector2 in anchors:
+					a = minf(a, cc.distance_to(p))
+				_rest.append([off_bg + a + (0.0 if in_view else away), c])
+			else:
+				var d := cc.distance_to(centre)
+				_sighted.append([d if in_view else off_sight + d, c])
+	_sighted.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	_rest.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+
 # Chunks the prefetch ring reaches beyond the view's edge on one side (side +1:
 # past the far edge, -1: past the near one) given the camera's motion along
 # that axis: `pre`, plus `ahead` more in the direction it moves, `behind` on the
@@ -551,6 +801,8 @@ func _show(c: Vector2i, tex: Texture2D) -> void:
 	s.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	map_layer.add_child(s)
 	_chunks[c] = s
+	_drop_covered_stale()
+	chunk_serial += 1
 	chunk_baked.emit(c)
 
 # Drops chunks until at most `cap` are kept. Order of going: those outside the
@@ -579,6 +831,7 @@ func _evict(view: Rect2, wanted: Dictionary, cap: int) -> void:
 		var c: Vector2i = scored[i][1]
 		(_chunks[c] as Node).queue_free()
 		_chunks.erase(c)
+	chunk_serial += 1
 
 # --- status --------------------------------------------------------------------------------
 
@@ -609,3 +862,42 @@ func missing_in_view(ignore_hidden: bool = false) -> int:
 
 func pending() -> int:
 	return baker.pending()
+
+# Does the loading card wait for the whole map (data map_view.background_bake.load_whole_map) rather than the chunks
+# sight reaches? PROPOSED, off: playable sooner, the rest baked in the background.
+func load_whole_map() -> bool:
+	return bool((cfg.get("background_bake", {}) as Dictionary).get("load_whole_map", false))
+
+# Chunks of the whole map not baked yet, sight or not.
+func missing_total() -> int:
+	var n := 0
+	var mr := map_rect()
+	for cy in range(floori(mr.position.y / chunk_px), ceili(mr.end.y / chunk_px)):
+		for cx in range(floori(mr.position.x / chunk_px), ceili(mr.end.x / chunk_px)):
+			if not _chunks.has(Vector2i(cx, cy)):
+				n += 1
+	return n
+
+# Chunks of the WHOLE MAP that sight reaches (not under the fog: hidden_test) and are not baked yet --
+# the ground a player could pan to and find unpainted. Unset hidden_test: every chunk of the map.
+func missing_sighted() -> int:
+	var n := 0
+	if background_baking() and not _sched_sig.is_empty():
+		for e: Array in _sighted:   # (the schedule keeps the list; this runs every frame)
+			if not _chunks.has(e[1]):
+				n += 1
+		return n
+	var mr := map_rect()
+	for cy in range(floori(mr.position.y / chunk_px), ceili(mr.end.y / chunk_px)):
+		for cx in range(floori(mr.position.x / chunk_px), ceili(mr.end.x / chunk_px)):
+			if _chunks.has(Vector2i(cx, cy)):
+				continue
+			if hidden_test.is_valid() and bool(hidden_test.call(Rect2(Vector2(cx * chunk_px, cy * chunk_px), Vector2(chunk_px, chunk_px)))):
+				continue
+			n += 1
+	return n
+
+# How many chunks the whole map has.
+func map_chunk_count() -> int:
+	var mr := map_rect()
+	return (ceili(mr.end.x / chunk_px) - floori(mr.position.x / chunk_px)) * (ceili(mr.end.y / chunk_px) - floori(mr.position.y / chunk_px))

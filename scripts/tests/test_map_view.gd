@@ -29,6 +29,16 @@ extends "res://scripts/test_support/test_case.gd"
 #      (further ahead, nothing behind). In the baker: jobs start nearest first, a
 #      sprite page for a farther chunk is pulled forward when a nearer chunk needs
 #      a sprite on it, and the per-frame cap on submitting pages holds.
+#   7. BACKGROUND BAKING (Track P, 2026-10-10): with a fog (hidden_test) the map is baked by SIGHT, not by
+#      camera -- every chunk sight reaches, anywhere on the map, view first; the chunks under the fog follow
+#      in the background, a couple at a time, nearest a unit first, and only once everything in sight is
+#      baked; and with the whole map baked a pan, a zoom or a change of view requests nothing at all.
+#   9. SEVERAL TERRAINS, SEVERAL LANES (Track P): with map_view.terrain_lanes the provider keeps one terrain
+#      per band of the map's chunk rows, each a lane of its own; a chunk's trees and structures are the
+#      same from any of them as from a single terrain, the bands cover every row and the lanes are named.
+#   8. THE SPRITE CACHE EVICTS IN ONE CHEAP PASS (Track P, 2026-10-10): over its cap it used to sort every
+#      key with a lambda each frame (100-250 ms of main thread a frame, the frames of 100+ ms while a pan
+#      baked chunks); now the oldest quarter of the cap goes at once, the newest stay, and it is fast.
 #   6. THE VILLAGE (Track W): the baker tile that holds the radio tower holds the village's houses
 #      and walls (and the stages that cast their shadows), no tree of it stands on one, the road
 #      or a field, a tile far from the village holds none of it, and a tile's content is the same
@@ -40,6 +50,7 @@ const ChunkBaker = preload("res://scripts/render/chunk_baker.gd")
 const ChunkSceneProvider = preload("res://scripts/render/chunk_scene_provider.gd")
 const ChunkTerrainProvider = preload("res://scripts/render/chunk_terrain_provider.gd")
 
+const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 const SEED := 20261009
 
 var _view: Node2D
@@ -57,6 +68,8 @@ func setup(main) -> void:
 	var t0 := Time.get_ticks_usec()
 	_check_scene_determinism(cfg)
 	_check_terrain_determinism(cfg)
+	_check_lane_equality(cfg)
+	_check_terrain_maker(cfg)
 	_check_village_content(cfg)
 	print("determinism checks: %.0f ms" % ((Time.get_ticks_usec() - t0) / 1000.0))
 	_view = MapView.new(SEED, Rect2(0, 0, 5000, 5000), 2.0, "scene", RenderParams.new())
@@ -94,6 +107,10 @@ func _physics_process(_delta: float) -> void:
 			_check_centre(Vector2(4000.0, 900.0), "the camera stays on the same metres across a scale change")
 			_check_cache_cap()
 			_check_queue_order()
+			_check_background()
+			_check_stale_floor()
+			_check_sprite_eviction()
+			_check_tree_set()
 			_check_baker_order()
 			_check_controlled_camera()
 			_view.queue_free()
@@ -256,7 +273,10 @@ func _check_queue_order() -> void:
 	check(_view.motion_dir() == Vector2.ZERO, "5. a camera that has stopped for longer than the window is still")
 	_view._motion.clear()
 	_view.motion_px_s = Vector2.ZERO
-	# d. view chunks under the fog come after the visible ones and before the ring
+	# d. view chunks under the fog come after the visible ones and before the ring (the view-and-ring rule:
+	#    with background baking on, a fog means the fogged schedule of section 7 instead)
+	var saved_bg: Variant = _view.cfg.get("background_bake")
+	_view.cfg["background_bake"] = {"enabled": false}
 	_clear_chunks()
 	var hidden_x := c1.x
 	_view.hidden_test = func(r: Rect2) -> bool: return int(r.position.x / cp) >= hidden_x
@@ -282,6 +302,7 @@ func _check_queue_order() -> void:
 	_view._schedule()
 	check(_view.baker.queued().size() > 0, "5. everything in view baked: the ring comes")
 	_view.hidden_test = Callable()
+	_view.cfg["background_bake"] = saved_bg
 	# e. the knob that turns the gate off: view and ring are requested together, view still first
 	_view.cfg["ring_after_view"] = false
 	_clear_chunks()
@@ -298,6 +319,318 @@ func _check_queue_order() -> void:
 	check(vmax < rmin, "5. and the view's chunks still rank before the ring's")
 	_view.cfg["ring_after_view"] = true
 	_clear_chunks()
+
+# 7. THE FOGGED SCHEDULE (Track P): what MapView asks the baker for when a fog says which chunks are
+# under it. Queue only: nothing is baked here (chunks are faked as baked with an empty Sprite2D).
+func _check_background() -> void:
+	var cfg_bg: Dictionary = _view.cfg.get("background_bake", {})
+	check(bool(cfg_bg.get("enabled", false)), "7. data: map_view.background_bake is on")
+	var jobs := int(cfg_bg.get("jobs", 2))
+	_view.cfg["max_cached_chunks"] = 1000
+	_view.motion_px_s = Vector2.ZERO
+	_view.look_at_m(Vector2(1250.0, 1250.0))
+	_view.set_zoom(0.3)
+	_clear_chunks()
+	_view._sched_sig = []
+	var cp: float = _view.chunk_px
+	var mr: Rect2 = _view.map_rect()
+	var nx := int(ceil(mr.size.x / cp))
+	var ny := int(ceil(mr.size.y / cp))
+	check(nx * ny > 200, "7. the test map has many chunks (%d)" % [nx * ny])
+	# the fog: a vision circle near (6, 6) chunks, radius 2.2 chunks; everything else is under it
+	var circ := [Vector2(6.0, 6.0) * cp]   # (an array: a lambda captures a local by value, and the circle moves below)
+	var circle_r := 2.2 * cp
+	var calls := [0]
+	_view.hidden_test = func(r: Rect2) -> bool:
+		calls[0] += 1
+		var at: Vector2 = circ[0]
+		var q := Vector2(clampf(at.x, r.position.x, r.end.x), clampf(at.y, r.position.y, r.end.y))
+		return q.distance_to(at) > circle_r
+	var sig := [1]
+	_view.sight_sig = func() -> Variant: return sig[0]
+	_view.anchor_points = func() -> PackedVector2Array: return PackedVector2Array([circ[0]])
+	var sighted: Array = []
+	for cy in ny:
+		for cx in nx:
+			var c := Vector2i(cx, cy)
+			if not bool(_view.hidden_test.call(Rect2(Vector2(c) * cp, Vector2(cp, cp)))):
+				sighted.append(c)
+	check(sighted.size() > 6 and sighted.size() < 40, "7. the test circle reaches a few chunks (%d)" % sighted.size())
+	# a. every chunk sight reaches is requested, and nothing else, wherever the camera is
+	_view._schedule()
+	var q: Array = _view.baker.queued()
+	var want := {}
+	for c: Vector2i in sighted:
+		want[c] = true
+	var same := q.size() == sighted.size()
+	for c: Vector2i in q:
+		same = same and want.has(c)
+	check(same, "7. with nothing baked exactly the chunks sight reaches are requested, view or not (%d of %d)" % [q.size(), sighted.size()])
+	eq(_view.missing_sighted(), sighted.size(), "7. missing_sighted() counts them over the whole map")
+	var in_view := {}
+	for c: Vector2i in _view_chunks():
+		in_view[c] = true
+	var worst_in := 0.0
+	var best_out := INF
+	for c: Vector2i in q:
+		if in_view.has(c):
+			worst_in = maxf(worst_in, _view.baker.priority_of(c))
+		else:
+			best_out = minf(best_out, _view.baker.priority_of(c))
+	check(worst_in < best_out, "7. the sighted chunks in the view rank before the sighted ones the view does not show")
+	# b. the background waits until everything in sight is baked, then asks for `jobs` chunks nearest the unit
+	var first_rest: Array = sighted.slice(0, sighted.size() - 1)
+	_fake_baked(first_rest)
+	_view._schedule()
+	eq(_view.baker.queued().size(), 1, "7. one chunk in sight missing: only it is requested, the background waits")
+	_fake_baked(sighted)
+	_view._schedule()
+	var bg_q: Array = _view.baker.queued()
+	eq(bg_q.size(), jobs, "7. everything in sight baked: %d background chunks are requested, no more" % jobs)
+	var near := true
+	for c: Vector2i in bg_q:
+		near = near and not want.has(c) and (Vector2(c) + Vector2(0.5, 0.5)).distance_to((circ[0] as Vector2) / cp) < 4.5
+	check(near, "7. and they are the chunks under the fog nearest the unit")
+	check(_view._bg_only, "7. only the background is running: the smaller budget applies")
+	# c. a view that moves with the sight unchanged re-requests nothing new and reclassifies nothing
+	_clear_chunks()
+	_fake_baked(sighted)
+	_view._schedule()
+	var before: Array = _view.baker.queued().duplicate()
+	var calls_before: int = calls[0]
+	_view._schedule()
+	eq(calls[0], calls_before, "7. a second schedule with the same view and sight classifies nothing again (no hidden_test calls)")
+	_view.look_at_m(Vector2(1260.0, 1255.0))   # a little pan, the same chunks in view
+	_view._schedule()
+	eq(calls[0], calls_before, "7. and a little pan within the same chunks neither")
+	_view.look_at_m(Vector2(3800.0, 1300.0))   # a big pan: new chunks in view, same sight
+	_view._schedule()
+	var after: Array = _view.baker.queued()
+	check(after.size() == before.size(), "7. a pan to another part of the map asks for as much and no more (%d, was %d)" % [after.size(), before.size()])
+	# d. the whole map baked: nothing is requested wherever the camera goes, at any zoom
+	var all: Array = []
+	for cy in ny:
+		for cx in nx:
+			all.append(Vector2i(cx, cy))
+	_clear_chunks()
+	_view.cfg["max_cached_chunks"] = nx * ny + 10
+	_fake_baked(all)
+	for at: Vector2 in [Vector2(250.0, 250.0), Vector2(4800.0, 300.0), Vector2(2500.0, 4900.0), Vector2(4700.0, 4700.0)]:
+		for z: float in [0.3, 1.0, 0.08]:
+			_view.look_at_m(at)
+			_view.set_zoom(z)
+			_view._schedule()
+			eq(_view.baker.queued().size() + _view.baker._jobs.size(), 0, "7. whole map baked: a pan/zoom to %s at %.2f requests no bake" % [at, z])
+	eq(_view.missing_sighted(), 0, "7. and missing_sighted() is 0")
+	# e. sight moves (a unit flew): the classification is redone and the newly sighted chunk is requested
+	_clear_chunks()
+	_fake_baked(all)
+	var target := Vector2i(14, 6)
+	(_view._chunks[target] as Node).free()
+	_view._chunks.erase(target)
+	_view._schedule()
+	var off_bg := float((_view.cfg.get("priority_offsets", {}) as Dictionary).get("background", 100.0))
+	check(_view.baker.queued().has(target) and _view.baker.priority_of(target) >= off_bg, "7. a missing chunk under the fog is a background request (priority %.1f >= %.0f)" % [_view.baker.priority_of(target), off_bg])
+	circ[0] = Vector2(14.0, 6.0) * cp
+	sig[0] = 2
+	_view._schedule()
+	check(_view.baker.queued().has(target) and _view.baker.priority_of(target) < off_bg, "7. sight moved onto it (sight_sig changed): the schedule is redone and it ranks as sighted (%.1f)" % _view.baker.priority_of(target))
+	eq(_view.missing_sighted(), 1, "7. and it is the one chunk missing in sight")
+	# f. the cap holds: a map bigger than max_cached_chunks keeps the sighted chunks and the nearest background
+	_clear_chunks()
+	circ[0] = Vector2(6.0, 6.0) * cp
+	sig[0] = 3
+	_view.cfg["max_cached_chunks"] = 60
+	_fake_baked(all)
+	_view._schedule()
+	check(_view.chunk_count() <= maxi(60, _view_chunks().size()), "7. the cap holds (%d chunks kept of %d, cap 60)" % [_view.chunk_count(), all.size()])
+	var kept_sighted := true
+	for c: Vector2i in sighted:
+		kept_sighted = kept_sighted and _view.has_chunk(c)
+	check(kept_sighted, "7. and every chunk sight reaches is among the kept")
+	_view.hidden_test = Callable()
+	_view.sight_sig = Callable()
+	_view.anchor_points = Callable()
+	_clear_chunks()
+
+# 11. THE FLOOR (Track P2, 2026-10-10; Alex: "showing a stale map seems better then a plain brown square", and "we
+# have to be throwing out work we can reuse"): a rebake keeps what is on screen until the replacement lands, at a new
+# scale too; nothing baked is dropped for the cache cap; the bakes of each chunk are counted.
+func _check_stale_floor() -> void:
+	var cp: float = _view.chunk_px
+	var nx := int(ceil(_view.map_rect().size.x / cp))
+	var ny := int(ceil(_view.map_rect().size.y / cp))
+	# a. no eviction: the cap is above any map this game draws (400 chunks at 4 px/m), and the whole map stays
+	var data_cfg := MapView.load_config(RenderParams.new().source_path)
+	check(int(data_cfg.get("max_cached_chunks", 0)) >= 400, "11. data: max_cached_chunks (%s) holds a whole 4 px/m map (400 chunks): nothing baked is dropped for the cap" % data_cfg.get("max_cached_chunks"))
+	var all: Array = []
+	for cy in ny:
+		for cx in nx:
+			all.append(Vector2i(cx, cy))
+	_clear_chunks()
+	_view.cfg["max_cached_chunks"] = 1000
+	_fake_baked(all)
+	for c: Vector2i in all:
+		(_view._chunks[c] as Sprite2D).position = Vector2(c) * cp   # (the fakes have no place of their own)
+	_view.hidden_test = Callable()
+	_view.look_at_m(Vector2(250.0, 250.0))
+	_view._schedule()
+	eq(_view.chunk_count(), all.size(), "11. the whole map (%d chunks) stays baked after a schedule at a corner, no eviction" % all.size())
+	eq(_view.missing_total(), 0, "11. missing_total() (what the card waits for with load_whole_map) is 0 with the whole map baked")
+	check(not _view.load_whole_map(), "11. data: the card waits for the chunks sight reaches by default (background_bake.load_whole_map is off, proposed)")
+	# b. a rebake keeps the chunks on screen as stale ones, and they cover the same places
+	var serial0: int = _view.chunk_serial
+	var probe_rect := Rect2(Vector2(3, 3) * cp, Vector2(cp, cp))
+	_view.rebake()
+	eq(_view.chunk_count(), 0, "11. rebake(): no fresh chunk")
+	eq(_view.stale_count(), all.size(), "11. but every chunk that was on screen is still there, stale")
+	check(_view.chunk_serial != serial0, "11. and the layers above are told")
+	check(_view.covers_px(probe_rect), "11. a stale chunk covers its place (covers_px)")
+	# c. a fresh chunk lands: the stale sprite it replaces goes, the others stay
+	var tex := ImageTexture.create_from_image(Image.create(8, 8, false, Image.FORMAT_RGBA8))
+	_view._show(Vector2i(3, 3), tex)
+	eq(_view.chunk_count(), 1, "11. one fresh chunk")
+	eq(_view.stale_count(), all.size() - 1, "11. and exactly the stale sprite of that place went")
+	check(_view.covers_px(probe_rect), "11. the place is covered by the fresh chunk")
+	check(_view.covers_px(Rect2(Vector2(4, 4) * cp, Vector2(cp, cp))), "11. a neighbour is still covered, by its stale sprite")
+	# d. a new scale: the stale sprites are scaled to it and still cover the same places
+	var r_before: Rect2 = _view._sprite_rect(_view._stale[0])
+	var ppm0: float = _view.px_per_m
+	_view.set_px_per_m(ppm0 * 2.0)
+	var r_after: Rect2 = _view._sprite_rect(_view._stale[0])
+	check(r_after.size.is_equal_approx(r_before.size * 2.0) and r_after.position.is_equal_approx(r_before.position * 2.0), "11. a new scale: the stale sprites are scaled with it (%s -> %s)" % [r_before, r_after])
+	check(_view.covers_px(Rect2(Vector2(4, 4) * cp * 2.0, Vector2(cp, cp) * 2.0)), "11. and still cover the place they covered, now in the new pixels")
+	# e. the bake counts
+	_view.baker.reset_bake_counts()
+	_view.baker.bake_counts[Vector2i(1, 1)] = 1
+	_view.baker.bake_counts[Vector2i(2, 2)] = 2
+	var re: Array = _view.baker.rebaked()
+	check(re.size() == 1 and re[0][0] == Vector2i(2, 2) and re[0][1] == 2, "11. rebaked() lists the chunks baked more than once (%s)" % [re])
+	_view.baker.reset_bake_counts()
+	# f. the background waits for the camera (Track P2, proposed): while it moves and everything in sight is baked
+	var bg: Dictionary = _view.cfg.get("background_bake", {})
+	check(int(bg.get("yield_to_camera_ms", 0)) > 0, "11. data: background_bake.yield_to_camera_ms is set (%s)" % bg.get("yield_to_camera_ms"))
+	_view.bake_boost = false
+	_view._bg_only = true
+	_view.camera.position += Vector2(40.0, 10.0)
+	check(_view._bg_yielding(), "11. the camera moved: the background's main-thread work waits")
+	_view._cam_moved_ms = Time.get_ticks_msec() - 100000
+	check(not _view._bg_yielding(), "11. the camera has been still for a while: it goes on")
+	_view.camera.position += Vector2(40.0, 10.0)
+	_view._bg_only = false
+	check(not _view._bg_yielding(), "11. a chunk in sight is missing: nothing waits, whatever the camera does")
+	_view._bg_only = true
+	check(not bool(bg.get("yield_to_playback", false)), "11. data: the background bakes through a turn's playback (yield_to_playback is off, proposed)")
+	_view._cam_moved_ms = Time.get_ticks_msec() - 100000
+	_view._cam_sig = Vector3(_view.camera.position.x, _view.camera.position.y, _view.camera.zoom.x)
+	_view.bake_hold = func() -> bool: return true
+	check(not _view._bg_yielding(), "11. a turn is playing back and the switch is off: the background goes on")
+	(_view.cfg["background_bake"] as Dictionary)["yield_to_playback"] = true
+	check(_view._bg_yielding(), "11. the switch on: a turn is playing back, so the background waits")
+	(_view.cfg["background_bake"] as Dictionary)["yield_to_playback"] = false
+	_view.bake_hold = Callable()
+	_view.bake_boost = true
+	check(not _view._bg_yielding(), "11. a loading card is up: nothing waits")
+	_view.bake_boost = false
+	_view._bg_only = false
+	# back to the scale the other checks expect
+	_view.set_px_per_m(ppm0)
+	_clear_chunks()
+	for sp: Sprite2D in _view._stale:
+		sp.free()
+	_view._stale.clear()
+
+# 12. THE GLOBAL TREE SET (Track P2, 2026-10-10; Alex: "one set of globally unique trees of a large amount and
+# sample from that"): the pool is on by default, the set is every (size bucket, variant) the map's trees come in,
+# made ahead of the chunks, and each map tree samples from it: the closest size, the variant its seed picks, no
+# scaling, no rotation.
+func _check_tree_set() -> void:
+	var P := RenderParams.new()
+	var cfg := MapView.load_config(P.source_path)
+	var pool: Dictionary = cfg.get("tree_pool", {})
+	check(bool(pool.get("enabled", false)), "12. data: the tree pool is ON by default (Alex's global set)")
+	var variants := int(pool.get("variants", 0))
+	var bucket_px := float(pool.get("bucket_px", 0.5))
+	var rr: Array = pool.get("prebuild_radius_px", [])
+	check(rr.size() == 2 and float(rr[0]) < 11.4 and float(rr[1]) > 38.5, "12. data: the set's radii (%s px) cover the map's trees (11.4 to 38.5 px at any scale)" % [rr])
+	var baker := ChunkBaker.new(ChunkSceneProvider.new(SEED, P, cfg), P, cfg)
+	var objs: Array = baker.pool_objects()
+	var buckets := roundi(float(rr[1]) / bucket_px) - roundi(float(rr[0]) / bucket_px) + 1
+	eq(objs.size(), buckets * variants, "12. the set is %d buckets x %d variants = %d trees" % [buckets, variants, buckets * variants])
+	check(objs.size() >= 1000 and objs.size() <= 2000, "12. and that is 'about 1,000 to 2,000' (%d)" % objs.size())
+	var in_set := {}
+	for o: Dictionary in objs:
+		in_set[baker.sprite_key(o)] = true
+	eq(in_set.size(), objs.size(), "12. every tree of the set has a key of its own")
+	# sampling: random map trees (radius 11.4 to 38.5 px, any seed) land in the set, near their size
+	var rng := Mulberry32.new(5)
+	var worst_dr := 0.0
+	var all_in := true
+	var used := {}
+	for i in 3000:
+		var t := {"kind": "tree", "r": 11.4 + rng.next() * (38.5 - 11.4), "seed": int(rng.next() * 2147483647.0)}
+		var k := baker.sprite_key(t)
+		all_in = all_in and in_set.has(k)
+		used[k] = true
+		var drawn := baker._pool_tree(t)
+		worst_dr = maxf(worst_dr, absf(float(drawn.r) - float(t.r)))
+		# the variant is the tree's own seed's
+		if baker._pool_variant(t) != absi(int(t.seed)) % variants:
+			all_in = false
+	check(all_in, "12. every one of 3,000 trees samples a tree that is in the set, by its own seed")
+	check(worst_dr <= bucket_px * 0.5 + 1e-6, "12. at the closest size: never more than %.2f px off the tree's radius (worst %.3f px)" % [bucket_px * 0.5, worst_dr])
+	check(used.size() > objs.size() / 2, "12. and they spread over the set (%d of %d sprites used by 3,000 trees)" % [used.size(), objs.size()])
+	# the set is asked for a few pages a frame, first in line
+	eq(baker.prebuild_pool(), objs.size(), "12. prebuild_pool() asks for the whole set")
+	eq(baker.pool_total(), objs.size(), "12. and counts it")
+	for _i in 12:
+		baker._step_pool_requests()
+	eq(baker.pool_done(), 0, "12. nothing is made without a window to draw in (headless)")
+	check(baker._pool_todo.is_empty() and baker._pending.size() == objs.size(), "12. every sprite of it is on its way (%d)" % baker._pending.size())
+	check(not baker.pool_ready(), "12. and the set is not ready")
+	baker.clear(true)
+	eq(baker.pool_total(), 0, "12. clear() drops the request for the set (prebuild again after it)")
+	# a sprite made survives a change that does not touch how it looks (the scale), not one that does (the pen)
+	baker._sprites["k"] = [null, 3, 0]
+	baker.clear(true)
+	check(baker._sprites.has("k"), "12. clear(keep_sprites): a sprite made stays (a scale change)")
+	baker.clear()
+	check(not baker._sprites.has("k"), "12. clear(): all go (a new pen)")
+	# unique-per-tree stays as the off setting
+	baker.pool_enabled = false
+	eq(baker.prebuild_pool(), 0, "12. pool off: there is no set")
+	var ta := {"kind": "tree", "r": 17.0, "seed": 1}
+	var tb := {"kind": "tree", "r": 17.0, "seed": 2}
+	check(baker.sprite_key(ta) != baker.sprite_key(tb), "12. pool off: every tree is its own sprite (unique)")
+	baker.pool_enabled = true
+	var tc := {"kind": "tree", "r": 17.1, "seed": 1 + variants}
+	eq(baker.sprite_key(ta), baker.sprite_key(tc), "12. pool on: two trees of the same size bucket whose seeds agree modulo %d stand on one sprite" % variants)
+	check(baker.sprite_key(ta) != baker.sprite_key(tb), "12. pool on: and with other seeds they sample other trees of that size")
+
+# 8. The sprite cache: a baker whose cache is filled past its cap with stamped fake sprites.
+func _check_sprite_eviction() -> void:
+	var P := RenderParams.new()
+	var cfg := MapView.load_config(P.source_path)
+	cfg["sprite_cache_max"] = 16000
+	var baker := ChunkBaker.new(ChunkSceneProvider.new(SEED, P, cfg), P, cfg)
+	var tex := ImageTexture.new()
+	for i in 16500:
+		baker._sprites["k%d" % i] = [tex, 10, i / 10]   # stamps 0..1649, ten sprites to a stamp
+	baker._evict_sprites()   # (once to warm the allocator: the next is the one timed)
+	for i in 16500:
+		baker._sprites["j%d" % i] = [tex, 10, 2000 + i / 10]
+	var t0 := Time.get_ticks_usec()
+	baker._evict_sprites()
+	var ms := (Time.get_ticks_usec() - t0) / 1000.0
+	var cap: int = baker.sprite_cache_max
+	var target := cap - cap / 4
+	check(baker.sprite_count() <= target + 10 and baker.sprite_count() >= target - 10, "8. over the cap (%d), the cache drops to three quarters of it (%d; asked for %d)" % [cap, baker.sprite_count(), target])
+	check(baker._sprites.has("j16499") and baker._sprites.has("j15500"), "8. the newest sprites stayed")
+	check(not baker._sprites.has("j0") and not baker._sprites.has("k0"), "8. the oldest went")
+	check(ms < 150.0, "8. and it took %.1f ms (the sort it replaced took 100-250 ms every frame over the cap)" % ms)
+	var n: int = baker.sprite_count()
+	baker._evict_sprites()
+	eq(baker.sprite_count(), n, "8. under the cap nothing is touched")
 
 func worst_view_of(list: Array) -> float:
 	var w := 0.0
@@ -438,6 +771,63 @@ func _check_terrain_determinism(cfg: Dictionary) -> void:
 	check(first.size() > 0, "terrain provider: the test chunk has trees")
 	check(_sig(first) == _sig(later), "terrain provider: chunk %s's trees are the same whatever was generated first (%d vs %d)" % [X, first.size(), later.size()])
 
+
+# 9. A provider with K terrains against one with a single terrain.
+func _check_lane_equality(cfg: Dictionary) -> void:
+	var one_cfg := cfg.duplicate()
+	one_cfg["terrain_lanes"] = 1
+	var many_cfg := cfg.duplicate()
+	many_cfg["terrain_lanes"] = 8
+	var one := ChunkTerrainProvider.new(SEED, RenderParams.new(), one_cfg, 2.0)
+	var many := ChunkTerrainProvider.new(SEED, RenderParams.new(), many_cfg, 2.0)
+	if not check(one.ok() and many.ok(), "9. both providers load"):
+		return
+	eq(one.lanes, 1, "9. one terrain")
+	eq(many.lanes, 8, "9. and eight")
+	var bands := {}
+	var rows := many._rows
+	for cy in rows:
+		bands[many.bundle_index(Vector2i(3, many._rows0 + cy))] = true
+	eq(bands.size(), 8, "9. the map's %d chunk rows are dealt to all eight terrains" % rows)
+	var lanes := {}
+	for cy in rows:
+		lanes[many.lane_for(Vector2i(3, many._rows0 + cy), "terrain")] = true
+	eq(lanes.size(), 8, "9. each terrain is a lane of its own")
+	eq(one.lane_for(Vector2i(3, 3), "terrain"), "terrain", "9. a single terrain keeps the lane's old name")
+	eq(many.lane_for(Vector2i(3, 3), "other"), "other", "9. and only the terrain lane is split")
+	var same := true
+	var checked := 0
+	for c: Vector2i in [Vector2i(4, 4), Vector2i(8, 1), Vector2i(2, 8), Vector2i(6, 9), Vector2i(4, 0), Vector2i(1, 5)]:
+		var a: Dictionary = one.chunk_content(c)
+		var b: Dictionary = many.chunk_content(c)
+		var ok_here: bool = _sig(a.trees) == _sig(b.trees) and (a.structs as Array).size() == (b.structs as Array).size()
+		same = same and ok_here
+		checked += 1
+		if not ok_here:
+			fail("9. chunk %s differs between one terrain and eight (%d vs %d trees)" % [c, (a.trees as Array).size(), (b.trees as Array).size()])
+	check(same, "9. %d chunks across the bands hold the same trees and structures from one terrain as from eight" % checked)
+
+# 10. A terrain maker (Track P2, 2026-10-10, proposed): how a layer that changes the ground a terrain stands on
+# (the water's capped height field) makes every bundle's terrain. Water is not wired in; this is the seam.
+func _check_terrain_maker(cfg: Dictionary) -> void:
+	var many_cfg := cfg.duplicate()
+	many_cfg["terrain_lanes"] = 3
+	var prov := ChunkTerrainProvider.new(SEED, RenderParams.new(), many_cfg, 2.0)
+	var made := [0]
+	prov.set_terrain_maker(func(seed_v: int, path: String, params: RenderParams) -> RefCounted:
+		made[0] += 1
+		var t: RefCounted = (load("res://scripts/world/terrain.gd") as GDScript).new(seed_v, path, params)
+		t.set_meta("made_by_maker", true)
+		return t)
+	check(prov.ok(), "10. a provider with a terrain maker loads")
+	eq(made[0], 3, "10. every bundle's terrain came from the maker (3 lanes)")
+	check(prov.terrain.has_meta("made_by_maker"), "10. and bundle 0's is one of them")
+	eq(prov.terrain.px_per_m, 2.0, "10. at the scale the provider was asked for")
+	prov.set_px_per_m(3.0)
+	prov.set_terrain_maker(prov.terrain_maker)
+	eq(prov.terrain.px_per_m, 3.0, "10. a maker set after a scale change keeps that scale")
+	var plain := ChunkTerrainProvider.new(SEED, RenderParams.new(), many_cfg, 3.0)
+	check(_sig(plain.chunk_content(Vector2i(4, 4)).trees) == _sig(prov.chunk_content(Vector2i(4, 4)).trees), "10. a maker that builds the plain terrain changes nothing about a chunk's trees")
 
 # 6. The village in the terrain provider's chunk content, and the stages that bake it.
 func _check_village_content(cfg: Dictionary) -> void:

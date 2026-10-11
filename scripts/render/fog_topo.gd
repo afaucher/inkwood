@@ -159,13 +159,33 @@ func make_canvas(c: Vector2i, texels_per_px: float) -> InkCanvas:
 	record_chunk(g, c, view_for(c, texels_per_px))
 	return g
 
+# MAIN THREAD only (it reads the shared CameraData, which records what it hands out): a FogTopo over
+# a PRIVATE Terrain -- same seed, data and scale, so the same geometry bit for bit -- for one worker
+# thread to record on. FogTopoBaker makes one per recorder and uses each from one task at a time.
+#
+# `terrain_maker` (seed, data_path, params) -> Terrain says how the twin's terrain is made. Unset: the SAME CLASS as
+# the layer's terrain (terrain.get_script()), so a subclass keeps its geometry. A layer that changes the ground
+# after construction (the water's cap on the height field: scripts/world/water_gen.gd, set_cap before the first
+# chunk) sets a maker that does the same to every twin, or the twins would draw a different contour map than the
+# one the sight and the units read (proposed, Track P2, 2026-10-10: FogLayer.set_terrain_maker sets it).
+var terrain_maker: Callable = Callable()
+
+func make_twin() -> RefCounted:
+	var twin_terrain: Terrain
+	if terrain_maker.is_valid():
+		twin_terrain = terrain_maker.call(terrain.seed_value, terrain.data.source_path, terrain.P)
+	else:
+		twin_terrain = (terrain.get_script() as GDScript).new(terrain.seed_value, terrain.data.source_path, terrain.P)
+	twin_terrain.px_per_m = terrain.px_per_m
+	var twin: RefCounted = load("res://scripts/render/fog_topo.gd").new(twin_terrain, data, P)
+	twin.terrain_maker = terrain_maker
+	return twin
+
 # MAIN THREAD, once: the private twin make_canvas_threaded() records on.
 func prepare_threaded() -> void:
 	if _twin != null:
 		return
-	var twin_terrain := Terrain.new(terrain.seed_value, terrain.data.source_path, terrain.P)
-	twin_terrain.px_per_m = terrain.px_per_m
-	_twin = load("res://scripts/render/fog_topo.gd").new(twin_terrain, data, P)
+	_twin = make_twin()
 
 func has_twin() -> bool:
 	return _twin != null

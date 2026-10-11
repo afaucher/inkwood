@@ -46,12 +46,23 @@ extends "res://scripts/render/chunk_provider.gd"
 # a chunk the village does not reach takes none of the new branches and bakes exactly as before.
 #
 # T's caches are not thread-safe, so every call into the Terrain object holds
-# _tmutex: workers wait for it, main-thread stages only try it (a stage that
+# its mutex: workers wait for it, main-thread stages only try it (a stage that
 # finds it held returns null and runs next frame), so a main frame never
 # blocks on generation. The worker stages that call T run in the baker's
 # "terrain" LANE, one at a time, so none holds a worker slot while it waits
 # for the lock; and warm_chunk() generates the next ring ahead of the camera
 # whenever that lane is idle.
+#
+# SEVERAL TERRAINS, SEVERAL LANES (Track P, 2026-10-10; data map_view.terrain_lanes). One lane was the
+# serial part of every bake: 255 ms of generation and 190 of silhouettes and linework per chunk, the
+# critical path of the first view (11 s of the 24 chunks' 22 s). Terrain is deterministic in (seed,
+# chunk) and its caches are private, so the provider keeps K BUNDLES -- a Terrain with its own
+# TerrainDraw, TerrainShadows, VillageDraw and mutex -- and deals the map's chunk ROWS to them in
+# bands (each bundle generates its own rows and the margin its neighbours reach into, once). Each
+# bundle is a lane of its own ("terrain0", "terrain1", ...: lane_for), so K chunks generate side by
+# side. The same seed and data give the same geometry bit for bit, so a chunk's pixels do not depend
+# on which bundle made it (test_map_view's determinism checks and scripts/render/map_look_hash.gd hold
+# that). `terrain`, `td`, `ts`, `vd` are bundle 0's, for tools and tests that look at one.
 #
 # SCALE: px_per_m comes from data/terrain/terrain.json (T's scale.px_per_m)
 # unless the MapView overrides it; set_px_per_m() regenerates from scratch
@@ -64,13 +75,26 @@ const VillageDraw = preload("res://scripts/render/village_draw.gd")
 const Geometry = preload("res://scripts/core/geometry.gd")
 const TERRAIN_DATA_PATH := "res://data/terrain/terrain.json"
 
-var terrain: Terrain
+# One terrain with the drawing helpers bound to it and the lock its caches need.
+class Bundle:
+	var terrain: Terrain
+	var td: TerrainDraw
+	var ts: TerrainShadows
+	var vd: VillageDraw
+	var mutex := Mutex.new()
+
+var terrain: Terrain           # bundle 0's, and td, ts, vd below
 var td: TerrainDraw
 var ts: TerrainShadows
 var vd: VillageDraw
 var errors: Array[String] = []
+var lanes := 1                 # bundles (map_view.terrain_lanes)
 
-var _tmutex := Mutex.new()
+var _bundles: Array = []       # Bundle; [0] holds the objects above
+var _tmutex: Mutex             # bundle 0's
+var _ppm0 := 0.0               # the scale the MapView asked for (0: the data's)
+var _rows0 := 0                # first chunk row of the map (baker chunks) and how many rows
+var _rows := 1
 var _merge_mat_shader: Shader
 
 func _init(seed_v: int, params: RenderParams, view_cfg: Dictionary, px_per_m: float = 0.0) -> void:
@@ -78,17 +102,49 @@ func _init(seed_v: int, params: RenderParams, view_cfg: Dictionary, px_per_m: fl
 	P = params
 	P.L["road"] = false
 	chunk_px = int(view_cfg.get("chunk_px", 1024))
-	terrain = Terrain.new(seed_v, TERRAIN_DATA_PATH, P)
-	if px_per_m > 0.0:
-		terrain.px_per_m = px_per_m
-	td = TerrainDraw.new(terrain, P)
-	ts = TerrainShadows.new(terrain, P)
-	vd = VillageDraw.new(terrain, P)
+	lanes = maxi(1, int(view_cfg.get("terrain_lanes", 1)))
+	_ppm0 = px_per_m
+	_build_bundles()
+
+# How the provider's terrains are made: (seed, data_path, params) -> Terrain. Unset: Terrain.new. A layer that
+# changes the ground a terrain stands on (the water's capped height field, scripts/world/water_gen.gd: a
+# subclass with set_cap installed before its first chunk) hands the provider a maker, and EVERY bundle is made
+# with it, so the bundles stay the same terrain (proposed, Track P2, 2026-10-10; water is wired in later and
+# goes through here). Call it before prepare(): it makes the bundles again.
+var terrain_maker: Callable = Callable()
+
+func set_terrain_maker(fn: Callable) -> void:
+	terrain_maker = fn
+	_bundles.clear()
+	errors.clear()
+	_build_bundles()
+
+func _make_terrain() -> Terrain:
+	var t: Terrain = terrain_maker.call(seed_value, TERRAIN_DATA_PATH, P) if terrain_maker.is_valid() else Terrain.new(seed_value, TERRAIN_DATA_PATH, P)
+	if _ppm0 > 0.0:
+		t.px_per_m = _ppm0
+	return t
+
+func _build_bundles() -> void:
+	for i in lanes:
+		var b := Bundle.new()
+		b.terrain = _make_terrain()
+		b.td = TerrainDraw.new(b.terrain, P)
+		b.ts = TerrainShadows.new(b.terrain, P)
+		b.vd = VillageDraw.new(b.terrain, P)
+		_bundles.append(b)
+	var b0: Bundle = _bundles[0]
+	terrain = b0.terrain
+	td = b0.td
+	ts = b0.ts
+	vd = b0.vd
+	_tmutex = b0.mutex
 	if not terrain.ok():
 		errors.append_array(terrain.errors)
 		errors.append_array(terrain.data.errors)
 	errors.append_array(td.errors)
 	errors.append_array(vd.errors)
+	_set_rows()
 
 func ok() -> bool:
 	return errors.is_empty()
@@ -99,9 +155,10 @@ func prepare() -> void:
 	_merge_mat_shader.code = TerrainShadows._MERGE_SHADER
 	# T's cut and fill shaders are made on their first (main-thread) use.
 	# The world layout and the village are made here, on the main thread, before any worker asks.
-	_tmutex.lock()
-	terrain.village()
-	_tmutex.unlock()
+	for b: Bundle in _bundles:
+		b.mutex.lock()
+		b.terrain.village()
+		b.mutex.unlock()
 
 # The village at the current scale (null when there is none), made under the terrain lock.
 func village() -> RefCounted:
@@ -109,6 +166,30 @@ func village() -> RefCounted:
 	var v: RefCounted = terrain.village()
 	_tmutex.unlock()
 	return v
+
+# The village's drawing style, in every bundle (the tools that compare styles).
+func set_village_style(style: String) -> void:
+	for b: Bundle in _bundles:
+		b.vd.style = style
+
+# The map's chunk rows (baker chunks) the bands are cut from.
+func _set_rows() -> void:
+	var mr := terrain.map_rect_px()
+	_rows0 = floori(mr.position.y / chunk_px)
+	_rows = maxi(1, ceili(mr.end.y / chunk_px) - _rows0)
+
+# The bundle for baker chunk c: bands of rows.
+func bundle_index(c: Vector2i) -> int:
+	return clampi((c.y - _rows0) * lanes / _rows, 0, lanes - 1)
+
+func _bundle(c: Vector2i) -> Bundle:
+	return _bundles[bundle_index(c)]
+
+# The lane a stage runs in for chunk c: "terrain" is one lane per bundle.
+func lane_for(c: Vector2i, lane: String) -> String:
+	if lane == "terrain" and lanes > 1:
+		return "terrain%d" % bundle_index(c)
+	return lane
 
 func px_per_m() -> float:
 	return terrain.px_per_m
@@ -119,17 +200,21 @@ func map_rect_px() -> Rect2:
 
 # A new scale: everything T generated is dropped (it is generated in px).
 func set_px_per_m(v: float) -> void:
-	_tmutex.lock()
-	terrain.px_per_m = v
-	terrain.clear_cache()
-	vd.forget()
-	_tmutex.unlock()
+	_ppm0 = v
+	for b: Bundle in _bundles:
+		b.mutex.lock()
+		b.terrain.px_per_m = v
+		b.terrain.clear_cache()
+		b.vd.forget()
+		b.mutex.unlock()
+	_set_rows()
 
 func clear_cache() -> void:
-	_tmutex.lock()
-	terrain.clear_cache()
-	vd.forget()
-	_tmutex.unlock()
+	for b: Bundle in _bundles:
+		b.mutex.lock()
+		b.terrain.clear_cache()
+		b.vd.forget()
+		b.mutex.unlock()
 
 func reach_px() -> float:
 	return ts.reach_px()
@@ -142,13 +227,14 @@ func warm_lane() -> String:
 # One of T's own chunks per lock hold (T generates per chunk_m, 256 m), so a
 # warm task never keeps the lock -- or a waiting bake -- for long.
 func warm_chunk(c: Vector2i) -> void:
-	_tmutex.lock()
-	var cells := terrain.chunks_in_rect_px(chunk_rect(c).grow(ts.reach_px()))
-	_tmutex.unlock()
+	var b := _bundle(c)
+	b.mutex.lock()
+	var cells := b.terrain.chunks_in_rect_px(chunk_rect(c).grow(b.ts.reach_px()))
+	b.mutex.unlock()
 	for t in cells:
-		_tmutex.lock()
-		terrain.trees_in_chunk(t.x, t.y)
-		_tmutex.unlock()
+		b.mutex.lock()
+		b.terrain.trees_in_chunk(t.x, t.y)
+		b.mutex.unlock()
 
 func stages() -> Array:
 	return [
@@ -174,12 +260,13 @@ func stages() -> Array:
 # T draws them: base + h, then y, then x -- the terrain's own and the hedge trees of the fields
 # (Track W) -- and the village's structures that reach it. Pure in (seed, chunk).
 func chunk_content(c: Vector2i) -> Dictionary:
-	var grown := chunk_rect(c).grow(ts.reach_px())
-	_tmutex.lock()
-	var trees: Array = terrain.trees_in_rect_px(grown)
-	var vil: RefCounted = terrain.village()
-	var hedges: Array = vd.hedge_trees(vil) if vil != null else []
-	_tmutex.unlock()
+	var b := _bundle(c)
+	var grown := chunk_rect(c).grow(b.ts.reach_px())
+	b.mutex.lock()
+	var trees: Array = b.terrain.trees_in_rect_px(grown)
+	var vil: RefCounted = b.terrain.village()
+	var hedges: Array = b.vd.hedge_trees(vil) if vil != null else []
+	b.mutex.unlock()
 	var copies: Array = []
 	for t: Dictionary in trees:
 		copies.append(t.duplicate())
@@ -210,13 +297,14 @@ func _gather(job: Dictionary) -> Dictionary:
 	var content := chunk_content(c)
 	# Warm T's caches for everything the later stages touch, so the main-thread
 	# stages only read them.
-	var scarp := terrain.scarp_m * terrain.px_per_m
-	_tmutex.lock()
-	for ch in terrain.chunks_in_rect_px(rect.grow(maxf(ts.reach_px(), scarp * 2.0))):
-		for k in terrain.thresholds.size():
-			terrain.chains_px(ch.x, ch.y, k)
-			terrain.polys_px(ch.x, ch.y, k)
-	_tmutex.unlock()
+	var b := _bundle(c)
+	var scarp := b.terrain.scarp_m * b.terrain.px_per_m
+	b.mutex.lock()
+	for ch in b.terrain.chunks_in_rect_px(rect.grow(maxf(b.ts.reach_px(), scarp * 2.0))):
+		for k in b.terrain.thresholds.size():
+			b.terrain.chains_px(ch.x, ch.y, k)
+			b.terrain.polys_px(ch.x, ch.y, k)
+	b.mutex.unlock()
 	var sprite_objects: Array = (content.trees as Array).duplicate()
 	sprite_objects.append_array(content.structs)
 	return {"data": {"trees": content.trees, "structs": content.structs, "village": content.village,
@@ -227,7 +315,7 @@ func _ground(job: Dictionary) -> Dictionary:
 	# the village's fields and road (Track W): a chunk it does not reach draws nothing more
 	var vil: Variant = job.data.get("village")
 	if vil != null:
-		vd.draw_ground(g, vil, job.rect)
+		_bundle(job.c).vd.draw_ground(g, vil, job.rect)
 		g.set_transform_matrix(job.view)
 	return {"data": {"g": g}}
 
@@ -235,13 +323,14 @@ func _ground(job: Dictionary) -> Dictionary:
 # where the level is k+1 or more, black elsewhere (terrain_draw.gd,
 # level_masks -- the same fills in the same order).
 func _levels(job: Dictionary) -> Variant:
-	if not _tmutex.try_lock():
+	var b := _bundle(job.c)
+	if not b.mutex.try_lock():
 		return null
 	var view: Transform2D = job.view
 	var size: Vector2i = job.size
-	var chunks := terrain.chunks_in_rect_px(TerrainDraw.view_rect(view, size))
+	var chunks := b.terrain.chunks_in_rect_px(TerrainDraw.view_rect(view, size))
 	var out: Array = []
-	for k in terrain.thresholds.size():
+	for k in b.terrain.thresholds.size():
 		var g := InkCanvas.new(size)
 		g.fill_color = Color.BLACK
 		g.fill_rect(0.0, 0.0, float(size.x), float(size.y))
@@ -251,7 +340,7 @@ func _levels(job: Dictionary) -> Variant:
 		var rings: Array = []
 		var any := false
 		for ch in chunks:
-			for poly: Dictionary in terrain.polys_px(ch.x, ch.y, k):
+			for poly: Dictionary in b.terrain.polys_px(ch.x, ch.y, k):
 				if poly.border:
 					TerrainDraw._add_poly(g, poly.pts)
 					any = true
@@ -259,24 +348,25 @@ func _levels(job: Dictionary) -> Variant:
 					rings.append(poly)
 		if any:
 			g.fill()
-		rings.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return absf(a.area) > absf(b.area))
+		rings.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return absf(x.area) > absf(y.area))
 		for ring: Dictionary in rings:
 			g.fill_color = Color.WHITE if ring.area > 0.0 else Color.BLACK
 			g.begin_path()
 			TerrainDraw._add_poly(g, ring.pts)
 			g.fill()
 		out.append(g)
-	_tmutex.unlock()
+	b.mutex.unlock()
 	return out
 
 func _terrain_sil(job: Dictionary) -> Dictionary:
 	var parts: Array = []
-	_tmutex.lock()
-	for r in terrain.level_count() - 1:
+	var b := _bundle(job.c)
+	b.mutex.lock()
+	for r in b.terrain.level_count() - 1:
 		var sp := ShadowPass.new(job.size)
-		var n := ts.add_terrain_silhouettes(sp, r, job.view, job.rect)
+		var n := b.ts.add_terrain_silhouettes(sp, r, job.view, job.rect)
 		parts.append([r, sp, n])
-	_tmutex.unlock()
+	b.mutex.unlock()
 	return {"data": {"terrain_sps": parts}}
 
 func _terrain_cut(job: Dictionary) -> Variant:
@@ -337,12 +427,13 @@ func _struct_merge(job: Dictionary) -> Variant:
 
 func _tree_sil(job: Dictionary) -> Dictionary:
 	var parts: Array = []
-	_tmutex.lock()
-	for r in terrain.level_count():
+	var b := _bundle(job.c)
+	b.mutex.lock()
+	for r in b.terrain.level_count():
 		var sp := ShadowPass.new(job.size)
-		var n := ts.add_tree_silhouettes(sp, job.data.trees, r, job.view)
+		var n := b.ts.add_tree_silhouettes(sp, job.data.trees, r, job.view)
 		parts.append([r, sp, n])
-	_tmutex.unlock()
+	b.mutex.unlock()
 	return {"data": {"tree_sps": parts}}
 
 func _tree_cut(job: Dictionary) -> Variant:
@@ -386,9 +477,10 @@ func _fill(job: Dictionary) -> Array:
 	return []
 
 func _linework(job: Dictionary) -> Array:
-	_tmutex.lock()
-	td.draw_linework(job.data.g, job.view, job.rect)
-	_tmutex.unlock()
+	var b := _bundle(job.c)
+	b.mutex.lock()
+	b.td.draw_linework(job.data.g, job.view, job.rect)
+	b.mutex.unlock()
 	return []
 
 func _frame(job: Dictionary) -> Array:

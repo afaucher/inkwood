@@ -275,6 +275,7 @@ func _build_scene() -> void:
 	vp.add_child(ctl)
 	fog = FogLayer.new()
 	fog.setup(terrain, P)
+	fog.mask_mode = FogLayer.MASK_TEXTURE   # this shot reads the mask texture back and holds it to the CPU formula; the default analytic sight has no texture
 	fog.controller = ctl
 	fog.auto_bake = false
 	vp.add_child(fog)

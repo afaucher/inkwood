@@ -68,7 +68,7 @@ func _board() -> int:
 	var play_images: Array[Image] = []
 	for o: Dictionary in OPTIONS:
 		print("[fields-board] option %s: %s (style %s)" % [o.name, o.title, o.style])
-		view.provider.vd.style = o.style
+		view.provider.set_village_style(o.style)
 		view.rebake()
 		var entry := {"option": o.name, "label": "%s - %s" % [o.name, o.title], "changes": o.changes, "note": o.note, "rows": []}
 		# the zooms, far first (it bakes the chunks the closer ones reuse)

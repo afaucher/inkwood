@@ -5,9 +5,15 @@
 // where it is in sight. Everything is a uniform from data/view/fog.json and
 // camera.json; every colour arrives resolved from a palette role (rule 6).
 //
-// mask: fog_mask.gdshader's texture, the same size ratio as the screen, so
-// SCREEN_UV addresses it. Its value is a clamped signed distance: (m - .5) x 2
-// x range_px is SCREEN px from the vision edge, positive inside.
+// SIGHT, two ways to the same number -- the clamped signed distance to the vision edge, in SCREEN px,
+// positive inside:
+//   analytic (the default, scripts/render/fog_layer.gd mask.mode "analytic"): the vision circles are
+//   uniforms in MAP px and this shader takes max over the circles of (r - |world - c|) x zoom, clamped
+//   to +/- range_px. Nothing is rendered for the mask, so a pan costs no mask pass; the circles are
+//   uploaded only when sight changes.
+//   texture: fog_mask.gdshader's texture, the same size ratio as the screen, so SCREEN_UV addresses it.
+//   Its value is a clamped signed distance: (m - .5) x 2 x range_px. Used when a unit has a viewshed
+//   shape (fog_mask_los.gdshader draws that), and by tests and fog_shot.gd (mask.mode "texture").
 //
 // edge_mode 0, INKED: a hard cut (1 px antialiased) on the edge with
 //   world-anchored wobble, an ink line on it, and ink hatching on the fog side
@@ -25,6 +31,14 @@ shader_type canvas_item;
 render_mode unshaded;
 
 uniform sampler2D mask : filter_linear, repeat_disable;
+// FORCED chunks (Track P2: "showing a stale map seems better then a plain brown square"): one texel per chunk of the
+// map, white where the ground under the chunk is not baked yet. There the contour map shows whatever the sight says,
+// with no edge. forced_rect: the grid's origin and size in MAP px.
+uniform sampler2D forced_mask : filter_nearest, repeat_disable, hint_default_black;
+uniform vec4 forced_rect = vec4(0.0, 0.0, 1.0, 1.0);
+uniform bool analytic = false;
+uniform int circle_count = 0;
+uniform vec4 circles[64];      // x, y, r in MAP px; w unused
 uniform float range_px = 64.0;
 uniform int edge_mode = 0;
 uniform float zoom = 1.0;
@@ -75,8 +89,20 @@ void vertex() {
 }
 
 void fragment() {
+	vec2 fuv = (world - forced_rect.xy) / forced_rect.zw;
+	bool forced = fuv.x >= 0.0 && fuv.y >= 0.0 && fuv.x < 1.0 && fuv.y < 1.0 && texture(forced_mask, fuv).r > 0.5;
 	vec4 topo = texture(TEXTURE, UV) * COLOR;
-	float sdf = (texture(mask, SCREEN_UV).r - 0.5) * 2.0 * range_px;
+	float sdf;
+	if (analytic) {
+		float best = -1.0e9;
+		for (int i = 0; i < circle_count; i++) {
+			vec4 c = circles[i];
+			best = max(best, c.z - distance(world, c.xy));
+		}
+		sdf = clamp(best * zoom, -range_px, range_px);
+	} else {
+		sdf = (texture(mask, SCREEN_UV).r - 0.5) * 2.0 * range_px;
+	}
 	vec2 s = world * zoom;
 	float vis;
 	float line = 0.0;
@@ -94,6 +120,11 @@ void fragment() {
 	} else {
 		float n = (vnoise(s * soft_wobble_freq) - 0.5) * 2.0 + (vnoise(s * soft_wobble_freq * 2.7 + 17.0) - 0.5);
 		vis = smoothstep(-feather_px * 0.5, feather_px * 0.5, sdf + n * soft_wobble_px);
+	}
+	if (forced) {
+		vis = 0.0;
+		line = 0.0;
+		hatch = 0.0;
 	}
 	float fog = mix(1.0 - vis, 1.0, overview);
 	vec3 col = mix(topo.rgb, outside_color.rgb, outside_color.a * (1.0 - vis) * overview);

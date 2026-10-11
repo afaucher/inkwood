@@ -63,6 +63,9 @@ func _map() -> void:
 	var view = MapView.new(20261009, Rect2(), 0.0, "", RenderParams.new())
 	view.bake_enabled = false
 	view.input_enabled = false
+	if str(opts.get("pool", "")) != "":   # pool=off: a sprite per tree (the look before the global tree set); pool=on: the set
+		(view.cfg.get("tree_pool", {}) as Dictionary)["enabled"] = str(opts["pool"]) == "on"
+		view.baker.apply_config(view.cfg)
 	var baker = view.baker
 	var list: Array[Vector2i] = [Vector2i(4, 4), Vector2i(5, 3), Vector2i(2, 6)]
 	for i in list.size():

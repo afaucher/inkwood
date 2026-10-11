@@ -75,7 +75,7 @@ static func make_view(tree_root: Node, seed_v: int, ppm: float, style: String) -
 	view.input_enabled = false
 	view.bake_enabled = false
 	if style != "":
-		view.provider.vd.style = style
+		view.provider.set_village_style(style)
 	vp.add_child(view)
 	return [vp, view]
 
