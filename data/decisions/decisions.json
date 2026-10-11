@@ -1732,6 +1732,53 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Lets also look at some other control schemes for panning. The r-mouse doesn't feel right but I am not sure what the most typical way is to deal with multiple onscreen interactive elements and map-style pan/zoom at the same time.' Then, of the camera session's options A to D: 'B. Left-drag on empty map pans, left-drag on a thing acts on it'. Not decided: whether right-drag and middle-drag panning stay (both still pan), whether right-click stays the point target, Space + drag (D, not added). The slop of 4 px is PROPOSED."
+    },
+    {
+      "id": "pan-right-drag-off",
+      "date": "2026-10-11",
+      "area": "Camera",
+      "question": "With left-drag on empty map panning (pan-left-drag), keep right-drag panning, or remove it so the right button only sets targets?",
+      "board": "none (said in chat)",
+      "options": [
+        "keep right-drag panning",
+        "remove it: the right button sets targets only"
+      ],
+      "chosen": "remove it",
+      "parameters": {
+        "pan.drag_buttons": [
+          "middle"
+        ]
+      },
+      "applied_to": [
+        "data/view/camera.json pan.drag_buttons [middle] (was [middle, right])",
+        "scripts/app/sandbox.gd: the key hint says 'drag the map or WASD pans'",
+        "scripts/app/demo_shot.gd: its real-input check drags with the middle button",
+        "scripts/tests/test_camera.gd (PAN), test_ui_target.gd"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex, to the camera session's question 'Right-drag pan: keep it, or remove it so the right button only sets targets?': '2. remove it'. Middle-drag, WASD and arrows, a two-finger trackpad pan and left-drag on empty map still pan."
+    },
+    {
+      "id": "pan-stops-at-edge",
+      "date": "2026-10-11",
+      "area": "Camera",
+      "question": "How far out may the player zoom and pan? Keep 'whole map fits' as the zoom-out limit and stop panning past the edge, or limit zoom-out so the map always fills the screen?",
+      "board": "none (said in chat)",
+      "options": [
+        "keep 'whole map fits' (fit_map) and stop panning past the edge",
+        "limit zoom-out so the map always fills the screen, and scroll"
+      ],
+      "chosen": "keep 'whole map fits' and stop panning past the edge (the camera session's pick)",
+      "parameters": {
+        "pan.edge_overscroll_m": 100
+      },
+      "applied_to": [
+        "scripts/world/camera_controller.gd set_view: the free area shows at most pan.edge_overscroll_m past the map's edge; centred on an axis where it is wider",
+        "data/view/camera.json pan.edge_overscroll_m (100 m, proposed), which replaced pan.map_margin_m (1000 m on the view centre)",
+        "scripts/tests/test_camera.gd (CLAMPS, insets)"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex, to the camera session's question 'Zoom-out limit: keep whole map fits and stop panning past the edge (my pick), or make the map always fill the screen?': '4. your pick'. The 100 m band is PROPOSED (the map border board shows it). Trade-off: a plane more than 100 m outside the map cannot be centred or followed."
     }
   ]
 }

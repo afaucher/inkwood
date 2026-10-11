@@ -32,7 +32,7 @@ extends Node
 # from a Terrain: it watches terrain.px_per_m each frame -- keeps the view on
 # the same point in METRES and keeps the ZOOM, because the render's detail
 # (trees, linework) is drawn in map px at any scale: what changes is how many
-# metres the same-looking view covers. Limits in metres (pan.map_margin_m) and
+# metres the same-looking view covers. Limits in metres (pan.edge_overscroll_m) and
 # the fit_map zoom-out limit follow; zoom.max and far_zoom stay in map px.
 #
 # INPUT (_unhandled_input, so the roster and the planner see events first). A
@@ -88,7 +88,7 @@ var trackpad_px: float
 var left_drag_slop: float
 var drag_buttons: Array[int] = []
 var key_codes: Dictionary = {}    # action -> Array[int] of physical keycodes
-var map_margin_px: float
+var edge_overscroll_px: float
 var follow_rate: float
 var break_on_pan: bool
 var frame_margin: float
@@ -133,7 +133,7 @@ func set_scale(map_px: Rect2, ppm: float) -> void:
 	var centre_m := camera.position / px_per_m if camera != null else Vector2.ZERO
 	px_per_m = ppm
 	map_rect_px = map_px
-	map_margin_px = data.num("pan.map_margin_m") * px_per_m
+	edge_overscroll_px = data.num("pan.edge_overscroll_m") * px_per_m
 	if camera != null:
 		set_view(centre_m * px_per_m, camera.zoom.x)
 
@@ -191,7 +191,7 @@ func _load() -> void:
 			else:
 				codes.append(code)
 		key_codes[action] = codes
-	map_margin_px = data.num("pan.map_margin_m") * px_per_m
+	edge_overscroll_px = data.num("pan.edge_overscroll_m") * px_per_m
 	follow_rate = data.num("follow.smoothing_per_s")
 	break_on_pan = data.flag("follow.break_on_pan")
 	frame_margin = data.num("frame.margin_px")
@@ -256,26 +256,37 @@ func is_fit_zoom(z: float) -> bool:
 func clamp_zoom(z: float) -> float:
 	return clampf(z, zoom_limit_min(), zoom_max)
 
-# Sets centre (map px) and zoom, clamped: zoom to the range, and the centre of the FREE
-# area (the view less the HUD insets) to the map grown by pan.map_margin_m. At the
-# "fit_map" zoom-out limit the free area is centred on the map: pos = map centre -
-# (left - right, top - bottom) / (2 zoom), so the sidebar does not cover it. With no
-# insets this is the plain clamp of the camera's centre.
+# Sets centre (map px) and zoom, clamped: zoom to the range, and THE VIEW TO THE MAP (Alex,
+# 2026-10-11, decision pan-stops-at-edge): the FREE area (the view less the HUD insets) shows at
+# most pan.edge_overscroll_m past the map's edge; along an axis where it is wider than the map
+# and that band it is centred on the map. At the "fit_map" zoom-out limit the free area is
+# centred on the map: pos = map centre - (left - right, top - bottom) / (2 zoom), so the
+# sidebar does not cover it.
 func set_view(c: Vector2, z: float) -> void:
 	var zz := clamp_zoom(z)
-	var lim := map_rect_px.grow(map_margin_px)
+	var lim := map_rect_px.grow(edge_overscroll_px)
 	var shift := inset_offset() / zz     # the camera centre sits this far from the free area's centre
 	var free_c := c + shift
+	var half := free_size() * 0.5 / zz   # the free area's half size, map px
+	var mid := map_rect_px.get_center()
 	var cc: Vector2
 	if is_fit_zoom(zz):
-		cc = map_rect_px.get_center() - shift
+		cc = mid - shift
 	else:
-		cc = Vector2(clampf(free_c.x, lim.position.x, lim.end.x), clampf(free_c.y, lim.position.y, lim.end.y)) - shift
+		cc = Vector2(_clamp_axis(free_c.x, half.x, lim.position.x, lim.end.x, mid.x),
+			_clamp_axis(free_c.y, half.y, lim.position.y, lim.end.y, mid.y)) - shift
 	if cc == camera.position and zz == camera.zoom.x:
 		return
 	camera.position = cc
 	camera.zoom = Vector2(zz, zz)
 	view_changed.emit()
+
+# One axis of set_view's clamp: a span of half-size `half` centred at `c` kept inside [lo, hi], or centred
+# on `mid` when it is wider than that.
+static func _clamp_axis(c: float, half: float, lo: float, hi: float, mid: float) -> float:
+	if hi - lo <= 2.0 * half:
+		return mid
+	return clampf(c, lo + half, hi - half)
 
 # --- transforms ---------------------------------------------------------------------
 
