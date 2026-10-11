@@ -11,6 +11,8 @@ extends SceneTree
 #   variants=N      override tree_pool.variants (the size of the set is variants x the buckets)
 #   boost=1         the loading card's budget (map_view.bake_budget_loading_ms, 14 ms a frame; the default)
 #   timeout=S       give up after S seconds (default 900)
+#   water=on|off    the live map's water (WaterGen.shared of the seed; Track WB, Job 3): the capped terrain, the wash and the ink lines
+#   dump=DIR        save every baked chunk as DIR/chunk_<x>_<y>.png
 #
 # Prints the seconds until the set was made, until the first chunk, until every chunk asked for, the mean chunk time
 # (a job's first stage to its texture, so it includes waiting for a worker), the workers' time by stage, the main
@@ -39,7 +41,12 @@ func _run() -> void:
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	vp.disable_3d = true
 	root.add_child(vp)
-	var view = MapView.new(20261009, Rect2(), 0.0, "terrain")
+	var water: RefCounted = null
+	if str(opts.get("water", "off")) == "on":
+		var t_w := Time.get_ticks_usec()
+		water = load("res://scripts/world/water_gen.gd").shared(20261009)
+		print("[mapbench] the water of seed 20261009 built in %.0f ms (ok %s)" % [(Time.get_ticks_usec() - t_w) / 1000.0, water.ok()])
+	var view = MapView.new(20261009, Rect2(), 0.0, "terrain", null, water)
 	view.input_enabled = false
 	view.bake_enabled = false   # (this tool asks for the chunks itself)
 	var pool_on := str(opts.get("pool", "on")) == "on"
@@ -58,6 +65,9 @@ func _run() -> void:
 	var centre := mr.get_center() / cp
 	all.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return (Vector2(a) + Vector2(0.5, 0.5)).distance_to(centre) < (Vector2(b) + Vector2(0.5, 0.5)).distance_to(centre))
 	var want: int = all.size() if str(opts.get("chunks", "21")) == "all" else mini(int(opts.get("chunks", "21")), all.size())
+	var dump := str(opts.get("dump", ""))
+	if dump != "":
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dump))
 	var set_n := 0
 	if pool_on:
 		set_n = view.prebuild_pool()
@@ -79,6 +89,8 @@ func _run() -> void:
 		last = now
 		for r: Dictionary in view.baker.step(budget_us):
 			view._show(r.c, r.texture)
+			if dump != "":
+				(r.texture as Texture2D).get_image().save_png("%s/chunk_%d_%d.png" % [dump, r.c.x, r.c.y])
 		if t_set < 0.0 and pool_on and view.baker.pool_ready():
 			t_set = (Time.get_ticks_msec() - t0) / 1000.0
 		if t_first < 0.0 and view.chunk_count() > 0:

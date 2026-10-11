@@ -24,6 +24,7 @@ extends SceneTree
 #   phases=rescale,repen   the map scale knob to 3 px/m, then the pen knob: the frames while the map is redrawn
 #   phases=playback   n turns played back with the camera still (turns=N, default 2); bgyield=0: the background bake does not wait
 #   loadwhole=1  the loading card waits for EVERY chunk of the map (background_bake.load_whole_map)
+#   prewarm=1    make the scenario's water ahead on a thread first, as the menu does (Sandbox.prewarm), and print its time apart
 #   twins=N      the fog's recorder threads (FogLayer.twin_count), overriding the data; inflight=N its max_inflight
 #
 # Per frame (rows in the JSON, one array per phase): dt (ms), the script process time, the main-thread ms the
@@ -189,6 +190,13 @@ func _run() -> void:
 	RenderingServer.viewport_set_measure_render_time(_rid, true)
 	print("[pan] window %s on screen %s, vsync %s" % [DisplayServer.window_get_size(), DisplayServer.screen_get_size(), DisplayServer.window_get_vsync_mode()])
 	var script: Script = load("res://scripts/app/sandbox.gd")
+	if str(opts.get("prewarm", "0")) == "1":
+		# the menu's dwell: the scenario's water is made ahead on its own thread (Main does this when the menu is up); the time it
+		# took is printed apart, and the Local press that follows finds it made
+		var tp := Time.get_ticks_msec()
+		script.prewarm(str(root.get_node("DebugSettings").call("get_choice_name", "scenario")))
+		load("res://scripts/world/water_gen.gd").prewarm_wait()
+		print("[pan] the water and the fields of the map made ahead on a thread: %d ms (the menu's time, not the load's)" % (Time.get_ticks_msec() - tp))
 	sb = script.new()
 	var t0 := Time.get_ticks_msec()
 	root.add_child(sb)

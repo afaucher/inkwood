@@ -170,8 +170,10 @@ var _idle_at := -1             # the cache size at which the last fogged pass fo
 # px_per_m: map pixels per metre (0: from data); kind: "terrain" or "scene"
 # ("": from data). `params` lets a caller pass its own RenderParams (it is
 # used as is: the providers switch its road off).
+# water: a WaterGen (scripts/world/water_gen.gd) whose water the map shows, the terrain under it capped by it and
+# planted dry (the "terrain" provider only; null: no water, the map exactly as it was).
 func _init(seed_v: int = 20261009, bounds: Rect2 = Rect2(), ppm: float = 0.0, kind: String = "",
-		params: RenderParams = null) -> void:
+		params: RenderParams = null, water: RefCounted = null) -> void:
 	seed_value = seed_v
 	P = params if params != null else RenderParams.new()
 	cfg = load_config(P.source_path)
@@ -182,7 +184,7 @@ func _init(seed_v: int = 20261009, bounds: Rect2 = Rect2(), ppm: float = 0.0, ki
 		px_per_m = ppm if ppm > 0.0 else _terrain_px_per_m()
 		bounds_m = bounds if bounds.has_area() else _sim_bounds()
 	else:
-		provider = ChunkTerrainProvider.new(seed_v, P, cfg, ppm)
+		provider = ChunkTerrainProvider.new(seed_v, P, cfg, ppm, water)
 		px_per_m = provider.px_per_m()
 		var mr: Rect2 = provider.map_rect_px()
 		bounds_m = bounds if bounds.has_area() else Rect2(mr.position / px_per_m, mr.size / px_per_m)

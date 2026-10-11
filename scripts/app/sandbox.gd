@@ -85,6 +85,7 @@ const SandboxSession = preload("res://scripts/app/sandbox_session.gd")
 const World = preload("res://scripts/sim/world.gd")
 const Mission = preload("res://scripts/sim/mission.gd")
 const Terrain = preload("res://scripts/world/terrain.gd")
+const WaterGen = preload("res://scripts/world/water_gen.gd")
 const MapView = preload("res://scripts/render/map_view.gd")
 const CameraController = preload("res://scripts/world/camera_controller.gd")
 const FogLayer = preload("res://scripts/render/fog_layer.gd")
@@ -106,6 +107,7 @@ var mission: Mission = null           # the scenario's mission, or null (the old
 var result: Dictionary = {}           # the mission's verdict once it has one: {state, reason, turn, t, scenario}
 var objective: SandboxObjective = null
 var terrain: Terrain = null
+var water: RefCounted = null            # the scenario's WaterGen (null: its water switch is off)
 var map_view: MapView = null
 var ctl: CameraController = null
 var fog: FogLayer = null
@@ -165,6 +167,20 @@ var _data_ppm := 2.0
 var _data := {}                       # knob key -> what "data" means (text)
 var _window: Array[float] = []        # the last frame times, for frame_line()
 
+# MAKES THE SCENARIO'S WATER AHEAD OF NEED (Track WB, Job 3): the water of the Strike's seed takes 2.5 to 3 s to build with its sites,
+# which is a window that does not answer when Local is pressed. The menu calls this for the scenario it shows (and again when
+# the selector changes), on a thread of its own; the sandbox's scenario then finds it made (WaterGen.shared waits for it when it is
+# not). Nothing happens for a scenario with its water off. WaterGen.prewarm_join() before quitting.
+static func prewarm(scenario_id: String) -> void:
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string("%s/%s.json" % [SandboxScenario.SCENARIO_DIR, scenario_id]))
+	if not (raw is Dictionary):
+		return
+	var d: Dictionary = raw
+	var wk := DebugSettings.get_choice_name("water")
+	var on: bool = (wk == "on") if (wk == "on" or wk == "off") else (d.get("water", false) == true)
+	if on and d.get("seed") is float:
+		WaterGen.prewarm(int(d["seed"]))
+
 func _init(scenario_id: String = "") -> void:
 	name = "Sandbox"
 	created_ms = Time.get_ticks_msec()
@@ -172,7 +188,12 @@ func _init(scenario_id: String = "") -> void:
 		scenario_id = DebugSettings.get_choice_name("scenario")
 	if scenario_id == "":
 		scenario_id = DEFAULT_SCENARIO
-	scenario = SandboxScenario.new(scenario_id)
+	# the water knob (DebugSettings "water"): data leaves the scenario file's own switch, on / off override it
+	var overrides: Dictionary = {}
+	var wk := DebugSettings.get_choice_name("water")
+	if wk == "on" or wk == "off":
+		overrides["water"] = (wk == "on")
+	scenario = SandboxScenario.new(scenario_id, false, overrides)
 
 func _ready() -> void:
 	process_priority = 50   # after Track U's layers and the camera: the fog and tracks see this frame's poses
@@ -239,9 +260,16 @@ func _build() -> void:
 	var pen := _choice("pen")
 	InkCanvas.set_pen_mode(str(_data["pen"]) if pen == "data" else pen)
 
-	terrain = Terrain.new(scenario.seed_value)
+	# THE WATER (Track WB, Job 3): the scenario's own switch decides, and the one WaterGen (WaterGen.shared, the sim's own) is
+	# the map's, the fog's and this terrain's: its height field is capped by the coast and no tree stands in it, here and in
+	# every terrain the map and the fog make for their workers. A scenario with the switch off has none of it.
+	water = scenario.water()
+	if water != null:
+		terrain = water.make_terrain(scenario.seed_value)
+	else:
+		terrain = Terrain.new(scenario.seed_value)
 	terrain.px_per_m = ppm
-	map_view = MapView.new(scenario.seed_value, Rect2(), ppm if not is_equal_approx(ppm, _data_ppm) else 0.0)
+	map_view = MapView.new(scenario.seed_value, Rect2(), ppm if not is_equal_approx(ppm, _data_ppm) else 0.0, "", null, water)
 	if not map_view.errors().is_empty():
 		_fail("map view data did not load: %s" % [map_view.errors()])
 		return
@@ -269,6 +297,7 @@ func _build() -> void:
 	fog = FogLayer.new()
 	fog.name = "Fog"
 	fog.setup(terrain)
+	fog.set_water(water)
 	if not fog.ok():
 		_fail("fog data did not load: %s" % [fog.errors])
 		return

@@ -1,8 +1,12 @@
 extends RefCounted
 
 # DRAWING WATER (Track WB, 2026-10-10): the board variants/water/ draws the generator's water
-# (scripts/world/water_gen.gd) with the game's own drawing layer. A PROTOTYPE, NOT wired into the
-# chunk baker: Track P is changing that. WINDOWED ONLY -- the masks and washes are rendered.
+# (scripts/world/water_gen.gd) with the game's own drawing layer. The FRAME functions below (make_masks, draw_wash,
+# draw_halo, draw_lines: the board's, all six options) are the prototype; the CHUNK functions at the end of the file (chunk_geometry,
+# chunk_masks, draw_chunk_wash, draw_chunk_lines, chunk_step_lines) are what the live map runs in the chunk baker
+# (scripts/render/chunk_terrain_provider.gd, the stages `water` and `water_masks`) and what the contour map's water
+# (scripts/render/fog_topo.gd) takes its rings and lines from: look A only (Alex's choice), in the chunk's own px_per_m.
+# WINDOWED ONLY -- the masks and washes are rendered.
 #
 #   var wd := WaterDraw.new(P)                         # reads data/world/water.json (draw.*)
 #   var opt := wd.option("A")                          # the option's switches (data draw.options)
@@ -33,6 +37,7 @@ const RenderParams = preload("res://scripts/world/render_params.gd")
 const ValueNoise = preload("res://scripts/core/noise.gd")
 
 const WATER_PATH := "res://data/world/water.json"
+const WASH_SHADER = preload("res://scripts/render/shaders/water_wash.gdshader")
 
 # The wash: the step colour by mask, over everything, through the upland cut, with the paper's mottle. Each step's
 # mask is the sea's and the river's, whichever covers more (the river keeps a sharper edge than the sea's soft shore).
@@ -151,6 +156,9 @@ var ripple_weight: float
 var ripple_break_f: float
 var ripple_break_thr := PackedFloat64Array()
 
+var mask_ssaa: int
+var clip_px: float
+
 var _wash_mat: ShaderMaterial
 var _halo_mat: ShaderMaterial
 var _blur_shader: Shader
@@ -196,6 +204,8 @@ func _init(params: RenderParams, hue_override: float = -1.0, path: String = WATE
 	data.value("draw.grid_cell_m")
 	data.value("draw.chaikin_passes")
 	data.value("draw.resample_m")
+	mask_ssaa = data.integer("draw.chunk.mask_ssaa")
+	clip_px = data.num("draw.chunk.clip_px")
 	errors.append_array(data.errors)
 	for pair in [[_l_below, 3, "draw.palette.lightness_below_paper"], [_chroma, 3, "draw.palette.chroma"], [step_alphas, 3, "draw.line.step_alphas"],
 			[gradient_blur_m, 3, "draw.soft.gradient_blur_m"], [ripple_offsets, 3, "draw.ripples.offsets_m"], [ripple_alphas, 3, "draw.ripples.alphas"],
@@ -314,7 +324,8 @@ func _mask_canvas(water: RefCounted, view: Transform2D, size: Vector2i, rect_px:
 	return g
 
 # A ribbon as quads and discs (the union is filled once, so a fold in a bend cannot leave a hole).
-func _ribbon(g: InkCanvas, c: PackedVector2Array, h: PackedFloat64Array) -> void:
+func _ribbon(g: InkCanvas, c: PackedVector2Array, h: PackedFloat64Array, scale: float = -1.0) -> void:
+	var sc := ppm if scale < 0.0 else scale
 	var n := c.size()
 	var nrm := PackedVector2Array()
 	nrm.resize(n)
@@ -322,10 +333,10 @@ func _ribbon(g: InkCanvas, c: PackedVector2Array, h: PackedFloat64Array) -> void
 		var t := (c[mini(i + 1, n - 1)] - c[maxi(i - 1, 0)]).normalized()
 		nrm[i] = Vector2(-t.y, t.x)
 	for i in n - 1:
-		var a0 := (c[i] + nrm[i] * h[i]) * ppm
-		var a1 := (c[i + 1] + nrm[i + 1] * h[i + 1]) * ppm
-		var b1 := (c[i + 1] - nrm[i + 1] * h[i + 1]) * ppm
-		var b0 := (c[i] - nrm[i] * h[i]) * ppm
+		var a0 := (c[i] + nrm[i] * h[i]) * sc
+		var a1 := (c[i + 1] + nrm[i + 1] * h[i + 1]) * sc
+		var b1 := (c[i + 1] - nrm[i + 1] * h[i + 1]) * sc
+		var b0 := (c[i] - nrm[i] * h[i]) * sc
 		g.move_to(a0.x, a0.y)
 		g.line_to(a1.x, a1.y)
 		g.line_to(b1.x, b1.y)
@@ -334,8 +345,8 @@ func _ribbon(g: InkCanvas, c: PackedVector2Array, h: PackedFloat64Array) -> void
 	for i in n:
 		if h[i] < 0.5:
 			continue
-		var r := h[i] * ppm
-		var p := c[i] * ppm
+		var r := h[i] * sc
+		var p := c[i] * sc
 		var seg := 12
 		for q in seg:
 			var ang := float(q) / float(seg) * TAU
@@ -503,7 +514,8 @@ func _keep(water: RefCounted, ter: Variant, p: Vector2, thr: float, is_sea: bool
 	return water.sea_s(p.x, p.y) <= thr + 0.4
 
 # Cuts a polyline into the runs where `keep` holds; each run is {pts: PackedVector2Array (world px), closed: bool}.
-func _pieces(pts: PackedVector2Array, closed: bool, keep: Callable) -> Array:
+func _pieces(pts: PackedVector2Array, closed: bool, keep: Callable, scale: float = -1.0) -> Array:
+	var sc := ppm if scale < 0.0 else scale
 	var out: Array = []
 	var n := pts.size()
 	if n < 2:
@@ -518,7 +530,7 @@ func _pieces(pts: PackedVector2Array, closed: bool, keep: Callable) -> Array:
 	if all:
 		var px := PackedVector2Array()
 		for p in pts:
-			px.append(p * ppm)
+			px.append(p * sc)
 		out.append({"pts": px, "closed": closed})
 		return out
 	# start at a dropped vertex so a closed ring's run is not split by the seam
@@ -534,7 +546,7 @@ func _pieces(pts: PackedVector2Array, closed: bool, keep: Callable) -> Array:
 		if not closed and start + q >= n:
 			break
 		if flags[i] == 1:
-			cur.append(pts[i] * ppm)
+			cur.append(pts[i] * sc)
 		elif cur.size() >= 2:
 			out.append({"pts": cur, "closed": false})
 			cur = PackedVector2Array()
@@ -547,7 +559,7 @@ func _pieces(pts: PackedVector2Array, closed: bool, keep: Callable) -> Array:
 		var head := PackedVector2Array()
 		for i in start:
 			if flags[i] == 1:
-				head.append(pts[i] * ppm)
+				head.append(pts[i] * sc)
 			elif head.size() >= 2:
 				out.append({"pts": head, "closed": false})
 				head = PackedVector2Array()
@@ -625,3 +637,198 @@ func _stroke_lines(g: InkCanvas, pieces: Array, ns: int, break_f: float, break_t
 				any = true
 	if any:
 		g.stroke()
+
+# --- the live map's chunks (Track WB, 2026-10-10) ------------------------------------------------------------------------
+#
+# THE WATER IN THE CHUNK PIPELINE (scripts/render/chunk_terrain_provider.gd; look A, Alex's choice). A chunk's water is made in
+# three steps, split across the baker's stages by what each may touch:
+#
+#   chunk_geometry(water, rect_px, scale)   WORKER, no engine state: the sea's rings for every step and the river's runs over the
+#                                           chunk, in metres ({} for a chunk with no water at all)
+#   chunk_masks(geo, view, size)            WORKER: two InkCanvases to render, the sea's and the river's mask (grey levels 1/3,
+#                                           2/3, 1 for the three steps, nested; shaders/water_wash.gdshader decodes them)
+#   draw_chunk_wash(g, sea, river, up, ..)  MAIN (it makes a material): the wash onto the chunk's ground canvas, under the
+#                                           terrain's level fill
+#   draw_chunk_lines(g, ter, water, geo, ..) WORKER, with the terrain's lock held (it asks the bundle's terrain what is an
+#                                           upland): the ink at each step -- the shore, the shelf's edge, the deep's edge
+#
+# Lines are never cut at the chunk, only dropped when they lie wholly outside it (draw.chunk.clip_px), so a ring keeps its pen,
+# its closed or open weight and its wobble (a function of the world position) whichever chunk draws it, and two chunks draw
+# the same line to the pixel on either side of their border.
+
+# The level of a mask's grey ramp: nominal 8-bit value k/3 (85, 170, 255), painted a quarter step over so that a store that
+# truncates and one that rounds read back the same integer (the GPU's does not round to nearest: CLAUDE.md).
+static func _grey(level: int) -> Color:
+	var v := minf((roundf(255.0 * float(level) / 3.0) + 0.25) / 255.0, 1.0)
+	return Color(v, v, v)
+
+func chunk_geometry(water: RefCounted, rect_px: Rect2, scale: float) -> Dictionary:
+	var rect_m := Rect2(rect_px.position / scale, rect_px.size / scale)
+	var rings: Array = water.sea_rings_all(rect_m)
+	var runs: Array = []
+	var any := false
+	for k in 3:
+		var r: Array = water.river_runs(rect_m, k)
+		runs.append(r)
+		any = any or not r.is_empty() or not (rings[k] as Array).is_empty()
+	if not any:
+		return {}
+	return {"rings": rings, "runs": runs, "scale": scale}
+
+func _black(size: Vector2i, ssaa: int) -> InkCanvas:
+	var g := InkCanvas.new(size, ssaa)
+	g.fill_color = Color.BLACK
+	g.fill_rect(0.0, 0.0, float(size.x), float(size.y))
+	return g
+
+# [the sea's mask canvas, the river's], black where dry; unrendered.
+func chunk_masks(geo: Dictionary, view: Transform2D, size: Vector2i) -> Array:
+	var scale: float = geo["scale"]
+	var all: Array = []
+	for k in 3:
+		for ring: Dictionary in geo["rings"][k]:
+			all.append({"pts": ring["pts"], "area": ring["area"], "k": k})
+	var sea: InkCanvas
+	if all.is_empty():
+		sea = _black(size, 1)
+	else:
+		sea = _black(size, mask_ssaa)
+		sea.set_transform_matrix(view)
+		# largest first: a ring is painted in the level of the water INSIDE it (an outer ring of step k: k + 1; a hole in step k's
+		# region holds what step k - 1 holds there, and a smaller ring, painted later, refines it)
+		all.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return absf(a["area"]) > absf(b["area"]))
+		for ring: Dictionary in all:
+			sea.fill_color = _grey(int(ring["k"]) + (1 if float(ring["area"]) > 0.0 else 0))
+			sea.begin_path()
+			var pts: PackedVector2Array = ring["pts"]
+			sea.move_to(pts[0].x * scale, pts[0].y * scale)
+			for i in range(1, pts.size()):
+				sea.line_to(pts[i].x * scale, pts[i].y * scale)
+			sea.close_path()
+			sea.fill()
+	var has_river := false
+	for k in 3:
+		has_river = has_river or not (geo["runs"][k] as Array).is_empty()
+	var river: InkCanvas
+	if not has_river:
+		river = _black(size, 1)
+	else:
+		river = _black(size, mask_ssaa)
+		river.set_transform_matrix(view)
+		for k in 3:     # the ribbons nest (a deeper step is the narrower), so the deeper is painted over
+			var runs: Array = geo["runs"][k]
+			if runs.is_empty():
+				continue
+			river.fill_color = _grey(k + 1)
+			river.begin_path()
+			for run: Dictionary in runs:
+				_ribbon(river, run["c"], run["h"], scale)
+			river.fill()
+	return [sea, river]
+
+# The wash onto `g` (the chunk's ground canvas): the three step colours by the masks, the paper's mottle kept, the uplands
+# (`up`: the terrain's level-1 mask) left out.
+func draw_chunk_wash(g: InkCanvas, sea: Texture2D, river: Texture2D, up: Texture2D, rect_px: Rect2, size: Vector2i) -> void:
+	var mat := ShaderMaterial.new()
+	mat.shader = WASH_SHADER
+	mat.set_shader_parameter("sea", sea)
+	mat.set_shader_parameter("river", river)
+	mat.set_shader_parameter("up", up)
+	for k in 3:
+		mat.set_shader_parameter("c%d" % k, _v3(steps[k]))
+	mat.set_shader_parameter("paper", Vector3(P.PAPER.r8, P.PAPER.g8, P.PAPER.b8))
+	mat.set_shader_parameter("origin", rect_px.position)
+	mat.set_shader_parameter("extent", rect_px.size)
+	mat.set_shader_parameter("alpha", wash_alpha)
+	mat.set_shader_parameter("mottle", mottle)
+	g.save()
+	g.reset_transform()
+	g.global_alpha = 1.0
+	g.draw_image_with_material(sea, 0.0, 0.0, float(size.x), float(size.y), mat)
+	g.restore()
+
+# The ink at each step of look A (the working default's shore_line and step_lines switches) onto `g` under `view`. `ter` is
+# the chunk's bundle terrain and its lock must be held by the caller (level_at fills its caches).
+func draw_chunk_lines(g: InkCanvas, ter: Variant, water: RefCounted, geo: Dictionary, view: Transform2D, rect_px: Rect2) -> void:
+	var opt: Dictionary = options.get(working_default, {})
+	if not (bool(opt.get("shore_line", false)) or bool(opt.get("step_lines", false))):
+		return
+	var scale: float = geo["scale"]
+	var ns := int(water.seed_value) % 9973 + 977
+	var near := rect_px.grow(clip_px)
+	g.save()
+	g.set_transform_matrix(view)
+	g.line_cap = "round"
+	var top := 3 if bool(opt.get("step_lines", false)) else 1
+	for k in top:
+		var lines := chunk_step_lines(water, ter, geo, k, scale, near)
+		if lines.is_empty():
+			continue
+		g.stroke_color = P.INK
+		g.line_width = P.lw * (ink_weight if k == 0 else step_weight)
+		g.global_alpha = ink_alpha if k == 0 else step_alphas[k]
+		_stroke_lines(g, lines, ns + k * 31, 0.0, 0.0, 0.0)
+	g.global_alpha = 1.0
+	g.restore()
+
+# step k's lines of a chunk's geometry as _step_lines makes them (world px, cut where under an upland or inside the other
+# water), the pieces wholly outside `near` (world px) left out.
+#
+# A RING is looked at every SAMPLE_STRIDE-th vertex first (8 m): a ring none of whose samples is cut -- the common case, and
+# every ring deeper than the cap's reach (water.ring_may_meet_upland) can only be cut by the river -- is one closed line, made
+# by one transform, and not asked about at every metre. A ring with a cut sample goes through _pieces vertex by vertex (what
+# the board did). An upland sliver or a river mouth narrower than the stride can be missed: the line then runs over it.
+const SAMPLE_STRIDE := 8
+
+func chunk_step_lines(water: RefCounted, ter: Variant, geo: Dictionary, k: int, scale: float, near: Rect2) -> Array:
+	var thr: float = water.step_from[k]
+	var upland: bool = water.ring_may_meet_upland(k)
+	var xf := Transform2D(Vector2(scale, 0.0), Vector2(0.0, scale), Vector2.ZERO)
+	var out: Array = []
+	for ring: Dictionary in geo["rings"][k]:
+		var pts: PackedVector2Array = ring["pts"]
+		var n := pts.size()
+		if n < 3:
+			continue
+		var near_hit := false
+		var cut := false
+		for i in range(0, n, SAMPLE_STRIDE):
+			var p := pts[i]
+			if not near_hit and near.has_point(p * scale):
+				near_hit = true
+			if not cut:
+				if upland:
+					cut = not _keep(water, ter, p, thr, true)
+				else:
+					cut = water.river_s(p.x, p.y) > thr + 0.4
+		if not near_hit:
+			continue
+		if not cut:
+			out.append({"pts": xf * pts, "closed": true})
+		elif upland:
+			out.append_array(_touching(_pieces(pts, true, func(p: Vector2) -> bool: return _keep(water, ter, p, thr, true), scale), near))
+		else:
+			out.append_array(_touching(_pieces(pts, true, func(p: Vector2) -> bool: return water.river_s(p.x, p.y) <= thr + 0.4, scale), near))
+	var runs: Array = geo["runs"][k]
+	if not runs.is_empty():
+		for edge: Dictionary in water.edges_of_runs(runs):
+			for side: String in ["l", "r"]:
+				var pts: PackedVector2Array = edge[side]
+				out.append_array(_touching(_pieces(pts, false, func(p: Vector2) -> bool: return _keep(water, ter, p, thr, false), scale), near))
+	return out
+
+# The pieces that come within `near` (world px): a sample of each, every SAMPLE_STRIDE-th point.
+func _touching(pieces: Array, near: Rect2) -> Array:
+	var out: Array = []
+	for piece: Dictionary in pieces:
+		var pp: PackedVector2Array = piece["pts"]
+		var hit := false
+		for i in range(0, pp.size(), SAMPLE_STRIDE):
+			if near.has_point(pp[i]):
+				hit = true
+				break
+		if not hit and pp.size() > 0 and near.has_point(pp[pp.size() - 1]):
+			hit = true
+		if hit:
+			out.append(piece)
+	return out

@@ -55,6 +55,7 @@ const CameraData = preload("res://scripts/world/camera_data.gd")
 const FogStyle = preload("res://scripts/render/fog_style.gd")
 const TerrainDraw = preload("res://scripts/render/terrain_draw.gd")
 const ValueNoise = preload("res://scripts/core/noise.gd")
+const WaterDraw = preload("res://scripts/render/water_draw.gd")
 
 const SALT_WOBBLE := 4111   # noise-stream salt (a code constant, not a tunable)
 
@@ -79,6 +80,16 @@ var grid_w: float                     # texels
 var lods := PackedFloat64Array()      # texels per world px, finest first
 var lod_ratio: float
 var noise_seed: int
+
+# WATER on the rough map (Track WB, 2026-10-10; set_water): a WaterGen whose three depth steps are painted under the level tones
+# (an upland is never water: its tone paints over) as stepped washes eased toward the sheet by topo.water.quiet, and whose
+# shore and step lines are inked in the contour ink after the contours. Null: no water, every pixel as it was.
+var water: RefCounted = null
+var water_draw: RefCounted = null
+var water_quiet: float
+var water_alphas := PackedFloat64Array()
+var water_line_w: float               # texels
+var water_steps: Array[Color] = []     # the washes, eased
 
 var _twin: RefCounted = null          # a FogTopo over a private Terrain, for worker threads
 var _twin_lock := Mutex.new()
@@ -113,6 +124,11 @@ func _init(t: Terrain, fog_data: CameraData = null, params: RenderParams = null)
 			_err("topo.lods must be positive and finest first, got %s" % [lods])
 			break
 	lod_ratio = data.num("topo.lod_ratio")
+	water_quiet = data.num("topo.water.quiet")
+	water_alphas = data.floats("topo.water.line_alphas")
+	water_line_w = data.num("topo.water.line_width_texels")
+	if water_alphas.size() != 3:
+		_err("topo.water.line_alphas needs 3 numbers")
 	noise_seed = terrain.seed_value % 9973 + SALT_WOBBLE
 
 func ok() -> bool:
@@ -179,7 +195,21 @@ func make_twin() -> RefCounted:
 	twin_terrain.px_per_m = terrain.px_per_m
 	var twin: RefCounted = load("res://scripts/render/fog_topo.gd").new(twin_terrain, data, P)
 	twin.terrain_maker = terrain_maker
+	twin.set_water(water)
 	return twin
+
+# MAIN THREAD (WaterDraw reads its data): this layer shows `w`'s water (null: none). The terrain must be the water's own
+# (WaterGen.make_terrain), or the levels the water is cut by are not the ones the map and the sight read.
+func set_water(w: RefCounted) -> void:
+	water = w
+	water_draw = null
+	water_steps.clear()
+	if w == null:
+		return
+	water_draw = WaterDraw.new(P)
+	errors.append_array(water_draw.errors)
+	for k in 3:
+		water_steps.append(paper_levels[0].lerp(water_draw.steps[k], 1.0 - water_quiet))
 
 # MAIN THREAD, once: the private twin make_canvas_threaded() records on.
 func prepare_threaded() -> void:
@@ -207,7 +237,7 @@ static func texture_from(img: Image) -> ImageTexture:
 	return ImageTexture.create_from_image(img)
 
 # Records chunk `c` onto `g` through `view` (world px -> canvas px). Pass order:
-# the sheet, the level tones, the grid, the contours.
+# the sheet, the water (when there is some), the level tones, the grid, the contours, the water's lines.
 func record_chunk(g: InkCanvas, c: Vector2i, view: Transform2D) -> void:
 	var s := view.x.length()
 	var rect := chunk_rect_px(c)
@@ -217,11 +247,18 @@ func record_chunk(g: InkCanvas, c: Vector2i, view: Transform2D) -> void:
 	g.fill_color = paper_levels[0]
 	g.fill_rect(0.0, 0.0, float(g.size.x), float(g.size.y))
 	g.set_transform_matrix(view)
+	var wet: Dictionary = {}
 	if terrain.chunk_in_map(c.x, c.y):
-		_level_tones(g, c)
+		if water != null:
+			wet = _water_geo(rect, s)
+			if not wet.is_empty():
+				_water_fills(g, wet, PackedVector2Array())
+		_level_tones(g, c, wet)
 	_grid(g, rect, s)
 	if terrain.chunk_in_map(c.x, c.y):
 		_contours(g, rect, s)
+		if not wet.is_empty():
+			_water_lines(g, rect, s, wet)
 	g.restore()
 
 # Each level's sheet tone, painted level by level: threshold k's border
@@ -229,7 +266,7 @@ func record_chunk(g: InkCanvas, c: Vector2i, view: Transform2D) -> void:
 # first -- an upland ring in level k+1's tone, a hole in level k's -- which
 # paints any nesting right because rings never cross (Track T's level_masks
 # does the same in black and white).
-func _level_tones(g: InkCanvas, c: Vector2i) -> void:
+func _level_tones(g: InkCanvas, c: Vector2i, wet: Dictionary = {}) -> void:
 	for k in terrain.thresholds.size():
 		var hi: Color = paper_levels[k + 1]
 		var lo: Color = paper_levels[k]
@@ -251,12 +288,93 @@ func _level_tones(g: InkCanvas, c: Vector2i) -> void:
 			g.begin_path()
 			_add_poly(g, ring.pts)
 			g.fill()
+			if k == 0 and ring.area < 0.0 and not wet.is_empty():
+				_water_fills(g, wet, ring.pts)   # (a basin in an upland holds water the hole's own fill has just covered: put it back)
 
 static func _add_poly(g: InkCanvas, pts: PackedVector2Array) -> void:
 	g.move_to(pts[0].x, pts[0].y)
 	for i in range(1, pts.size()):
 		g.line_to(pts[i].x, pts[i].y)
 	g.close_path()
+
+# The water of the chunk, in px: {rings: [{pts, area, k} largest first], geo: WaterDraw.chunk_geometry's (for the lines and the
+# ribbons)} or {} when the chunk has none. At a coarse level of detail (`s` texels per px) the rings' points are thinned to about a
+# texel apart before anything is drawn from them: a texel is 8 m at the coarsest, and the rings come a metre apart.
+func _water_geo(rect: Rect2, s: float) -> Dictionary:
+	var geo: Dictionary = water_draw.chunk_geometry(water, rect, ppm)
+	if geo.is_empty():
+		return {}
+	var every := maxi(1, floori(1.0 / (s * water.resample_m() * ppm)))
+	var xf := Transform2D(Vector2(ppm, 0.0), Vector2(0.0, ppm), Vector2.ZERO)
+	var rings: Array = []
+	var thin_rings: Array = []
+	for k in 3:
+		var kept: Array = []
+		for ring: Dictionary in geo["rings"][k]:
+			var pts: PackedVector2Array = ring["pts"]
+			if every > 1 and pts.size() > 24 * every:
+				var t := PackedVector2Array()
+				for i in range(0, pts.size(), every):
+					t.append(pts[i])
+				pts = t
+			kept.append({"pts": pts, "area": ring["area"]})
+			rings.append({"pts": xf * pts, "area": ring["area"], "k": k})
+		thin_rings.append(kept)
+	rings.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return absf(a["area"]) > absf(b["area"]))
+	return {"rings": rings, "geo": {"rings": thin_rings, "runs": geo["runs"], "scale": ppm}}
+
+# Paints the water's washes: every ring, largest first, in the step it holds (an outer ring of step k: step k; a hole in step k
+# holds step k - 1, or the sheet for step 0), then the river's ribbons step by step. With `within` set, only what starts inside
+# that polygon (px): a basin of an upland whose own fill has covered the water in it.
+func _water_fills(g: InkCanvas, wet: Dictionary, within: PackedVector2Array) -> void:
+	var all := within.is_empty()
+	for ring: Dictionary in wet["rings"]:
+		var pts: PackedVector2Array = ring["pts"]
+		if not all and not Geometry2D.is_point_in_polygon(pts[0], within):
+			continue
+		var level := int(ring["k"]) + (1 if float(ring["area"]) > 0.0 else 0)   # 0: the sheet
+		g.fill_color = paper_levels[0] if level == 0 else water_steps[level - 1]
+		g.begin_path()
+		_add_poly(g, pts)
+		g.fill()
+	var geo: Dictionary = wet["geo"]
+	for k in 3:
+		var any := false
+		g.fill_color = water_steps[k]
+		g.begin_path()
+		for run: Dictionary in geo["runs"][k]:
+			var cpts: PackedVector2Array = run["c"]
+			if not all and not Geometry2D.is_point_in_polygon(cpts[0] * ppm, within):
+				continue
+			water_draw._ribbon(g, cpts, run["h"], ppm)
+			any = true
+		if any:
+			g.fill()
+
+# The shore's and the steps' lines in the contour ink (the full render's pieces: cut where under an upland or inside the other
+# water), every few points at a coarse level of detail, quieter by topo.water.line_alphas.
+func _water_lines(g: InkCanvas, rect: Rect2, s: float, wet: Dictionary) -> void:
+	var near := rect.grow(water_line_w / s + 4.0)
+	g.stroke_color = line_color
+	g.line_width = water_line_w / s
+	g.line_cap = "round"
+	for k in 3:
+		var pieces: Array = water_draw.chunk_step_lines(water, terrain, wet["geo"], k, ppm, near)
+		if pieces.is_empty():
+			continue
+		g.global_alpha = water_alphas[k]
+		g.begin_path()
+		for piece: Dictionary in pieces:
+			var pts: PackedVector2Array = piece["pts"]
+			var n := pts.size()
+			var closed: bool = piece["closed"]
+			g.move_to(pts[0].x, pts[0].y)
+			for i in range(1, n):
+				g.line_to(pts[i].x, pts[i].y)
+			if closed:
+				g.close_path()
+		g.stroke()
+	g.global_alpha = 1.0
 
 # Grid lines at whole multiples of the spacing from the world origin, so they
 # run on across chunks; a line on a chunk border is drawn half by each side.

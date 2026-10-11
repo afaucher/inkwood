@@ -216,6 +216,30 @@ var _site_p: Dictionary = {}             # sites.<path> -> its value (Track WS: 
 var _sites: Dictionary = {}              # sites(), made on first use
 static var _shared_cache: Dictionary = {}
 static var _shared_mutex := Mutex.new()
+var _lv: Dictionary = {}                # live.<key> -> number (the live map's shortcuts)
+var _live_ready := false                 # the coarse shortcuts may be used (set when the build is over)
+var _cg_x0 := 0                        # the coarse grid: cells [x0, x0 + nx) x [y0, y0 + ny), made once in _init and only read after
+var _cg_y0 := 0
+var _cg_nx := 0
+var _cg_ny := 0
+var _cg_lo := PackedFloat32Array()       # the lowest landness over each cell's five samples
+var _cg_hi := PackedFloat32Array()       # the highest
+var _coarse_cell := 64.0
+var _cap_inland := 2.0                   # landness at or above which field_cap is 1 (nothing capped)
+var _cap_hi := 2.0                        # landness at or above which the cap is 1 at any cliff noise (the higher margin + ramp)
+var _cap_low := -2.0                     # landness at or under which the cap is its floor (the lower margin)
+var _rv_reach: Dictionary = {}              # Vector2i -> PackedInt32Array: the river's segments within the valley's reach of each 64 m bucket (made once, read only)
+var _dry_l := 1.0                        # landness at or above which a cell holds no sea
+var _deep_l := -1.0                      # landness at or below which a cell is deep sea at every point
+var _tree_s := 1.5
+var _ring_pad := 64.0
+var _blocks: Dictionary = {}                # Vector2i -> a block of the sea's field on the lattice (see _block)
+var _rings_cache: Dictionary = {}            # str(rect) -> sea_rings_all's answer
+var _blocks_mutex := Mutex.new()
+const BLOCK_N := 32                      # lattice nodes along a block (256 m at the 8 m lattice)
+const BLOCK_PENDING := 9    # (a block's slot while a thread is making it; 1 and 2 are the uniform blocks)
+const WARM_THREADS := 4        # threads that make the map's fields ahead of need (warm_fields)
+const RINGS_CACHE_MAX := 1200
 
 func _init(seed_v: int, terrain: Variant = null, path: String = DEFAULT_PATH) -> void:
 	seed_value = seed_v
@@ -239,16 +263,31 @@ func _init(seed_v: int, terrain: Variant = null, path: String = DEFAULT_PATH) ->
 		return
 	_map = Rect2(float(_t.map_x), float(_t.map_y), float(_t.map_w), float(_t.map_h))
 	_thr0 = float(_t.thresholds[0])
+	var p0 := Time.get_ticks_usec()
 	_build_keep_dry()
+	var p1 := Time.get_ticks_usec()
 	_build_sea()
+	var p2 := Time.get_ticks_usec()
 	if _river_on:
 		_build_river()
+		diagnostics["phase_ms"] = {"keep_dry": (p1 - p0) / 1000.0, "sea": (p2 - p1) / 1000.0, "river": (Time.get_ticks_usec() - p2) / 1000.0}
 	else:
 		diagnostics["river"] = {"made": false, "why": "disabled in data"}
 	diagnostics["build_ms"] = (Time.get_ticks_usec() - t0) / 1000.0
 	var all_dry := _dry_check(river_crossing, _x_exempt)
 	diagnostics["keep_dry_ok"] = all_dry["ok"]
 	diagnostics["keep_dry_samples"] = _kd_pts.size()
+	_coarse_cell = maxf(_lv["coarse_cell_m"], 8.0)
+	_cap_inland = maxf(float(_cap["margin_far"]), float(_cap["margin_cliff"])) + float(_cap["ramp"]) + _lv["cap_safety"]
+	_cap_hi = maxf(float(_cap["margin_far"]), float(_cap["margin_cliff"])) + float(_cap["ramp"])
+	_cap_low = minf(float(_cap["margin_far"]), float(_cap["margin_cliff"]))
+	_dry_l = _lv["dry_safety_m"] / _sea_dpu
+	_deep_l = -(step_from[step_from.size() - 1] + _lv["deep_safety_m"]) / _sea_dpu
+	_tree_s = _lv["tree_shore_s"]
+	_ring_pad = _lv["ring_pad_m"]
+	_build_coarse()
+	_build_river_reach()
+	_live_ready = true
 	if not all_dry["ok"]:
 		errors.append("the sea or the river floods the layout's keep-dry set at %s (%s)" % [all_dry["at"], all_dry["kind"]])
 
@@ -278,8 +317,10 @@ func _read() -> void:
 			"lagoon.radius_m", "lagoon.peak", "lagoon.channel_half_width_m", "lagoon.channel_strength", "lagoon.channel_extra_m", "inlet.chance", "attempts", "attempt_shrink_steps", "min_share",
 			"inlet.length_m", "inlet.half_width_m", "inlet.strength", "inlet.turn_rad", "stray.chance", "stray.count", "stray.radius_m", "site_tries"]:
 		_sp[k] = d.value("shape." + k)
-	for k: String in ["margin_far", "margin_cliff", "ramp", "cliff_noise_per_m", "cliff_from", "cliff_to", "floor_below_threshold"]:
+	for k: String in ["margin_far", "margin_cliff", "ramp", "cliff_noise_per_m", "cliff_from", "cliff_to", "floor_below_threshold", "river_margin_m", "river_ramp_m"]:
 		_cap[k] = d.num("cap." + k)
+	for k: String in ["coarse_cell_m", "cap_safety", "dry_safety_m", "deep_safety_m", "tree_shore_s", "ring_pad_m"]:
+		_lv[k] = d.num("live." + k)
 	for k: String in ["grid_m", "axis_tolerance_deg", "min_coast_spread", "min_median_coast_spread", "max_land_fill", "max_median_land_fill",
 			"min_archetypes", "min_share_spread", "min_coast_m"]:
 		quality[k] = d.num("quality." + k)
@@ -442,14 +483,67 @@ func landness(x: float, y: float) -> float:
 # ground there is level 0. The field is min(field, cap): plateaus taper toward a coast, vanish under the sea, and
 # meet it as a cliff only where the cliff noise says so.
 func field_cap(x: float, y: float) -> float:
+	if _live_ready and _coarse_range(floori(x / _coarse_cell), floori(y / _coarse_cell)).x >= _cap_inland:
+		return _river_cap(x, y)   # (the live map's shortcut: far inland the sea's cap is 1 whatever the cliff noise says; test_water_live checks it)
 	return _cap_of(landness(x, y), x, y)
 
 func _cap_of(l: float, x: float, y: float) -> float:
+	# (the two ends need no cliff noise: above margin + ramp at the higher margin the cap is 1, at or under the lower margin it is the floor)
+	var lo := _thr0 - float(_cap["floor_below_threshold"])
+	if l <= _cap_low:
+		return lo
+	var valley := _river_cap(x, y)
+	if l >= _cap_hi:
+		return valley
 	var cn := ValueNoise.fbm(x * float(_cap["cliff_noise_per_m"]), y * float(_cap["cliff_noise_per_m"]), _sea_seed + 77, 2)
 	var m := lerpf(float(_cap["margin_far"]), float(_cap["margin_cliff"]), smoothstep(float(_cap["cliff_from"]), float(_cap["cliff_to"]), cn))
 	var t := clampf((l - m) / float(_cap["ramp"]), 0.0, 1.0)
+	return minf(lo + (1.0 - lo) * (t * t * (3.0 - 2.0 * t)), valley)
+
+# THE RIVER'S VALLEY: the cap along the river (data cap.river_margin_m, river_ramp_m): its floor within the margin of the river's bank, rising
+# to 1 over the ramp. 1 where the river is not near (one bucket lookup: the buckets are the river's segments grown by the valley's reach).
+func _river_cap(x: float, y: float) -> float:
+	if _rv_reach.is_empty():
+		return 1.0
+	var cell: Variant = _rv_reach.get(Vector2i(floori(x / BUCKET_M), floori(y / BUCKET_M)))
+	if cell == null:
+		return 1.0
+	var best := INF
+	var p := Vector2(x, y)
+	for si: int in (cell as PackedInt32Array):
+		var a := river_pts[si]
+		var ab := river_pts[si + 1] - a
+		var l2 := ab.length_squared()
+		var u := 0.0 if l2 == 0.0 else clampf((p - a).dot(ab) / l2, 0.0, 1.0)
+		best = minf(best, p.distance_to(a + ab * u) - lerpf(river_hw[si], river_hw[si + 1], u))
+	var margin := float(_cap["river_margin_m"])
 	var lo := _thr0 - float(_cap["floor_below_threshold"])
+	if best <= margin:
+		return lo
+	var t := (best - margin) / float(_cap["river_ramp_m"])
+	if t >= 1.0:
+		return 1.0
 	return lo + (1.0 - lo) * (t * t * (3.0 - 2.0 * t))
+
+# THE CAP AT A LATTICE NODE (the terrain's own nodes are the water's lattice: both are data's 8 m): the same number field_cap() gives
+# there, from the block of the sea's field the node lies in (the caller holds the block, scripts/world/water_terrain.gd keeps the
+# last one it used: a chunk's nodes are in a block or two) and not from the fields again. `blk` is what lattice_block() returned.
+func lattice_m() -> float:
+	return _cell_m
+
+func lattice_block(bi: int, bj: int) -> Variant:
+	return _block(bi, bj)
+
+func cap_at_node(blk: Variant, ix: int, iy: int) -> float:
+	var n := BLOCK_N
+	var s: float
+	if blk is PackedFloat64Array:
+		s = (blk as PackedFloat64Array)[(iy - floori(float(iy) / float(n)) * n) * n + ix - floori(float(ix) / float(n)) * n]
+	elif int(blk) == 1:
+		return _river_cap(float(ix) * _cell_m, float(iy) * _cell_m)
+	else:
+		s = step_from[step_from.size() - 1] + float(_lv["deep_safety_m"])
+	return _cap_of(-s / _sea_dpu, float(ix) * _cell_m, float(iy) * _cell_m)
 
 # The water at a point and the CAPPED height field there, in one go (the overview draws a pixel with it): Vector2(s,
 # capped field). The same numbers as s_at() and terrain().field_at(), at about a third of the cost.
@@ -502,33 +596,91 @@ func step_at(x: float, y: float) -> int:
 	return step_of(s_at(x, y))
 
 func is_wet(x: float, y: float) -> bool:
-	return s_at(x, y) > 0.0 and int(terrain().level_at(x, y)) == 0
+	return depth_at(x, y) > 0.0
 
 # THE SIMULATION'S WATER QUERY (Track WS, 2026-10-10): metres of water a boat can float in at a point: s_at() where
 # is_wet() holds, else 0.0 (land, an upland, the dry side of a shore). World.set_water takes it:
 # world.set_water(Callable(water, "depth_at")).
 func depth_at(x: float, y: float) -> float:
-	var s := s_at(x, y)
-	if s <= 0.0 or int(terrain().level_at(x, y)) != 0:
+	var sea := sea_s(x, y)
+	var s := maxf(sea, river_s(x, y))
+	if s <= 0.0:
+		return 0.0
+	# sea deeper than the cap's reach (landness at or under the cap's lowest margin) is level 0 whatever the terrain says: no upland
+	# stands there, so the terrain's chunk need not be made to say so (the sites' grid and the boats ask all over the sea)
+	if sea >= -_cap_low * _sea_dpu:
+		return s
+	if int(terrain().level_at(x, y)) != 0:
 		return 0.0
 	return s
 
 # The shared water of a seed (the default data, its own terrain), made on first use: the simulation's water query and
 # the drawing's can be one object, as WorldLayout.shared is one. Not for a test that changes the data: make a WaterGen.
 static func shared(seed_v: int, path: String = DEFAULT_PATH) -> RefCounted:
-	var key := "%d|%s|%d" % [seed_v, path, FileAccess.get_file_as_string(path).hash()]
-	_shared_mutex.lock()
-	var hit: Variant = _shared_cache.get(key)
-	_shared_mutex.unlock()
-	if hit != null:
-		return hit
+	var key := _shared_key(seed_v, path)
+	while true:
+		_shared_mutex.lock()
+		var hit: Variant = _shared_cache.get(key)
+		var making: bool = _prewarming.has(key)
+		_shared_mutex.unlock()
+		if hit != null:
+			return hit
+		if not making:
+			break
+		OS.delay_msec(2)   # a prewarm (below) is making it: wait for that one, do not make a second
+	return _make_shared(key, seed_v, path, false)
+
+static func _shared_key(seed_v: int, path: String) -> String:
+	return "%d|%s|%d" % [seed_v, path, FileAccess.get_file_as_string(path).hash()]
+
+static func _make_shared(key: String, seed_v: int, path: String, with_sites: bool) -> RefCounted:
 	var made: RefCounted = (load("res://scripts/world/water_gen.gd") as GDScript).new(seed_v, null, path)
+	if with_sites and made.ok():
+		made.sites()   # (before it is published: nothing else touches it while this thread is still working on it)
 	_shared_mutex.lock()
 	if not _shared_cache.has(key):
 		_shared_cache[key] = made
 	made = _shared_cache[key]
+	_prewarming.erase(key)
 	_shared_mutex.unlock()
 	return made
+
+# MAKES THE SHARED WATER AHEAD OF NEED, on a thread of its own (Track WB, Job 3): the water of a seed costs about 1.3 s to build
+# and its sites() 1 s more, which is a window that does not answer when Local is pressed. The menu calls this for the scenario it
+# shows; shared() then waits for it instead of making a second. The water is published when it is whole, sites() and all. Call
+# prewarm_join() before quitting (a thread still running GDScript when the engine exits crashes it).
+static var _prewarming: Dictionary = {}
+static var _prewarm_threads: Array = []
+static var _prewarm_stop := false
+
+static func prewarm(seed_v: int, path: String = DEFAULT_PATH) -> void:
+	var key := _shared_key(seed_v, path)
+	_shared_mutex.lock()
+	var busy := _shared_cache.has(key) or _prewarming.has(key)
+	if not busy:
+		_prewarming[key] = true
+	_shared_mutex.unlock()
+	if busy:
+		return
+	var th := Thread.new()
+	_prewarm_threads.append(th)
+	th.start(func() -> void:
+		var made := _make_shared(key, seed_v, path, true)
+		if made.ok():
+			made.warm_fields())
+
+# Stops the thread (it is making the fields for the whole map ahead of need, warm_fields(): it stops at the next block) and waits for it.
+static func prewarm_join() -> void:
+	_prewarm_stop = true
+	prewarm_wait()
+	_prewarm_stop = false
+
+# Waits for the thread to finish ALL it does (the water, its sites and the fields of the map): a tool or a test that wants them made.
+static func prewarm_wait() -> void:
+	for th: Thread in _prewarm_threads:
+		if th.is_started():
+			th.wait_to_finish()
+	_prewarm_threads.clear()
 
 # --- the simulation's sites (Track WS, 2026-10-10) -----------------------------------------------------------------------
 #
@@ -604,9 +756,7 @@ func _bridge_site(why: Dictionary) -> Dictionary:
 # (scripts/world/water_terrain.gd). Made on first use. The layout was made on the RAW terrain (raw_terrain()).
 func terrain() -> Variant:
 	if _tc == null:
-		var script: GDScript = load("res://scripts/world/water_terrain.gd")
-		_tc = script.new(seed_value)
-		_tc.set_cap(Callable(self, "field_cap"))
+		_tc = make_terrain()
 	return _tc
 
 func raw_terrain() -> Variant:
@@ -1535,8 +1685,12 @@ func river_runs(rect: Rect2, k: int) -> Array:
 
 # The river's two banks as polylines over `rect`: [{l: PackedVector2Array, r: PackedVector2Array}] for step k.
 func river_edges(rect: Rect2, k: int) -> Array:
+	return edges_of_runs(river_runs(rect, k))
+
+# The banks of runs that river_runs() made (so a caller that has the runs does not make them twice).
+func edges_of_runs(runs: Array) -> Array:
 	var out: Array = []
-	for run: Dictionary in river_runs(rect, k):
+	for run: Dictionary in runs:
 		var c: PackedVector2Array = run["c"]
 		var h: PackedFloat64Array = run["h"]
 		var l := PackedVector2Array()
@@ -1550,6 +1704,305 @@ func river_edges(rect: Rect2, k: int) -> Array:
 			r.append(c[i] - nr * h[i])
 		out.append({"l": l, "r": r})
 	return out
+
+# --- the live map (Track WB, 2026-10-10) ---------------------------------------------------------------------------------
+#
+# THE WATER IN THE CHUNK PIPELINE (scripts/render/chunk_terrain_provider.gd) calls these from the baker's worker threads,
+# several at once. Everything they read is built in _init and never written -- except the coarse grid, which fills in as it is
+# asked and sits behind its own mutex. (sea_grid() above keeps a cache and is NOT for a worker.)
+#
+#   make_terrain(...)    a Terrain whose height field is capped by field_cap() and whose trees stand on dry ground
+#   sea_rings_all(rect)  the sea's rings for every step over a rectangle, from a grid that is only computed where the
+#                        coarse grid says the sea can be
+#   tree_dry(x, y)       whether a tree may stand there
+#
+# THE COARSE GRID is landness at the corners and the centre of every cell of data live.coarse_cell_m, the lowest and the
+# highest, made on first use. Five samples are a sample of the cell and not a bound on it (the coasts are smooth at that
+# scale: the sea's noise has a wavelength of hundreds of metres, and the safety margins in data live.* cover the rest);
+# test_water_live holds every shortcut against the exact fields on a lattice over the whole map.
+
+# The terrain of this water: scripts/world/water_terrain.gd with the cap installed and the trees kept on dry ground. The
+# provider's bundles, the sandbox's own terrain and the fog's twins are all made by this, so the map, the sight, the fog and
+# the camera read one ground. Call it once the water exists: the layout was made on the RAW terrain, before the cap, and a
+# capped terrain finds it shared (WorldLayout.shared). The arguments are Terrain._init's (a maker for a provider).
+func make_terrain(seed_v: int = -1, data_path: String = "", params: Variant = null) -> Variant:
+	var script: GDScript = load("res://scripts/world/water_terrain.gd")
+	var t: Variant = script.new(seed_value if seed_v < 0 else seed_v, data_path if data_path != "" else TerrainData.DEFAULT_PATH, params)
+	t.set_cap(Callable(self, "field_cap"))
+	t.set_lattice(self)
+	t.set_tree_filter(Callable(self, "tree_dry"))
+	return t
+
+# THE COARSE GRID, made once at the end of _init over the map and a margin of cells and READ ONLY after (the baker's workers
+# ask it millions of times: a lock on a shared cache, which this was first, made them queue). A cell outside it (a chunk's pad
+# past the map's edge) is sampled on the spot.
+func _build_coarse() -> void:
+	var cc := _coarse_cell
+	var margin := 4
+	_cg_x0 = floori(_map.position.x / cc) - margin
+	_cg_y0 = floori(_map.position.y / cc) - margin
+	_cg_nx = ceili(_map.end.x / cc) + margin - _cg_x0
+	_cg_ny = ceili(_map.end.y / cc) + margin - _cg_y0
+	var vx := _cg_nx + 1
+	var corner := PackedFloat32Array()
+	corner.resize(vx * (_cg_ny + 1))
+	for j in _cg_ny + 1:
+		for i in vx:
+			corner[j * vx + i] = landness(float(_cg_x0 + i) * cc, float(_cg_y0 + j) * cc)
+	_cg_lo.resize(_cg_nx * _cg_ny)
+	_cg_hi.resize(_cg_nx * _cg_ny)
+	for j in _cg_ny:
+		for i in _cg_nx:
+			var c0 := corner[j * vx + i]
+			var c1 := corner[j * vx + i + 1]
+			var c2 := corner[(j + 1) * vx + i]
+			var c3 := corner[(j + 1) * vx + i + 1]
+			var mid := landness((float(_cg_x0 + i) + 0.5) * cc, (float(_cg_y0 + j) + 0.5) * cc)
+			_cg_lo[j * _cg_nx + i] = minf(minf(c0, c1), minf(minf(c2, c3), mid))
+			_cg_hi[j * _cg_nx + i] = maxf(maxf(c0, c1), maxf(maxf(c2, c3), mid))
+
+# The valley's index (see _river_cap): every bucket the river's segment grown by the valley's reach touches lists it.
+func _build_river_reach() -> void:
+	_rv_reach = {}
+	if river_pts.size() < 2:
+		return
+	var hmax := 0.0
+	for h in river_hw:
+		hmax = maxf(hmax, h)
+	var reach := hmax + float(_cap["river_margin_m"]) + float(_cap["river_ramp_m"]) + 1.0
+	for i in river_pts.size() - 1:
+		var a := river_pts[i]
+		var b := river_pts[i + 1]
+		for by in range(floori((minf(a.y, b.y) - reach) / BUCKET_M), floori((maxf(a.y, b.y) + reach) / BUCKET_M) + 1):
+			for bx in range(floori((minf(a.x, b.x) - reach) / BUCKET_M), floori((maxf(a.x, b.x) + reach) / BUCKET_M) + 1):
+				var key := Vector2i(bx, by)
+				var arr: PackedInt32Array = _rv_reach.get(key, PackedInt32Array())
+				arr.append(i)
+				_rv_reach[key] = arr
+
+# The lowest and the highest landness at the five samples of coarse cell (cx, cy).
+func _coarse_range(cx: int, cy: int) -> Vector2:
+	var i := cx - _cg_x0
+	var j := cy - _cg_y0
+	if i >= 0 and j >= 0 and i < _cg_nx and j < _cg_ny:
+		return Vector2(_cg_lo[j * _cg_nx + i], _cg_hi[j * _cg_nx + i])
+	var x0 := float(cx) * _coarse_cell
+	var y0 := float(cy) * _coarse_cell
+	var lo := INF
+	var hi := -INF
+	for q in 5:
+		var fx := 0.5 if q == 4 else float(q & 1)
+		var fy := 0.5 if q == 4 else float(q >> 1)
+		var l := landness(x0 + fx * _coarse_cell, y0 + fy * _coarse_cell)
+		lo = minf(lo, l)
+		hi = maxf(hi, l)
+	return Vector2(lo, hi)
+
+# Whether step k's ring (landness -step_from[k] / depth_per_unit_m) can meet an upland: the cap lets one stand only where landness
+# is above the lower of its two margins, so a ring deeper than that is never under one and a line drawn along it need not ask the
+# terrain (the shallows' shore, at landness 0, does: a cliff coast).
+func ring_may_meet_upland(k: int) -> bool:
+	return -step_from[k] / _sea_dpu > minf(float(_cap["margin_far"]), float(_cap["margin_cliff"]))
+
+# The spacing of the rings' points, metres (data draw.resample_m): a caller that thins them reads it.
+func resample_m() -> float:
+	return _resample
+
+# Whether the sea can reach into `rect` at all: some coarse cell over it is not dry.
+func sea_may_reach(rect: Rect2) -> bool:
+	if not _live_ready:
+		return true
+	for cy in range(floori(rect.position.y / _coarse_cell), floori(rect.end.y / _coarse_cell) + 1):
+		for cx in range(floori(rect.position.x / _coarse_cell), floori(rect.end.x / _coarse_cell) + 1):
+			if _coarse_range(cx, cy).x < _dry_l:
+				return true
+	return false
+
+# The sea's rings for every step over `rect` grown by pad_m (data live.ring_pad_m when negative): [step 0's rings, step
+# 1's, step 2's], each as sea_rings(). The same rings sea_rings() makes (the grid is on the same lattice and the same
+# values), without its cache, so a worker thread may call it. Nodes the coarse grid says are dry (or deep) all round are
+# not computed: a chunk of inland costs five samples a coarse cell, and the open sea nothing at all.
+func sea_rings_all(rect: Rect2, pad_m: float = -1.0) -> Array:
+	var grown := rect.grow(_ring_pad if pad_m < 0.0 else pad_m)
+	var key := str(grown)
+	_blocks_mutex.lock()
+	var hit: Variant = _rings_cache.get(key)
+	_blocks_mutex.unlock()
+	if hit != null:
+		return hit
+	var out: Array = []
+	for k in step_from.size():
+		out.append([])
+	if sea_may_reach(grown):
+		var g := _live_grid(grown)
+		for k in step_from.size():
+			out[k] = WaterContour.rings(g["vals"], g["cols"], g["rows"], g["x0"], g["y0"], g["cell"], maxf(step_from[k], 0.0), _chaikin, _resample)
+	_blocks_mutex.lock()
+	if _rings_cache.size() >= RINGS_CACHE_MAX:
+		_rings_cache.clear()
+	_rings_cache[key] = out
+	_blocks_mutex.unlock()
+	return out
+
+# The sea's field on the contour lattice over `rect` (as sea_grid, with the pad already in rect), assembled from BLOCKS of
+# BLOCK_N x BLOCK_N lattice nodes kept for the life of the water: a node is made once for the map's chunks, the contour
+# map's three levels of detail and its twins, whichever asks first (a chunk's pad is a quarter of its width, and the map
+# is baked at two sizes and three detail levels, so a grid made per call made every node about thirty times).
+func _live_grid(rect: Rect2) -> Dictionary:
+	var i0 := floori(rect.position.x / _cell_m)
+	var j0 := floori(rect.position.y / _cell_m)
+	var x0 := float(i0) * _cell_m
+	var y0 := float(j0) * _cell_m
+	var cols := ceili((rect.end.x - x0) / _cell_m) + 1
+	var rows := ceili((rect.end.y - y0) / _cell_m) + 1
+	var dry_v := -float(_lv["dry_safety_m"])
+	var deep_v := step_from[step_from.size() - 1] + float(_lv["deep_safety_m"])
+	var vals := PackedFloat64Array()
+	vals.resize(cols * rows)
+	for jj in rows:
+		var j := j0 + jj
+		var bj := floori(float(j) / float(BLOCK_N))
+		var lrow := (j - bj * BLOCK_N) * BLOCK_N
+		var bi_last := 1 << 40
+		var blk: Variant = null
+		for ii in cols:
+			var i := i0 + ii
+			var bi := floori(float(i) / float(BLOCK_N))
+			if bi != bi_last:
+				blk = _block(bi, bj)
+				bi_last = bi
+			if blk is PackedFloat64Array:
+				vals[jj * cols + ii] = (blk as PackedFloat64Array)[lrow + i - bi * BLOCK_N]
+			else:
+				vals[jj * cols + ii] = dry_v if int(blk) == 1 else deep_v
+	return {"x0": x0, "y0": y0, "cols": cols, "rows": rows, "cell": _cell_m, "vals": vals}
+
+# Block (bi, bj) of the lattice's sea field: a PackedFloat64Array of BLOCK_N x BLOCK_N values, or 1 (every node dry, not
+# computed) or 2 (every node deep). Made on first use, by the thread that asks first, outside the lock.
+func _block(bi: int, bj: int) -> Variant:
+	var key := Vector2i(bi, bj)
+	while true:
+		_blocks_mutex.lock()
+		var hit: Variant = _blocks.get(key)
+		if hit == null:
+			_blocks[key] = BLOCK_PENDING   # this thread makes it; the others wait for it (the first blocks are asked for by a dozen threads at once)
+		_blocks_mutex.unlock()
+		if hit == null:
+			break
+		if not (hit is int and int(hit) == BLOCK_PENDING):
+			return hit
+		OS.delay_msec(1)
+	var made: Variant = _make_block(bi, bj)
+	_blocks_mutex.lock()
+	_blocks[key] = made
+	_blocks_mutex.unlock()
+	return made
+
+# The coarse grid's shortcut, per node: a node whose coarse cell and its eight neighbours are all dry (or all deep) is given a
+# stand-in value, as far from every threshold as the safety margin says it is, and not computed. A stand-in is never next to a
+# real node that differs in kind (the neighbours of its cell are all the same), so no contour crossing is placed from one.
+func _make_block(bi: int, bj: int) -> Variant:
+	var n := BLOCK_N
+	var x0 := float(bi * n) * _cell_m
+	var y0 := float(bj * n) * _cell_m
+	var cc := _coarse_cell
+	var ox := floori(x0 / cc) - 1
+	var oy := floori(y0 / cc) - 1
+	var nx := floori((x0 + float(n - 1) * _cell_m) / cc) + 1 - ox + 1
+	var ny := floori((y0 + float(n - 1) * _cell_m) / cc) + 1 - oy + 1
+	var kind := PackedByteArray()
+	kind.resize(nx * ny)
+	for cy in ny:
+		for cx in nx:
+			var r := _coarse_range(ox + cx, oy + cy)
+			kind[cy * nx + cx] = 1 if r.x >= _dry_l else (2 if r.y <= _deep_l else 0)
+	var halo := PackedByteArray()
+	halo.resize(nx * ny)
+	for cy in range(1, ny - 1):
+		for cx in range(1, nx - 1):
+			var k0 := kind[cy * nx + cx]
+			if k0 == 0:
+				continue
+			var same := true
+			for dy in range(-1, 2):
+				for dx in range(-1, 2):
+					if kind[(cy + dy) * nx + cx + dx] != k0:
+						same = false
+			if same:
+				halo[cy * nx + cx] = k0
+	var any_real := false
+	var first := -1
+	var uniform := true
+	var vals := PackedFloat64Array()
+	vals.resize(n * n)
+	var dry_v := -float(_lv["dry_safety_m"])
+	var deep_v := step_from[step_from.size() - 1] + float(_lv["deep_safety_m"])
+	for j in n:
+		var y := y0 + float(j) * _cell_m
+		var row := (floori(y / cc) - oy) * nx - ox
+		for i in n:
+			var x := x0 + float(i) * _cell_m
+			var h := halo[row + floori(x / cc)]
+			if first < 0:
+				first = h
+			elif h != first:
+				uniform = false
+			if h == 1:
+				vals[j * n + i] = dry_v
+			elif h == 2:
+				vals[j * n + i] = deep_v
+			else:
+				vals[j * n + i] = sea_s(x, y)
+				any_real = true
+	if uniform and first > 0 and not any_real:
+		return first
+	return vals
+
+# THE FIELDS OF THE WHOLE MAP, ahead of need (the prewarm thread, once the water is published and the player is on the menu): every block of
+# the sea's field over the map and a margin, and the rings of every chunk the map's baker (512 m) and the contour map (256 m) will
+# ask for, so that the load finds them made. Best effort: whatever is not made yet when the load asks is made by the load, and a
+# block a thread is making is waited for, not made twice.
+func warm_fields() -> void:
+	var helpers: Array = []
+	for part in range(1, WARM_THREADS):
+		var th := Thread.new()
+		th.start(func() -> void: _warm_part(part))
+		helpers.append(th)
+	_warm_part(0)
+	for th: Thread in helpers:
+		th.wait_to_finish()
+
+# One of WARM_THREADS shares of that work (every WARM_THREADS-th block, then every WARM_THREADS-th chunk): the menu has the machine to itself.
+func _warm_part(part: int) -> void:
+	var span := _cell_m * float(BLOCK_N)
+	var pad := _ring_pad
+	var idx := 0
+	for bj in range(floori((_map.position.y - pad) / span), floori((_map.end.y + pad) / span) + 1):
+		for bi in range(floori((_map.position.x - pad) / span), floori((_map.end.x + pad) / span) + 1):
+			idx += 1
+			if idx % WARM_THREADS != part:
+				continue
+			if _prewarm_stop:
+				return
+			_block(bi, bj)
+	for size in [256.0, 512.0]:
+		var n := int(ceil(_map.size.x / size))
+		for cy in n:
+			for cx in n:
+				idx += 1
+				if idx % WARM_THREADS != part:
+					continue
+				if _prewarm_stop:
+					return
+				sea_rings_all(Rect2(_map.position + Vector2(cx, cy) * size, Vector2(size, size)))
+
+# Whether a tree may stand at (x, y) metres: not in the river and not in the sea or at its very edge (data live.tree_shore_s).
+func tree_dry(x: float, y: float) -> bool:
+	if river_pts.size() >= 2 and river_s(x, y) > 0.0:
+		return false
+	if _live_ready and _coarse_range(floori(x / _coarse_cell), floori(y / _coarse_cell)).x >= _dry_l:
+		return true
+	return sea_s(x, y) <= -_tree_s
 
 # --- reports -------------------------------------------------------------------------------------------------
 

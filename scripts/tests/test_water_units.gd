@@ -700,9 +700,10 @@ func _play_strike(sc: SandboxScenario, turns: int) -> Dictionary:
 
 func _strike_off() -> void:
 	var file: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/scenarios/strike.json"))
-	eq((file as Dictionary).get("water"), false, "data/scenarios/strike.json ships with \"water\": false (the drawing track turns it on)")
+	eq((file as Dictionary).get("water"), true, "data/scenarios/strike.json ships with \"water\": true (the live map draws it: Track WB, Job 3)")
 	check((file as Dictionary).has("water_units") and (file as Dictionary).has("water_assignments"), "...with the water units and their orders ready beside it")
-	var sc := SandboxScenario.new("strike")
+	# (the dry Strike is the switch overridden: the knob \"water\" does the same for the game)
+	var sc := SandboxScenario.new("strike", true, {"water": false})
 	check(sc.ok(), "the Strike reads: %s" % [sc.errors])
 	eq(sc.water_on, false, "water is off")
 	eq(sc.units.size(), 7, "the Strike has its seven units, no more")
@@ -726,7 +727,7 @@ func _strike_off() -> void:
 	check(not bad.ok(), "a unit on a water site with the switch off is refused: %s" % [bad.errors])
 
 func _strike_on() -> void:
-	var off := SandboxScenario.new("strike")
+	var off := SandboxScenario.new("strike", true, {"water": false})
 	var sc := SandboxScenario.new("strike", true, {"water": true})
 	if not check(sc.ok(), "the Strike with water on reads: %s" % [sc.errors]):
 		return

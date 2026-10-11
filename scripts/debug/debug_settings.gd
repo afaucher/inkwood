@@ -74,6 +74,13 @@ const OPTIONS := {
 		"default": 2,
 		"help": "Which data/scenarios/<id>.json Local, Host and Join start. 'strike' (the default, proposed: the newest layer) is the bombing mission: a bomber and two fighters against a radio tower in a village, its two flak batteries and a patrolling fighter; 'intercept' is the first fight (an AI bomber and its escort); 'sandbox' is the old flight toy (AiDumb, no mission). The menu's selector sets this knob. Read when a game is built, so set it before pressing Local: INKWOOD_SCENARIO=intercept. Not a live knob (it is not on the F2 panel). Indexes 0 and 1 are the two older scenarios, in the order the tests set them.",
 	},
+	"water": {
+		"section": "Sandbox",
+		"label": "Water",
+		"choices": ["data", "on", "off"],
+		"default": 0,
+		"help": "THE WATER SWITCH of the scenario (Track WB, Job 3, proposed). data = the scenario file's \"water\" key (the strike has it ON: a river, a sea, a bridge, a patrol boat and a supply barge, the map drawn with the water in it and its ground capped by the coast); 'off' plays the same scenario on dry land, with no boat and no bridge, the map as it was; 'on' forces the water on (only a scenario that has \"water_units\"). Read when a game is built, so set it before pressing Local: INKWOOD_WATER=off. Not a live knob (it is not on the F2 panel).",
+	},
 	# --- Sandbox knobs (Track A; the F2 panel shows them) ---------------------------
 	# Index 0 is always "data": whatever the data files say (data/scenarios/
 	# sandbox.json view, data/terrain/terrain.json, data/view/*.json,

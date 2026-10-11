@@ -86,7 +86,9 @@
     "cliff_noise_per_m": { "value": 0.0011, "_proposed": true, "_reason": "the cliff noise's lattice: every 900 m" },
     "cliff_from": { "value": 0.46, "_proposed": true, "_reason": "the cliff noise's smoothstep: below this no cliff" },
     "cliff_to": { "value": 0.58, "_proposed": true, "_reason": "and at or above this a full cliff coast (cliffs are about a tenth to a fifth of a coast where there is an upland to make one)" },
-    "floor_below_threshold": { "value": 0.03, "_proposed": true, "_reason": "the cap's lowest value is the terrain's first threshold less this, so capped ground is low ground (level 0)" }
+    "floor_below_threshold": { "value": 0.03, "_proposed": true, "_reason": "the cap's lowest value is the terrain's first threshold less this, so capped ground is low ground (level 0)" },
+    "river_margin_m": { "value": 14, "_proposed": true, "_reason": "A RIVER RUNS IN A VALLEY (live map, Job 3): no upland stands within this many metres of the river's bank, and the cap rises from there over river_ramp_m to the field's top, so a river never vanishes under a plateau (4 percent of the Strike's river did: 70 m of it beside the village). Where the terrain has no upland the valley changes nothing" },
+    "river_ramp_m": { "value": 40, "_proposed": true, "_reason": "how far the valley's slope runs: the plateau's edge stands about 6 m beyond river_margin_m plus this, a scarp with its hachures and shadow, like any other" }
   },
 
   "quality": {
@@ -201,8 +203,21 @@
     "road_sample_m": { "value": 10, "_proposed": true, "_reason": "spacing of the road's points that must stay dry (except at the crossing)" }
   },
 
+  "live": {
+    "coarse_cell_m": { "value": 64, "_proposed": true, "_reason": "THE LIVE MAP'S SHORTCUTS (Track WB, Job 3). The map is baked in chunks on worker threads, and the water's fields are costly (the warp, two fbms and the terrain's own field: about 60 microseconds a point). A coarse grid of this cell, five samples a cell, tells where nothing is going on: a cell whose lowest landness is high holds no sea and no cap, a cell whose highest is low is deep sea everywhere. Land far from any coast (most of the map) then costs nothing" },
+    "cap_safety": { "value": 0.12, "_proposed": true, "_reason": "a cell is inland (the terrain's height cap does nothing there, field_cap = 1) when its lowest sampled landness is at least the cap's margin plus its ramp plus this. test_water_live checks the shortcut against the exact cap on a lattice of the whole map" },
+    "dry_safety_m": { "value": 30, "_proposed": true, "_reason": "a cell holds no sea when its lowest sampled landness is at least this many metres of s above the shore (landness x depth_per_unit_m), the five samples being a sample of the cell and not a bound on it. NOT BELOW the cap's own inland margin (cap margins plus cap_safety, in metres of s: 26 here), because the terrain's cap reads its lattice nodes from the same blocks and a stand-in must be a place where the cap is 1" },
+    "deep_safety_m": { "value": 12, "_proposed": true, "_reason": "a cell is deep sea everywhere (below the last step's start by this much at every sample) when its highest sampled landness says so; the contour grid is then not computed there. The stand-in only moves the false shoreline the contour grid's forced-outside border makes (in the pad, out of the view), and the cap is at its floor there whatever the value, so this can be smaller than the dry margin: it saves a quarter of the nodes" },
+    "tree_shore_s": { "value": 1.5, "_proposed": true, "_reason": "no tree stands where the sea's s is within this of the shore (s is minus the land's elevation proxy, about a metre and a half of height from the water): the trunk would stand in the ink line. The water and its river are never planted" },
+    "ring_pad_m": { "value": 64, "_proposed": true, "_reason": "the contour grid of a chunk reaches this far past it, so the false shoreline that the grid's forced-outside border makes lies outside the view" }
+  },
+
   "draw": {
     "px_per_m": { "value": 2, "_proposed": true, "_reason": "the board draws at the map's scale (data/terrain/terrain.json scale.px_per_m, the demo baseline)" },
+    "chunk": {
+      "mask_ssaa": { "value": 2, "_proposed": true, "_reason": "supersampling of a chunk's two depth masks (the sea's and the river's; each carries all three steps as grey levels 1/3, 2/3 and 1, so a chunk needs two small canvases and not six). The mask edge lies under an ink line at the shore and under a faint one at the steps: 2 is enough, and 4 would cost a 4096 px target a chunk" },
+      "clip_px": { "value": 24, "_proposed": true, "_reason": "a line piece that lies wholly further than this from a chunk is not drawn in it (pieces are never cut at the chunk: an ink line keeps its pen and its closed or open weight whatever chunk draws it, so neighbours agree at the seam). The pen's taper is 7 px" }
+    },
     "grid_cell_m": { "value": 8, "_proposed": true, "_reason": "the sea's contour grid, as the terrain's (chunks.cell_m); rivers are not on it (they are drawn as ribbons: an 8 m grid cannot hold a 5 m brook)" },
     "chaikin_passes": { "value": 2, "_proposed": true, "_reason": "as the terrain's boundaries" },
     "resample_m": { "value": 1, "_proposed": true, "_reason": "as the terrain's boundaries" },

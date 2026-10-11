@@ -72,6 +72,7 @@ const Terrain = preload("res://scripts/world/terrain.gd")
 const TerrainDraw = preload("res://scripts/render/terrain_draw.gd")
 const TerrainShadows = preload("res://scripts/render/terrain_shadows.gd")
 const VillageDraw = preload("res://scripts/render/village_draw.gd")
+const WaterDraw = preload("res://scripts/render/water_draw.gd")
 const Geometry = preload("res://scripts/core/geometry.gd")
 const TERRAIN_DATA_PATH := "res://data/terrain/terrain.json"
 
@@ -96,14 +97,17 @@ var _ppm0 := 0.0               # the scale the MapView asked for (0: the data's)
 var _rows0 := 0                # first chunk row of the map (baker chunks) and how many rows
 var _rows := 1
 var _merge_mat_shader: Shader
+var water: RefCounted = null     # the WaterGen whose water the map shows (null: none; the stage list is then exactly what it was)
+var water_draw: WaterDraw = null
 
-func _init(seed_v: int, params: RenderParams, view_cfg: Dictionary, px_per_m: float = 0.0) -> void:
+func _init(seed_v: int, params: RenderParams, view_cfg: Dictionary, px_per_m: float = 0.0, water_gen: RefCounted = null) -> void:
 	seed_value = seed_v
 	P = params
 	P.L["road"] = false
 	chunk_px = int(view_cfg.get("chunk_px", 1024))
 	lanes = maxi(1, int(view_cfg.get("terrain_lanes", 1)))
 	_ppm0 = px_per_m
+	_use_water(water_gen)
 	_build_bundles()
 
 # How the provider's terrains are made: (seed, data_path, params) -> Terrain. Unset: Terrain.new. A layer that
@@ -118,6 +122,25 @@ func set_terrain_maker(fn: Callable) -> void:
 	_bundles.clear()
 	errors.clear()
 	_build_bundles()
+
+# THE WATER (Track WB, 2026-10-10, Job 3): the map shows a WaterGen's water. Every bundle's terrain is then the water's own
+# (WaterGen.make_terrain: the height field capped by the water, no tree in the water), and three things join the bake: a
+# `water` stage that makes the chunk's rings and the two depth masks (worker, parallel), a `water_masks` stage that renders
+# the masks (main), the wash drawn under the terrain's level fill, and the ink lines drawn before the terrain's own
+# linework (scripts/render/water_draw.gd). With no water the stage list, the terrain and every pixel are what they were.
+func set_water(w: RefCounted) -> void:
+	_use_water(w)
+	_bundles.clear()
+	errors.clear()
+	_build_bundles()
+
+func _use_water(w: RefCounted) -> void:
+	water = w
+	water_draw = null
+	terrain_maker = Callable()
+	if w != null:
+		water_draw = WaterDraw.new(P)
+		terrain_maker = Callable(w, "make_terrain")
 
 func _make_terrain() -> Terrain:
 	var t: Terrain = terrain_maker.call(seed_value, TERRAIN_DATA_PATH, P) if terrain_maker.is_valid() else Terrain.new(seed_value, TERRAIN_DATA_PATH, P)
@@ -144,6 +167,8 @@ func _build_bundles() -> void:
 		errors.append_array(terrain.data.errors)
 	errors.append_array(td.errors)
 	errors.append_array(vd.errors)
+	if water_draw != null:
+		errors.append_array(water_draw.errors)
 	_set_rows()
 
 func ok() -> bool:
@@ -237,7 +262,7 @@ func warm_chunk(c: Vector2i) -> void:
 		b.mutex.unlock()
 
 func stages() -> Array:
-	return [
+	var list: Array = [
 		{"name": "gather", "thread": "worker", "lane": "terrain", "fn": _gather},
 		{"builtin": "sprites"},
 		{"name": "ground", "thread": "worker", "parallel": true, "fn": _ground},
@@ -255,6 +280,15 @@ func stages() -> Array:
 		{"name": "linework", "thread": "worker", "lane": "terrain", "fn": _linework},
 		{"name": "frame", "thread": "main", "final": true, "fn": _frame},
 	]
+	if water_draw != null:
+		# after the ground (both parallel: the rings are computed beside it), the masks rendered once everything else is in
+		list.insert(3, {"name": "water", "thread": "worker", "parallel": true, "fn": _water})
+		var at := 0
+		for i in list.size():
+			if (list[i] as Dictionary).get("name", "") == "fill":
+				at = i
+		list.insert(at, {"name": "water_masks", "thread": "main", "join": true, "fn": _water_masks})
+	return list
 
 # The trees whose centre lies in the chunk grown by reach_px(), sorted as
 # T draws them: base + h, then y, then x -- the terrain's own and the hedge trees of the fields
@@ -472,13 +506,34 @@ func _merge(parts: Variant, size: Vector2i) -> Variant:
 	m.draw_image_with_material(list[0], 0.0, 0.0, float(size.x), float(size.y), mat)
 	return [m]
 
+# The water's rings and masks of the chunk (the stage `water`, a worker beside the ground): the geometry stays in job.data for the
+# linework, the mask canvases go to be rendered by `water_masks`.
+func _water(job: Dictionary) -> Dictionary:
+	var geo: Dictionary = water_draw.chunk_geometry(water, job.rect, px_per_m())
+	if geo.is_empty():
+		return {"data": {}}
+	return {"data": {"water_geo": geo, "water_g": water_draw.chunk_masks(geo, job.view, job.size)}}
+
+func _water_masks(job: Dictionary) -> Variant:
+	var g: Variant = job.data.get("water_g")
+	if g is Array and not (g as Array).is_empty():
+		(job.data as Dictionary).erase("water_g")   # (the canvases are rendered now, and freed after: the job no longer holds them)
+		return g
+	return []
+
 func _fill(job: Dictionary) -> Array:
+	var masks: Variant = job.data.get("water_masks")
+	if water_draw != null and masks is Array and (masks as Array).size() == 2:
+		water_draw.draw_chunk_wash(job.data.g, masks[0], masks[1], (job.data.levels as Array)[0], job.rect, job.size)
 	td.draw_level_fill(job.data.g, job.data.levels)
 	return []
 
 func _linework(job: Dictionary) -> Array:
 	var b := _bundle(job.c)
 	b.mutex.lock()
+	var geo: Variant = job.data.get("water_geo")
+	if water_draw != null and geo is Dictionary:
+		water_draw.draw_chunk_lines(job.data.g, b.terrain, water, geo, job.view, job.rect)   # (the water's ink goes down first: the terrain's contours and hachures cross it)
 	b.td.draw_linework(job.data.g, job.view, job.rect)
 	b.mutex.unlock()
 	return []

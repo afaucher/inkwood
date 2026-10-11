@@ -102,7 +102,7 @@ func _scenario() -> void:
 	if not check(sc.ok(), "1. the Strike scenario reads cleanly: %s" % str(sc.errors)):
 		return
 	eq(sc.ai_kind, SandboxScenario.AI_PILOT, "1. it asks for the pilot AI")
-	eq(sc.units.size(), 7, "1. seven units: bomber, two fighters, the patrol, the tower, two batteries")
+	eq(sc.units.size() - (3 if sc.water_on else 0), 7, "1. seven units: bomber, two fighters, the patrol, the tower, two batteries (and, with the water switch on, the bridge, the patrol boat and the barge: test_water_units)")
 	var by_id: Dictionary = {}
 	var pools: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(SandboxScenario.CALLSIGNS_PATH))
 	var seen: Dictionary = {}
@@ -200,7 +200,7 @@ func _scenario() -> void:
 	var g := StrikePlay.new("strike", 7)
 	if not check(g.ok(), "1. the scenario stands up as a game: %s" % str(g.errors)):
 		return
-	eq(g.world.units.size(), 7, "1. the World has seven units")
+	eq(g.world.units.size() - (3 if g.scenario.water_on else 0), 7, "1. the World has seven units (and the water's three)")
 	eq(g.player_ids().size(), 3, "1. three of them the players'")
 	check(g.ai is AiPilot, "1. the AI is the pilot")
 	eq(g.ai.state_of(PATROL), AiPilot.S_PATROL, "1. the patrol is patrolling")
@@ -441,7 +441,7 @@ func _local() -> bool:
 	if not check(playable, "5. the sandbox becomes playable"):
 		return false
 	var w: World = sb.world
-	eq(w.units.size(), 7, "5. seven units")
+	eq(w.units.size() - (3 if sb.scenario.water_on else 0), 7, "5. seven units (and the water's three)")
 	check(sb.ai is AiPilot, "5. Local attaches the pilot")
 	check(sb.mission != null and sb.mission.state == Mission.PLAYING, "5. and the mission, playing")
 	check(sb.objective != null, "5. the target ring is on the map")

@@ -137,6 +137,7 @@ var full_above: float
 var overview_override := -1.0   # >= 0 forces the overview amount (shots, tests)
 var auto_bake := true
 var terrain_maker: Callable = Callable()   # see set_terrain_maker()
+var water: RefCounted = null              # see set_water()
 # (rect_px: Rect2) -> bool: does the map layer show something (fresh or stale) over this map-px rectangle? And
 # () -> int, moving when that changes (MapView.covers_px, MapView.chunk_serial). Unset: the map is taken as there.
 var map_ready: Callable = Callable()
@@ -254,6 +255,7 @@ func set_terrain(t: Terrain) -> void:
 	vision.attach_terrain(t)
 	topo = FogTopo.new(t, fog_data, P)
 	topo.terrain_maker = terrain_maker
+	topo.set_water(water)
 	errors.append_array(topo.errors)
 	_apply_style()
 	shutdown()   # bakes in flight are for the old layer
@@ -275,6 +277,17 @@ func set_terrain(t: Terrain) -> void:
 func set_terrain_maker(fn: Callable) -> void:
 	terrain_maker = fn
 	topo.terrain_maker = fn
+
+# THE WATER ON THE CONTOUR MAP (Track WB, 2026-10-10, Job 3): the map outside sight shows `w`'s water (a WaterGen: three depth steps as
+# quiet washes under the level tones and their ink lines, FogTopo.set_water) and the recorder twins' terrains are the water's own
+# (w.make_terrain: the same capped ground the map, the sight and the units read). `terrain` must be that capped ground too.
+# Call after setup() and before the first bake; a layer already baking is rebuilt (set_terrain). Null: no water.
+func set_water(w: RefCounted) -> void:
+	water = w
+	set_terrain_maker(Callable(w, "make_terrain") if w != null else Callable())
+	topo.set_water(w)
+	if _baker != null:
+		set_terrain(terrain)
 
 func _ready() -> void:
 	process_priority = 100   # after the camera has moved this frame

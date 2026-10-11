@@ -36,6 +36,7 @@ var sandbox: Node = null
 var scenario_select: OptionButton = null   # the menu's selector (built by setup_menu, not in the .tscn)
 var _menu_ready := false
 var _local_pressed_ms := 0
+var _prewarm_ok := false   # set by _ready for a real launch; a test that stands the menu up never starts the water's thread
 
 func _ready() -> void:
 	# Headless entry point first, before any menu, network or Steam wiring: a
@@ -53,6 +54,8 @@ func _ready() -> void:
 			return
 
 	setup_menu()
+	_prewarm_ok = true   # (a real launch, not a test: only here may a thread be left running while the menu waits)
+	_prewarm_selected()
 
 # The menu's wiring: the build stamp, the buttons and the session signals. Split
 # out of _ready (which a headless test run leaves before this point) so the
@@ -114,6 +117,20 @@ func _on_scenario_selected(index: int) -> void:
 	var at := choices.find(str(scenario_select.get_item_metadata(index)))
 	if at >= 0:
 		DebugSettings.set_choice("scenario", at)
+	_prewarm_selected()
+
+# The scenario shown has water to make (the Strike): make it now, on its own thread, so Local does not wait for it (Sandbox.prewarm).
+func _prewarm_selected() -> void:
+	if _prewarm_ok and load("res://scripts/app/sandbox.gd").can_instantiate():
+		load("res://scripts/app/sandbox.gd").prewarm(DebugSettings.get_choice_name("scenario"))
+
+# A thread still making the water must not be running when the engine goes (LOADED here, as the sandbox is: a parse error in the
+# water must not fail every test through this file).
+func _join_water() -> void:
+	if _prewarm_ok:
+		var wg: Script = load("res://scripts/world/water_gen.gd")
+		if wg != null and wg.can_instantiate():
+			wg.prewarm_join()
 
 # The scenario the next Local / Host / Join starts (the knob's choice).
 func selected_scenario() -> String:
@@ -124,6 +141,8 @@ func selected_scenario() -> String:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST and sandbox != null:
 		stop_sandbox()
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_join_water()
 
 # Esc: out of the sandbox to the menu; at the menu, quit.
 func _unhandled_input(event: InputEvent) -> void:
@@ -131,6 +150,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if sandbox != null:
 			stop_sandbox()
 		else:
+			_join_water()
 			get_tree().quit()
 
 # --- Menu --------------------------------------------------------------------
