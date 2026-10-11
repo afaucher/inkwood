@@ -97,7 +97,7 @@
     "resample_m": { "value": 1, "_proposed": true, "_reason": "as the terrain's boundaries" },
 
     "palette": {
-      "hue_deg": { "value": 222, "_proposed": true, "_reason": "WORKING DEFAULT for the water's hue (OKLCH). 20 degrees from the shadow tint (steel, 242) and 38 from the slate-blue side accent (side_b, 260), so the three blues are three blues and not one; the board shows it beside teal (200) and the shadow's own hue (242)" },
+      "hue_deg": { "value": 222, "decision": "water-look", "_reason": "Alex 2026-10-10: 'Hue 222, the first'. The water's hue (OKLCH). 20 degrees from the shadow tint (steel, 242) and 38 from the slate-blue side accent (side_b, 260), so the three blues are three blues and not one; the board shows it beside teal (200) and the shadow's own hue (242)" },
       "lightness_below_paper": { "value": [0.03, 0.11, 0.2], "_proposed": true, "_reason": "L of each depth step = the paper's L less this (paper 0.847): shallows 0.817, shelf 0.737, deep 0.647. Lightness is the ramp off paper, darker with depth, the way the land lifts from paper with height. The deep step stays well above the shadow tint (0.513) so a shadow still reads on it, and above the slate accent (0.551) so the enemy's colour is the darker thing" },
       "chroma": { "value": [0.032, 0.05, 0.066], "_proposed": true, "_reason": "more saturated with depth (Alex), and always under the shadow tint's 0.076 and the accents' 0.100: water is the quietest blue in the drawing" },
       "wash_alpha": { "value": 1.0, "_proposed": true, "_reason": "alpha of the wash; the paper's own mottle shows through by paper_mottle instead" },
@@ -134,7 +134,7 @@
       "break_threshold": { "value": [0.32, 0.4, 0.48], "_proposed": true, "_reason": "per line: a line lifts the pen where the noise is under this, so the outer lines are more broken (dashes)" }
     },
 
-    "working_default": { "value": "A", "_proposed": true, "_reason": "the option the board's data defaults to until Alex picks (chosen: null in variants/water/board.json). A is the most literal reading of 'the same height system with a blue colour wash': the land's contours continue under the water as lines at each step. PROPOSED by Track WB, not a decision" },
+    "working_default": { "value": "A", "decision": "water-look", "_reason": "Alex 2026-10-10 on variants/water/: 'A · Ink line at each step'" },
 
     "options": {
       "value": {

@@ -1339,6 +1339,33 @@
       ],
       "status": "chosen by Alex; looks on boards",
       "notes": "Alex: 'Let's do a water layer next. We need to settle the water design. I like the same height system with a blue color wash. Same shadows. We need at least one small boat. Maybe two? Maybe bridges? What else? More terrain variety.' Answers: '1. I thought the map was random? 2. Sounds good 3. Make the board 4-6. Sounds good 7. Add the boats just as environment' On the boats: 'Correct, part of the environment with real patrols but no specific part in the mission'. Then, on the patrol boat's guns: 'Let it fire if it wants'."
+    },
+    {
+      "id": "water-look",
+      "date": "2026-10-10",
+      "area": "Terrain, Water, Palette",
+      "question": "How does water look (variants/water/), and in which blue?",
+      "board": "variants/water/ (the Inkwood Water Board viewer)",
+      "options": [
+        "A ink line at each step",
+        "B inked shoreline only",
+        "C soft shore and pale band",
+        "D ripple lines",
+        "E smooth gradient",
+        "F pale step edges",
+        "hue 222, 242 (200 not rendered)"
+      ],
+      "chosen": "A, an ink line at each depth step; hue 222",
+      "parameters": {
+        "look": "A",
+        "hue_deg": 222
+      },
+      "applied_to": [
+        "data/world/water.json draw.working_default and hue_deg",
+        "variants/water/board.json chosen"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'A · Ink line at each step' and 'Hue 222, the first'. On the generator: 'But the seeds are too uniform. It looks like a big square of land' (being reworked)."
     }
   ]
 }

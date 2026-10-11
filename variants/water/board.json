@@ -604,6 +604,6 @@
   "recommendation_proposed": "A, the working default in data (PROPOSED, not Alex's): see the sheet",
   "frames": "frames.json (every frame whole, with its caption)",
   "sheet": "board.png (rows: coast, river, bank, markers at 0.35 and 1; the palette row; the palette strip; the generator's overview of six seeds)",
-  "chosen": null,
-  "chosen_by": null
+  "chosen": "A",
+  "chosen_by": "Alex, 2026-10-10: 'A · Ink line at each step' and 'Hue 222, the first'"
 }
