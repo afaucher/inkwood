@@ -166,6 +166,9 @@ mixed-warfare): water is generated per seed (`scripts/world/water_gen.gd`,
   (`MapView.set_burnt_trees`, `scripts/render/fire_trunk.gd`). Tests:
   `test_fire`, `test_fire_track`, `test_fire_net`, `test_fire_render`; a look:
   `scripts/render/fire_shot.gd`.
+- The sun has ONE source: `data/params/sun.json`, read through `scripts/world/sun.gd`
+  (`Sun.current()`) by RenderParams, UiStyle, FxStyle, InkCanvas's pen and the demo
+  frame. Never read a sun direction anywhere else (`test_sun`).
 - The Style guide is the design doc's "Style guide" tab: read it before drawing
   anything new.
 Work on a track stays inside the folders it owns and reads other tracks' data

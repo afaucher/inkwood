@@ -492,8 +492,9 @@ static func _load_style() -> Style:
 	st.height = _def(par, "tree_height", 1.3)
 	st.wall_w = _def(par, "wall_width", 16)
 	st.wall_h = _def(par, "wall_height", 12)
-	st.sun_az = _def(par, "sun_direction", 315)
-	st.elev = _def(par, "sun_elevation", 46)
+	var sun = load("res://scripts/world/sun.gd").current()   # THE SUN is data/params/sun.json's (scripts/world/sun.gd)
+	st.sun_az = sun.azimuth_deg
+	st.elev = sun.elevation_deg
 	st.shadow_str = _def(par, "shadow_strength", 0.92)
 	st.grain = _def(par, "paper_grain", 0.55)
 	st.lx = float(light.get("x", -sqrt(0.5)))

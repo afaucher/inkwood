@@ -195,7 +195,9 @@ func _check_plan_readers() -> void:
 	# gun_source.gd (Track SH, the warship): bomb_source's twin for the big guns -- it lists a unit's planned fires and asks the World for a
 	# step's gun_check; it draws nothing, only reads a PLAYER unit's plan (it refuses any other) and the planner hands what it reads to a
 	# drawing only behind plan_shown (test_ui_guns).
-	var allowed := ["motion_planner.gd", "roster.gd", "node_hover_board_shot.gd", "bomb_source.gd", "gun_source.gd", "bomb_aim_board_shot.gd", "bomb_ui_shot.gd"]
+	# motion_range_board_shot.gd (builder BM): a windowed board over four PLAYER units of one side (a light fighter, the bomber, a tank, the
+	# cruiser) that it plans and plays itself; it measures the fan's size from the planner's own outline and the envelope.
+	var allowed := ["motion_planner.gd", "roster.gd", "node_hover_board_shot.gd", "bomb_source.gd", "gun_source.gd", "bomb_aim_board_shot.gd", "bomb_ui_shot.gd", "motion_range_board_shot.gd"]
 	var checked := 0
 	for root: String in ["res://scripts/ui", "res://scripts/fx"]:
 		for f: String in _gd_files(root):

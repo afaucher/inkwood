@@ -1937,26 +1937,39 @@
       "date": "2026-10-11",
       "area": "Interface",
       "question": "How is the range of motion (where the next node can go) drawn, in one style for every unit type?",
-      "board": "variants/motion-range/ (being made)",
-      "options": [],
+      "board": "variants/motion-range/",
+      "options": [
+        "A ribs (today's: outline, wash, ribs, spokes)",
+        "B shade (Alex's idea: a flat shaded area, no outline)",
+        "C wash_rim (a light wash under one thin rim)",
+        "D stipple",
+        "E hatch",
+        "F rim_ticks (a quiet rim and a ruler with ticks at the slowest and fastest reach)"
+      ],
       "chosen": null,
-      "parameters": {},
+      "parameters": {
+        "switch": "data/ui/ui.json planner.fan.mode (today's 'ribs' is the default)",
+        "recommendation": "C for every unit (PROPOSED)"
+      },
       "applied_to": [],
       "status": "open",
-      "notes": "Alex: 'I want to look at the design of the 'acceptable range of motion' indicator for planes. Is there a style that makes more sense across all unit types? Should we just have a little shaded area where you can set the node? Show me some options before commiting this.'"
+      "notes": "Alex: 'I want to look at the design of the 'acceptable range of motion' indicator for planes. Is there a style that makes more sense across all unit types? Should we just have a little shaded area where you can set the node? Show me some options before commiting this.' PROPOSED by the board's builder: C, because B's tone alone vanishes at the start zoom (the fighter's fan is a 3 x 24 px streak) and one thin rim keeps it findable; D and E turn into a dotted line and a ladder on a 9 px band; F alone shows reach. Found: the cruiser's fan sits under its own hull (the markers draw over the planner), so no look shows it until that changes."
     },
     {
       "id": "sun-time",
       "date": "2026-10-11",
       "area": "Style, Terrain",
       "question": "Do shadows follow the time of day, and how is the time picked?",
-      "board": "variants/sun-time/ (being made)",
+      "board": "variants/sun-time/",
       "options": [],
       "chosen": "picked once at mission start and fixed for the mission; every shadow follows the one sun",
       "parameters": {
         "when": "fixed at mission start",
         "what_follows": "every shadow (trees, terrain, structures, planes' altitude shadows, effects)",
-        "still_open": "the look across the hours (the board), the clock source in co-op (proposed: the host's), night hours"
+        "still_open": "the look across the hours (the board), the clock source in co-op (proposed: the host's), night hours",
+        "model": "PROPOSED: bearing 90 at 06:00, 180 at noon, 270 at 18:00; elevation a sine arc peaking at 60 degrees; shadow length 1/tan(elevation), clamped at 3; data/params/sun.json, scripts/world/sun.gd",
+        "recommendations": "PROPOSED: (a) the host's clock, sent with mission start, and a scenario may pin an hour; (b) fold the 24 hours onto the day (clamp gives half of all real hours the longest shadows); planes' altitude-shadow gap held at today's length",
+        "rebake": "measured: about 37 to 45 s for all 100 chunks, the same as today's sun; fixed at start means one bake"
       },
       "applied_to": [],
       "status": "chosen by Alex (in part); the look and the rest open",

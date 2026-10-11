@@ -137,6 +137,8 @@ const ARC_TOLERANCE := 0.02
 # The engine's texture size limit; the supersample factor drops to fit it.
 const MAX_TARGET_PX := 16384
 
+const Sun = preload("res://scripts/world/sun.gd")   # the pen's shadow side is THE sun's (data/params/sun.json)
+
 const _SELF_PATH := "res://scripts/render/ink_canvas.gd"
 const PARAMS_PATH := "res://data/params/render_defaults.json"
 
@@ -805,9 +807,10 @@ static func _load_pen() -> Dictionary:
 	var ink: Variant = (root.get("palette", {}) as Dictionary).get("ink")
 	if ink is String and Color.html_is_valid(ink):
 		cfg["ink"] = Color.html(ink)
-	var sun: Variant = ((root.get("parameters", {}) as Dictionary).get("sun_direction", {}) as Dictionary).get("default")
-	if sun is float or sun is int:
-		var az := (float(sun) + 90.0) * PI / 180.0
+	# THE SUN is data/params/sun.json's (scripts/world/sun.gd): the pen's shadow side is the map's
+	var sun = Sun.current()
+	if sun.ok():
+		var az: float = (sun.azimuth_deg + 90.0) * PI / 180.0
 		cfg["shadow_dir"] = Vector2(cos(az), sin(az))
 	return cfg
 

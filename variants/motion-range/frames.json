@@ -1,0 +1,1124 @@
+{
+  "id": "motion-range",
+  "about": "Every frame of the range-of-motion board as its own PNG at native size: <option>_<unit>_z<zoom>.png are 1:1 crops of the game's frames (380 px wide; the fan's apex at the same pixel in every crop of a zoom), *_light_cones_z1.0.png the light fighter with its cone wash, cruiser_hidden_* the cruiser as the game draws it today, context_<unit>_z0.35.png whole 1280 x 720 frames. board.png is the sheet.",
+  "frames": [
+    {
+      "file": "a_ribs_light_z1.0.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "light",
+      "zoom": 1.0,
+      "title": "A  ·  Light fighter  ·  zoom 1",
+      "caption": "Today: outline, a faint wash and ribs: Light fighter, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "a_ribs_bomber_z1.0.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "bomber",
+      "zoom": 1.0,
+      "title": "A  ·  Bomber  ·  zoom 1",
+      "caption": "Today: outline, a faint wash and ribs: Bomber, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "a_ribs_tank_z1.0.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "tank",
+      "zoom": 1.0,
+      "title": "A  ·  Tank, by the river  ·  zoom 1",
+      "caption": "Today: outline, a faint wash and ribs: Tank, by the river, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "a_ribs_cruiser_z1.0.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "cruiser",
+      "zoom": 1.0,
+      "title": "A  ·  Cruiser, by the coast  ·  zoom 1",
+      "caption": "Today: outline, a faint wash and ribs: Cruiser, by the coast, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "a_ribs_light_z0.35.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "light",
+      "zoom": 0.35,
+      "title": "A  ·  Light fighter  ·  zoom 0.35",
+      "caption": "Today: outline, a faint wash and ribs: Light fighter, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "a_ribs_bomber_z0.35.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "bomber",
+      "zoom": 0.35,
+      "title": "A  ·  Bomber  ·  zoom 0.35",
+      "caption": "Today: outline, a faint wash and ribs: Bomber, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "a_ribs_tank_z0.35.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "tank",
+      "zoom": 0.35,
+      "title": "A  ·  Tank, by the river  ·  zoom 0.35",
+      "caption": "Today: outline, a faint wash and ribs: Tank, by the river, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "a_ribs_cruiser_z0.35.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "cruiser",
+      "zoom": 0.35,
+      "title": "A  ·  Cruiser, by the coast  ·  zoom 0.35",
+      "caption": "Today: outline, a faint wash and ribs: Cruiser, by the coast, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "a_ribs_light_z0.2.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "light",
+      "zoom": 0.2,
+      "title": "A  ·  Light fighter  ·  zoom 0.2",
+      "caption": "Today: outline, a faint wash and ribs: Light fighter, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "a_ribs_bomber_z0.2.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "bomber",
+      "zoom": 0.2,
+      "title": "A  ·  Bomber  ·  zoom 0.2",
+      "caption": "Today: outline, a faint wash and ribs: Bomber, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "a_ribs_tank_z0.2.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "tank",
+      "zoom": 0.2,
+      "title": "A  ·  Tank, by the river  ·  zoom 0.2",
+      "caption": "Today: outline, a faint wash and ribs: Tank, by the river, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "a_ribs_cruiser_z0.2.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "cruiser",
+      "zoom": 0.2,
+      "title": "A  ·  Cruiser, by the coast  ·  zoom 0.2",
+      "caption": "Today: outline, a faint wash and ribs: Cruiser, by the coast, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "b_shade_light_z1.0.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "light",
+      "zoom": 1.0,
+      "title": "B  ·  Light fighter  ·  zoom 1",
+      "caption": "A shaded area, no outline (Alex's idea): Light fighter, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "b_shade_bomber_z1.0.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "bomber",
+      "zoom": 1.0,
+      "title": "B  ·  Bomber  ·  zoom 1",
+      "caption": "A shaded area, no outline (Alex's idea): Bomber, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "b_shade_tank_z1.0.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "tank",
+      "zoom": 1.0,
+      "title": "B  ·  Tank, by the river  ·  zoom 1",
+      "caption": "A shaded area, no outline (Alex's idea): Tank, by the river, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "b_shade_cruiser_z1.0.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "cruiser",
+      "zoom": 1.0,
+      "title": "B  ·  Cruiser, by the coast  ·  zoom 1",
+      "caption": "A shaded area, no outline (Alex's idea): Cruiser, by the coast, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "b_shade_light_z0.35.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "light",
+      "zoom": 0.35,
+      "title": "B  ·  Light fighter  ·  zoom 0.35",
+      "caption": "A shaded area, no outline (Alex's idea): Light fighter, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "b_shade_bomber_z0.35.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "bomber",
+      "zoom": 0.35,
+      "title": "B  ·  Bomber  ·  zoom 0.35",
+      "caption": "A shaded area, no outline (Alex's idea): Bomber, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "b_shade_tank_z0.35.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "tank",
+      "zoom": 0.35,
+      "title": "B  ·  Tank, by the river  ·  zoom 0.35",
+      "caption": "A shaded area, no outline (Alex's idea): Tank, by the river, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "b_shade_cruiser_z0.35.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "cruiser",
+      "zoom": 0.35,
+      "title": "B  ·  Cruiser, by the coast  ·  zoom 0.35",
+      "caption": "A shaded area, no outline (Alex's idea): Cruiser, by the coast, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "b_shade_light_z0.2.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "light",
+      "zoom": 0.2,
+      "title": "B  ·  Light fighter  ·  zoom 0.2",
+      "caption": "A shaded area, no outline (Alex's idea): Light fighter, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "b_shade_bomber_z0.2.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "bomber",
+      "zoom": 0.2,
+      "title": "B  ·  Bomber  ·  zoom 0.2",
+      "caption": "A shaded area, no outline (Alex's idea): Bomber, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "b_shade_tank_z0.2.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "tank",
+      "zoom": 0.2,
+      "title": "B  ·  Tank, by the river  ·  zoom 0.2",
+      "caption": "A shaded area, no outline (Alex's idea): Tank, by the river, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "b_shade_cruiser_z0.2.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "cruiser",
+      "zoom": 0.2,
+      "title": "B  ·  Cruiser, by the coast  ·  zoom 0.2",
+      "caption": "A shaded area, no outline (Alex's idea): Cruiser, by the coast, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "c_wash_rim_light_z1.0.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "light",
+      "zoom": 1.0,
+      "title": "C  ·  Light fighter  ·  zoom 1",
+      "caption": "Wash and a thin inked rim: Light fighter, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "c_wash_rim_bomber_z1.0.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "bomber",
+      "zoom": 1.0,
+      "title": "C  ·  Bomber  ·  zoom 1",
+      "caption": "Wash and a thin inked rim: Bomber, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "c_wash_rim_tank_z1.0.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "tank",
+      "zoom": 1.0,
+      "title": "C  ·  Tank, by the river  ·  zoom 1",
+      "caption": "Wash and a thin inked rim: Tank, by the river, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "c_wash_rim_cruiser_z1.0.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "cruiser",
+      "zoom": 1.0,
+      "title": "C  ·  Cruiser, by the coast  ·  zoom 1",
+      "caption": "Wash and a thin inked rim: Cruiser, by the coast, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "c_wash_rim_light_z0.35.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "light",
+      "zoom": 0.35,
+      "title": "C  ·  Light fighter  ·  zoom 0.35",
+      "caption": "Wash and a thin inked rim: Light fighter, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "c_wash_rim_bomber_z0.35.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "bomber",
+      "zoom": 0.35,
+      "title": "C  ·  Bomber  ·  zoom 0.35",
+      "caption": "Wash and a thin inked rim: Bomber, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "c_wash_rim_tank_z0.35.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "tank",
+      "zoom": 0.35,
+      "title": "C  ·  Tank, by the river  ·  zoom 0.35",
+      "caption": "Wash and a thin inked rim: Tank, by the river, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "c_wash_rim_cruiser_z0.35.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "cruiser",
+      "zoom": 0.35,
+      "title": "C  ·  Cruiser, by the coast  ·  zoom 0.35",
+      "caption": "Wash and a thin inked rim: Cruiser, by the coast, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "c_wash_rim_light_z0.2.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "light",
+      "zoom": 0.2,
+      "title": "C  ·  Light fighter  ·  zoom 0.2",
+      "caption": "Wash and a thin inked rim: Light fighter, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "c_wash_rim_bomber_z0.2.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "bomber",
+      "zoom": 0.2,
+      "title": "C  ·  Bomber  ·  zoom 0.2",
+      "caption": "Wash and a thin inked rim: Bomber, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "c_wash_rim_tank_z0.2.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "tank",
+      "zoom": 0.2,
+      "title": "C  ·  Tank, by the river  ·  zoom 0.2",
+      "caption": "Wash and a thin inked rim: Tank, by the river, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "c_wash_rim_cruiser_z0.2.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "cruiser",
+      "zoom": 0.2,
+      "title": "C  ·  Cruiser, by the coast  ·  zoom 0.2",
+      "caption": "Wash and a thin inked rim: Cruiser, by the coast, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "d_stipple_light_z1.0.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "light",
+      "zoom": 1.0,
+      "title": "D  ·  Light fighter  ·  zoom 1",
+      "caption": "Stipple: Light fighter, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "d_stipple_bomber_z1.0.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "bomber",
+      "zoom": 1.0,
+      "title": "D  ·  Bomber  ·  zoom 1",
+      "caption": "Stipple: Bomber, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "d_stipple_tank_z1.0.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "tank",
+      "zoom": 1.0,
+      "title": "D  ·  Tank, by the river  ·  zoom 1",
+      "caption": "Stipple: Tank, by the river, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "d_stipple_cruiser_z1.0.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "cruiser",
+      "zoom": 1.0,
+      "title": "D  ·  Cruiser, by the coast  ·  zoom 1",
+      "caption": "Stipple: Cruiser, by the coast, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "d_stipple_light_z0.35.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "light",
+      "zoom": 0.35,
+      "title": "D  ·  Light fighter  ·  zoom 0.35",
+      "caption": "Stipple: Light fighter, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "d_stipple_bomber_z0.35.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "bomber",
+      "zoom": 0.35,
+      "title": "D  ·  Bomber  ·  zoom 0.35",
+      "caption": "Stipple: Bomber, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "d_stipple_tank_z0.35.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "tank",
+      "zoom": 0.35,
+      "title": "D  ·  Tank, by the river  ·  zoom 0.35",
+      "caption": "Stipple: Tank, by the river, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "d_stipple_cruiser_z0.35.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "cruiser",
+      "zoom": 0.35,
+      "title": "D  ·  Cruiser, by the coast  ·  zoom 0.35",
+      "caption": "Stipple: Cruiser, by the coast, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "d_stipple_light_z0.2.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "light",
+      "zoom": 0.2,
+      "title": "D  ·  Light fighter  ·  zoom 0.2",
+      "caption": "Stipple: Light fighter, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "d_stipple_bomber_z0.2.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "bomber",
+      "zoom": 0.2,
+      "title": "D  ·  Bomber  ·  zoom 0.2",
+      "caption": "Stipple: Bomber, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "d_stipple_tank_z0.2.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "tank",
+      "zoom": 0.2,
+      "title": "D  ·  Tank, by the river  ·  zoom 0.2",
+      "caption": "Stipple: Tank, by the river, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "d_stipple_cruiser_z0.2.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "cruiser",
+      "zoom": 0.2,
+      "title": "D  ·  Cruiser, by the coast  ·  zoom 0.2",
+      "caption": "Stipple: Cruiser, by the coast, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "e_hatch_light_z1.0.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "light",
+      "zoom": 1.0,
+      "title": "E  ·  Light fighter  ·  zoom 1",
+      "caption": "Hatch: Light fighter, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "e_hatch_bomber_z1.0.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "bomber",
+      "zoom": 1.0,
+      "title": "E  ·  Bomber  ·  zoom 1",
+      "caption": "Hatch: Bomber, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "e_hatch_tank_z1.0.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "tank",
+      "zoom": 1.0,
+      "title": "E  ·  Tank, by the river  ·  zoom 1",
+      "caption": "Hatch: Tank, by the river, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "e_hatch_cruiser_z1.0.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "cruiser",
+      "zoom": 1.0,
+      "title": "E  ·  Cruiser, by the coast  ·  zoom 1",
+      "caption": "Hatch: Cruiser, by the coast, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "e_hatch_light_z0.35.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "light",
+      "zoom": 0.35,
+      "title": "E  ·  Light fighter  ·  zoom 0.35",
+      "caption": "Hatch: Light fighter, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "e_hatch_bomber_z0.35.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "bomber",
+      "zoom": 0.35,
+      "title": "E  ·  Bomber  ·  zoom 0.35",
+      "caption": "Hatch: Bomber, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "e_hatch_tank_z0.35.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "tank",
+      "zoom": 0.35,
+      "title": "E  ·  Tank, by the river  ·  zoom 0.35",
+      "caption": "Hatch: Tank, by the river, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "e_hatch_cruiser_z0.35.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "cruiser",
+      "zoom": 0.35,
+      "title": "E  ·  Cruiser, by the coast  ·  zoom 0.35",
+      "caption": "Hatch: Cruiser, by the coast, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "e_hatch_light_z0.2.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "light",
+      "zoom": 0.2,
+      "title": "E  ·  Light fighter  ·  zoom 0.2",
+      "caption": "Hatch: Light fighter, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "e_hatch_bomber_z0.2.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "bomber",
+      "zoom": 0.2,
+      "title": "E  ·  Bomber  ·  zoom 0.2",
+      "caption": "Hatch: Bomber, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "e_hatch_tank_z0.2.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "tank",
+      "zoom": 0.2,
+      "title": "E  ·  Tank, by the river  ·  zoom 0.2",
+      "caption": "Hatch: Tank, by the river, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "e_hatch_cruiser_z0.2.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "cruiser",
+      "zoom": 0.2,
+      "title": "E  ·  Cruiser, by the coast  ·  zoom 0.2",
+      "caption": "Hatch: Cruiser, by the coast, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "f_rim_ticks_light_z1.0.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "light",
+      "zoom": 1.0,
+      "title": "F  ·  Light fighter  ·  zoom 1",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: Light fighter, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "f_rim_ticks_bomber_z1.0.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "bomber",
+      "zoom": 1.0,
+      "title": "F  ·  Bomber  ·  zoom 1",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: Bomber, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "f_rim_ticks_tank_z1.0.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "tank",
+      "zoom": 1.0,
+      "title": "F  ·  Tank, by the river  ·  zoom 1",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: Tank, by the river, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "f_rim_ticks_cruiser_z1.0.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "cruiser",
+      "zoom": 1.0,
+      "title": "F  ·  Cruiser, by the coast  ·  zoom 1",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: Cruiser, by the coast, zoom 1, 1:1 crop of the game's own frame, the fan's apex at (320, 85)",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "f_rim_ticks_light_z0.35.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "light",
+      "zoom": 0.35,
+      "title": "F  ·  Light fighter  ·  zoom 0.35",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: Light fighter, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "f_rim_ticks_bomber_z0.35.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "bomber",
+      "zoom": 0.35,
+      "title": "F  ·  Bomber  ·  zoom 0.35",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: Bomber, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "f_rim_ticks_tank_z0.35.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "tank",
+      "zoom": 0.35,
+      "title": "F  ·  Tank, by the river  ·  zoom 0.35",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: Tank, by the river, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "f_rim_ticks_cruiser_z0.35.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "cruiser",
+      "zoom": 0.35,
+      "title": "F  ·  Cruiser, by the coast  ·  zoom 0.35",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: Cruiser, by the coast, zoom 0.35, 1:1 crop of the game's own frame, the fan's apex at (150, 55)",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "f_rim_ticks_light_z0.2.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "light",
+      "zoom": 0.2,
+      "title": "F  ·  Light fighter  ·  zoom 0.2",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: Light fighter, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "f_rim_ticks_bomber_z0.2.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "bomber",
+      "zoom": 0.2,
+      "title": "F  ·  Bomber  ·  zoom 0.2",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: Bomber, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "f_rim_ticks_tank_z0.2.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "tank",
+      "zoom": 0.2,
+      "title": "F  ·  Tank, by the river  ·  zoom 0.2",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: Tank, by the river, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "f_rim_ticks_cruiser_z0.2.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "cruiser",
+      "zoom": 0.2,
+      "title": "F  ·  Cruiser, by the coast  ·  zoom 0.2",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: Cruiser, by the coast, zoom 0.2, 1:1 crop of the game's own frame, the fan's apex at (130, 40)",
+      "size": [
+        380,
+        80
+      ]
+    },
+    {
+      "file": "a_ribs_light_cones_z1.0.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "light",
+      "zoom": 1.0,
+      "title": "A  ·  light fighter with its cone wash",
+      "caption": "Today: outline, a faint wash and ribs: the light fighter's fan in its weapon-cone wash, zoom 1",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "b_shade_light_cones_z1.0.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "light",
+      "zoom": 1.0,
+      "title": "B  ·  light fighter with its cone wash",
+      "caption": "A shaded area, no outline (Alex's idea): the light fighter's fan in its weapon-cone wash, zoom 1",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "c_wash_rim_light_cones_z1.0.png",
+      "option": "C",
+      "look": "wash_rim",
+      "unit": "light",
+      "zoom": 1.0,
+      "title": "C  ·  light fighter with its cone wash",
+      "caption": "Wash and a thin inked rim: the light fighter's fan in its weapon-cone wash, zoom 1",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "d_stipple_light_cones_z1.0.png",
+      "option": "D",
+      "look": "stipple",
+      "unit": "light",
+      "zoom": 1.0,
+      "title": "D  ·  light fighter with its cone wash",
+      "caption": "Stipple: the light fighter's fan in its weapon-cone wash, zoom 1",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "e_hatch_light_cones_z1.0.png",
+      "option": "E",
+      "look": "hatch",
+      "unit": "light",
+      "zoom": 1.0,
+      "title": "E  ·  light fighter with its cone wash",
+      "caption": "Hatch: the light fighter's fan in its weapon-cone wash, zoom 1",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "f_rim_ticks_light_cones_z1.0.png",
+      "option": "F",
+      "look": "rim_ticks",
+      "unit": "light",
+      "zoom": 1.0,
+      "title": "F  ·  light fighter with its cone wash",
+      "caption": "Quiet rim, and ticks for the slowest and the fastest reach: the light fighter's fan in its weapon-cone wash, zoom 1",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "cruiser_hidden_a_ribs_z1.0.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "cruiser",
+      "zoom": 1.0,
+      "title": "the cruiser as drawn today (planner under the hull)",
+      "caption": "The cruiser with the planner under the marker layer, as the game draws it: the fan is hidden by the hull",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "cruiser_hidden_b_shade_z1.0.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "cruiser",
+      "zoom": 1.0,
+      "title": "the cruiser as drawn today (planner under the hull)",
+      "caption": "The cruiser with the planner under the marker layer, as the game draws it: the fan is hidden by the hull",
+      "size": [
+        380,
+        170
+      ]
+    },
+    {
+      "file": "cruiser_hidden_a_ribs_z0.35.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "cruiser",
+      "zoom": 0.35,
+      "title": "the cruiser as drawn today (planner under the hull)",
+      "caption": "The cruiser with the planner under the marker layer, as the game draws it: the fan is hidden by the hull",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "cruiser_hidden_b_shade_z0.35.png",
+      "option": "B",
+      "look": "shade",
+      "unit": "cruiser",
+      "zoom": 0.35,
+      "title": "the cruiser as drawn today (planner under the hull)",
+      "caption": "The cruiser with the planner under the marker layer, as the game draws it: the fan is hidden by the hull",
+      "size": [
+        380,
+        110
+      ]
+    },
+    {
+      "file": "context_light_z0.35.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "light",
+      "zoom": 0.35,
+      "title": "context: light, today's look, the whole frame",
+      "caption": "The whole 1280 x 720 frame: the selected unit, its plan, its ghosts and speed labels, its ribbon trail, today's fan",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "context_bomber_z0.35.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "bomber",
+      "zoom": 0.35,
+      "title": "context: bomber, today's look, the whole frame",
+      "caption": "The whole 1280 x 720 frame: the selected unit, its plan, its ghosts and speed labels, its ribbon trail, today's fan",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "context_tank_z0.35.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "tank",
+      "zoom": 0.35,
+      "title": "context: tank, today's look, the whole frame",
+      "caption": "The whole 1280 x 720 frame: the selected unit, its plan, its ghosts and speed labels, its ribbon trail, today's fan",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "context_cruiser_z0.35.png",
+      "option": "A",
+      "look": "ribs",
+      "unit": "cruiser",
+      "zoom": 0.35,
+      "title": "context: cruiser, today's look, the whole frame",
+      "caption": "The whole 1280 x 720 frame: the selected unit, its plan, its ghosts and speed labels, its ribbon trail, today's fan",
+      "size": [
+        1280,
+        720
+      ]
+    }
+  ]
+}

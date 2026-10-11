@@ -165,6 +165,35 @@ const OPTIONS := {
 		"view_only": true,
 		"help": "Turn-seconds played per real second when a turn resolves. data = data/ui/ui.json marker.playback_speed.",
 	},
+	# --- The sun (builder BS, 2026-10-11, PROPOSED: the board variants/sun-time/; nothing changes until Alex picks) ---
+	# Read ONCE, when scripts/world/sun.gd first builds the shared sun (Sun.current()), so set them before the game is built
+	# (INKWOOD_SUN_MODE=clock INKWOOD_SUN_HOUR=9). Not live knobs: a new sun is a rebake of the whole map.
+	"sun_mode": {
+		"section": "Sandbox",
+		"label": "Sun",
+		"choices": ["data", "fixed", "clock_at_start"],
+		"default": 0,
+		"view_only": true,
+		"help": "fixed = today's sun (north-west, elevation 46); clock_at_start = the time-of-day sun, taken once at the mission's start and held (Alex, decision sun-time; the hour from sun_hour: the bearing and the height follow the day, the model's numbers PROPOSED). data = data/params/sun.json mode (fixed). Read when the game is built; the map is NOT redrawn after a change here.",
+	},
+	"sun_hour": {
+		"section": "Sandbox",
+		"label": "Sun hour (clock_at_start)",
+		"kind": "float",
+		"default": -1.0,
+		"min": -1.0,
+		"max": 24.0,
+		"view_only": true,
+		"help": "The hour, 0 to 24, the clock_at_start sun is asked for (9.5 is half past nine). -1 = data/params/sun.json hour (or the machine's clock when its hour_source is system). Read when the game is built.",
+	},
+	"sun_scope": {
+		"section": "Sandbox",
+		"label": "Sun scope (clock_at_start)",
+		"choices": ["data", "all", "trees"],
+		"default": 0,
+		"view_only": true,
+		"help": "all = every shadow follows the one sun (Alex, decision sun-time: \"Every shadow follows\"); trees = ONLY the trees' cast shadows take the clock sun, everything else keeps today's: the board's 'why not' frame, two suns on one map. Not for play. data = data/params/sun.json scope (all).",
+	},
 }
 
 var _values: Dictionary = {}

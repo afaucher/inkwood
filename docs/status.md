@@ -9,8 +9,6 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| Board: the range-of-motion indicator for every unit type (no live change until Alex picks) | lead session (builder BM) | variants/motion-range/; scripts/ui/boards/motion_range_board_shot.gd; a mode switch in the fan's drawing in scripts/ui/motion_planner.gd (today's look the default); data/ui/ui.json planner.fan keys | 2026-10-11 |
-| Board: shadows from the time of day (no live change until Alex picks) | lead session (builder BS) | variants/sun-time/; a new board shot script; the sun's direction and length in data and their readers (ui_style.gd, fx_style.gd, scripts/render/ink_structs.gd shadow_dir), today's sun the default | 2026-10-11 |
 | Forest fire (decision forest-fire): the mechanic has landed (below); next the board for a burning grove and a burnt-out trunk, then playtesting in Suppress | fire session (nice-dewdney worktree) | new data/sim/fire.json, scripts/sim/fire*.gd, scripts/tests/test_fire*.gd; the fire step and its net state in scripts/sim/world.gd (and the snapshot in scripts/net/world_sync.gd); burnt cover in scripts/sim/concealment.gd, data/sim/concealment.json; smoke denies tracking in scripts/sim/spotting.gd, bombs.gd (followed aim), scripts/ui/ui_target.gd and the enemy-click lines of scripts/ui/unit_ui.gd; new scripts/fx/fx_fire*.gd and its hook in fx_field.gd/fx_layer.gd; per-chunk rebake in scripts/render/map_view.gd, chunk_terrain_provider.gd; data/scenarios/suppress.json (fire on); a fire knob in scripts/debug/debug_settings.gd | 2026-10-11 |
 | Camera controls: wheel zoom anchors and left-drag pan (landed); right-drag pan removed, panning stops at the map's edge (Alex); the map's border board (builder) | camera session (beautiful-lumiere worktree) | scripts/world/camera_controller.gd, data/view/camera.json, scripts/tests/test_camera.gd; the board: scripts/render/map_border*.gd, data/view/map_border.json, scripts/ui/boards/map_border_board_shot.gd, variants/map-border/, scripts/tests/test_map_border.gd, and a one-line hook in scripts/render/map_view.gd | 2026-10-11 |
 | Side view: top, front and side as folding strips, an arcs button in the panel, map cones off by default (Alex, decision side-view-views) | camera session (builder) | scripts/ui/side_view*.gd, scripts/tests/test_side_view.gd, data/ui/ui.json side_view keys, roster.arcs (removed) and planner.cones.shown; the roster's Arcs button in scripts/ui/roster.gd (removed); the arcs default's knock-on in tests that expect cones (test_cone_overlay, test_ui_*) | 2026-10-11 |
@@ -43,6 +41,10 @@ Decisions and open questions live in the Decision Ledger
 
 ## Recently landed
 
+- 2026-10-11: two boards for Alex, nothing live changed. The range-of-motion indicator for every unit type (variants/motion-range/,
+  decision motion-range-look, open; `planner.fan.mode`, today's 'ribs' the default; test_fan_modes). Shadows from the time of day
+  (variants/sun-time/, decision sun-time: fixed at start and every shadow follows, Alex's; the look, the co-op clock and night hours open):
+  the sun now has one source, `data/params/sun.json` read through `scripts/world/sun.gd`, bit-identical in 'fixed' mode (test_sun).
 - 2026-10-11: the boats and the bridge are drawn in the game (P1 cutter, S2 barge, ink V wake, the flat-deck arch and its ruin;
   `scripts/ui/unit_marker_art_boats.gd`), and sinking (decision ship-sinks): a destroyed ship, and a plane that comes down over water,
   falls through the water to the floor at 3 m/s (proposed), drawn intact under the water's own depth wash (`scripts/ui/unit_sunk.gd`),
