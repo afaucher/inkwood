@@ -1366,6 +1366,51 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'A · Ink line at each step' and 'Hue 222, the first'. On the generator: 'But the seeds are too uniform. It looks like a big square of land' (being reworked)."
+    },
+    {
+      "id": "boat-wake",
+      "date": "2026-10-10",
+      "area": "Units, Water",
+      "question": "How is a boat's wake drawn (variants/boats/)?",
+      "board": "variants/boats/ (the Inkwood Boats and Bridges viewer)",
+      "options": [
+        "ink V",
+        "foam stipple",
+        "pale wash trail"
+      ],
+      "chosen": "ink V",
+      "parameters": {
+        "wake": "ink_v"
+      },
+      "applied_to": [
+        "data/world/boats.json wakes._chosen",
+        "variants/boats/board.json chosen_parts.wake"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Ink V is the best'. The patrol and supply boat looks, the bridge look, the river width and the boat scale are still open."
+    },
+    {
+      "id": "boat-looks",
+      "date": "2026-10-10",
+      "area": "Units, Water",
+      "question": "Which patrol boat and supply boat looks (variants/boats/)?",
+      "board": "variants/boats/ (the Inkwood Boats and Bridges viewer)",
+      "options": [
+        "patrol P1 Cutter, P2 Picket boat, P3 Bare minimum, P4 Whaleback gunboat",
+        "supply S1 Coaster, S2 Barge, S3 Lighter, S4 Deck-loaded coaster"
+      ],
+      "chosen": "patrol boat: P1, the Cutter; supply boat: S2, the Barge with deck cargo",
+      "parameters": {
+        "patrol": "p1",
+        "supply": "s2"
+      },
+      "applied_to": [
+        "data/world/boats.json patrol._chosen",
+        "variants/boats/board.json chosen_parts.patrol",
+        "data/world/boats.json supply._chosen"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'P1 cutter'. 'S2 barge'."
     }
   ]
 }

@@ -841,6 +841,7 @@
   "recommendation_proposed": "PROPOSED by Track BB, Alex decides: patrol P1 (the cutter) and supply S1 (the coaster) -- the two that read as a warship and as a cargo boat at both zooms -- at the planes' scale (the plane rule), with the PALE WASH for the wake if one wake has to serve both zooms (it is the only one that still says moving at 0.35), or the ink V if the wake must add no tone at all. P3 is the cheap fallback for the patrol boat (almost the same at the planning zoom) and S2 the supply boat that reads as cargo from furthest away. On Track WB's lightest step (the shallows) a hull is held by its outline and shadow more than its fill: worth a look when WB settles the water.",
   "frames": "frames.json (every frame whole, native size)",
   "sheet": "board.png (the scale strips, four patrol looks, four supply looks, three wakes, the palette strip)",
-  "chosen": null,
-  "chosen_by": null
+  "chosen": "p1, s2, ink_v",
+  "chosen_by": "Alex, 2026-10-10 (see chosen_parts)",
+  "chosen_parts": { "wake": "ink_v", "patrol": "p1", "supply": "s2", "_by": "Alex, 2026-10-10: 'Ink V is the best', 'P1 cutter', 'S2 barge'" }
 }
