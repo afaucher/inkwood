@@ -355,6 +355,7 @@ func _build() -> void:
 		ui.connect("result_menu", _on_result_menu)
 	ui.marker_layer.ground_height = func(x: float, y: float) -> float: return terrain.height_at(x, y)
 	ui.unit_focus_requested.connect(_on_focus_requested)
+	ui.empty_map_press.connect(ctl.begin_grab)   # a left drag on empty map pans (Alex, decision pan-left-drag)
 	tracks.setup(world, map_view, ui.marker_layer, _style, scenario.view_num("track_sample_s"), scenario.view_num("track_line_px"))
 	if ui.has_method("trail_start_t"):
 		tracks.trail_start = ui.trail_start_t   # the whole-flight line gives way to the wingtip trail (decision wingtip-trails)

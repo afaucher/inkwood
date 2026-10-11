@@ -14,7 +14,8 @@ extends "res://scripts/test_support/test_case.gd"
 #   2. THE CLICKS: left on an enemy sets the target and keeps the friendly selected; with no friendly selected it selects the
 #      enemy; left on a friendly selects it; right press-and-release without movement sets a point (or the enemy under the
 #      pointer); a right DRAG sets nothing (it pans); Esc clears the target before anything else; the target clears when the
-#      friendly selection changes
+#      friendly selection changes; a left press on EMPTY map (nothing under it) is announced for the camera to pan from
+#      (decision pan-left-drag), a press on a marker, an enemy or the fan is not
 #   3. DROP'S ENABLE RULES: no target, a target outside the step's cone, a target inside -- and the card says why
 #   4. THE STEP'S TARGET: activation stores it (a unit's id, or a point) with the aim on it; two steps, two targets; the target
 #      selection changing later changes nothing already activated; dragging the aim makes the step's target a point
@@ -276,9 +277,37 @@ func _clicks() -> bool:
 	eq(_ui.target.is_set(), false, "2. the target is gone")
 	eq(_ui.selection.unit_id, "b1", "2. and the selection is not (Esc clears the target before anything else)")
 	eq(_esc(), false, "2. Esc with no target is not taken (it goes on to the menu)")
+	_empty_presses(tower_s)
 	return true
 
-# --- 3 ---------------------------------------------------------------------------------------------
+# LEFT ON EMPTY MAP (Alex, 2026-10-11, decision pan-left-drag: "left-drag on empty map pans, left-drag on a thing acts on
+# it"): a left press nothing on the map takes is announced (empty_map_press, for the camera's pan); a press on a thing is not.
+func _empty_presses(tower_s: Vector2) -> void:
+	var seen: Array = []
+	var note := func(p: Vector2) -> void: seen.append(p)
+	_ui.empty_map_press.connect(note)
+	_fresh("b1")
+	var empty_s := _s(Vector2(500.0, 1000.0))
+	_left_click(empty_s)
+	eq(seen, [empty_s], "2. a left press on empty map is announced once, where it was (it is the camera's to pan from)")
+	eq([_ui.selection.unit_id, _ui.target.is_set(), _pl.planned_count()], ["b1", false, 0], "2. and it changes nothing here: the selection, the target, the plan")
+	seen.clear()
+	_left_click(_s(Vector2(_w.units["b2"].x, _w.units["b2"].y)))
+	eq([seen.size(), _ui.selection.unit_id], [0, "b2"], "2. a press on a unit's marker selects it and is not announced")
+	_fresh("b1")
+	_left_click(tower_s)
+	eq([seen.size(), _ui.target.unit_id], [0, "tower"], "2. a press on an enemy (a friendly selected) targets it and is not announced")
+	_fresh("b1")
+	var fan := _pl.fan_outline_screen()
+	var in_fan := Vector2.ZERO
+	for q in fan:
+		in_fan += q
+	in_fan /= maxf(1.0, float(fan.size()))
+	if check(_pl.in_fan(in_fan), "2. (the fan's centroid %s is inside b1's fan)" % in_fan):
+		_left_click(in_fan)
+		eq([seen.size(), _pl.planned_count()], [0, 1], "2. a press in the fan places a step and is not announced")
+	_fresh("b1")
+	_ui.empty_map_press.disconnect(note)
 
 func _btn(name: String) -> Dictionary:
 	return _ui.orders.buttons()[name]

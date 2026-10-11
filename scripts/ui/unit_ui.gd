@@ -192,7 +192,16 @@ extends Node
 # centring at that limit must take them too (scripts/world, Track F's). A host
 # reads the column's width here: ctl.set_insets(...hud_insets...).
 # ---------------------------------------------------------------------------
+#
+# LEFT-DRAG ON EMPTY MAP PANS (Alex, 2026-10-11, decision pan-left-drag: "left-drag
+# on empty map pans, left-drag on a thing acts on it"): a left press on the map
+# that map_press does not use -- no unit, step handle, fan or bomb cone under
+# it -- is announced as empty_map_press(viewport px); the host hands it to the
+# camera (CameraController.begin_grab), which pans once the pointer moves.
+# ---------------------------------------------------------------------------
 
+# A left press on the map that nothing here used (viewport px): the host's camera may pan from it.
+signal empty_map_press(viewport_pt: Vector2)
 signal unit_focus_requested(unit_id: String, world_pos: Vector2)
 signal ready_pressed(all_ready: bool)
 signal turn_played(turn: int)
@@ -911,6 +920,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		var used := map_press(p) if mb.pressed else map_release(p)
 		if used:
 			get_viewport().set_input_as_handled()
+		elif mb.pressed:
+			empty_map_press.emit(mb.position)
 	elif event is InputEventMouseMotion and planner.is_dragging():
 		map_drag(_to_map((event as InputEventMouseMotion).position))
 		get_viewport().set_input_as_handled()

@@ -1,9 +1,9 @@
 extends Node
 
 # THE CAMERA CONTROLLER, first option (Track F, exit criterion 7): pan (drag
-# and keys), wheel zoom about the cursor, a hard zoom range, follow-selected-
-# unit and frame-this-plan. Every number is in data/view/camera.json, all
-# proposed.
+# and keys), wheel zoom (in toward the cursor, out about the centre), a hard
+# zoom range, follow-selected-unit and frame-this-plan. Every number is in
+# data/view/camera.json, all proposed.
 #
 # It DRIVES A Camera2D IT IS GIVEN (Track V's MapView has its own; the
 # controller never makes one inside it):
@@ -40,11 +40,19 @@ extends Node
 # 2026-10-09): a card under the pointer stops mouse motion and swallows the
 # release, which stalled the drag and left it stuck on.
 # THE LEFT BUTTON IS TRACK U'S (click and drag inside a plane's fan plans its
-# motion): the controller never pans on it. Wheel and trackpad magnify zoom
-# about the cursor; the drag buttons (data: middle, right) and a trackpad pan
-# drag the map; held keys (data: WASD and arrows, Q/E and -/=) pan at a
-# screen speed and zoom about the view centre. A manual pan stops following
-# (follow.break_on_pan).
+# motion): the controller never takes a left press itself. A LEFT DRAG ON EMPTY
+# MAP PANS (Alex, 2026-10-11, decision pan-left-drag: "left-drag on empty map
+# pans, left-drag on a thing acts on it"): a press the interface does not use
+# (UnitUI.empty_map_press: no unit, step handle, fan or bomb cone under it) is
+# handed over through begin_grab() and pans once the pointer has moved
+# pan.left_drag_slop_px, so a click stays a click. Wheel and trackpad magnify zoom IN
+# TOWARD THE CURSOR and OUT ABOUT THE CENTRE of the map area (the view less the
+# HUD insets: zoom_centre()) -- Alex, 2026-10-11 (decision zoom-anchors), as
+# Spring RTS does: zooming out and back in at a spot moves the view toward it,
+# so zoom pans (about the cursor both ways the round trip went nowhere). The
+# drag buttons (data: middle, right) and a trackpad pan drag the map; held keys
+# (data: WASD and arrows, Q/E and -/=) pan at a screen speed and zoom about
+# zoom_centre(). A manual pan stops following (follow.break_on_pan).
 #
 # FAR ZOOM (far_zoom.mode, proposed "overview_topo"): overview_amount() is how
 # much of the topographic overview should show at the current zoom (0..1);
@@ -77,6 +85,7 @@ var wheel_step: float
 var keys_zoom_rate: float
 var pan_keys_speed: float
 var trackpad_px: float
+var left_drag_slop: float
 var drag_buttons: Array[int] = []
 var key_codes: Dictionary = {}    # action -> Array[int] of physical keycodes
 var map_margin_px: float
@@ -97,6 +106,9 @@ var input_enabled := true
 
 var _follow: Callable = Callable()
 var _drag_button := -1
+var _grab_button := -1            # a press handed over by begin_grab, until its release
+var _grab_last := Vector2.ZERO    # where it was pressed, then (once panning) where the pointer last was
+var _grab_live := false           # it has moved past pan.left_drag_slop_px: a pan
 
 # The map in map px and the scale (map px per metre). `cam_data` defaults to
 # data/view/camera.json.
@@ -163,6 +175,7 @@ func _load() -> void:
 	keys_zoom_rate = data.num("zoom.keys_step_per_s")
 	pan_keys_speed = data.num("pan.keys_px_per_s")
 	trackpad_px = data.num("pan.trackpad_px_per_unit")
+	left_drag_slop = data.num("pan.left_drag_slop_px")
 	for b: Variant in data.list("pan.drag_buttons"):
 		if _BUTTONS.has(str(b)):
 			drag_buttons.append(_BUTTONS[str(b)])
@@ -294,6 +307,14 @@ func zoom_at(z: float, anchor: Vector2) -> void:
 func zoom_by(factor: float, anchor: Vector2) -> void:
 	zoom_at(camera.zoom.x * factor, anchor)
 
+# The player's zoom: in (factor > 1) toward `cursor`, out about zoom_centre().
+func zoom_player(factor: float, cursor: Vector2) -> void:
+	zoom_by(factor, cursor if factor > 1.0 else zoom_centre())
+
+# The centre of the map area on screen, the view less the HUD insets (screen px).
+func zoom_centre() -> Vector2:
+	return view_size() * 0.5 + inset_offset()
+
 # Drag the map by `delta` screen px (the map follows the pointer).
 func pan_screen(delta: Vector2) -> void:
 	if delta == Vector2.ZERO:
@@ -399,7 +420,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if mb.pressed and (mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN):
 			var notches := mb.factor if mb.factor > 0.0 else 1.0
 			var f := pow(wheel_step, notches)
-			zoom_by(f if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / f, mb.position)
+			zoom_player(f if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / f, mb.position)
 			_handled()
 		elif drag_buttons.has(mb.button_index):
 			if mb.pressed:
@@ -412,16 +433,54 @@ func _unhandled_input(event: InputEvent) -> void:
 		_handled()
 	elif event is InputEventMagnifyGesture:
 		var mg := event as InputEventMagnifyGesture
-		zoom_by(mg.factor, mg.position)
+		zoom_player(mg.factor, mg.position)
 		_handled()
 	elif event is InputEventPanGesture:
 		pan_screen(-(event as InputEventPanGesture).delta * trackpad_px)
 		_handled()
 
+# A LEFT PRESS ON EMPTY MAP, handed over by the interface (UnitUI.empty_map_press; screen px): it pans
+# once the pointer has moved more than pan.left_drag_slop_px from the press -- catching up, so the
+# point pressed stays under the pointer -- and ends on the release. Short of the slop it was a
+# click on empty map, which does nothing (decision pan-left-drag).
+func begin_grab(screen_pos: Vector2) -> void:
+	if not input_enabled or data == null or camera == null or _drag_button != -1:
+		return
+	_grab_button = MOUSE_BUTTON_LEFT
+	_grab_last = screen_pos
+	_grab_live = false
+
+# A left drag on empty map is panning now.
+func is_grabbing() -> bool:
+	return _grab_live
+
+func _step_grab(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		var pos := (event as InputEventMouseMotion).position
+		if not _grab_live:
+			if pos.distance_to(_grab_last) <= left_drag_slop:
+				return
+			_grab_live = true
+		pan_screen(pos - _grab_last)
+		_grab_last = pos
+		_handled()
+	elif event is InputEventMouseButton and not (event as InputEventMouseButton).pressed \
+			and (event as InputEventMouseButton).button_index == _grab_button:
+		if _grab_live:
+			_handled()   # the release of a pan; a click's release goes on to the interface as before
+		_grab_button = -1
+		_grab_live = false
+
 # The drag in progress: motion pans, the release of its button ends it, wherever
 # the pointer is (the press that began it went through _unhandled_input).
 func _input(event: InputEvent) -> void:
-	if not input_enabled or data == null or camera == null or _drag_button == -1:
+	if not input_enabled or data == null or camera == null:
+		_grab_button = -1   # (a grab never outlives the input that made it)
+		_grab_live = false
+		return
+	if _grab_button != -1:
+		_step_grab(event)
+	if _drag_button == -1:
 		return
 	if event is InputEventMouseMotion:
 		pan_screen((event as InputEventMouseMotion).relative)
@@ -452,7 +511,7 @@ func _process(delta: float) -> void:
 			pan_screen(-dir.normalized() * pan_keys_speed * delta)
 		var zdir := float(_held("zoom_in")) - float(_held("zoom_out"))
 		if zdir != 0.0:
-			zoom_by(pow(keys_zoom_rate, zdir * delta), view_size() * 0.5)
+			zoom_by(pow(keys_zoom_rate, zdir * delta), zoom_centre())
 	step_follow(delta)
 
 # One follow step of `delta` seconds (called every frame; public for tests).
