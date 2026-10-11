@@ -1459,6 +1459,30 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'We have to be throwing out work we can reuse.' Then: 'At the very least, showing a stale map seems better then a plain brown square.' Then: 'I mean we seem to be regenerating map sections we should already have.'"
+    },
+    {
+      "id": "global-tree-set",
+      "date": "2026-10-10",
+      "area": "Rendering, Performance, Trees",
+      "question": "Trees are about two-thirds of a map piece's drawing (about 370 unique tree sprites per 512 m piece): simplify them, pool them, or use temporary sprites?",
+      "board": "none yet (said in chat; the look side by side will be shown)",
+      "options": [
+        "a shared pool per size (exists, off)",
+        "a simpler tree when zoomed out",
+        "temporary sprites refined later",
+        "fewer GPU passes per tree"
+      ],
+      "chosen": "at the very least, one large global set of unique trees, made once, that every map tree samples from",
+      "parameters": {
+        "set_size": "large (proposed 1,000 to 2,000, data)",
+        "sampling": "the closest size, by the tree's own seed",
+        "lighting": "no rotation or mirroring (the lit side faces the sun)"
+      },
+      "applied_to": [
+        "Track P2 (map and fog performance), extending the existing tree pool"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'I'm wondering if the tree drawing could be simplified or converted to temporary sprites?' Then: 'At the very least, we could do one set of globally unique trees of a large amount and sample from that'."
     }
   ]
 }
