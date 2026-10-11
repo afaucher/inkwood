@@ -1,0 +1,356 @@
+{
+  "id": "boats",
+  "about": "Every frame of the boats board as its own PNG at native size, with its zoom and a caption. board.png is the sheet; the 3x crops on it are nearest-neighbour copies of the *_plan.png frames.",
+  "frames": [
+    {
+      "file": "patrol_p1_z1.png",
+      "look": "p1",
+      "zoom": 1.0,
+      "caption": "patrol p1, Cutter: zoom 1 (4.0 px per metre, the plane rule), side_a above side_b, a light fighter ahead, the working-default ink V wake",
+      "size": [
+        400,
+        200
+      ]
+    },
+    {
+      "file": "patrol_p1_plan.png",
+      "look": "p1",
+      "zoom": 0.35,
+      "caption": "patrol p1, Cutter: the planning zoom 0.35 (1.56 px per metre, the plane rule)",
+      "size": [
+        200,
+        110
+      ]
+    },
+    {
+      "file": "patrol_p2_z1.png",
+      "look": "p2",
+      "zoom": 1.0,
+      "caption": "patrol p2, Picket boat: zoom 1 (4.0 px per metre, the plane rule), side_a above side_b, a light fighter ahead, the working-default ink V wake",
+      "size": [
+        400,
+        200
+      ]
+    },
+    {
+      "file": "patrol_p2_plan.png",
+      "look": "p2",
+      "zoom": 0.35,
+      "caption": "patrol p2, Picket boat: the planning zoom 0.35 (1.56 px per metre, the plane rule)",
+      "size": [
+        200,
+        110
+      ]
+    },
+    {
+      "file": "patrol_p3_z1.png",
+      "look": "p3",
+      "zoom": 1.0,
+      "caption": "patrol p3, Bare minimum: zoom 1 (4.0 px per metre, the plane rule), side_a above side_b, a light fighter ahead, the working-default ink V wake",
+      "size": [
+        400,
+        200
+      ]
+    },
+    {
+      "file": "patrol_p3_plan.png",
+      "look": "p3",
+      "zoom": 0.35,
+      "caption": "patrol p3, Bare minimum: the planning zoom 0.35 (1.56 px per metre, the plane rule)",
+      "size": [
+        200,
+        110
+      ]
+    },
+    {
+      "file": "patrol_p4_z1.png",
+      "look": "p4",
+      "zoom": 1.0,
+      "caption": "patrol p4, Whaleback gunboat: zoom 1 (4.0 px per metre, the plane rule), side_a above side_b, a light fighter ahead, the working-default ink V wake",
+      "size": [
+        400,
+        200
+      ]
+    },
+    {
+      "file": "patrol_p4_plan.png",
+      "look": "p4",
+      "zoom": 0.35,
+      "caption": "patrol p4, Whaleback gunboat: the planning zoom 0.35 (1.56 px per metre, the plane rule)",
+      "size": [
+        200,
+        110
+      ]
+    },
+    {
+      "file": "supply_s1_z1.png",
+      "look": "s1",
+      "zoom": 1.0,
+      "caption": "supply s1, Coaster: zoom 1 (4.0 px per metre, the plane rule), side_a above side_b, a light fighter ahead, the working-default ink V wake",
+      "size": [
+        400,
+        200
+      ]
+    },
+    {
+      "file": "supply_s1_plan.png",
+      "look": "s1",
+      "zoom": 0.35,
+      "caption": "supply s1, Coaster: the planning zoom 0.35 (1.56 px per metre, the plane rule)",
+      "size": [
+        200,
+        110
+      ]
+    },
+    {
+      "file": "supply_s2_z1.png",
+      "look": "s2",
+      "zoom": 1.0,
+      "caption": "supply s2, Barge with deck cargo: zoom 1 (4.0 px per metre, the plane rule), side_a above side_b, a light fighter ahead, the working-default ink V wake",
+      "size": [
+        400,
+        200
+      ]
+    },
+    {
+      "file": "supply_s2_plan.png",
+      "look": "s2",
+      "zoom": 0.35,
+      "caption": "supply s2, Barge with deck cargo: the planning zoom 0.35 (1.56 px per metre, the plane rule)",
+      "size": [
+        200,
+        110
+      ]
+    },
+    {
+      "file": "supply_s3_z1.png",
+      "look": "s3",
+      "zoom": 1.0,
+      "caption": "supply s3, Lighter: zoom 1 (4.0 px per metre, the plane rule), side_a above side_b, a light fighter ahead, the working-default ink V wake",
+      "size": [
+        400,
+        200
+      ]
+    },
+    {
+      "file": "supply_s3_plan.png",
+      "look": "s3",
+      "zoom": 0.35,
+      "caption": "supply s3, Lighter: the planning zoom 0.35 (1.56 px per metre, the plane rule)",
+      "size": [
+        200,
+        110
+      ]
+    },
+    {
+      "file": "supply_s4_z1.png",
+      "look": "s4",
+      "zoom": 1.0,
+      "caption": "supply s4, Coaster, deck-loaded: zoom 1 (4.0 px per metre, the plane rule), side_a above side_b, a light fighter ahead, the working-default ink V wake",
+      "size": [
+        400,
+        200
+      ]
+    },
+    {
+      "file": "supply_s4_plan.png",
+      "look": "s4",
+      "zoom": 0.35,
+      "caption": "supply s4, Coaster, deck-loaded: the planning zoom 0.35 (1.56 px per metre, the plane rule)",
+      "size": [
+        200,
+        110
+      ]
+    },
+    {
+      "file": "wake_ink_v_patrol_z1.png",
+      "look": "p1",
+      "zoom": 1.0,
+      "caption": "wake ink_v (Ink V) behind the patrol p1 at zoom 1",
+      "size": [
+        400,
+        150
+      ]
+    },
+    {
+      "file": "wake_ink_v_patrol_plan.png",
+      "look": "p1",
+      "zoom": 0.35,
+      "caption": "wake ink_v (Ink V) behind the patrol p1 at the planning zoom 0.35",
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "file": "wake_ink_v_supply_z1.png",
+      "look": "s1",
+      "zoom": 1.0,
+      "caption": "wake ink_v (Ink V) behind the supply s1 at zoom 1",
+      "size": [
+        340,
+        150
+      ]
+    },
+    {
+      "file": "wake_ink_v_supply_plan.png",
+      "look": "s1",
+      "zoom": 0.35,
+      "caption": "wake ink_v (Ink V) behind the supply s1 at the planning zoom 0.35",
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "file": "wake_foam_patrol_z1.png",
+      "look": "p1",
+      "zoom": 1.0,
+      "caption": "wake foam (Foam stipple) behind the patrol p1 at zoom 1",
+      "size": [
+        400,
+        150
+      ]
+    },
+    {
+      "file": "wake_foam_patrol_plan.png",
+      "look": "p1",
+      "zoom": 0.35,
+      "caption": "wake foam (Foam stipple) behind the patrol p1 at the planning zoom 0.35",
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "file": "wake_foam_supply_z1.png",
+      "look": "s1",
+      "zoom": 1.0,
+      "caption": "wake foam (Foam stipple) behind the supply s1 at zoom 1",
+      "size": [
+        340,
+        150
+      ]
+    },
+    {
+      "file": "wake_foam_supply_plan.png",
+      "look": "s1",
+      "zoom": 0.35,
+      "caption": "wake foam (Foam stipple) behind the supply s1 at the planning zoom 0.35",
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "file": "wake_wash_patrol_z1.png",
+      "look": "p1",
+      "zoom": 1.0,
+      "caption": "wake wash (Pale wash trail) behind the patrol p1 at zoom 1",
+      "size": [
+        400,
+        150
+      ]
+    },
+    {
+      "file": "wake_wash_patrol_plan.png",
+      "look": "p1",
+      "zoom": 0.35,
+      "caption": "wake wash (Pale wash trail) behind the patrol p1 at the planning zoom 0.35",
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "file": "wake_wash_supply_z1.png",
+      "look": "s1",
+      "zoom": 1.0,
+      "caption": "wake wash (Pale wash trail) behind the supply s1 at zoom 1",
+      "size": [
+        340,
+        150
+      ]
+    },
+    {
+      "file": "wake_wash_supply_plan.png",
+      "look": "s1",
+      "zoom": 0.35,
+      "caption": "wake wash (Pale wash trail) behind the supply s1 at the planning zoom 0.35",
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "file": "scale_z1_plane.png",
+      "look": "scale",
+      "zoom": 1.0,
+      "caption": "the roster at zoom 1.00: planes at the plane rule (4.00 px per metre), boats at the plane rule",
+      "size": [
+        580,
+        96
+      ]
+    },
+    {
+      "file": "scale_z1_map.png",
+      "look": "scale",
+      "zoom": 1.0,
+      "caption": "the roster at zoom 1.00: planes at the plane rule (4.00 px per metre), boats at the map rule",
+      "size": [
+        455,
+        96
+      ]
+    },
+    {
+      "file": "scale_plan_plane.png",
+      "look": "scale",
+      "zoom": 0.35,
+      "caption": "the roster at zoom 0.35: planes at the plane rule (1.56 px per metre), boats at the plane rule",
+      "size": [
+        247,
+        40
+      ]
+    },
+    {
+      "file": "scale_plan_map.png",
+      "look": "scale",
+      "zoom": 0.35,
+      "caption": "the roster at zoom 0.35: planes at the plane rule (1.56 px per metre), boats at the map rule",
+      "size": [
+        193,
+        40
+      ]
+    },
+    {
+      "file": "water_shallows.png",
+      "look": "p1+s1",
+      "zoom": 1.0,
+      "caption": "the patrol boat P1 (side_a) and the supply boat S1 (side_b) over Track WB's shallows step, zoom 1",
+      "size": [
+        400,
+        130
+      ]
+    },
+    {
+      "file": "water_shelf.png",
+      "look": "p1+s1",
+      "zoom": 1.0,
+      "caption": "the patrol boat P1 (side_a) and the supply boat S1 (side_b) over Track WB's shelf step, zoom 1",
+      "size": [
+        400,
+        130
+      ]
+    },
+    {
+      "file": "water_deep.png",
+      "look": "p1+s1",
+      "zoom": 1.0,
+      "caption": "the patrol boat P1 (side_a) and the supply boat S1 (side_b) over Track WB's deep step, zoom 1",
+      "size": [
+        400,
+        130
+      ]
+    }
+  ]
+}

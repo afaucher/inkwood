@@ -1,0 +1,276 @@
+{
+  "id": "bridge",
+  "about": "Every frame of the bridge board as its own PNG at native size, with its zoom and a caption. board.png is the sheet; the 3x copies on it are nearest-neighbour copies of the *_plan.png frames.",
+  "frames": [
+    {
+      "file": "arch_ok_z1.png",
+      "look": "arch",
+      "zoom": 1.0,
+      "caption": "Stone arch, whole, at zoom 1 (2 px per metre, the map's scale)",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "arch_ok_plan.png",
+      "look": "arch",
+      "zoom": 0.35,
+      "caption": "Stone arch, whole, at the planning zoom 0.35 (0.7 px per metre)",
+      "size": [
+        120,
+        84
+      ]
+    },
+    {
+      "file": "arch_ok_z2.png",
+      "look": "arch",
+      "zoom": 2.0,
+      "caption": "Stone arch, whole, at zoom 2 (4 px per metre, the camera's closest)",
+      "size": [
+        480,
+        300
+      ]
+    },
+    {
+      "file": "arch_ruin_z1.png",
+      "look": "arch",
+      "zoom": 1.0,
+      "caption": "Stone arch, destroyed, at zoom 1 (2 px per metre, the map's scale)",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "arch_ruin_plan.png",
+      "look": "arch",
+      "zoom": 0.35,
+      "caption": "Stone arch, destroyed, at the planning zoom 0.35 (0.7 px per metre)",
+      "size": [
+        120,
+        84
+      ]
+    },
+    {
+      "file": "arch_ruin_z2.png",
+      "look": "arch",
+      "zoom": 2.0,
+      "caption": "Stone arch, destroyed, at zoom 2 (4 px per metre, the camera's closest)",
+      "size": [
+        480,
+        300
+      ]
+    },
+    {
+      "file": "truss_ok_z1.png",
+      "look": "truss",
+      "zoom": 1.0,
+      "caption": "Steel truss, whole, at zoom 1 (2 px per metre, the map's scale)",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "truss_ok_plan.png",
+      "look": "truss",
+      "zoom": 0.35,
+      "caption": "Steel truss, whole, at the planning zoom 0.35 (0.7 px per metre)",
+      "size": [
+        120,
+        84
+      ]
+    },
+    {
+      "file": "truss_ok_z2.png",
+      "look": "truss",
+      "zoom": 2.0,
+      "caption": "Steel truss, whole, at zoom 2 (4 px per metre, the camera's closest)",
+      "size": [
+        480,
+        300
+      ]
+    },
+    {
+      "file": "truss_ruin_z1.png",
+      "look": "truss",
+      "zoom": 1.0,
+      "caption": "Steel truss, destroyed, at zoom 1 (2 px per metre, the map's scale)",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "truss_ruin_plan.png",
+      "look": "truss",
+      "zoom": 0.35,
+      "caption": "Steel truss, destroyed, at the planning zoom 0.35 (0.7 px per metre)",
+      "size": [
+        120,
+        84
+      ]
+    },
+    {
+      "file": "truss_ruin_z2.png",
+      "look": "truss",
+      "zoom": 2.0,
+      "caption": "Steel truss, destroyed, at zoom 2 (4 px per metre, the camera's closest)",
+      "size": [
+        480,
+        300
+      ]
+    },
+    {
+      "file": "trestle_ok_z1.png",
+      "look": "trestle",
+      "zoom": 1.0,
+      "caption": "Wooden trestle, whole, at zoom 1 (2 px per metre, the map's scale)",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "trestle_ok_plan.png",
+      "look": "trestle",
+      "zoom": 0.35,
+      "caption": "Wooden trestle, whole, at the planning zoom 0.35 (0.7 px per metre)",
+      "size": [
+        120,
+        84
+      ]
+    },
+    {
+      "file": "trestle_ok_z2.png",
+      "look": "trestle",
+      "zoom": 2.0,
+      "caption": "Wooden trestle, whole, at zoom 2 (4 px per metre, the camera's closest)",
+      "size": [
+        480,
+        300
+      ]
+    },
+    {
+      "file": "trestle_ruin_z1.png",
+      "look": "trestle",
+      "zoom": 1.0,
+      "caption": "Wooden trestle, destroyed, at zoom 1 (2 px per metre, the map's scale)",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "trestle_ruin_plan.png",
+      "look": "trestle",
+      "zoom": 0.35,
+      "caption": "Wooden trestle, destroyed, at the planning zoom 0.35 (0.7 px per metre)",
+      "size": [
+        120,
+        84
+      ]
+    },
+    {
+      "file": "trestle_ruin_z2.png",
+      "look": "trestle",
+      "zoom": 2.0,
+      "caption": "Wooden trestle, destroyed, at zoom 2 (4 px per metre, the camera's closest)",
+      "size": [
+        480,
+        300
+      ]
+    },
+    {
+      "file": "range_arch_26m.png",
+      "look": "arch",
+      "zoom": 1.0,
+      "caption": "Stone arch over a 26 m river at zoom 1",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "range_arch_42m.png",
+      "look": "arch",
+      "zoom": 1.0,
+      "caption": "Stone arch over a 42 m river at zoom 1",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "range_arch_78m.png",
+      "look": "arch",
+      "zoom": 1.0,
+      "caption": "Stone arch over a 78 m river at zoom 1",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "range_truss_26m.png",
+      "look": "truss",
+      "zoom": 1.0,
+      "caption": "Steel truss over a 26 m river at zoom 1",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "range_truss_42m.png",
+      "look": "truss",
+      "zoom": 1.0,
+      "caption": "Steel truss over a 42 m river at zoom 1",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "range_truss_78m.png",
+      "look": "truss",
+      "zoom": 1.0,
+      "caption": "Steel truss over a 78 m river at zoom 1",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "range_trestle_26m.png",
+      "look": "trestle",
+      "zoom": 1.0,
+      "caption": "Wooden trestle over a 26 m river at zoom 1",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "range_trestle_42m.png",
+      "look": "trestle",
+      "zoom": 1.0,
+      "caption": "Wooden trestle over a 42 m river at zoom 1",
+      "size": [
+        300,
+        210
+      ]
+    },
+    {
+      "file": "range_trestle_78m.png",
+      "look": "trestle",
+      "zoom": 1.0,
+      "caption": "Wooden trestle over a 78 m river at zoom 1",
+      "size": [
+        300,
+        210
+      ]
+    }
+  ]
+}

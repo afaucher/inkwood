@@ -1,0 +1,66 @@
+{
+  "_about": "THE BRIDGES (Track BB, 2026-10-10): the three looks of a bridge where the village road crosses a river, as scripts/render/bridge_art.gd draws them. EVERY VALUE HERE IS PROPOSED by Track BB; none is a decision. What is Alex's (decision water-layer, 2026-10-10): bridges where the road crosses the river, drawn like the buildings (roof halves, shaded slopes, a shadow on the water), destroyable like the radio tower (the lead's proposal; Alex: 'Sounds good'). How they LOOK is a board (variants/bridge/): board.json there has chosen: null. A bridge is MAP SCENERY, drawn at the map's own scale like a house or the road (data/terrain/terrain.json scale.px_per_m, 2 px per metre, times the zoom): it is not a unit and not at the planes' scale. LENGTHS ARE METRES. Colours are ROLES (base, shade, toward, alpha) resolved by scripts/render/ink_roles.gd against the palette: no hex anywhere (working rule 6). Every kind is built from the village road's own numbers (data/params/render_defaults.json constants.road_half_width_px, and the eight rut and edge lines of scripts/render/village_draw.gd draw_road), so the road runs onto the deck without a seam.",
+
+  "deck_width_m": { "value": 16, "_proposed": true, "_reason": "the road's own width: constants.road_half_width_px 16 at 2 px per metre is 8 m a side, so the road's eight rut and edge lines carry across the deck unchanged and a bridge is as wide as the road it carries. A narrower deck (12 m) would need the road's outer lines to taper into it" },
+  "abutment_len_m": { "value": 6, "_proposed": true, "_reason": "the stone abutment on each bank: the bridge reaches this far past the water's edge" },
+  "road_px_per_m": { "value": 2, "_proposed": true, "_reason": "the map's scale (terrain.json scale.px_per_m): the road's lines are in map px in the village code, so their offsets are divided by this to get metres" },
+
+  "arch": {
+    "title": "Stone arch",
+    "about": "Round arches (one to four, three over a 60 m river) on piers with pointed cutwaters, a humped deck (each arch is a roof of two halves: the half facing away from the sun in the slope tone, a ridge line at its crown) between stone parapets that flare out into wing walls at the banks. A solid bridge: it casts a solid slab of shadow (the light under the arches is not drawn).",
+    "river_w": [54, 62], "pier_w": [3.6, 4.4], "cutwater_m": [2.2, 2.8], "parapet_w": [1.0, 1.2], "wing_m": [6.5, 8.0],
+    "arch_span_m": { "value": 19, "_proposed": true, "_reason": "the span of one arch: the number of arches is the river's width over this, from 1 to 4 (one arch over a 26 m river, two over 42, three over 54 to 62, four over 78)" },
+    "crown_h": { "value": 6.5, "_proposed": true, "_reason": "the crown of the roadway above the water: its shadow lands this x 0.93 metres away from it" },
+    "pier_h": { "value": 4.2, "_proposed": true, "_reason": "the top of a pier above the water, where the arches spring" },
+    "slab_h": { "value": 1.6, "_proposed": true, "_reason": "the thickness of the roadway slab over the arch ring, the part of the shadow that floats clear of the pier" },
+    "ruin": { "about": "The middle arch is gone: its roadway and parapets down into the river, ragged edges at both piers, stone blocks in the water with ripple rings round them.", "rubble_blocks": [16, 22] }
+  },
+
+  "truss": {
+    "title": "Steel truss",
+    "about": "One through-truss span of eight panels: two top chords either side of the road, a strut across at every panel point and X bracing between them above the carriageway, and abutments of stone. The sides of the truss are seen edge-on from above, so their lattice is the SHADOW: each diagonal and upright throws its own line across the water, the way the radio tower's lattice does.",
+    "river_w": [62, 70], "panel_len": [7.6, 8.4], "chord_w": [0.9, 1.1],
+    "deck_h": { "value": 4.5, "_proposed": true, "_reason": "the roadway above the water" },
+    "truss_h": { "value": 7.0, "_proposed": true, "_reason": "the top chord above the roadway: the lattice's shadow is a band this x 0.93 metres wide" },
+    "ruin": { "about": "The middle of the span has dropped into the river on a slant: the two stubs of the truss stand cantilevered out from the abutments with bent, torn ends, and the fallen section lies askew in the water, half under it, with its top chords twisted and planks floating off.", "stub_w": [0.26, 0.16], "tilt_deg": [11, 16], "planks": [8, 12] }
+  },
+
+  "trestle": {
+    "title": "Wooden trestle",
+    "about": "A timber deck on rows of piles: a plank deck laid across, a rail with a post every three metres, and a pile bent every five and a half metres whose cap beam sticks out a metre past each edge, with its outer piles standing in the water and a ripple behind each. The lightest and the cheapest-looking of the three, and the one that throws a thin, many-legged shadow.",
+    "river_w": [50, 60], "bent_sp": [5.2, 5.8], "cap_over_m": [0.9, 1.1], "piles": 5,
+    "deck_h": { "value": 4.2, "_proposed": true, "_reason": "the plank deck above the water" },
+    "ruin": { "about": "Four bents in the middle are gone with the deck between them: the deck's ends hang torn off at the last standing bents, broken pile stubs stand in the water, and planks and timbers drift downstream.", "gone_bents": 4, "timbers": [10, 14] }
+  },
+
+  "ripples": {
+    "_about": "The ink lines on the water that say a thing stands in it: a short broken V off the downstream side of a pier, pile or block of rubble, a short arc on the upstream side. The river runs from the top of the frame to the bottom. Ink at a low alpha, the same line as the boats' wake.",
+    "alpha": 0.5, "weight": 0.7
+  },
+
+  "roles": {
+    "_about": "Every colour the bridges draw, as a role. Hue is reserved for paper, ink, shadow and the side accents; lightness is the ramp off paper; material is linework. A bridge has no side accent: it belongs to nobody. The only role that is not on that rule is the PLACEHOLDER water, as in boats.json.",
+    "ink": { "base": "ink" },
+    "dirt": { "base": "dirt" },
+    "paper": { "base": "paper" },
+    "stone": { "base": "wall_fill" },
+    "stone_slope": { "base": "wall_fill", "shade": "wall_slope_shadow_mix" },
+    "stone_rock": { "base": "rock_fill" },
+    "stone_rock_slope": { "base": "rock_fill", "shade": "wall_slope_shadow_mix" },
+    "coping": { "base": "object_fill" },
+    "steel": { "base": "object_fill" },
+    "timber": { "base": "wall_fill" },
+    "timber_new": { "base": "roof_lit" },
+    "pebble": { "base": "object_fill", "alpha": 0.9 },
+    "rubble": { "base": "rock_fill" },
+    "rubble_slope": { "base": "rock_fill", "shade": "wall_slope_shadow_mix" },
+    "shadow": { "base": "shadow", "alpha": "shadow_strength" },
+    "water_placeholder": { "base": "shadow", "toward": "paper", "t": 0.42 },
+    "_water_placeholder": "PLACEHOLDER, NOT A PICK: the water's look is Track WB's board (variants/water/). Here it is the one shadow tint mixed 42 percent toward paper, as in boats.json, so the bridge and its shadow can be judged on a blue wash.",
+    "ripple_placeholder": { "base": "ink", "alpha": 0.16 },
+    "submerged": { "base": "shadow", "toward": "paper", "t": 0.42, "alpha": 0.34 },
+    "_submerged": "the placeholder water laid over a fallen part at this alpha, so the wreck reads as half under water",
+    "land_placeholder": { "base": "paper" },
+    "bank_shadow": { "base": "ink", "alpha": 0.5 }
+  }
+}

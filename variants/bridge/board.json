@@ -1,0 +1,257 @@
+{
+  "id": "bridge",
+  "date": "2026-10-10",
+  "area": "Water, World",
+  "question": "How does a bridge look where the village road crosses the river? Alex (decision water-layer): 'Maybe bridges?' -- proposed by the lead as bridges drawn like the buildings, with shadows on the water, destroyable like the radio tower; Alex: 'Sounds good'.",
+  "source": "scripts/ui/boards/bridge_board_shot.gd: the new generators in scripts/render/bridge_art.gd, framed by scripts/render/bridge_frame.gd on PLACEHOLDER water and banks, one InkCanvas per frame; no sandbox is stood up and nothing in the game changes",
+  "seed": 20261009,
+  "held_constant": {
+    "light": "the map's sun (from the north-west, elevation 46, shadow strength 0.44), so the shadows fall south-east onto the water",
+    "pen": "the game's own pen (render_defaults linework.pen, shadow side)",
+    "scale": "the MAP's scale (2 px per metre x zoom): a bridge is scenery like a house, not a unit; zoom 0.35 / 1 / 2 are 0.7 / 2 / 4 px per metre",
+    "road": "the village road's own look (village_draw.gd draw_road: dirt specks, eight wobbly broken lines at the road's offsets, pebbles on the verges), 16 m wide, run onto the deck from both banks",
+    "water_and_banks": "the water is Track WB's PROPOSED default (data/world/water.json draw.palette, read at render time: shallows along the banks, a shelf channel down the middle); the banks are a PLACEHOLDER (paper with a hachured shore). Track WB's board (variants/water/) decides the water"
+  },
+  "sizes_m_proposed": {
+    "deck_width": 16,
+    "abutment_each_end": 6,
+    "arch_river": [
+      54,
+      62
+    ],
+    "truss_river": [
+      62,
+      70
+    ],
+    "trestle_river": [
+      50,
+      60
+    ],
+    "range_checked": [
+      26,
+      42,
+      78
+    ],
+    "heights": {
+      "arch_crown": 6.5,
+      "truss_deck": 4.5,
+      "truss_top_chord": 11.5,
+      "trestle_deck": 4.2
+    }
+  },
+  "parameter": "data/world/bridges.json: arch, truss, trestle (each with its ruin block), ripples, roles",
+  "options": [
+    {
+      "name": "A",
+      "title": "Stone arch",
+      "kind": "arch",
+      "proposed": true,
+      "files": [
+        "arch_ok_z1.png",
+        "arch_ruin_z1.png",
+        "arch_ok_plan.png",
+        "arch_ruin_plan.png",
+        "arch_ok_z2.png",
+        "arch_ruin_z2.png"
+      ],
+      "range_check": [
+        "range_arch_26m.png",
+        "range_arch_42m.png",
+        "range_arch_78m.png"
+      ],
+      "description": "Round arches (one to four, three over a 60 m river) on piers with pointed cutwaters, a humped deck (each arch is a roof of two halves: the half facing away from the sun in the slope tone, a ridge line at its crown) between stone parapets that flare out into wing walls at the banks. A solid bridge: it casts a solid slab of shadow (the light under the arches is not drawn).",
+      "ruin": "The middle arch is gone: its roadway and parapets down into the river, ragged edges at both piers, stone blocks in the water with ripple rings round them.",
+      "data": "data/world/bridges.json arch",
+      "drawn_as": {
+        "river_m": 61.8,
+        "length_m": 73.8,
+        "deck_width_m": 16.0,
+        "seed": 1397446119
+      },
+      "parameters": {
+        "title": "Stone arch",
+        "about": "Round arches (one to four, three over a 60 m river) on piers with pointed cutwaters, a humped deck (each arch is a roof of two halves: the half facing away from the sun in the slope tone, a ridge line at its crown) between stone parapets that flare out into wing walls at the banks. A solid bridge: it casts a solid slab of shadow (the light under the arches is not drawn).",
+        "river_w": [
+          54.0,
+          62.0
+        ],
+        "pier_w": [
+          3.6,
+          4.4
+        ],
+        "cutwater_m": [
+          2.2,
+          2.8
+        ],
+        "parapet_w": [
+          1.0,
+          1.2
+        ],
+        "wing_m": [
+          6.5,
+          8.0
+        ],
+        "arch_span_m": {
+          "value": 19.0,
+          "_proposed": true,
+          "_reason": "the span of one arch: the number of arches is the river's width over this, from 1 to 4 (one arch over a 26 m river, two over 42, three over 54 to 62, four over 78)"
+        },
+        "crown_h": {
+          "value": 6.5,
+          "_proposed": true,
+          "_reason": "the crown of the roadway above the water: its shadow lands this x 0.93 metres away from it"
+        },
+        "pier_h": {
+          "value": 4.2,
+          "_proposed": true,
+          "_reason": "the top of a pier above the water, where the arches spring"
+        },
+        "slab_h": {
+          "value": 1.6,
+          "_proposed": true,
+          "_reason": "the thickness of the roadway slab over the arch ring, the part of the shadow that floats clear of the pier"
+        },
+        "ruin": {
+          "about": "The middle arch is gone: its roadway and parapets down into the river, ragged edges at both piers, stone blocks in the water with ripple rings round them.",
+          "rubble_blocks": [
+            16.0,
+            22.0
+          ]
+        }
+      }
+    },
+    {
+      "name": "B",
+      "title": "Steel truss",
+      "kind": "truss",
+      "proposed": true,
+      "files": [
+        "truss_ok_z1.png",
+        "truss_ruin_z1.png",
+        "truss_ok_plan.png",
+        "truss_ruin_plan.png",
+        "truss_ok_z2.png",
+        "truss_ruin_z2.png"
+      ],
+      "range_check": [
+        "range_truss_26m.png",
+        "range_truss_42m.png",
+        "range_truss_78m.png"
+      ],
+      "description": "One through-truss span of eight panels: two top chords either side of the road, a strut across at every panel point and X bracing between them above the carriageway, and abutments of stone. The sides of the truss are seen edge-on from above, so their lattice is the SHADOW: each diagonal and upright throws its own line across the water, the way the radio tower's lattice does.",
+      "ruin": "The middle of the span has dropped into the river on a slant: the two stubs of the truss stand cantilevered out from the abutments with bent, torn ends, and the fallen section lies askew in the water, half under it, with its top chords twisted and planks floating off.",
+      "data": "data/world/bridges.json truss",
+      "drawn_as": {
+        "river_m": 63.9,
+        "length_m": 75.8,
+        "deck_width_m": 16.0,
+        "seed": 522238764
+      },
+      "parameters": {
+        "title": "Steel truss",
+        "about": "One through-truss span of eight panels: two top chords either side of the road, a strut across at every panel point and X bracing between them above the carriageway, and abutments of stone. The sides of the truss are seen edge-on from above, so their lattice is the SHADOW: each diagonal and upright throws its own line across the water, the way the radio tower's lattice does.",
+        "river_w": [
+          62.0,
+          70.0
+        ],
+        "panel_len": [
+          7.6,
+          8.4
+        ],
+        "chord_w": [
+          0.9,
+          1.1
+        ],
+        "deck_h": {
+          "value": 4.5,
+          "_proposed": true,
+          "_reason": "the roadway above the water"
+        },
+        "truss_h": {
+          "value": 7.0,
+          "_proposed": true,
+          "_reason": "the top chord above the roadway: the lattice's shadow is a band this x 0.93 metres wide"
+        },
+        "ruin": {
+          "about": "The middle of the span has dropped into the river on a slant: the two stubs of the truss stand cantilevered out from the abutments with bent, torn ends, and the fallen section lies askew in the water, half under it, with its top chords twisted and planks floating off.",
+          "stub_w": [
+            0.26,
+            0.16
+          ],
+          "tilt_deg": [
+            11.0,
+            16.0
+          ],
+          "planks": [
+            8.0,
+            12.0
+          ]
+        }
+      }
+    },
+    {
+      "name": "C",
+      "title": "Wooden trestle",
+      "kind": "trestle",
+      "proposed": true,
+      "files": [
+        "trestle_ok_z1.png",
+        "trestle_ruin_z1.png",
+        "trestle_ok_plan.png",
+        "trestle_ruin_plan.png",
+        "trestle_ok_z2.png",
+        "trestle_ruin_z2.png"
+      ],
+      "range_check": [
+        "range_trestle_26m.png",
+        "range_trestle_42m.png",
+        "range_trestle_78m.png"
+      ],
+      "description": "A timber deck on rows of piles: a plank deck laid across, a rail with a post every three metres, and a pile bent every five and a half metres whose cap beam sticks out a metre past each edge, with its outer piles standing in the water and a ripple behind each. The lightest and the cheapest-looking of the three, and the one that throws a thin, many-legged shadow.",
+      "ruin": "Four bents in the middle are gone with the deck between them: the deck's ends hang torn off at the last standing bents, broken pile stubs stand in the water, and planks and timbers drift downstream.",
+      "data": "data/world/bridges.json trestle",
+      "drawn_as": {
+        "river_m": 53.0,
+        "length_m": 65.0,
+        "deck_width_m": 16.0,
+        "seed": 610979638
+      },
+      "parameters": {
+        "title": "Wooden trestle",
+        "about": "A timber deck on rows of piles: a plank deck laid across, a rail with a post every three metres, and a pile bent every five and a half metres whose cap beam sticks out a metre past each edge, with its outer piles standing in the water and a ripple behind each. The lightest and the cheapest-looking of the three, and the one that throws a thin, many-legged shadow.",
+        "river_w": [
+          50.0,
+          60.0
+        ],
+        "bent_sp": [
+          5.2,
+          5.8
+        ],
+        "cap_over_m": [
+          0.9,
+          1.1
+        ],
+        "piles": 5.0,
+        "deck_h": {
+          "value": 4.2,
+          "_proposed": true,
+          "_reason": "the plank deck above the water"
+        },
+        "ruin": {
+          "about": "Four bents in the middle are gone with the deck between them: the deck's ends hang torn off at the last standing bents, broken pile stubs stand in the water, and planks and timbers drift downstream.",
+          "gone_bents": 4.0,
+          "timbers": [
+            10.0,
+            14.0
+          ]
+        }
+      }
+    }
+  ],
+  "palette_check": "No option adds a hue and none uses a side accent (a bridge belongs to nobody). Surfaces are the paper ramp (wall fill L 0.880, its slope mix L 0.772, rock fill L 0.887, object fill L 0.925, roof lit L 0.922); material is linework. The placeholder water is the one exception and is Track WB's to decide.",
+  "recommendation_proposed": "PROPOSED by Track BB, Alex decides: B, the steel truss, if the bridge has to be found and read at the planning zoom (the lattice, on the span and as a lattice of shadow, is the most legible thing of the three at 0.7 px per metre); A, the stone arch, if it should look like the village's own masonry (it shares the walls' two tones and is the most like the buildings); C, the wooden trestle, as the cheap, light variant (a second bridge type for the back roads). They need not be one: the generator can pick a look per crossing (a stone arch in the village, a trestle on the track).",
+  "frames": "frames.json (every frame whole, native size)",
+  "sheet": "board.png (each look whole and destroyed at zoom 1 and the planning zoom, a zoom-2 close-up, a range check, a palette strip)",
+  "chosen": null,
+  "chosen_by": null
+}
