@@ -1449,15 +1449,16 @@
         "a plain paper square until the bake lands",
         "the best thing already made: a stale bake, a coarser level of detail, the overview"
       ],
-      "chosen": "never a blank square: show a stale map (or a coarser level of detail) until the fresh one is ready",
+      "chosen": "bake each map section once and keep it: never regenerate a section the game already has (on pan, zoom, LOD switch or eviction); and never a blank square: a stale or coarser bake shows until a fresh one is ready",
       "parameters": {
-        "fallback": "the previous bake, else a coarser LOD scaled up, else the whole-map overview; never free a texture before its replacement is ready"
+        "fallback": "the previous bake, else a coarser LOD scaled up, else the whole-map overview; never free a texture before its replacement is ready",
+        "bake_once": "every static piece (each chunk at each level of detail, and the fog's contours) is baked once per game and kept; only a real change to a place re-bakes it"
       },
       "applied_to": [
         "Track P2 (map and fog performance, finishing)"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'At the very least, showing a stale map seems better then a plain brown square'."
+      "notes": "Alex: 'We have to be throwing out work we can reuse.' Then: 'At the very least, showing a stale map seems better then a plain brown square.' Then: 'I mean we seem to be regenerating map sections we should already have.'"
     }
   ]
 }
