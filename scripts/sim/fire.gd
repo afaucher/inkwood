@@ -59,7 +59,6 @@ const KIND_LIT_T := 3
 const KIND_DAMAGE := 4
 const CELL_M := 64.0                # the grid the lit trees are found by
 const EPS := 1e-9
-const BISECT := 10                  # bisections that find the edge of a smoke
 
 # The event order within one moment: a tree lights, then what that does to the units, then the trees that burn out.
 const RANK_IGNITE := 0
@@ -211,33 +210,6 @@ func smoke_at(x_m: float, y_m: float, time_s: float) -> bool:
 # and mobility are listed, and it is in the smoke)?
 func denies_tracking(def: Object, x_m: float, y_m: float, time_s: float) -> bool:
 	return rules.smoke_applies(def) and smoke_at(x_m, y_m, time_s)
-
-# The latest moment at or before `t` (seconds into the turn) at which a unit was NOT in the smoke, walking back from `t`, where the unit is in
-# smoke: the moment it entered it (found to a small fraction of smoke.entry_step_s). 0.0 if it was in smoke all the way back to the turn's start.
-# `pos_at` is a Callable (t) -> Vector2, the unit's place (metres) at t.
-func last_clear_t(turn: int, t: float, pos_at: Callable) -> float:
-	var step := rules.entry_step_s
-	var hi := t
-	var lo := t - step
-	while lo > 0.0:
-		var p: Vector2 = pos_at.call(lo)
-		if not smoke_at(p.x, p.y, game_time(turn, lo)):
-			break
-		hi = lo
-		lo -= step
-	if lo <= 0.0:
-		var p0: Vector2 = pos_at.call(0.0)
-		if smoke_at(p0.x, p0.y, game_time(turn, 0.0)):
-			return 0.0
-		lo = 0.0
-	for _i in BISECT:
-		var mid := 0.5 * (lo + hi)
-		var pm: Vector2 = pos_at.call(mid)
-		if smoke_at(pm.x, pm.y, game_time(turn, mid)):
-			hi = mid
-		else:
-			lo = mid
-	return lo
 
 # --- Burnt cover ---------------------------------------------------------------------------------------------------------
 

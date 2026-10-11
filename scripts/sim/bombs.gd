@@ -35,11 +35,17 @@ extends RefCounted
 # fall time of a bomb released at t (aim_at: PROPOSED, a constant-velocity projection, so the stick lands where the unit
 # is expected to be; a unit that turns or stops after the release is missed by that much). The release is then the
 # moment of the step with the smallest release error for THAT moving aim (best_release_moving / plan_drop_moving), the
-# way best_release picks it for a fixed one. A followed unit that is out of the player side's sight at the release is
-# still followed (PROPOSED: the sim has no fog rule). EXCEPT in SMOKE (the forest fire, decision forest-fire; Alex: "visible but untrackable" and
-# "last place you saw it"): a followed ground or sea unit that is in the smoke of a burning tree at the moment a release is considered is not
-# tracked, and the aim for that moment is the last place it WAS tracked, without the lead (tracked_aim; World._resolve_followed_drops). If
-# it has left the smoke by the release it is tracked again and followed normally (PROPOSED).
+# way best_release picks it for a fixed one.
+#
+# A LOST TARGET IS NOT FOLLOWED (decision lost-target-last-seen, 2026-10-11; Alex: "We should do last place for fog. Keep trees as they are for now."): a
+# followed unit that is out of the bombing side's SIGHT at the moment a release is considered -- the sight circles of the side's units, cut by the line of
+# sight where that is on (Spotting.in_sight_of) -- is aimed at the last place the side saw it, without the lead (tracked_aim; World._resolve_followed_drops;
+# data/sim/bombs.json lost_target_mode, "followed" being the old rule: "the sim has no fog rule"). The woods' concealment is NOT asked: a unit hidden in
+# woods but inside a sight circle is still followed, as built. The enemy AI's bombs go through the same rule, by side. If the unit was not seen at all in the
+# turn before the release, the place is the one the planning player last saw it at, the aim the drop was set with (PROPOSED: lost_target_fallback).
+# And in SMOKE (the forest fire, decision forest-fire; Alex: "visible but untrackable" and "last place you saw it"): a followed ground or sea unit that is in the
+# smoke of a burning tree at that moment is lost the same way, and the last place is the last one it was seen in AND out of the smoke. A unit that has been
+# seen again by the release (out of the smoke, back in sight) is tracked again and followed normally (PROPOSED).
 #
 # WHEN THE TARGET IS OUTSIDE THE CONE (Track T; Alex: "That means it might leave the cone and completely not fire" and
 # then "Or just be a bad shot". DECIDED 2026-10-11 (decision outside-cone-release): "Fire a poorer one. Maybe in the future we

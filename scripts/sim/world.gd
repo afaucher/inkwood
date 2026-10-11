@@ -124,6 +124,8 @@ extends RefCounted
 # snapshot (net_fire / apply_net_fire); clients never roll. SMOKE DENIES TRACKING (Alex: "visible but untrackable ... last place you saw it"): a
 # ground or sea unit in the smoke is seen as before but is not SPOTTED for fire control (spotting.gd; _gun_analysis; a salvo at it is a poor shot
 # at the last place it was tracked) and a bomb that follows it aims at that place (_resolve_followed_drops). tracking_denied() answers it.
+# LOST TARGETS (decision lost-target-last-seen): the same goes for a followed unit that is out of the bombing side's SIGHT at the release (sight circles and
+# line of sight; the woods' concealment does not count): _target_lost / _last_seen_place; data/sim/bombs.json lost_target_mode.
 #
 # LEAVING THE MAP is an event, not an error: the step state carries
 # out_of_bounds, a "left_bounds" / "returned_to_bounds" event goes into the
@@ -361,12 +363,59 @@ func _place_at(u: Unit, t: float) -> Vector2:
 	var s := sample(u.id, t, "history")
 	return Vector2(float(s["x"]), float(s["y"]))
 
-# The last place a unit in smoke at `t` was TRACKED: where it was at the latest moment, at or before t, that it was not in the smoke ("last place
-# you saw it"), or where it was at the start of the turn if it was in smoke all along.
-func _last_tracked_place(unit_id: String, t: float) -> Vector2:
+# LOST TARGETS (decisions forest-fire and lost-target-last-seen; Alex: "last place you saw it", "We should do last place for fog. Keep trees as they
+# are for now."). A bomb that FOLLOWS a unit aims at it where it is -- unless the unit is LOST to the bomber's side at that moment (`t`, seconds into the
+# turn): in the SMOKE of a burning tree, or (data/sim/bombs.json lost_target_mode "last_seen") out of the side's SIGHT -- the sight circles of the side's
+# units, cut by the line of sight where it is on (Spotting.in_sight_of). A target hidden in WOODS but inside a sight circle is not lost: the woods'
+# concealment is not asked. The side is the bomber's, so the enemy AI's bombs follow the same rule.
+func _target_lost(side: String, unit_id: String, t: float) -> bool:
+	var tu: Unit = units[unit_id]
+	if fire != null:
+		var p := _place_at(tu, t)
+		if fire.denies_tracking(tu.def, p.x, p.y, fire.game_time(turn, t)):
+			return true
+	if bombs.lost_target_mode != "last_seen":
+		return false
+	return not spotting.in_sight_of(self, side, {"unit": unit_id}, spotting.frame_at(self, t), t)
+
+# The last place a unit that is lost at `t` was SEEN by `side`: where it was at the latest moment, at or before t, that it was both in sight and out of the
+# smoke -- found by walking back (every spot step, or the smoke's entry step if finer) and bisecting to the edge. If it was not seen at any moment of the
+# turn before t: PROPOSED (data/sim/bombs.json lost_target_fallback) the place the planning player last saw it, the drop request's aim (`planned`, a
+# Vector2 or null); "turn_start" takes its place at the start of the turn.
+func _last_seen_place(side: String, unit_id: String, t: float, planned: Variant) -> Vector2:
 	var u: Unit = units[unit_id]
-	var pos_at := func(tt: float) -> Vector2: return _place_at(u, tt)
-	return pos_at.call(fire.last_clear_t(turn, t, pos_at))
+	var lost := func(tt: float) -> bool: return _target_lost(side, unit_id, tt)
+	var step := guns.spot_step_s
+	if fire != null:
+		step = minf(step, fire.rules.entry_step_s)
+	var seen_t := _latest_clear_t(lost, t, step)
+	if seen_t >= 0.0:
+		return _place_at(u, seen_t)
+	if bombs.lost_target_fallback == "planning_aim" and planned is Vector2:
+		return planned
+	return _place_at(u, 0.0)
+
+# The latest moment in [0, t] at which `lost` (a Callable (moment) -> bool) is false, given that it is true at t: walking back in steps of `step`, then
+# bisecting the last step to the edge. -1.0 if it is true at every walked moment back to 0 (including 0).
+func _latest_clear_t(lost: Callable, t: float, step: float) -> float:
+	var hi := t
+	var lo := t - step
+	while lo > 0.0:
+		if not bool(lost.call(lo)):
+			break
+		hi = lo
+		lo -= step
+	if lo <= 0.0:
+		if bool(lost.call(0.0)):
+			return -1.0
+		lo = 0.0
+	for _i in 10:
+		var mid := 0.5 * (lo + hi)
+		if bool(lost.call(mid)):
+			hi = mid
+		else:
+			lo = mid
+	return lo
 
 # --- Players and units -------------------------------------------------------
 
@@ -1490,6 +1539,8 @@ func _drop_state(u: Unit, k: int, prev: Dictionary, cur: Dictionary, req: Varian
 # moment: the target's position at t, led by its velocity at t times the fall time of a bomb released at t (bombs.gd,
 # followed_aim -- PROPOSED), the release at the moment of the step with the smallest release error for that aim. The
 # outside-the-cone switch applies as for any drop (release_rule). A point target and a drop with no target are untouched.
+# A unit LOST to the bomber's side at the moment -- in smoke, or out of the side's sight (_target_lost) -- is aimed at where it was last seen instead,
+# without the lead (decisions forest-fire and lost-target-last-seen).
 # `histories` is the turn just built and is on the units (sample() reads it).
 func _resolve_followed_drops(histories: Dictionary) -> void:
 	for id: String in units:
@@ -1508,19 +1559,23 @@ func _resolve_followed_drops(histories: Dictionary) -> void:
 				continue
 			var samples := _drop_samples(u, int(st["step"]), h[i - 1], st)
 			var followed_id := str(target["unit"])
+			var bomber_side := u.side
+			var req: Variant = (d as Dictionary).get("requested")   # the aim the planning player set the drop with: where he last saw the unit
+			var planning_aim: Variant = Vector2(float(req[0]), float(req[1])) if req is Array and (req as Array).size() >= 2 else null
 			var aim_at := func(t: float) -> Vector2:
 				var bomber := Bombs.sample_at(samples, t)
 				var pose := sample(followed_id, t, "history")
-				# A unit IN SMOKE cannot be tracked (decision forest-fire; Alex: "last place you saw it"): the aim is where it was last tracked,
-				# with no lead; out of the smoke again by the release it is followed as usual.
-				var lost: Variant = null
-				if fire != null and fire.denies_tracking((units[followed_id] as Unit).def, float(pose["x"]), float(pose["y"]), fire.game_time(turn, t)):
-					lost = _last_tracked_place(followed_id, t)
-				return Bombs.tracked_aim(pose, float(bomber["height_m"]), bombs, lost)
+				# A unit LOST to the bomber's side at the release -- in smoke (decision forest-fire) or out of its sight (decision lost-target-last-seen)
+				# -- is not followed: the aim is the last place the side saw it, with no lead. Seen again by the release, it is followed as usual.
+				var last: Variant = null
+				if _target_lost(bomber_side, followed_id, t):
+					last = _last_seen_place(bomber_side, followed_id, t, planning_aim)
+				return Bombs.tracked_aim(pose, float(bomber["height_m"]), bombs, last)
 			var rec := Bombs.release_rule(Bombs.plan_drop_moving(samples, aim_at, bombs), bombs)
 			rec["target"] = target
 			rec["followed"] = true
 			st["drop"] = rec
+	spotting.forget()   # (the frames the sight questions sampled are dropped with the resolve's own)
 
 # The unit and the bomber through step `step_index` of its current plan, for drop_cone and
 # drop_spread: {unit, samples}, or {} with last_error for a unit with no bombs, a down unit or a

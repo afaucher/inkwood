@@ -218,6 +218,8 @@ func _align(w: World, aim: Vector2) -> void:
 func _bomb_world(seed_v: int, cx: float) -> World:
 	var w := BombWorlds.world(seed_v)
 	w.add_unit({"id": "tank", "type": "tank", "side": "axis", "controller": "ai", "x": BombWorlds.TOWER.x, "y": BombWorlds.TOWER.y, "heading": 0.0, "speed": 8.0})
+	# a lookout keeps the tank in the bomber's side's SIGHT all through the turn, so that only the smoke can lose it (decision lost-target-last-seen)
+	w.add_unit({"id": "lookout", "type": "radio_tower", "side": "allies", "controller": "player", "x": BombWorlds.TOWER.x + 60.0, "y": BombWorlds.TOWER.y + 120.0, "heading": 0.0})
 	_align(w, BombWorlds.TOWER + Vector2(80.0, 0.0))
 	if is_finite(cx):
 		w.enable_fire(null)

@@ -158,7 +158,14 @@ mixed-warfare): water is generated per seed (`scripts/world/water_gen.gd`,
   and burnt trees re-baked as trunks, only the chunks they touch
   (`MapView.set_burnt_trees`, `scripts/render/fire_trunk.gd`). Tests:
   `test_fire`, `test_fire_track`, `test_fire_net`, `test_fire_render`; a look:
-  `scripts/render/fire_shot.gd`.
+  `scripts/render/fire_shot.gd`. **A lost target is not followed** (decision
+  lost-target-last-seen, Alex: "last place for fog. Keep trees as they are for
+  now"): a bomb following a unit that is in smoke or out of the bombing side's
+  sight at the release (sight circles and line of sight; woods concealment does
+  not count) aims at the last place the side saw it, no lead; never seen this
+  turn: the aim the drop was planned with (PROPOSED). `data/sim/bombs.json`
+  `lost_target_mode` / `lost_target_fallback`, `Spotting.in_sight_of`,
+  `World._target_lost`; `test_fire_lost`.
 - The Style guide is the design doc's "Style guide" tab: read it before drawing
   anything new.
 Work on a track stays inside the folders it owns and reads other tracks' data

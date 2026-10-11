@@ -161,6 +161,24 @@ func spotters_in(world: Object, side: String, target: Dictionary, frame: Diction
 				break
 	return out
 
+# Is the target IN SIGHT of the side at this moment: inside the sight circle of one of its units and, where the line of sight is on, clear of what blocks
+# it -- and nothing else. The woods' concealment is NOT asked (decision lost-target-last-seen, Alex: "Keep trees as they are for now": a target hidden in
+# woods but inside a sight circle is still followed by a bomb) and neither is the smoke (that is World.tracking_denied, a separate question).
+# World._resolve_followed_drops asks it for the side of the bomber. `t` and `down_at` as in spotters_in.
+func in_sight_of(world: Object, side: String, target: Dictionary, frame: Dictionary, t: float = -1.0, down_at: Dictionary = {}) -> bool:
+	var tg := target_at(world, target, frame)
+	if tg.is_empty():
+		return false
+	for id: String in world.units:
+		var o: Object = world.units[id]
+		if o.side != side or not frame.has(id):
+			continue
+		if target.has("unit") and str(target["unit"]) == id:
+			continue
+		if _sees(o, frame[id], tg, t, down_at):   # (no world given: no concealment)
+			return true
+	return false
+
 # HOW CLOSE the nearest spotter is, as a share of its own sight: the smallest distance-to-the-target over sight radius among the units
 # of `side` that see `target` in this frame (0: right on it, 1: the target is at the edge of the sight of every one that sees it), or
 # 1.0 when none sees it. The guns' scatter reads it (guns.gd spotter_mult).
