@@ -1906,6 +1906,53 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Next - I want to enhance the side view. I want to be able to select between top, front & side. I think this solves the 'cone but only upwards' problem. Maybe they fold instead of you selecting only one - so you could have all three. It would also make it easier to disable the cones on the main map which visually make it much harder to read.' Then, to the three questions: '1 B - but no limit on which are open at a time. I am testing on 4k 2 Yes, lets actually add a button to the panel to turn arcs on/off 3 self only'. How each view projects the cones, the strips' sizes and which are open at first are PROPOSED by the builder."
+    },
+    {
+      "id": "playtest-2",
+      "date": "2026-10-11",
+      "area": "Interface, Effects",
+      "question": "Alex's notes from the second playtest (played on build 2026-10-10.134839, the first playtest build)",
+      "board": "none (said in chat)",
+      "options": [],
+      "chosen": "tracers for machine guns; tails drawn from the start; the per-unit dot and dotted line removed; already fixed after that build: the roster line, the trail's thin line, the click X and its dotted line",
+      "parameters": {
+        "tracers": "machine guns only (proposed list); look on variants/tracers/, a working default proposed",
+        "start_tails": "a ribbon behind every moving unit at mission start, as if it had flown on at its normal speed; visual only",
+        "unit_dot": "removed behind a data switch"
+      },
+      "applied_to": [
+        "data/fx/fx.json tracers",
+        "scripts/ui/wingtip_trails.gd",
+        "data/ui/ui.json"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'We should show tracers for machine guns.' / 'There is still a line between the selected plane and the roster. Remove it.' / 'The plane motion tails don't render at the start. Create a tail for them assuming they are moving forward at normal speed.' / 'When the motion tail converts to a dotted red or blue solid thin line, remove that trail. Maybe we want that for 'post battle retrospective/replay' but not right now. It is visually distracting.' / 'Remove the indicator on where you clicked to set a units motion. A little X and dotted line. More visual noise and we don't care about the specific spot.' / 'The red/blue indicator dot for each unit (planes at least) with the dotted line. We can remove that. The tail serves this purpose well.' The roster line, the thin trail line and the click X were removed by cc76f61 after that build (leader_to_roster, whole_flight_line, clamp_marks: false); a replay may bring the whole-flight line back later."
+    },
+    {
+      "id": "motion-range-look",
+      "date": "2026-10-11",
+      "area": "Interface",
+      "question": "How is the range of motion (where the next node can go) drawn, in one style for every unit type?",
+      "board": "variants/motion-range/ (being made)",
+      "options": [],
+      "chosen": null,
+      "parameters": {},
+      "applied_to": [],
+      "status": "open",
+      "notes": "Alex: 'I want to look at the design of the 'acceptable range of motion' indicator for planes. Is there a style that makes more sense across all unit types? Should we just have a little shaded area where you can set the node? Show me some options before commiting this.'"
+    },
+    {
+      "id": "sun-time",
+      "date": "2026-10-11",
+      "area": "Style, Terrain",
+      "question": "Do shadows follow the time of day, and how is the time picked?",
+      "board": "variants/sun-time/ (being made)",
+      "options": [],
+      "chosen": null,
+      "parameters": {},
+      "applied_to": [],
+      "status": "open",
+      "notes": "Alex: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.' PROPOSED: every shadow follows one sun, not the trees alone."
     }
   ]
 }
