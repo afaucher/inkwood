@@ -1948,11 +1948,36 @@
       "question": "Do shadows follow the time of day, and how is the time picked?",
       "board": "variants/sun-time/ (being made)",
       "options": [],
-      "chosen": null,
-      "parameters": {},
+      "chosen": "picked once at mission start and fixed for the mission; every shadow follows the one sun",
+      "parameters": {
+        "when": "fixed at mission start",
+        "what_follows": "every shadow (trees, terrain, structures, planes' altitude shadows, effects)",
+        "still_open": "the look across the hours (the board), the clock source in co-op (proposed: the host's), night hours"
+      },
       "applied_to": [],
-      "status": "open",
-      "notes": "Alex: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.' PROPOSED: every shadow follows one sun, not the trees alone."
+      "status": "chosen by Alex (in part); the look and the rest open",
+      "notes": "Alex: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.' PROPOSED: every shadow follows one sun, not the trees alone. Then: 'Fixed time at start' and 'Every shadow follows'."
+    },
+    {
+      "id": "tracers-mg",
+      "date": "2026-10-11",
+      "area": "Effects",
+      "question": "Which weapons draw tracers?",
+      "board": "variants/tracers/ (being made) for the look",
+      "options": [
+        "machine guns only",
+        "every direct-fire weapon"
+      ],
+      "chosen": "machine guns only, for now",
+      "parameters": {
+        "weapons": "machine guns (the list in data, so another weapon is a data edit)",
+        "revisit": "other direct-fire weapons, like the tank's gun"
+      },
+      "applied_to": [
+        "data/fx/fx.json tracers"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. The tracers' look is still open (variants/tracers/)."
     }
   ]
 }
