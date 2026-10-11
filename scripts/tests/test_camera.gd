@@ -9,8 +9,10 @@ extends "res://scripts/test_support/test_case.gd"
 #            drag button (Track U's planner owns it).
 #   CLAMPS   zoom stops at zoom.max and at the zoom-out limit; "fit_map" puts
 #            the whole map in view at the limit; far_zoom "full_render" raises
-#            the limit to full_render_min_zoom; the centre stays within the
-#            map plus pan.map_margin_m.
+#            the limit to full_render_min_zoom; THE VIEW STOPS AT THE MAP'S EDGE
+#            (Alex, 2026-10-11, decision pan-stops-at-edge): it shows at most
+#            pan.edge_overscroll_m past it, and is centred on an axis where it
+#            is wider than the map and that band.
 #   CURSOR   zoom about the cursor keeps the map point under the cursor (by
 #            zoom_at and by a wheel event), and the controller's transform is
 #            the one the engine's Camera2D actually applies (the viewport's
@@ -20,8 +22,10 @@ extends "res://scripts/test_support/test_case.gd"
 #            (zoom_centre: the view less the HUD insets), so out-and-back-in at a
 #            spot pans toward it: the centre moves by (step - 1) x the cursor's
 #            offset / zoom; held keys zoom about zoom_centre.
-#   PAN      a drag (middle or right button) moves the map with the pointer; a
-#            left drag does nothing; a pan stops following.
+#   PAN      a middle drag moves the map with the pointer; a right drag does not
+#            (Alex, 2026-10-11, decision pan-right-drag-off: right-click is the
+#            target alone); a left drag does nothing here (GRAB is the left's own
+#            pan); a pan stops following.
 #   GRAB     (Alex, 2026-10-11, decision pan-left-drag) a left press the interface
 #            hands over (begin_grab: nothing on the map under it) pans once the
 #            pointer has moved past pan.left_drag_slop_px -- not before, so a click
@@ -137,9 +141,21 @@ func _clamps() -> void:
 	check(vis.encloses(_ctl.map_rect_px), "at the zoom-out limit the whole map is in view (%s holds %s)" % [vis, _ctl.map_rect_px])
 	print("[camera] zoom range %.4f .. %.2f (fit_map at %s px/m, %d x %d view); the whole %.0f m map spans %.0f px" % [lo, _ctl.zoom_max, _terrain.px_per_m, SIZE.x, SIZE.y, _terrain.map_w, _ctl.map_rect_px.size.y * lo])
 	_ctl.set_view(Vector2(-1e6, 1e6), 0.5)
-	var lim := _ctl.map_rect_px.grow(_ctl.map_margin_px)
-	near(_ctl.center().x, lim.position.x, 1e-3, "the centre stops at the map's west edge plus the margin")
-	near(_ctl.center().y, lim.end.y, 1e-3, "the centre stops at the map's south edge plus the margin")
+	var lim := _ctl.map_rect_px.grow(_ctl.edge_overscroll_px)
+	var vr := _ctl.visible_rect_px()
+	near(vr.position.x, lim.position.x, 1e-3, "the view stops at the map's west edge plus pan.edge_overscroll_m")
+	near(vr.end.y, lim.end.y, 1e-3, "and at its south edge plus it")
+	_ctl.set_view(Vector2(1e6, -1e6), 1.0)
+	_ctl.pan_screen(Vector2(-400.0, 300.0))   # dragging the map further out moves nothing
+	vr = _ctl.visible_rect_px()
+	near(vr.end.x, lim.end.x, 1e-3, "zoom 1, pushed and dragged past the north-east corner: the view stops at the east edge plus the band")
+	near(vr.position.y, lim.position.y, 1e-3, "and at the north edge plus it")
+	# Between the zoom-out limit and the zoom where the view fits inside the map: wider than the map one way.
+	var zw := SIZE.x / lim.size.x * 0.9
+	if check(zw > _ctl.zoom_limit_min() and SIZE.y / zw < lim.size.y, "(a zoom %.4f where the view is wider than the map but not taller)" % zw):
+		_ctl.set_view(Vector2(-1e6, -1e6), zw)
+		near(_ctl.center().x, _ctl.map_rect_px.get_center().x, 1e-3, "wider than the map and its band: the view is centred across it")
+		near(_ctl.visible_rect_px().position.y, lim.position.y, 1e-3, "and still stops at the north edge plus the band")
 
 	var d := CameraData.new(CameraData.CAMERA_PATH)
 	d.root["far_zoom"]["mode"]["value"] = "full_render"
@@ -263,6 +279,8 @@ func _pan() -> void:
 		var moved := _ctl.world_px_to_screen(w) - before
 		if button == MOUSE_BUTTON_LEFT:
 			near(moved.length(), 0.0, 0.0, "a LEFT drag does not move the map")
+		elif button == MOUSE_BUTTON_RIGHT:
+			near(moved.length(), 0.0, 0.0, "a RIGHT drag does not move the map (decision pan-right-drag-off)")
 		else:
 			near(moved.distance_to(Vector2(30.0, 25.0)), 0.0, 1e-3, "a drag with button %d moves the map with the pointer" % button)
 	_ctl.follow(func() -> Variant: return Vector2(100.0, 100.0))
@@ -271,7 +289,8 @@ func _pan() -> void:
 	# A drag in progress is followed and ended in _input (a card under the pointer
 	# stops motion and swallows the release in the GUI phase): the press begins it in
 	# _unhandled_input, the rest never gets there.
-	for button: int in [MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT]:
+	check(_ctl.drag_buttons.size() == 1 and _ctl.drag_buttons[0] == MOUSE_BUTTON_MIDDLE, "the drag buttons are the middle button alone (decision pan-right-drag-off)")
+	for button: int in [MOUSE_BUTTON_MIDDLE]:
 		var b4 := _ctl.world_px_to_screen(w)
 		var down := InputEventMouseButton.new()
 		down.button_index = button
@@ -439,7 +458,7 @@ func _scale_knob() -> void:
 		near((_ctl.center() / ppm).distance_to(centre_m), 0.0, 0.01, "px_per_m %s: the view stays on the same point in metres" % ppm)
 		near(_ctl.zoom_level(), 0.5, 1e-6, "px_per_m %s: the zoom is kept" % ppm)
 		near(_ctl.zoom_limit_min(), lo0 * ppm0 / ppm, 1e-9, "px_per_m %s: fit_map's zoom-out limit follows the map's size in px" % ppm)
-		near(_ctl.map_margin_px, _ctl.data.num("pan.map_margin_m") * ppm, 1e-9, "px_per_m %s: the pan margin is metres x px_per_m" % ppm)
+		near(_ctl.edge_overscroll_px, _ctl.data.num("pan.edge_overscroll_m") * ppm, 1e-9, "px_per_m %s: the band past the edge is metres x px_per_m" % ppm)
 	near(_ctl.world_to_screen(centre_m).distance_to(_ctl.view_size() * 0.5), 0.0, 0.01, "metres map to the same screen point after the round trip")
 
 # --- the HUD insets: the roster must not cover the map at full zoom-out ---------------------------------
@@ -479,13 +498,14 @@ func _insets() -> void:
 		for i in 60:
 			_ctl.zoom_by(1.0 / _ctl.wheel_step, Vector2(30.0, 30.0))
 		near(_ctl.center().distance_to(expect), 0.0, 1e-3, "insets %s: zooming out with the wheel (about a corner) ends on the same centred view" % str([L, T, R, B]))
-		# 5. In between, the clamp is on the free area's centre: pushed far, it stops at the map's edge plus the margin.
+		# 5. In between, the clamp is on the free area: pushed far, it stops at the map's edge plus the band.
 		_ctl.set_view(map.get_center(), 0.5)
 		_ctl.set_view(Vector2(1e7, -1e7), 0.5)
 		var free_c := _ctl.center() + _ctl.inset_offset() / 0.5
-		var lim := map.grow(_ctl.map_margin_px)
-		near(free_c.x, lim.end.x, 1e-3, "insets %s: the free area's centre stops at the map's east edge plus the margin" % str([L, T, R, B]))
-		near(free_c.y, lim.position.y, 1e-3, "insets %s: and at the north edge plus the margin" % str([L, T, R, B]))
+		var half := _ctl.free_size() * 0.5 / 0.5
+		var lim := map.grow(_ctl.edge_overscroll_px)
+		near(free_c.x + half.x, lim.end.x, 1e-3, "insets %s: the free area stops at the map's east edge plus the band" % str([L, T, R, B]))
+		near(free_c.y - half.y, lim.position.y, 1e-3, "insets %s: and at the north edge plus it" % str([L, T, R, B]))
 	# Framing is unchanged by this and still leaves the insets out.
 	_ctl.set_insets(0.0, 0.0, 354.0, 0.0)
 	check(_ctl.frame_rect().end.x <= SIZE.x - 354.0 + 1e-9, "frame_rect still leaves the insets out")
