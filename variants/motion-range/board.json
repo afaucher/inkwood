@@ -239,6 +239,7 @@
   "recommendation_proposed": "C, a wash under one thin rim, no ribs and no spokes, for every unit type (PROPOSED by builder BM; Alex decides). The region is a thin arc for the planes, a small wedge for the tank and a speck for the cruiser, and the ribs and spokes are most of today's ink, so Alex's instinct is right that they are not what tells a player where a node can go. But a tone alone (B) is the first thing to vanish where the region is smallest and the ground busiest (the fighter's is a 3 by 24 px streak at the start zoom, over trees), so one thin rim keeps it findable: C is the same two marks on every unit at every zoom, in ink only. D and E break up on a 9 px band (a dotted line, a ladder). F is the quietest and the only look that says the slowest and the fastest reach, so it is the one to keep in mind if Alex wants the extent shown. None of them fixes the cruiser: its region is under its own hull today.",
   "how_to_switch": "set planner.fan.mode in data/ui/ui.json to the option's mode; nothing else changes",
   "sheet": "board.png (rows A-F, columns: light fighter | bomber | tank | cruiser, three zoom lines each; the cone wash and the cruiser-today sections and a palette strip below)",
-  "chosen": null,
-  "chosen_by": null
+  "chosen": "C",
+  "chosen_by": "Alex",
+  "decision": "motion-range-look"
 }

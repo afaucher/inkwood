@@ -652,9 +652,9 @@
       "_reason": "the working default until Alex chooses from variants/tower-ruin/ (PROPOSED by Track X2)"
     },
     "tracers": {
-      "value": "T2",
-      "_proposed": true,
-      "_reason": "PROPOSED (Track TR, 2026-10-11): T2, the paper-light streak with an ink edge, is the look the game runs until Alex picks from variants/tracers/ (decision tracers-mg asked for tracers for machine guns; the look is open). Why T2: a real tracer is a bright round, and the knock-out step (the lightest value on the map, no new hue) with a fine ink edge reads as one on forest, hatching and the wingtip ribbons alike, at the planning zoom as close in; it needs no colour and leaves a hairline of the line of fire that fades toward the gun. NOT A DECISION"
+      "value": "T5",
+      "decision": "tracers-look",
+      "_reason": "Alex 2026-10-11 on variants/tracers/: 'T5 · Ink streak, hit and miss marks' (he asked for no re-render). T5's own numbers stay PROPOSED inside its option"
     }
   },
   "smoke": {
@@ -20929,7 +20929,7 @@
     }
   },
   "tracers": {
-    "_about": "MACHINE-GUN TRACERS (Track TR, 2026-10-11). Alex 2026-10-11 (the second playtest): 'We should show tracers for machine guns.' and, confirming the scope, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. ALL VALUES ARE PROPOSED VALUE RECORDS except where a record names the decision (the SCOPE, machine guns only, is Alex's, decision tracers-mg; the weapon list that scope picks out, the look and every number are the builder's proposals). A 'fire' event (scripts/sim/combat.gd, one per roll) from a weapon in `weapons` draws a tracer from its hardpoint toward the target, as scripts/fx/fx_tracer.gd: a hit ends on the target, a miss passes beside it and carries on a little; it lives a short time on the playback clock; visual only and deterministic from the event. The look is one of `options` (T1..T5, the board is variants/tracers/); `working_default.tracers` names the one the game runs until Alex picks. Colours are roles (data/fx/fx.json roles tracer.* and the ink roles): no new hue, no glow. Nothing in the code keys on a weapon's class or kind: ADDING A WEAPON (the tank's 'turret_gun', say) IS A DATA EDIT, one id in `weapons`.",
+    "_about": "MACHINE-GUN TRACERS (Track TR, 2026-10-11). Alex 2026-10-11 (the second playtest): 'We should show tracers for machine guns.' and, confirming the scope, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. ALL VALUES ARE PROPOSED VALUE RECORDS except where a record names the decision (the SCOPE, machine guns only, is Alex's, decision tracers-mg; the weapon list that scope picks out, the look and every number are the builder's proposals). A 'fire' event (scripts/sim/combat.gd, one per roll) from a weapon in `weapons` draws a tracer from its hardpoint toward the target, as scripts/fx/fx_tracer.gd: a hit ends on the target, a miss passes beside it and carries on a little; it lives a short time on the playback clock; visual only and deterministic from the event. The look is one of `options` (T1..T5, the board is variants/tracers/); `working_default.tracers` names the one the game runs: Alex picked T5, an ink streak with hit and miss marks (decision tracers-look); T5's numbers are still proposed. Colours are roles (data/fx/fx.json roles tracer.* and the ink roles): no new hue, no glow. Nothing in the code keys on a weapon's class or kind: ADDING A WEAPON (the tank's 'turret_gun', say) IS A DATA EDIT, one id in `weapons`.",
     "enabled": {
       "value": true,
       "_proposed": true,

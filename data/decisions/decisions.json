@@ -1909,7 +1909,9 @@
           "top": true,
           "front": true,
           "side": true
-        }
+        },
+        "side_view.top.nose_deg": 0,
+        "side_view.text.head_step": "views, step %d"
       },
       "applied_to": [
         "scripts/ui/side_view.gd (the strips, the Arcs button), side_view_top.gd, side_view_front.gd, side_view_art.gd",
@@ -1918,7 +1920,7 @@
         "scripts/tests/test_side_view.gd"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'Next - I want to enhance the side view. I want to be able to select between top, front & side. I think this solves the 'cone but only upwards' problem. Maybe they fold instead of you selecting only one - so you could have all three. It would also make it easier to disable the cones on the main map which visually make it much harder to read.' Then, to the three questions: '1 B - but no limit on which are open at a time. I am testing on 4k 2 Yes, lets actually add a button to the panel to turn arcs on/off 3 self only'. How each view projects the cones, the strips' sizes and which are open at first are PROPOSED by the builder. Then, to 'the roster header also has an Arcs button... do you want the roster's one removed?': 'Yes, remove the extra'."
+      "notes": "Alex: 'Next - I want to enhance the side view. I want to be able to select between top, front & side. I think this solves the 'cone but only upwards' problem. Maybe they fold instead of you selecting only one - so you could have all three. It would also make it easier to disable the cones on the main map which visually make it much harder to read.' Then, to the three questions: '1 B - but no limit on which are open at a time. I am testing on 4k 2 Yes, lets actually add a button to the panel to turn arcs on/off 3 self only'. How each view projects the cones, the strips' sizes and which are open at first are PROPOSED by the builder. Then, to 'the roster header also has an Arcs button... do you want the roster's one removed?': 'Yes, remove the extra'. Then, to the builder's open questions: below about 900 px of window only the Side picture fits -- 'No problem for now'; the Top strip nose-right instead of up -- 'To the right'; rename the panel's heading 'side view, step N' (to 'views, step N') -- 'Yes'."
     },
     {
       "id": "playtest-2",
@@ -1955,14 +1957,18 @@
         "E hatch",
         "F rim_ticks (a quiet rim and a ruler with ticks at the slowest and fastest reach)"
       ],
-      "chosen": null,
+      "chosen": "C, a wash under one thin inked rim, for every unit type",
       "parameters": {
-        "switch": "data/ui/ui.json planner.fan.mode (today's 'ribs' is the default)",
-        "recommendation": "C for every unit (PROPOSED)"
+        "switch": "data/ui/ui.json planner.fan.mode, now 'wash_rim' (Alex's C); the other five modes stay as switches",
+        "recommendation": "C for every unit (PROPOSED)",
+        "mode": "wash_rim"
       },
-      "applied_to": [],
-      "status": "open",
-      "notes": "Alex: 'I want to look at the design of the 'acceptable range of motion' indicator for planes. Is there a style that makes more sense across all unit types? Should we just have a little shaded area where you can set the node? Show me some options before commiting this.' PROPOSED by the board's builder: C, because B's tone alone vanishes at the start zoom (the fighter's fan is a 3 x 24 px streak) and one thin rim keeps it findable; D and E turn into a dotted line and a ladder on a 9 px band; F alone shows reach. Found: the cruiser's fan sits under its own hull (the markers draw over the planner), so no look shows it until that changes."
+      "applied_to": [
+        "data/ui/ui.json planner.fan.mode",
+        "variants/motion-range/board.json chosen"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'I want to look at the design of the 'acceptable range of motion' indicator for planes. Is there a style that makes more sense across all unit types? Should we just have a little shaded area where you can set the node? Show me some options before commiting this.' PROPOSED by the board's builder: C, because B's tone alone vanishes at the start zoom (the fighter's fan is a 3 x 24 px streak) and one thin rim keeps it findable; D and E turn into a dotted line and a ladder on a 9 px band; F alone shows reach. Found: the cruiser's fan sits under its own hull (the markers draw over the planner), so no look shows it until that changes. Alex chose: 'C · Wash and a thin inked rim'."
     },
     {
       "id": "sun-time",
@@ -1971,18 +1977,22 @@
       "question": "Do shadows follow the time of day, and how is the time picked?",
       "board": "variants/sun-time/",
       "options": [],
-      "chosen": "picked once at mission start and fixed for the mission; every shadow follows the one sun",
+      "chosen": "picked once at mission start and fixed; every shadow follows the one sun; night hours fold onto the day; the sun comes from the north side so shadows fall below objects; shorter shadows than the board showed",
       "parameters": {
         "when": "fixed at mission start",
         "what_follows": "every shadow (trees, terrain, structures, planes' altitude shadows, effects)",
         "still_open": "the look across the hours (the board), the clock source in co-op (proposed: the host's), night hours",
         "model": "PROPOSED: bearing 90 at 06:00, 180 at noon, 270 at 18:00; elevation a sine arc peaking at 60 degrees; shadow length 1/tan(elevation), clamped at 3; data/params/sun.json, scripts/world/sun.gd",
         "recommendations": "PROPOSED: (a) the host's clock, sent with mission start, and a scenario may pin an hour; (b) fold the 24 hours onto the day (clamp gives half of all real hours the longest shadows); planes' altitude-shadow gap held at today's length",
-        "rebake": "measured: about 37 to 45 s for all 100 chunks, the same as today's sun; fixed at start means one bake"
+        "rebake": "measured: about 37 to 45 s for all 100 chunks, the same as today's sun; fixed at start means one bake",
+        "night": "fold (Alex)",
+        "direction": "from the north side, so every shadow falls below (south of) its object on the map (Alex); PROPOSED: the bearing runs from 45 (NE) at sunrise through 0 (N) at noon to 315 (NW, today's sun) at sunset",
+        "length": "shorter than the board (Alex: 'reduce the distance a bit'); PROPOSED: the clamp 2.0 instead of 3.0",
+        "plane_gap": "accurate: a plane's altitude shadow keeps following the sun's length, like every shadow (Alex), not held at today's length"
       },
       "applied_to": [],
-      "status": "chosen by Alex (in part); the look and the rest open",
-      "notes": "Alex: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.' PROPOSED: every shadow follows one sun, not the trees alone. Then: 'Fixed time at start' and 'Every shadow follows'."
+      "status": "chosen by Alex; the numbers proposed; the co-op clock proposed",
+      "notes": "Alex: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.' PROPOSED: every shadow follows one sun, not the trees alone. Then: 'Fixed time at start' and 'Every shadow follows'. Then, on the board: he chose fold for the night hours (quoting the proposal), and: 'But let's reduce the distance a bit and the sun should be coming from north side to keep shadows below the objects not above'. On the proposal to hold the planes' shadow gap at today's length: 'No, make them accurate'."
     },
     {
       "id": "tracers-mg",
@@ -2018,15 +2028,16 @@
         "T4 bunches of ink dots",
         "T5 an ink streak with a dot for a hit and a tick for a miss"
       ],
-      "chosen": null,
+      "chosen": "T5, an ink streak with a dot for a hit and a tick for a miss",
       "parameters": {
-        "working_default": "T2 (PROPOSED)"
+        "value": "T5"
       },
       "applied_to": [
-        "data/fx/fx.json working_default.tracers"
+        "data/fx/fx.json working_default.tracers",
+        "variants/tracers/board.json chosen"
       ],
-      "status": "open",
-      "notes": "Alex asked for tracers in the second playtest; the look is open. T2 is the working default so the next playtest has them."
+      "status": "chosen by Alex",
+      "notes": "Alex asked for tracers in the second playtest; the look is open. T2 is the working default so the next playtest has them. Alex chose: 'T5 · Ink streak, hit and miss marks'. Then: 'No need to rerender'."
     },
     {
       "id": "map-border",
@@ -2052,7 +2063,7 @@
         "variants/map-border (chosen_* frames)"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'The secondary thing I wanted to do was look at a couple of art proposals for what to do for the area around the map when you zoom out. It is just a solid color right now. What are some treatments? Should we constrain the outer most zoom to a specific area? For treatments I was thinking of: The hatch edging onto a continued blank paper pattern. Clipped so you just see it as the border but not beyond.' Then, from the board: 'I like the hatches, with the distance legend'. The lead read 'the distance legend' as B's ticks, numbers and scale bar, without B's double-ruled neatline and north arrow (asked)."
+      "notes": "Alex: 'The secondary thing I wanted to do was look at a couple of art proposals for what to do for the area around the map when you zoom out. It is just a solid color right now. What are some treatments? Should we constrain the outer most zoom to a specific area? For treatments I was thinking of: The hatch edging onto a continued blank paper pattern. Clipped so you just see it as the border but not beyond.' Then, from the board: 'I like the hatches, with the distance legend'. The lead read 'the distance legend' as B's ticks, numbers and scale bar, without B's double-ruled neatline and north arrow (asked). Then, to 'B also had a north arrow at full zoom-out. Do you want it with the legend?': 'No north arrow for now.'"
     },
     {
       "id": "lost-target-last-seen",
@@ -2107,6 +2118,30 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'We also need a slight wind or variety over time. What is the natural pattern near the coast?' The lead answered with the coastal breeze cycle (typical figures, not from a checked source) and noted that a mission is 2-3 minutes of game time (5 s turns), so the daily swing is set at the start from the time of day, as the sun is, and variety during a mission comes from gusts and slow wander. Alex: '1-3 looks good'."
+    },
+    {
+      "id": "board-images",
+      "date": "2026-10-11",
+      "area": "Project",
+      "question": "Commit the boards' rendered images, or only each board's records?",
+      "board": "none (said in chat)",
+      "options": [
+        "commit the images",
+        "only the records"
+      ],
+      "chosen": "board images never go in git; only the records (board.json, frames.json)",
+      "parameters": {
+        "ignored": "variants/**/*.png, *.webp, *.jpg",
+        "shown": "viewer artifacts at full size"
+      },
+      "applied_to": [
+        ".gitignore",
+        "variants/README.md",
+        "CLAUDE.md",
+        "docs/operating.md"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Asked about the board images in git (about 520 MB and growing): 'Board images should not go in it' / 'Git'. The images already committed are untracked from now on; they remain in the history (rewriting it would need a force-push over the other sessions' work: not done, ask Alex first)."
     }
   ]
 }

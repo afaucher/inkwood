@@ -9,6 +9,7 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
+| Time-of-day sun live (decision sun-time): north-side arc, shorter shadows, fold, host's clock in co-op | lead session (builder BS) | data/params/sun.json, scripts/world/sun.gd and its readers; the hour in the mission start (scripts/net/world_sync.gd or the session's start message); tests pin the sun; variants/sun-time/ frames | 2026-10-11 |
 | Forest fire (decision forest-fire): the mechanic has landed (below); now the coastal wind (decision coastal-wind: smoke drift, spread downwind); then the look board for a burning grove and a burnt-out trunk | fire session (nice-dewdney worktree) | new data/sim/fire.json, scripts/sim/fire*.gd, scripts/tests/test_fire*.gd; the fire step and its net state in scripts/sim/world.gd (and the snapshot in scripts/net/world_sync.gd); burnt cover in scripts/sim/concealment.gd, data/sim/concealment.json; smoke denies tracking in scripts/sim/spotting.gd, bombs.gd (followed aim), scripts/ui/ui_target.gd and the enemy-click lines of scripts/ui/unit_ui.gd; new scripts/fx/fx_fire*.gd and its hook in fx_field.gd/fx_layer.gd; per-chunk rebake in scripts/render/map_view.gd, chunk_terrain_provider.gd; data/scenarios/suppress.json (fire on); a fire knob in scripts/debug/debug_settings.gd; the wind: new data/sim/wind.json, scripts/sim/wind.gd, test_wind, and the smoke drift in scripts/fx/fx_field.gd (_wind) and fx_fire.gd | 2026-10-11 |
 
 ## Next, free to take
@@ -39,9 +40,11 @@ Decisions and open questions live in the Decision Ledger
 
 ## Recently landed
 
+- 2026-10-11: tracers are T5, an ink streak with a dot for a hit and a tick for a miss (Alex, decision tracers-look; `data/fx/fx.json`
+  working_default.tracers).
 - 2026-10-11: the camera and the map's edge: wheel zoom in toward the cursor and out about the centre, left-drag on empty map pans, no right-drag pan, panning stops 100 m past the edge, and past the edge a hatched band onto blank paper with a distance legend (decisions zoom-anchors, pan-left-drag, pan-right-drag-off, pan-stops-at-edge, map-border); the side view's top, front and side strips, with the map's cones off by default and the panel's Arcs button (side-view-views).
 - 2026-10-11: two boards for Alex, nothing live changed. The range-of-motion indicator for every unit type (variants/motion-range/,
-  decision motion-range-look, open; `planner.fan.mode`, today's 'ribs' the default; test_fan_modes). Shadows from the time of day
+  decision motion-range-look: Alex chose C, the wash under a thin rim, live as `planner.fan.mode` 'wash_rim'; test_fan_modes). Shadows from the time of day
   (variants/sun-time/, decision sun-time: fixed at start and every shadow follows, Alex's; the look, the co-op clock and night hours open):
   the sun now has one source, `data/params/sun.json` read through `scripts/world/sun.gd`, bit-identical in 'fixed' mode (test_sun).
 - 2026-10-11: the boats and the bridge are drawn in the game (P1 cutter, S2 barge, ink V wake, the flat-deck arch and its ruin;
