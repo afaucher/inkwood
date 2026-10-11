@@ -1987,11 +1987,12 @@
         "rebake": "measured: about 37 to 45 s for all 100 chunks, the same as today's sun; fixed at start means one bake",
         "night": "fold (Alex)",
         "direction": "from the north side, so every shadow falls below (south of) its object on the map (Alex); PROPOSED: the bearing runs from 45 (NE) at sunrise through 0 (N) at noon to 315 (NW, today's sun) at sunset",
-        "length": "shorter than the board (Alex: 'reduce the distance a bit'); PROPOSED: the clamp 2.0 instead of 3.0"
+        "length": "shorter than the board (Alex: 'reduce the distance a bit'); PROPOSED: the clamp 2.0 instead of 3.0",
+        "plane_gap": "accurate: a plane's altitude shadow keeps following the sun's length, like every shadow (Alex), not held at today's length"
       },
       "applied_to": [],
-      "status": "chosen by Alex; the numbers proposed; the co-op clock and the planes' gap proposed",
-      "notes": "Alex: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.' PROPOSED: every shadow follows one sun, not the trees alone. Then: 'Fixed time at start' and 'Every shadow follows'. Then, on the board: he chose fold for the night hours (quoting the proposal), and: 'But let's reduce the distance a bit and the sun should be coming from north side to keep shadows below the objects not above'."
+      "status": "chosen by Alex; the numbers proposed; the co-op clock proposed",
+      "notes": "Alex: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.' PROPOSED: every shadow follows one sun, not the trees alone. Then: 'Fixed time at start' and 'Every shadow follows'. Then, on the board: he chose fold for the night hours (quoting the proposal), and: 'But let's reduce the distance a bit and the sun should be coming from north side to keep shadows below the objects not above'. On the proposal to hold the planes' shadow gap at today's length: 'No, make them accurate'."
     },
     {
       "id": "tracers-mg",
