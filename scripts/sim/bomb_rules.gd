@@ -28,6 +28,8 @@ var falloff_exponent: float = NAN
 var release_samples: int = 0
 var outside_cone_mode: String = ""       # "hold" | "poor_shot": what a drop whose target is outside its cone does (Track T)
 var poor_shot_floor: float = NAN         # the least accuracy of a poor shot
+var lost_target_mode: String = ""        # "last_seen" | "followed": a followed unit the side cannot see at the release (decision lost-target-last-seen)
+var lost_target_fallback: String = ""    # "planning_aim" | "turn_start": where a lost target is taken to be if it was not seen at all this turn before the release
 var inside_tolerance: float = NAN        # an aim is inside the cone up to r = 1 + this (Track T: the strict rule)
 var expect_sticks: int = 0               # sticks sampled for the expected-damage line (bomb_expect.gd)
 var expect_seed: int = 0                 # their fixed seed
@@ -68,6 +70,8 @@ func _init(source: Variant = PATH, quiet: bool = false) -> void:
 		release_samples = r.integer(d, "release_samples", "release_samples", 2)
 		outside_cone_mode = r.id_value(d, "outside_cone_mode", "outside_cone_mode", OUTSIDE_MODES)
 		poor_shot_floor = r.number(d, "poor_shot_floor", "poor_shot_floor", 0.01, 1.0)
+		lost_target_mode = r.id_value(d, "lost_target_mode", "lost_target_mode", LOST_MODES)
+		lost_target_fallback = r.id_value(d, "lost_target_fallback", "lost_target_fallback", LOST_FALLBACKS)
 		inside_tolerance = r.number(d, "inside_tolerance", "inside_tolerance", 0.0, 0.1)
 		expect_sticks = r.integer(d, "expect_sticks", "expect_sticks", 1)
 		expect_seed = r.integer(d, "expect_seed", "expect_seed", 0)
@@ -91,8 +95,10 @@ func _init(source: Variant = PATH, quiet: bool = false) -> void:
 	})
 
 const OUTSIDE_MODES := ["hold", "poor_shot"]
+const LOST_MODES := ["last_seen", "followed"]
+const LOST_FALLBACKS := ["planning_aim", "turn_start"]
 const KEYS := ["gravity_mps2", "cone_half_across_deg", "cone_half_height_deg", "cone_max_range_factor", "rim_accuracy_factor", "falloff_exponent",
-	"release_samples", "outside_cone_mode", "poor_shot_floor", "inside_tolerance", "expect_sticks", "expect_seed", "spread_base_m", "spread_per_height", "stick_error_fraction", "release_interval_s",
+	"release_samples", "outside_cone_mode", "poor_shot_floor", "lost_target_mode", "lost_target_fallback", "inside_tolerance", "expect_sticks", "expect_seed", "spread_base_m", "spread_per_height", "stick_error_fraction", "release_interval_s",
 	"blast_pips_by_distance", "blast_height_m", "blast_hits_own_side"]
 
 func ok() -> bool:

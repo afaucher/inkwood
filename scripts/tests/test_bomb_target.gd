@@ -345,6 +345,9 @@ func _tank_world(mode: String, seed_value: int, heading: float, speed: float, le
 	w.add_player("local")
 	w.add_unit({"id": "bomber", "type": "bomber", "side": "allies", "controller": "player", "x": 400.0, "y": 2500.0, "heading": 0.0, "altitude_band": "medium", "speed": SPEED})
 	w.add_unit({"id": "tank", "type": "tank", "side": "axis", "controller": "ai", "x": BombWorlds.TOWER.x, "y": BombWorlds.TOWER.y + off_m, "heading": heading, "speed": speed})
+	# A lookout of the bomber's side that keeps the tank in sight through the turns the test plays (decision lost-target-last-seen: a unit target the side cannot
+	# see at the release is aimed at the last place it was seen; the bomber alone sees 650 m and is 770 m from the aim at the release). The tower sees 500 m.
+	w.add_unit({"id": "lookout", "type": "radio_tower", "side": "allies", "controller": "player", "x": BombWorlds.TOWER.x + 60.0, "y": BombWorlds.TOWER.y + 120.0, "heading": 0.0})
 	check(w.ok() and w.units.has("tank"), "(the test world loads: %s %s)" % [str(w.errors), w.last_error])
 	_align(w, BombWorlds.TOWER + Vector2(lead_m, 0.0))
 	return w

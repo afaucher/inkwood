@@ -64,6 +64,16 @@
     "decision": "outside-cone-release",
     "_reason": "ALEX (decision outside-cone-release): first 'That means it might leave the cone and completely not fire' and then 'Or just be a bad shot'; DECIDED 2026-10-11: 'Fire a poorer one. Maybe in the future we have an engagement mode but for now that is extra complexity we are not ready for.' So the default is 'poor_shot' (was 'hold', the working default while it was open). WHAT HAPPENS WHEN A DROP'S TARGET IS OUTSIDE ITS STEP'S CONE AT RELEASE; it covers both ways it can happen: a followed unit that leaves the cone during the resolve, and a step moved after its drop was set (the planning rule stands either way: a special cannot be activated on a step whose cone does not hold the target). 'poor_shot': the stick IS released and the bombs are spent, at the moment the target is closest to the cone, aimed at the cone's nearest point to the target (the old clamp, bombs.gd clamp_aim), with the rim's accuracy scaled down by how far outside the cone the target is (poor_shot_floor is the least). 'hold' (nothing is released, no bombs are spent: the strict reading of his first line) is kept as the switch's other setting, tested and not the default. The guns' twin is data/sim/guns.json gun_unspotted_mode"
   },
+  "lost_target_mode": {
+    "value": "last_seen",
+    "decision": "lost-target-last-seen",
+    "_reason": "ALEX (decision lost-target-last-seen, 2026-10-11): '1. We should do last place for fog. Keep trees as they are for now.' WHAT A BOMB DOES WHEN THE UNIT IT FOLLOWS IS OUT OF THE BOMBING SIDE'S SIGHT AT THE RELEASE: 'last_seen': it aims at the last place the side saw it, with no lead (Bombs.tracked_aim; World._resolve_followed_drops). 'Sight' is the side's units' sight circles, cut by the line of sight where that is on (the spotting seam, scripts/sim/spotting.gd in_sight_of); a target hidden in WOODS but inside a sight circle is still followed (concealment does not count, 'keep trees as they are for now'). A target in the smoke of a burning tree is lost the same way (decision forest-fire, data/sim/fire.json smoke). 'followed' is the old rule (a unit target is followed wherever it goes: the strike track's proposal, 'the sim has no fog rule'), kept as the switch's other setting; smoke still applies. The cruiser's guns have the same rule in data/sim/guns.json gun_unspotted_mode"
+  },
+  "lost_target_fallback": {
+    "value": "planning_aim",
+    "_proposed": true,
+    "_reason": "PROPOSED by the lead (decision lost-target-last-seen builds it; Alex did not say): if the target was not in sight at any moment of the turn before the release, 'the last place the side saw it' is the place the planning player last saw it -- the aim the drop was set with (the target selection holds an unseen unit at the place it was last seen: ui_target.gd). 'turn_start' takes the target's place at the start of the turn instead"
+  },
   "poor_shot_floor": {
     "value": 0.15,
     "_proposed": true,

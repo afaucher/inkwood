@@ -1787,13 +1787,14 @@
         "smoke_sight": "a, refined (Alex: 'a', then '1 visible but untrackable and 2 last place you saw it'): smoke does not hide a unit (fog, the enemy AI's knowledge and woods cover are unchanged by it); it denies tracking: fire control (the cruiser's guns) does not count a target in smoke as spotted, so they fire the poorer shot at its last tracked place (decision outside-cone-release); a bomb following a unit that is in smoke at the release aims at the last place it was tracked; PROPOSED: ground and sea units, mobile and static, not planes; a click on an enemy in smoke sets a point target, not a unit target; leaving the smoke makes it trackable again",
         "smoke.reach_m": "PROPOSED: inside the smoke = within 20 m of a burning tree's canopy edge",
         "look": "W1 smoke (decision damage-smoke) as a stand-in column per burning tree; then a board for the burning grove and the burnt-out trunk",
-        "first_scenario": "suppress (data/scenarios/suppress.json), plus a sandbox switch"
+        "first_scenario": "suppress (data/scenarios/suppress.json), plus a sandbox switch",
+        "smoke_in_fog": "hidden: fog hides the smoke (Alex: 'No, fog should hide smoke.'); data/fx/fx.json forest_fire smoke_when_hidden = false"
       },
       "applied_to": [
         "to be built (track 'Forest fire', docs/status.md): data/sim/fire.json and scripts/sim/fire*.gd, the World's resolve and its net state, the effects layer's smoke per burning tree, the map's burnt trunks, Suppress"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'I want to build a forest fire mechanic.' Then: 'I am thinking that the fire is actually just smoke coming from the trees. It spreads from tree to tree based on distance. It can inflict damage to nearby units with low power and low chance.' Then: 'It should generate smoke which makes it harder to see.' On the lead's seven proposals: '1 - yes 2 - yes 3 - lets fade the change with distance as well 4 - this is deeper then I was thinking. tell me more about this decision in a second. 5 - yes, lets burn down to the trunks? 6 - that is what I wanted 7 - suppress sounds good'. On the lead's explanation of question 4 (a cover, b sight lines, c aim): 'a - but confirm what the implication of this is.  the player might be able to visually see the unit on screen but won't be able to target it directly in a way that tracks it if it moves?' The lead explained that woods cover hides the marker entirely, that bombs today keep following a hidden target, and asked: hidden or visible but not trackable; a bomb's target lost in smoke aimed at its last-seen place? Alex: '1 visible but untrackable and 2 last place you saw it'. The numbers are starting values for a playtest (decision balance-uncalibrated); every detail marked PROPOSED is the lead's."
+      "notes": "Alex: 'I want to build a forest fire mechanic.' Then: 'I am thinking that the fire is actually just smoke coming from the trees. It spreads from tree to tree based on distance. It can inflict damage to nearby units with low power and low chance.' Then: 'It should generate smoke which makes it harder to see.' On the lead's seven proposals: '1 - yes 2 - yes 3 - lets fade the change with distance as well 4 - this is deeper then I was thinking. tell me more about this decision in a second. 5 - yes, lets burn down to the trunks? 6 - that is what I wanted 7 - suppress sounds good'. On the lead's explanation of question 4 (a cover, b sight lines, c aim): 'a - but confirm what the implication of this is.  the player might be able to visually see the unit on screen but won't be able to target it directly in a way that tracks it if it moves?' The lead explained that woods cover hides the marker entirely, that bombs today keep following a hidden target, and asked: hidden or visible but not trackable; a bomb's target lost in smoke aimed at its last-seen place? Alex: '1 visible but untrackable and 2 last place you saw it'. The numbers are starting values for a playtest (decision balance-uncalibrated); every detail marked PROPOSED is the lead's. Later, asked whether smoke should show over the fog (the lead recommended yes): 'No, fog should hide smoke.'"
     },
     {
       "id": "pan-right-drag-off",
@@ -2054,6 +2055,60 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'The secondary thing I wanted to do was look at a couple of art proposals for what to do for the area around the map when you zoom out. It is just a solid color right now. What are some treatments? Should we constrain the outer most zoom to a specific area? For treatments I was thinking of: The hatch edging onto a continued blank paper pattern. Clipped so you just see it as the border but not beyond.' Then, from the board: 'I like the hatches, with the distance legend'. The lead read 'the distance legend' as B's ticks, numbers and scale bar, without B's double-ruled neatline and north arrow (asked). Then, to 'B also had a north arrow at full zoom-out. Do you want it with the legend?': 'No north arrow for now.'"
+    },
+    {
+      "id": "lost-target-last-seen",
+      "date": "2026-10-11",
+      "area": "Specials, Targeting, Fog of war",
+      "question": "A bomb follows a unit target; what if the target is out of the side's sight at the release (in the fog, or hidden in woods)? Today it is followed anyway (PROPOSED by the strike track: 'the sim has no fog rule').",
+      "board": "none (said in chat, after decision forest-fire made a target in smoke aim at the last place it was seen)",
+      "options": [
+        "followed anyway (as built)",
+        "aimed at the last place it was seen, wherever it was lost (fog, woods, smoke)",
+        "fog and smoke only; woods as built"
+      ],
+      "chosen": "a bomb whose followed target is out of the side's sight in the FOG at the release aims at the last place it was seen, with no lead; a target hidden in woods is still followed, as built, for now; smoke as decision forest-fire",
+      "parameters": {
+        "fog": "last place seen (the side's sight circles, and line of sight where it is on)",
+        "woods": "followed as built (concealment does not count), for now",
+        "smoke": "last place seen outside the smoke (decision forest-fire)"
+      },
+      "applied_to": [
+        "to be built (track 'Forest fire'): World._resolve_followed_drops, scripts/sim/bombs.gd tracked_aim, scripts/sim/spotting.gd"
+      ],
+      "status": "chosen by Alex",
+      "notes": "The lead asked: 'should bombs aim at the last place you saw any lost target? ... a target lost in fog or woods is still followed. I recommend yes, to match the cruiser's guns.' Alex: '1. We should do last place for fog. Keep trees as they are for now.'"
+    },
+    {
+      "id": "coastal-wind",
+      "date": "2026-10-11",
+      "area": "Environment, Effects",
+      "question": "A slight wind or variety over time, after the natural pattern near a coast (Alex: 'We also need a slight wind or variety over time. What is the natural pattern near the coast?')",
+      "board": "none (said in chat, on the lead's four proposals; the coastal pattern from general meteorology: a sea breeze onshore by day, a weaker land breeze offshore at night, calms at dawn and dusk, gusts and direction wobble on top)",
+      "options": [
+        "1 the breeze from the mission's time of day and where the sea lies: by day a gentle onshore wind of 2-5 m/s from the sea toward the battle area; at night a lighter offshore wind of 1-3 m/s; at dawn and dusk near calm with a wandering direction",
+        "2 variety over time: the direction wanders +/-15 degrees and the speed +/-30% over a few turns, with short gusts on top, seeded so every player sees the same wind",
+        "3 what it moves: all smoke drifts with the one wind (fire, damaged planes, wrecks); fire spreads further downwind (45 m downwind, 20 m upwind instead of 30 m all round, the same 40%); the untrackable smoke zone moves with the smoke; planes and bombs not affected for now",
+        "4 the look board for the burning grove and the trunks after the wind is in"
+      ],
+      "chosen": "1, 2 and 3: the wind comes from the mission's time of day and the coast (sea breeze by day, land breeze at night, near calm at dawn and dusk), wanders slowly with gusts on a seed every player shares, drifts all smoke, leans fire spread downwind and carries the untrackable smoke zone with it; planes and bombs are not affected for now. 4 (the look board) not answered yet",
+      "parameters": {
+        "day": "onshore, 2-5 m/s, from the sea toward the battle area",
+        "night": "offshore, 1-3 m/s",
+        "dawn_dusk": "near calm, wandering direction",
+        "wander": "direction +/-15 degrees and speed +/-30% over a few turns, plus short gusts; seeded (the same on every peer)",
+        "smoke": "all smoke drifts with the one wind: fire, damaged planes, wrecks",
+        "spread": "45 m downwind, 20 m upwind (30 m all round in a calm); the 40% at touching canopies stays",
+        "smoke_zone": "the untrackable zone moves with the drifting smoke",
+        "not_affected": "planes and bombs, for now",
+        "hour": "PROPOSED: the hour comes from the sun (scripts/world/sun.gd) when its mode is clock_at_start (decision sun-time); while the sun is 'fixed' (the default until the sun-time board is picked) the wind takes a mid-afternoon hour, the sea breeze",
+        "speeds_and_transitions": "PROPOSED: the hours of each regime and the blend between them, the wander's period, the gusts' size and length, how the spread reach scales with wind speed"
+      },
+      "applied_to": [
+        "to be built (track 'Forest fire'): data/sim/wind.json, scripts/sim/wind.gd, the fire's spread and smoke zone, the effects layer's smoke drift"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'We also need a slight wind or variety over time. What is the natural pattern near the coast?' The lead answered with the coastal breeze cycle (typical figures, not from a checked source) and noted that a mission is 2-3 minutes of game time (5 s turns), so the daily swing is set at the start from the time of day, as the sun is, and variety during a mission comes from gusts and slow wander. Alex: '1-3 looks good'."
     }
   ]
 }
