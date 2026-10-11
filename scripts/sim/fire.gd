@@ -216,7 +216,8 @@ func smoke_at(x_m: float, y_m: float, time_s: float) -> bool:
 			return true
 	return false
 
-# How far the smoke has drifted at the game second: the wind then times smoke.drift_s (Vector2.ZERO with no wind).
+# How far the smoke has drifted at the game second: the wind then times smoke.drift_s (Vector2.ZERO with no wind). The NEAR-GROUND wind, Wind.at, not
+# at_height: the untrackable zone is the low smoke where the units are (decision wind-with-height; PROPOSED), whatever the drawn plume does higher up.
 func drift_at(time_s: float) -> Vector2:
 	if wind == null or not (rules.drift_s > 0.0):
 		return Vector2.ZERO

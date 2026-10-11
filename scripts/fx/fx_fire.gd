@@ -28,13 +28,16 @@ extends RefCounted
 # burn-out; it rises and drifts on the W1 option's wind, and thick smoke casts a shadow by the planes' altitude rule
 # (decision smoke-shadow). Sizes follow the MAP's metres (a column stands on a tree), not the planes' drawn scale.
 #
-# THE WIND (decision coastal-wind, 2026-10-11): with a wind set (set_wind: a Wind, scripts/sim/wind.gd, at(game_s) -> the air's velocity in
-# m/s, world axes) a puff drifts with the air as it blows at the puff's BIRTH time, times a gain that makes the drawn column reach where the
-# sim puts its smoke zone: the sim sweeps the untrackable zone (the canopy grown by reach_m) downwind by `smoke.drift_s` seconds of wind
-# (data/sim/fire.json, read here, not copied), so the far end of the zone is wind x drift_s from the tree. The gain is drift_s over the age
-# a puff stays thick enough to read as smoke (its alpha at or above the shadow threshold, zone_age_s()), so the farthest puff that still
-# reads is wind x drift_s from its tree -- the picture fills the zone, no further. No wind, or no drift_s in the data: the option's own data
-# wind is used, or the gain is 1. The wind is sampled on a 0.25 s grid and cached (a puff is made again every frame).
+# THE WIND (decision coastal-wind, 2026-10-11, and wind-with-height: "The wind should pick up as the smoke rises"): with a wind set (set_wind: a
+# Wind, scripts/sim/wind.gd, at(game_s) -> the air's velocity near the ground in m/s, world axes; height_factor(h) -> how much faster it blows at
+# height h) a puff's direction and base speed are the wind's at its BIRTH time, and it drifts by that times D(age), the integral of the height factor
+# over the puff's climb (fx_wind_profile.gd): the plume stands over its tree and bends downwind as it rises, faster the higher it is. The climb is the
+# column's own (forest_fire.smoke: it starts at base_height_m with rise_mps and slows with time constant rise_tau_s, as a real plume does).
+# THE ZONE: the sim sweeps the untrackable zone (the canopy grown by reach_m) downwind by `smoke.drift_s` seconds of the NEAR-GROUND wind
+# (data/sim/fire.json, read here, not copied). A gain on the wind makes the low smoke end there: a puff drift_s old has drifted exactly wind x drift_s
+# (the gain is drift_s / D(drift_s)); the smoke above and older than that trails further, by the height factor, as the wind picks up. No wind, or
+# a Wind without height_factor: the option's own data wind, or the same wind at every height (D = age). The wind is sampled on a 0.25 s grid and
+# cached (a puff is made again every frame).
 #
 # COST. The puffs of a frame are made once per game time (not per pass, not per camera move) into packed arrays,
 # and drawn with one draw call each. Past forest_fire.smoke.draw_budget puffs in a frame, a fixed share (chosen by a
@@ -43,9 +46,10 @@ extends RefCounted
 
 const FxData = preload("res://scripts/fx/fx_data.gd")
 const FxPuff = preload("res://scripts/fx/fx_puff.gd")
+const FxWindProfile = preload("res://scripts/fx/fx_wind_profile.gd")
 
 const SET_ID := "forest_fire"
-const THICK_ALPHA := 0.25   # the alpha under which a puff is "mostly gone" (the layer casts no shadow from it, fx_layer.gd): the far end of the smoke
+const DSTEP := 0.05          # seconds between the entries of the drift table
 const TONES := 3
 
 var data: FxData
@@ -93,8 +97,10 @@ var _steps: Array = []
 var _wind := Vector2.ZERO
 var _wind_jitter := 0.0
 var _drift_s := -1.0                   # data/sim/fire.json smoke.drift_s (-1: the sim does not have it yet)
-var _zone_age := 1.0                   # the age (s) up to which a puff still reads as thick smoke (alpha >= THICK_ALPHA)
-var _drift_gain := 1.0                 # the wind's gain on a puff's drift: drift_s / _zone_age (1 when drift_s is not known)
+var _drift_gain := 1.0                 # the wind's gain on a puff's drift: drift_s / D(drift_s) (1 when drift_s is not known)
+var _rise_tau := 0.0                   # forest_fire.smoke.rise_tau_s: the time constant the climb slows with (0: a constant climb)
+var _profile: RefCounted = null        # the wind's factor by height (fx_wind_profile.gd)
+var _dtab := PackedFloat64Array()      # D(age) every DSTEP s along the column's climb
 var _wind_cache: Dictionary = {}       # int (0.25 s) -> Vector2: wind.at() x the gain
 var _wind_probe := Vector2.INF         # the wind at a fixed time: a Wind changed in place empties the cache
 var _iv := 1.2
@@ -182,6 +188,7 @@ func reload() -> void:
 	_life = maxf(FxData.f(cfg, "life_s"), 0.1)
 	_h0 = FxData.f(cfg, "base_height_m")
 	_rise = FxData.f(cfg, "rise_mps")
+	_rise_tau = FxData.f(cfg, "rise_tau_s")
 	_spread = FxData.f(cfg, "spread_frac")
 	var rf := FxData.arr(cfg, "radius_frac_of_tree")
 	_rf0 = float(rf[0])
@@ -199,18 +206,35 @@ func reload() -> void:
 	_hidden_ok = FxData.b(cfg, "smoke_when_hidden")
 	_shadow = FxData.b(cfg, "ground_shadow")
 	_shadow_min_tone = FxData.i(cfg, "shadow_min_tone")
-	_zone_age = _column_zone_age()
-	set_drift_s(read_drift_s())
+	_drift_s = read_drift_s()
+	_rebuild_drift()
 	_rebuild_times()
 	_dirty_frame()
 
-# The sim's drift_s (seconds of wind by which its smoke zone sits downwind; -1: none) and the gain on the wind that follows from it. reload() reads
-# the data's; a board or a test may set another.
+# The sim's drift_s (seconds of near-ground wind by which its smoke zone sits downwind; -1: none) and the gain on the wind that follows from it.
+# reload() reads the data's; a board or a test may set another.
 func set_drift_s(s: float) -> void:
 	_drift_s = s
-	_drift_gain = clampf(_drift_s / _zone_age, 0.25, 4.0) if _drift_s > 0.0 else 1.0
+	_rebuild_drift()
+
+# The wind's factor by height, the column's drift table D(age) along its climb, and the gain that makes a puff drift_s old sit wind x drift_s from
+# its tree. Run when the wind, drift_s or the data change.
+func _rebuild_drift() -> void:
+	_profile = FxWindProfile.from_wind(wind)
+	var n := int(ceil((_life + 1.0) / DSTEP)) + 2
+	_dtab = (_profile as FxWindProfile).drift_table(_h0, _rise, _rise_tau, DSTEP, n)
+	_drift_gain = 1.0
+	if _drift_s > 0.0:
+		_drift_gain = clampf(_drift_s / maxf(drift_integral(_drift_s), 1e-6), 0.4, 2.5)
 	_wind_cache.clear()
 	_dirty_frame()
+
+# D(age): the seconds of near-ground wind a puff of this age has drifted by (the age itself in a wind that is the same at every height).
+func drift_integral(age: float) -> float:
+	var last := _dtab.size() - 1
+	var x := clampf(age, 0.0, float(last) * DSTEP) / DSTEP
+	var i := mini(int(x), last - 1)
+	return lerpf(_dtab[i], _dtab[i + 1], x - float(i))
 
 # data/sim/fire.json smoke.drift_s: the seconds of drift by which the sim places the untrackable smoke zone downwind of the smoking trees
 # (decision coastal-wind). -1 when the file does not have it. Read, never copied: the sim's number is the one the drawing follows.
@@ -227,25 +251,11 @@ static func read_drift_s(path: String = "res://data/sim/fire.json") -> float:
 	var v: Variant = (rec as Dictionary).get("value") if rec is Dictionary else rec
 	return float(v) if (v is float or v is int) else -1.0
 
-# The age (s) up to which a puff still reads as thick smoke: where its fade (the option's hold and power, the column's peak alpha) crosses
-# THICK_ALPHA. Past it the puff is a faint wisp; the zone the sim draws round the smoke ends where this ends.
-func _column_zone_age() -> float:
-	var n := 480
-	for i in n + 1:
-		var u := float(i) / float(n)
-		var a := 1.0
-		if u > _hold:
-			a = pow(1.0 - (u - _hold) / maxf(1.0 - _hold, 1e-6), _fade_pow)
-		if a * _peak < THICK_ALPHA:
-			return maxf(u * _life, 0.1)
-	return _life
-
 # The wind (null: the option's own data wind). The frame's puffs are made again.
 func set_wind(w: Object) -> void:
 	wind = w
-	_wind_cache.clear()
 	_wind_probe = Vector2.INF
-	_dirty_frame()
+	_rebuild_drift()
 
 # The air's drift velocity for a puff born at game time b (m/s): the wind there times the gain, on a 0.25 s grid.
 func _wind_at(b: float) -> Vector2:
@@ -258,9 +268,6 @@ func _wind_at(b: float) -> Vector2:
 
 func drift_s() -> float:
 	return _drift_s
-
-func zone_age_s() -> float:
-	return _zone_age
 
 func drift_gain() -> float:
 	return _drift_gain
@@ -428,7 +435,7 @@ func _compute(t: float) -> void:
 	var size_k := 1.0
 	_thinned = 0
 	if est > _budget:
-		keep = float(_budget) / float(est)
+		keep = 0.9 * float(_budget) / float(est)   # (a share, not a count: the hash lets a few more through than the share says; 0.9 keeps it under the budget)
 		size_k = minf(1.0 / sqrt(keep), 1.6)
 	_pn = 0
 	_pw.resize(est)
@@ -487,9 +494,8 @@ func _compute(t: float) -> void:
 				tone = _tone_dying
 			var ang := float(h2 & 0xFFFF) / 65536.0 * TAU
 			var dist := sqrt(float((h2 >> 16) & 0x7FFF) / 32768.0) * _spread * r
-			var base_w := _wind_at(b) if windy else _wind
-			var wx := base_w.x + (float(h3 & 0x7FFF) / 32768.0 - 0.5) * 2.0 * _wind_jitter
-			var wy := base_w.y + (float((h3 >> 15) & 0xFFFF) / 65536.0 - 0.5) * 2.0 * _wind_jitter
+			var jx := (float(h3 & 0x7FFF) / 32768.0 - 0.5) * 2.0 * _wind_jitter
+			var jy := (float((h3 >> 15) & 0xFFFF) / 65536.0 - 0.5) * 2.0 * _wind_jitter
 			# the option's growth and fade at this age (fx_puff.gd grow_at / alpha_at / stage_of, inlined)
 			var e := (1.0 - exp(-u / _gtau)) / _gnorm
 			var grow := _g0 + (_g1 - _g0) * e
@@ -505,8 +511,14 @@ func _compute(t: float) -> void:
 					st += 1
 			st = mini(st, _stage_n - 1)
 			var rr := r * (_rf0 + (_rf1 - _rf0) * float(h4 & 0x7FFF) / 32768.0) * _tone_scale[clampi(tone, 0, TONES - 1)] * grow * size_k
-			_pw[n] = Vector2(x + cos(ang) * dist + wx * age, y + sin(ang) * dist + wy * age)
-			_ph[n] = _h0 + _rise * age
+			if windy:
+				# the air at the puff's birth, scaled by the integral of the height factor over the climb so far, plus the spread
+				var bw := _wind_at(b)
+				var dd := drift_integral(age)
+				_pw[n] = Vector2(x + cos(ang) * dist + bw.x * dd + jx * age, y + sin(ang) * dist + bw.y * dd + jy * age)
+			else:
+				_pw[n] = Vector2(x + cos(ang) * dist + (_wind.x + jx) * age, y + sin(ang) * dist + (_wind.y + jy) * age)
+			_ph[n] = _h0 + (_rise * age if _rise_tau <= 0.0 else _rise * _rise_tau * (1.0 - exp(-age / _rise_tau)))
 			_pr[n] = rr
 			_pa[n] = a
 			_pt[n] = tone

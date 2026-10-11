@@ -17,6 +17,9 @@ extends "res://scripts/test_support/test_case.gd"
 #   8. FIRE SPREAD       more likely downwind than upwind, over many seeds; 30 m all round in a calm; the wind at the turn's start
 #   9. THE SMOKE ZONE    shifted downwind (a capsule), with the wind of the moment asked about; a unit downwind is in it and one upwind is not
 #  10. THE SCENARIO      the scenario builder gives the World a wind (the Strike's sea breeze blows from its sea); "wind": false takes it away
+#  11. WITH HEIGHT       (decision wind-with-height) the factor is 1 at 10 m, rises with height by the power law, is flat under the floor and over the cap;
+#                        at_height = at x factor; at() stays the near-ground wind; the profile data loads and a bad exponent or cap is refused; the smoke zone
+#                        stays at the near-ground wind
 
 const World = preload("res://scripts/sim/world.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
@@ -51,6 +54,7 @@ func setup(_main) -> void:
 	eq(_spread(), true, "8. the spread part ran to its end")
 	eq(_smoke_zone(), true, "9. the smoke-zone part ran to its end")
 	eq(_scenario(), true, "10. the scenario part ran to its end")
+	eq(_with_height(), true, "11. the wind-with-height part ran to its end")
 	Sun.set_override({})
 	Sun.reset()
 	finish()
@@ -627,4 +631,123 @@ func _scenario() -> bool:
 	sp.quiet = true
 	SandboxScenario.new("suppress", true).populate(sp)
 	check(sp.fire != null and sp.wind != null and sp.fire.wind == sp.wind, "10. Suppress: the fire is given the wind")
+	return true
+
+# --- 11. The wind with height ------------------------------------------------------------------------------------------------------------
+
+func _with_height() -> bool:
+	var w := _wind(13.0, 8)
+	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(Wind.PATH))
+	var prof: Dictionary = raw["profile"]
+	# the data: the rule is Alex's, the numbers the lead's
+	eq(str((prof["rule"] as Dictionary).get("decision", "")), "wind-with-height", "11. the rule is Alex's (decision wind-with-height)")
+	eq(str((prof["rule"] as Dictionary)["value"]), "power_law", "11. a power law")
+	for key: String in ["reference_height_m", "exponent", "floor_m", "cap_m"]:
+		var rec: Dictionary = prof[key]
+		check(bool(rec.get("_proposed", false)) and str(rec.get("_reason", "")) != "", "11. profile.%s is PROPOSED with a reason" % key)
+	near(w.profile_ref_m, 10.0, 1e-12, "11. reference height 10 m")
+	near(w.profile_exponent, 0.2, 1e-12, "11. exponent 0.2")
+	near(w.profile_floor_m, 2.0, 1e-12, "11. floor 2 m")
+	near(w.profile_cap_m, 500.0, 1e-12, "11. cap 500 m")
+	# the factor
+	eq(w.height_factor(10.0), 1.0, "11. the factor is exactly 1 at the reference height (10 m)")
+	var prev := 0.0
+	var h := 2.0
+	var rising := true
+	while h <= 500.0:
+		var f := w.height_factor(h)
+		if f <= prev:
+			rising = false
+		prev = f
+		h += 1.0
+	check(rising, "11. the factor increases with height, from the floor to the cap")
+	near(w.height_factor(100.0), pow(10.0, 0.2), 1e-12, "11. at 100 m it is the power law: 10 ^ 0.2 = %.4f (about 1.6)" % w.height_factor(100.0))
+	near(w.height_factor(300.0), pow(30.0, 0.2), 1e-12, "11. at 300 m: 30 ^ 0.2 = %.4f (about 2)" % w.height_factor(300.0))
+	check(absf(w.height_factor(100.0) - 1.6) < 0.05 and absf(w.height_factor(300.0) - 2.0) < 0.05, "11. 'roughly 1.6x at 100 m and 2x at 300 m'")
+	near(w.height_factor(50.0), pow(5.0, 0.2), 1e-12, "11. at 50 m")
+	near(w.height_factor(25.0), pow(2.5, 0.2), 1e-12, "11. at 25 m")
+	# flat above the cap and below the floor
+	var cap_f := w.height_factor(500.0)
+	near(cap_f, pow(50.0, 0.2), 1e-12, "11. at the cap, 500 m: 50 ^ 0.2 = %.4f" % cap_f)
+	for hh: float in [501.0, 800.0, 3000.0, 100000.0]:
+		eq(w.height_factor(hh), cap_f, "11. flat above the cap: %.0f m" % hh)
+	var floor_f := w.height_factor(2.0)
+	near(floor_f, pow(0.2, 0.2), 1e-12, "11. at the floor, 2 m: 0.2 ^ 0.2 = %.4f" % floor_f)
+	for hh: float in [1.99, 1.0, 0.0, -5.0]:
+		eq(w.height_factor(hh), floor_f, "11. flat below the floor: %.2f m" % hh)
+	check(floor_f < 1.0 and cap_f > 1.0, "11. a puff just off the ground drifts a little slower than the 10 m wind, and high aloft faster")
+	# the deterministic power against the engine's
+	var worst := 0.0
+	for xv: float in [0.05, 0.2, 0.7, 1.0, 1.4, 3.0, 10.0, 30.0, 50.0, 100.0]:
+		for a: float in [0.2, 0.5, 1.0 / 3.0, 0.9, 1.0]:
+			worst = maxf(worst, absf(Wind.pow_exact(xv, a) / pow(xv, a) - 1.0))
+	check(worst < 1e-13, "11. the power built from + - * / alone agrees with the engine's to %s (relative)" % String.num(worst, 18))
+	eq(Wind.pow_exact(7.0, 0.0), 1.0, "11. x ^ 0 is 1")
+	eq(Wind.pow_exact(1.0, 0.2), 1.0, "11. 1 ^ a is 1")
+	# at_height = at x factor; at() is the near-ground wind, unchanged
+	var same := true
+	var near_ground_ok := true
+	for g in range(0, 200, 7):
+		for hm: float in [0.0, 2.0, 10.0, 37.0, 100.0, 300.0, 500.0, 900.0]:
+			if w.at_height(float(g), hm) != w.at(float(g)) * w.height_factor(hm):
+				same = false
+		if w.at_height(float(g), 10.0) != w.at(float(g)):
+			near_ground_ok = false
+	check(same, "11. at_height(g, h) is exactly at(g) x height_factor(h)")
+	check(near_ground_ok, "11. at the reference height at_height is at(): at() is the near-ground wind")
+	var lo := INF
+	var hi := 0.0
+	var hi100 := 0.0
+	var lo100 := INF
+	for seed_v in range(1, 6):
+		var wd := _wind(13.0, seed_v)
+		var g := 0.0
+		while g < 300.0:
+			lo = minf(lo, wd.at(g).length())
+			hi = maxf(hi, wd.at(g).length())
+			lo100 = minf(lo100, wd.at_height(g, 100.0).length())
+			hi100 = maxf(hi100, wd.at_height(g, 100.0).length())
+			g += 0.9
+	check(lo >= 2.0 - 1e-4 and hi <= 5.0 + 1e-4, "11. at() stays within Alex's 2-5 m/s at the reference height: %.3f..%.3f" % [lo, hi])
+	near(hi100 / hi, w.height_factor(100.0), 1e-5, "11. and at 100 m the same wind is %.2f times as fast (%.2f m/s at most)" % [w.height_factor(100.0), hi100])
+	check(w.at_height(5.0, 300.0).normalized().dot(w.at(5.0).normalized()) > 0.999999, "11. the wind aloft blows the same way, only faster")
+	# the 'uniform' rule is the old one-wind-at-every-height; the profile data is checked
+	var uni: Dictionary = raw.duplicate(true)
+	((uni["profile"] as Dictionary)["rule"] as Dictionary)["value"] = "uniform"
+	var wu := Wind.new({"hour": 13.0, "toward_sea": [1.0, 0.0], "seed": 8}, uni, true)
+	check(wu.ok() and wu.height_factor(300.0) == 1.0 and wu.height_factor(0.0) == 1.0 and wu.at_height(4.0, 300.0) == wu.at(4.0), "11. the rule 'uniform' is one wind at every height")
+	for bad_case: Array in [["exponent", -0.1], ["exponent", 1.5], ["cap_m", 2.0], ["cap_m", 1.0], ["cap_m", 0.0], ["floor_m", 0.0], ["floor_m", 600.0], ["reference_height_m", 0.0]]:
+		var bad: Dictionary = raw.duplicate(true)
+		((bad["profile"] as Dictionary)[bad_case[0]] as Dictionary)["value"] = bad_case[1]
+		check(not Wind.new({}, bad, true).ok(), "11. profile.%s = %s is refused" % [bad_case[0], str(bad_case[1])])
+	var bad_rule: Dictionary = raw.duplicate(true)
+	((bad_rule["profile"] as Dictionary)["rule"] as Dictionary)["value"] = "log_law"
+	check(not Wind.new({}, bad_rule, true).ok(), "11. a rule the code does not know is refused")
+	var missing: Dictionary = raw.duplicate(true)
+	(missing["profile"] as Dictionary).erase("exponent")
+	check(not Wind.new({}, missing, true).ok(), "11. a missing exponent is refused")
+	var no_prov: Dictionary = raw.duplicate(true)
+	(((no_prov["profile"] as Dictionary)["cap_m"]) as Dictionary).erase("_proposed")
+	check(not Wind.new({}, no_prov, true).ok(), "11. a value with no provenance is refused")
+	var extra: Dictionary = raw.duplicate(true)
+	(extra["profile"] as Dictionary)["top_m"] = 1
+	check(not Wind.new({}, extra, true).ok(), "11. an unknown field in the profile is refused")
+	# the fake wind the fire tests use has the same two calls
+	var fake := FireFakes.FakeWind.new(Vector2(3.0, 0.0))
+	fake.exponent = 0.2
+	near(fake.height_factor(10.0), 1.0, 1e-12, "11. (the test wind: 1 at 10 m)")
+	near(fake.at_height(1.0, 100.0).x, 3.0 * pow(10.0, 0.2), 1e-5, "11. (and at_height = at x factor)")
+	eq(FireFakes.FakeWind.new(Vector2(3.0, 0.0)).at_height(1.0, 300.0), Vector2(3.0, 0.0), "11. (a test wind with no exponent is one wind at every height)")
+	# THE SMOKE ZONE stays at the near-ground wind: the fire drifts its zone with at(), never at_height()
+	var fz := FireFakes.state(null, null, fake)
+	fz.add_lit(FireFakes.tree(1, 0.0, 0.0, 8.0), 1, 0.0, "bomb")
+	var dr := fz.drift_at(2.0)
+	near(dr.x, 3.0 * FireFakes.rules().drift_s, 1e-9, "11. the smoke zone drifts with the near-ground wind x drift_s (%.1f m), not the faster wind aloft" % dr.x)
+	var real := _wind(13.0, 8)
+	var fr := FireFakes.state(null, null, real)
+	fr.add_lit(FireFakes.tree(1, 0.0, 0.0, 8.0), 1, 0.0, "bomb")
+	check(fr.drift_at(3.0) == real.at(3.0) * FireFakes.rules().drift_s, "11. and so does a real wind's: drift = at(g) x drift_s")
+	var fraw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(FireRules.PATH))
+	var reason := str((fraw["smoke"] as Dictionary).get("_reason", ""))
+	check(reason.find("near-ground") >= 0 or reason.find("NEAR-GROUND") >= 0, "11. fire.json's smoke._reason says the zone stays at the near-ground wind")
 	return true

@@ -67,6 +67,9 @@ extends Node2D
 #       (fx_fire.gd), so the smoke you see sits where the sim's untrackable zone is. Thick smoke's shadow follows the drifted puffs. With null
 #       (the boards, a shot without a World) every option keeps its own data wind, exactly as before. Puffs already made keep the drift they were
 #       born with; the burning trees' columns are made again from the new wind. The sandbox sets it from `world.wind` (sandbox.gd _sync_wind).
+#       THE WIND BY HEIGHT (decision wind-with-height): a puff drifts by the wind at its CURRENT height (Wind.height_factor: 1.0 at 10 m, about 1.6 at
+#       100 m, about 2 at 300 m), integrated over its climb (fx_wind_profile.gd), so plumes stand over their source and bend downwind as they rise and a
+#       damaged plane's trail at its altitude drifts with the faster wind up there; a Wind without height_factor is one speed at every height.
 #
 # FROM THE SIM'S EVENTS (scripts/sim/combat.gd; game time t = (turn - 1) x turn_seconds + the event's t):
 #   hit   -> the unit's health fraction (health / its def's health) for emit_damage_smoke, each frame

@@ -134,6 +134,7 @@
   },
 
   "smoke": {
+    "_reason": "THE UNTRACKABLE SMOKE ZONE (decisions forest-fire and coastal-wind). Alex's decision wind-with-height makes the wind pick up as the smoke rises, so the DRAWN plume leans further downwind the higher it climbs (Wind.at_height). The zone does not: PROPOSED, it stays with the LOW smoke near the ground, where the units are, and drifts with the NEAR-GROUND wind (Wind.at, the 10 m wind of Alex's 2-5 / 1-3 m/s) times drift_s -- never the higher, faster wind aloft.",
     "denies_tracking": {
       "value": true,
       "decision": "forest-fire",
@@ -147,7 +148,7 @@
     "drift_s": {
       "value": 4.0,
       "_proposed": true,
-      "_reason": "the seconds of drift that place the smoke DOWNWIND (decision coastal-wind: 'the untrackable smoke zone moves with the drifting smoke'): the zone is the burning canopy grown by reach_m and swept along the wind times this many seconds (a capsule), and the effects layer's puffs drift for as long as they rise (about 4 s), so the zone and the picture agree. 0: the zone stays on the canopy. Read by scripts/sim/fire.gd smoke_at and by the drawing"
+      "_reason": "the seconds of drift that place the smoke DOWNWIND (decision coastal-wind: 'the untrackable smoke zone moves with the drifting smoke'): the zone is the burning canopy grown by reach_m and swept along the NEAR-GROUND wind times this many seconds (a capsule; decision wind-with-height: not the faster wind higher up), and the effects layer's puffs drift for as long as they rise (about 4 s), so the zone and the picture agree. 0: the zone stays on the canopy. Read by scripts/sim/fire.gd smoke_at and by the drawing"
     },
     "domains": {
       "value": ["ground", "sea"],

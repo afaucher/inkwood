@@ -21566,9 +21566,9 @@
         "_reason": "PROPOSED: the radius is scaled by this per tone (thin, medium, thick), so a dying column narrows"
       },
       "interval_s": {
-        "value": 1.0,
+        "value": 1.2,
         "_proposed": true,
-        "_reason": "PROPOSED: seconds between puffs of one column (a turn is 5 s): about six live puffs make a column"
+        "_reason": "PROPOSED: seconds between puffs of one column (a turn is 5 s): about ten live puffs make a column"
       },
       "interval_jitter": {
         "value": 0.3,
@@ -21576,19 +21576,24 @@
         "_reason": "PROPOSED: each puff's birth is moved by up to this share of the interval, so neighbouring columns do not pulse together; deterministic from the tree's place"
       },
       "life_s": {
-        "value": 6.0,
+        "value": 12.0,
         "_proposed": true,
-        "_reason": "PROPOSED: seconds a puff lasts: a little over a turn, so smoke thins away within about a turn after the tree is out (Alex wants a fast flash and a very slow decay for effects; the slow part is the W1 fade over these seconds and the column that stops, not a long hang)"
+        "_reason": "PROPOSED: seconds a puff lasts. Raised from 6 s when the wind began to pick up with height (decision wind-with-height): a plume that climbs into faster air needs the time to bend downwind (the first frames leaned only 10 m and read as a lump over the tree), and a puff is thick (alpha 0.25 and up, so a shadow caster) for its first 7 s or so, then a fading wisp. The column still stops with the tree, and the last puff is gone life_s + tail_s after the burn-out; the damage smoke lasts 24 to 40 s"
       },
       "base_height_m": {
-        "value": 60.0,
+        "value": 20.0,
         "_proposed": true,
-        "_reason": "PROPOSED: the height above the ground a puff is born at (m), above the treetops; with rise_mps it sets the shadow's gap by the plane rule (1% of the height along the light, so a puff 80 m up sits three quarters of a metre from its shadow)"
+        "_reason": "PROPOSED: the height above the ground a puff is born at (m): the tree top. It was 60 m before the wind picked up with height; a puff now starts low, where the wind is weak, and climbs into the faster air, so the plume stands over its tree and bends downwind as it rises (decision wind-with-height)"
       },
       "rise_mps": {
-        "value": 16.0,
+        "value": 24.0,
         "_proposed": true,
-        "_reason": "PROPOSED: how fast the smoke rises (m/s), so a puff that is still thick enough to cast a shadow (alpha 0.25 and up, the first 3 to 4 s of its life) is high enough for the altitude rule to give a gap of the min_shadow_px (1.5 px) at the map's play scale"
+        "_reason": "PROPOSED: how fast a puff climbs when it is born (m/s); it slows with rise_tau_s. With the wind growing with height the plume's bend depends on the climb: fast at first (a puff is high enough for the altitude rule to give its shadow a gap of the min_shadow_px, 1.5 px at the map's play scale, in about 4 s), then easing off"
+      },
+      "rise_tau_s": {
+        "value": 10.0,
+        "_proposed": true,
+        "_reason": "PROPOSED: the time constant (s) the climb slows with, a real plume slowing as it rises: h = base_height_m + rise_mps x rise_tau_s x (1 - e^(-age / rise_tau_s)), so a puff climbs 24 m/s at birth, about 18 m/s after 3 s and about 11 m/s after 8 s, and is some 190 m up at the end of its life. 0 makes the climb constant (what it was)"
       },
       "spread_frac": {
         "value": 0.35,
@@ -21621,9 +21626,9 @@
         "_reason": "PROPOSED: the last seconds of the burn that use tone_dying"
       },
       "tail_s": {
-        "value": 2.5,
+        "value": 1.5,
         "_proposed": true,
-        "_reason": "PROPOSED: puffs keep coming this long after the burn-out at the thin tone, so the column thins instead of cutting off"
+        "_reason": "PROPOSED: puffs keep coming this long after the burn-out at the thin tone, so the column thins instead of cutting off; the smoke is gone life_s + tail_s (13.5 s, under three turns) after the tree is out"
       },
       "peak_alpha": {
         "value": 0.9,

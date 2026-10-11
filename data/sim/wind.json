@@ -130,6 +130,36 @@
     }
   },
 
+  "profile": {
+    "_about": "THE WIND WITH HEIGHT (decision wind-with-height, 2026-10-11; Alex: 'The wind should pick up as the smoke rises'). The speeds above (Alex's 2-5 m/s by day, 1-3 at night, and everything the wander and the gusts do) are the wind NEAR THE GROUND, at reference_height_m: Wind.at(game_s) is that wind and is unchanged. Wind.height_factor(height_m) is how much stronger the same wind blows at a height above the ground and Wind.at_height(game_s, height_m) = at(game_s) x height_factor(height_m); each smoke puff drifts with the wind at its own height, so a plume stands over its source and bends downwind as it climbs. THE LAW (the lead's proposal): the standard power law of the wind profile, factor = (height / reference_height_m) ^ exponent, with the height held at a floor below and at a cap above. The untrackable smoke zone of the fire stays with the low smoke near the ground, where the units are (data/sim/fire.json smoke). Planes and bombs are not moved by the wind (decision coastal-wind).",
+    "rule": {
+      "value": "power_law",
+      "choices": ["power_law", "uniform"],
+      "decision": "wind-with-height",
+      "_reason": "Alex: the wind picks up as the smoke rises. 'power_law' is the rule (each smoke puff drifts with the wind at its own height); 'uniform' is the old one-wind-at-every-height (factor 1 everywhere), kept as the switch's other setting"
+    },
+    "reference_height_m": {
+      "value": 10.0,
+      "_proposed": true,
+      "_reason": "the height the near-ground wind (Alex's 2-5 m/s by day, 1-3 at night) is the wind AT: 10 m, the standard height a surface wind is quoted at. The factor is 1.0 here"
+    },
+    "exponent": {
+      "value": 0.2,
+      "_proposed": true,
+      "_reason": "the power law's exponent: about 0.2 over open land (the lead's proposal), which makes the wind about 1.6 times the near-ground wind at 100 m and 2 times at 300 m. 0 would be no change with height; the file is refused outside 0 to 1"
+    },
+    "floor_m": {
+      "value": 2.0,
+      "_proposed": true,
+      "_reason": "below this height the factor holds at its value here ((2 / 10) ^ 0.2 = 0.73 of the near-ground wind): the law has no meaning at the ground itself, and a puff just leaving a tree drifts a little slower than the 10 m wind"
+    },
+    "cap_m": {
+      "value": 500.0,
+      "_proposed": true,
+      "_reason": "above this height the factor stays at its value here (2.19 times): about 500 m is the depth of a sea breeze, over which the power law no longer holds. Must be above floor_m"
+    }
+  },
+
   "prevailing": {
     "from_bearing_deg": {
       "value": 270.0,

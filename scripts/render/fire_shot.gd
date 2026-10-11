@@ -25,7 +25,13 @@ extends SceneTree
 #   08_wind_day_play.png / 08_wind_day_plan.png / 08_wind_day_close.png     the plumes lean and trail downwind
 #   09_wind_night_play.png / 09_wind_night_plan.png                          lighter, and the other way
 #   10_wind_dawn_play.png / 10_wind_dawn_plan.png                            near calm: the smoke stands over its trees
-#   11_plumes_day.png / 12_plumes_night.png / 13_plumes_dawn.png            six trees burning alone, so each plume's lean can be read
+#   11_plumes_day.png / 12_plumes_night.png / 13_plumes_dawn.png            four trees burning alone, so each plume's lean can be read
+#   14_trail_nowind.png / 14_trail_day_400m.png / 14_trail_night_400m.png   a damaged plane's trail at 400 m: the data wind, then the day breeze
+#                                                                           (faster up there, by the wind's height profile) and the night's
+#
+# THE WIND BY HEIGHT (decision wind-with-height, 2026-10-11: "The wind should pick up as the smoke rises"): every puff drifts with the wind at its own
+# height, so a plume stands over its tree and bends downwind as it climbs; what is printed is the lean of the LOW smoke (puffs up to drift_s old: where the
+# sim keeps its untrackable zone, the near-ground wind x drift_s) and of the plume's TOP (the oldest puffs still thick enough to read).
 #
 # and PRINTS the cost: how long the chunks took to bake again, and the frame time with the grove burning against the same view with no fire
 # (VSync off, 180 frames, the smoke advancing), with what the smoke's own code spent (make the puffs, record the draws). A script that quits
@@ -41,6 +47,7 @@ const GRID_M := 30.0
 # A stand-in for the sim's Wind (at(game_s) -> Vector2 m/s, world axes; mean()): a base velocity whose direction wanders +-15 degrees and whose speed
 # wanders +-30% over a few turns, with a short gust now and then.
 const WindScript = preload("res://scripts/sim/wind.gd")
+const FxHeight = preload("res://scripts/fx/fx_wind_profile.gd")
 
 # The wind of one hour of the day, on the sim's own model (a stand-in FakeWind if it will not load).
 func _wind_for(hour: float, fallback: Vector2, phase: float) -> Object:
@@ -133,6 +140,7 @@ func _run() -> void:
 	if what == "all" or what == "wind":
 		await _wind_run()
 		await _plume_run()
+		await _trail_run()
 	if what == "all" or what == "cost":
 		await _cost_run()
 	_finish(code)
@@ -303,19 +311,47 @@ func _frames_run() -> void:
 
 # --- The wind -----------------------------------------------------------------------------------------------------------------
 
-# How far the smoke sits downwind of its trees: the mean displacement (m) of a puff from its tree, over the feed's burning columns.
-func _mean_lean() -> String:
+# How far the smoke sits downwind of its trees, in metres along the wind `wdir` (a unit vector), over the burning columns of `list`: the LOW smoke
+# (puffs up to drift_s old: the part the sim's zone covers) and the plume's TOP (older puffs that are still thick, alpha 0.25 and up): mean and farthest.
+func _lean(list: Array, wdir: Vector2) -> String:
 	var puffs: Array = fx.fire.puffs_at(t_show)
 	if puffs.is_empty():
 		return "no puffs"
 	var trees := {}
-	for rec: Dictionary in feed:
+	for rec: Dictionary in list:
 		trees[str(rec["id"])] = Vector2(rec["x_m"], rec["y_m"])
-	var sum := Vector2.ZERO
+	var life: float = float((fx.fire.cfg as Dictionary).get("life_s", 6.0))
+	var drift_s: float = maxf(fx.fire.drift_s(), 0.0)
+	var lo := PackedFloat64Array()
+	var hi := PackedFloat64Array()
+	var sum_all := Vector2.ZERO
 	for p: Dictionary in puffs:
-		sum += (p["pos"] as Vector2) - (trees[str(p["tree"])] as Vector2)
-	sum /= float(puffs.size())
-	return "%.1f m east, %.1f m south of its tree on average (%.1f m)" % [sum.x, sum.y, sum.length()]
+		var d: Vector2 = (p["pos"] as Vector2) - (trees[str(p["tree"])] as Vector2)
+		sum_all += d
+		var along := d.dot(wdir)
+		var age: float = float(p["u"]) * life
+		if age <= drift_s:
+			lo.append(along)
+		elif float(p["alpha"]) >= 0.25:
+			hi.append(along)
+	sum_all /= float(puffs.size())
+	return "%s | low smoke (up to %.1f s old, under about %d m): mean %.1f m, farthest %.1f m downwind | plume top (older, still thick): mean %.1f m, farthest %.1f m" % [
+		"%.1f m east, %.1f m south of its tree on average" % [sum_all.x, sum_all.y], drift_s, int(FxHeight.height_at(float((fx.fire.cfg as Dictionary).get("base_height_m", 20.0)), float((fx.fire.cfg as Dictionary).get("rise_mps", 20.0)), float((fx.fire.cfg as Dictionary).get("rise_tau_s", 0.0)), drift_s)),
+		_mean(lo), _max(lo), _mean(hi), _max(hi)]
+
+static func _mean(a: PackedFloat64Array) -> float:
+	if a.is_empty():
+		return 0.0
+	var sum := 0.0
+	for x in a:
+		sum += x
+	return sum / float(a.size())
+
+static func _max(a: PackedFloat64Array) -> float:
+	var m := -INF
+	for x in a:
+		m = maxf(m, x)
+	return m if m > -INF else 0.0
 
 func _wind_run() -> void:
 	view.look_at_m(centre_m)
@@ -324,9 +360,9 @@ func _wind_run() -> void:
 	fx.set_time(t_show)
 	view.set_burnt_trees(fx.fire.burnt_at(t_show))
 	await _wait_complete(120.0, true)
-	_say("WIND: the grove burning at %.1f s; drift_s from data/sim/fire.json: %s, the gain on the wind %.2f (a puff reads as smoke for %.2f s)" % [
-		t_show, str(fx.fire.drift_s()) if fx.fire.drift_s() > 0.0 else "none yet (the sim builder adds it): the wind is used as it blows", fx.fire.drift_gain(), fx.fire.zone_age_s()])
-	_say("WIND: with no wind, the options' data wind (2.5 east, 1.0 south m/s): smoke %s" % _mean_lean())
+	_say("WIND: the grove burning at %.1f s; drift_s from data/sim/fire.json: %s (the sim's zone is the near-ground wind x this far from the tree)" % [
+		t_show, str(fx.fire.drift_s()) if fx.fire.drift_s() > 0.0 else "none yet"])
+	_say("WIND: with no wind, the options' data wind (2.5 east, 1.0 south m/s): smoke %s" % _lean(feed, Vector2(0.93, 0.37)))
 	var regimes := [
 		["day (14:00)", "08_wind_day", _wind_for(14.0, Vector2(3.8, -1.3), 0.0), true],
 		["night (01:30)", "09_wind_night", _wind_for(1.5, Vector2(-1.8, 0.7), 1.3), false],
@@ -340,7 +376,9 @@ func _wind_run() -> void:
 		view.set_zoom(1.0)
 		await _frames(4)
 		var at: Vector2 = w.at(t_show)
-		_say("WIND %s: the air blows %.1f m/s toward (%.1f, %.1f) at %.1f s (the regime's mean (%.1f, %.1f)); smoke %s" % [r[0], at.length(), at.x, at.y, t_show, w.mean().x, w.mean().y, _mean_lean()])
+		var wd: Vector2 = at.normalized() if at.length() > 0.05 else Vector2.RIGHT
+		var hf := float(w.call("height_factor", 100.0)) if w.has_method("height_factor") else 1.0
+		_say("WIND %s: the air blows %.1f m/s toward (%.1f, %.1f) near the ground at %.1f s (x%.2f at 100 m; the regime's mean (%.1f, %.1f)); the gain on it %.2f; smoke %s" % [r[0], at.length(), at.x, at.y, t_show, hf, w.mean().x, w.mean().y, fx.fire.drift_gain(), _lean(feed, wd)])
 		_save("%s_play.png" % r[1])
 		view.set_zoom(0.35)
 		await _wait_complete(120.0, true)
@@ -390,10 +428,54 @@ func _plume_run() -> void:
 	await _wait_complete(120.0, true)
 	for r: Array in [["day", "11_plumes_day", _wind_for(14.0, Vector2(3.8, -1.3), 0.0)], ["night", "12_plumes_night", _wind_for(1.5, Vector2(-1.8, 0.7), 1.3)], ["dawn", "13_plumes_dawn", _wind_for(7.5, Vector2(0.25, 0.12), 2.1)]]:
 		fx.set_wind(r[2])
+		fx.fire.set_drift_s(fx.fire.drift_s())
 		fx.set_time(t_show + 1.0)
 		await _frames(4)
+		var wl: Vector2 = (r[2] as Object).call("at", t_show + 1.0)
+		var tt := t_show
+		t_show = t_show + 1.0
+		_say("PLUMES %s: %.1f m/s near the ground; %s" % [r[0], wl.length(), _lean(lone, wl.normalized() if wl.length() > 0.05 else Vector2.RIGHT)])
+		t_show = tt
 		_save("%s.png" % r[1])
 	fx.set_wind(null)
+
+# A damaged plane flying north at 400 m, trailing smoke, with no wind (the options' data wind) and under the day and night breeze: its smoke drifts
+# with the faster wind up there (the sim's height profile), so the older the puff the further it has gone, by more than at the ground.
+func _trail_run() -> void:
+	fx.set_fire_feed([], TS)
+	view.set_burnt_trees([])
+	var cx := centre_m.x
+	var cy := centre_m.y
+	var sampler := func(t: float) -> Dictionary:
+		return {"x": cx - 120.0, "y": cy + 280.0 - 50.0 * t, "height_m": 400.0, "heading": -PI / 2.0}
+	view.look_at_m(Vector2(cx + 20.0, cy))
+	view.set_zoom(1.0)
+	await _wait_complete(120.0, true)
+	var old_k := fx.true_scale
+	fx.true_scale = 2.0   # (the planes' drawn scale at zoom 1: a 9 m fighter is 36 px)
+	var cases := [["nowind", "14_trail_nowind", null], ["day", "14_trail_day_400m", _wind_for(14.0, Vector2(3.8, -1.3), 0.0)], ["night", "14_trail_night_400m", _wind_for(1.5, Vector2(-1.8, 0.7), 1.3)]]
+	for r: Array in cases:
+		fx.clear()
+		fx.set_wind(r[2])
+		var made: int = fx.emit_path("plane", sampler, 0.0, 12.0, 0.35, 9.0)
+		fx.set_time(12.0)
+		await _frames(4)
+		var drift := Vector2.ZERO
+		var n := 0
+		for pair: Array in fx.field.alive_puffs(12.0):
+			var pf: Dictionary = pair[0]
+			var st: Dictionary = pair[1]
+			drift += (st["pos"] as Vector2) - (pf["pos"] as Vector2)
+			n += 1
+		drift /= float(maxi(n, 1))
+		var w: Object = r[2]
+		var at: Vector2 = w.call("at", 6.0) if w != null else Vector2.ZERO
+		_say("TRAIL %s: %d puffs made, %d alive at 12 s; they have drifted %.1f m east, %.1f m south on average (the near-ground wind %.1f m/s, x%.2f at 400 m)" % [
+			r[0], made, n, drift.x, drift.y, at.length(), float(w.call("height_factor", 400.0)) if (w != null and w.has_method("height_factor")) else 1.0])
+		_save("%s.png" % r[1])
+	fx.clear()
+	fx.set_wind(null)
+	fx.true_scale = old_k
 
 # --- The cost ------------------------------------------------------------------------------------------------------------
 

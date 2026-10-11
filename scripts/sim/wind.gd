@@ -10,6 +10,11 @@ extends RefCounted
 #                                    seconds from the start of the game, (turn - 1) x turn_seconds + t (reveal.gd, fire.gd). A pure function of the Wind's
 #                                    inputs: no random state is consumed by a query, so any peer, in any order, gets the same answer.
 #   wind.mean() -> Vector2           the regime's mean wind (no wander, no gust): the sea breeze blows from the sea, so it points away from it
+#   wind.height_factor(height_m) -> float        THE WIND WITH HEIGHT (decision wind-with-height; Alex: "The wind should pick up as the smoke rises"): how many
+#                                    times the near-ground wind blows at a height above the ground, 1.0 at the reference height (10 m), the power law
+#                                    (height / 10) ^ 0.2 between a floor (2 m) and a cap (500 m), flat outside them. PROPOSED numbers, data profile.
+#   wind.at_height(game_s, height_m) -> Vector2  = at(game_s) x height_factor(height_m): what a smoke puff at that height drifts with. at() itself is the
+#                                    NEAR-GROUND wind, unchanged, and Alex's 2-5 / 1-3 m/s ranges are at the reference height.
 #   wind.params() -> Dictionary      the defining parameters, plain values, the wire's: {hour, toward_sea: [x, y] | [], seed, v}
 #   Wind.from_params(d) -> Wind      the very same wind from them, on any peer (its numbers are the data's, the same files everywhere)
 #
@@ -53,7 +58,10 @@ const KNOWN := {
 	"gusts": ["window_s", "chance", "length_s", "size_min", "size_frac"],
 	"sea": ["ring_radii_m", "directions", "deep_m", "min_hits", "min_bias"],
 	"prevailing": ["from_bearing_deg", "speed_mps"],
+	"profile": ["rule", "reference_height_m", "exponent", "floor_m", "cap_m"],
 }
+const PROFILE_RULES := ["power_law", "uniform"]
+const LN2 := 0.693147180559945
 
 # --- The data ---------------------------------------------------------------------------------------------
 var errors: Array[String] = []
@@ -85,6 +93,11 @@ var sea_min_hits: int = 0
 var sea_min_bias: float = NAN
 var prevailing_from_deg: float = NAN
 var prevailing_mps: float = NAN
+var profile_rule: String = ""
+var profile_ref_m: float = NAN
+var profile_exponent: float = NAN
+var profile_floor_m: float = NAN
+var profile_cap_m: float = NAN
 
 # --- The defining parameters (params()) and what they make ---------------------------------------------------
 var hour: float = NAN             # the local hour the regime was taken at, 0..24
@@ -286,6 +299,62 @@ func level_at(h: float) -> float:
 			return sched_level[i - 1] + (sched_level[i] - sched_level[i - 1]) * e
 	return sched_level[n - 1]
 
+# THE WIND WITH HEIGHT. How many times the near-ground wind blows at `height_m` above the ground: (height / reference) ^ exponent with the height held between
+# profile.floor_m and profile.cap_m, so exactly 1.0 at the reference height, rising with height, flat below the floor and above the cap; 1.0 everywhere under the
+# rule "uniform". The power is built from + - * / alone (pow_exact), so it is the same on every platform.
+func height_factor(height_m: float) -> float:
+	if profile_rule != "power_law":
+		return 1.0
+	var h := clampf(height_m, profile_floor_m, profile_cap_m)
+	return pow_exact(h / profile_ref_m, profile_exponent)
+
+# The air's velocity at a game second at a height above the ground: at(game_s) x height_factor(height_m). What a smoke puff drifts with.
+func at_height(game_s: float, height_m: float) -> Vector2:
+	return at(game_s) * height_factor(height_m)
+
+# The factor at the cap: the most the wind is stronger than near the ground.
+func max_height_factor() -> float:
+	return height_factor(profile_cap_m)
+
+# x ^ a for x > 0, 0 <= a, to about 1e-15, from + - * / only (IEEE arithmetic is exact the same everywhere; the engine's pow comes from each platform's C
+# runtime, as its sin and cos do -- js_math.gd has no power): exp(a ln x) with ln by the atanh series after halving x into [0.707, 1.414) and exp by its Taylor
+# series after taking out whole multiples of ln 2.
+static func pow_exact(x: float, a: float) -> float:
+	if x <= 0.0:
+		return 0.0
+	if a == 0.0:
+		return 1.0
+	# ln x
+	var m := x
+	var e := 0
+	while m >= 1.4142135623730951:
+		m *= 0.5
+		e += 1
+	while m < 0.7071067811865476:
+		m *= 2.0
+		e -= 1
+	var z := (m - 1.0) / (m + 1.0)
+	var z2 := z * z
+	var term := z
+	var sum := 0.0
+	for k in 14:
+		sum += term / float(2 * k + 1)
+		term *= z2
+	var y := a * (2.0 * sum + float(e) * LN2)
+	# exp y
+	var kk := floori(y / LN2 + 0.5)
+	var rr := y - float(kk) * LN2
+	var t := 1.0
+	var acc := 1.0
+	for n in range(1, 22):
+		t *= rr / float(n)
+		acc += t
+	var scale := 1.0
+	var steps := absi(kk)
+	for _i in steps:
+		scale *= 2.0 if kk > 0 else 0.5
+	return acc * scale
+
 # The regime's signed mean speed (m/s): > 0 onshore (day), < 0 offshore (night).
 func mean_speed_mps() -> float:
 	return _mean_mps
@@ -383,6 +452,14 @@ func _read(r: Records, d: Dictionary) -> void:
 	var pv := r.section(d, "prevailing", "prevailing")
 	prevailing_from_deg = r.number(pv, "from_bearing_deg", "prevailing.from_bearing_deg", 0.0, 360.0)
 	prevailing_mps = r.number(pv, "speed_mps", "prevailing.speed_mps", 0.0)
+	var pf := r.section(d, "profile", "profile")
+	profile_rule = r.id_value(pf, "rule", "profile.rule", PROFILE_RULES)
+	profile_ref_m = r.number(pf, "reference_height_m", "profile.reference_height_m", 0.001)
+	profile_exponent = r.number(pf, "exponent", "profile.exponent", 0.0, 1.0)
+	profile_floor_m = r.number(pf, "floor_m", "profile.floor_m", 0.001)
+	profile_cap_m = r.number(pf, "cap_m", "profile.cap_m", 0.001)
+	if is_finite(profile_floor_m) and is_finite(profile_cap_m) and profile_cap_m <= profile_floor_m:
+		r.err("profile.cap_m (%s) must be above profile.floor_m (%s)" % [profile_cap_m, profile_floor_m])
 	for key: Variant in d:
 		var k := str(key)
 		if not k.begins_with("_") and not KNOWN.has(k):

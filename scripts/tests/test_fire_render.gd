@@ -21,6 +21,11 @@ extends "res://scripts/test_support/test_case.gd"
 #      air as it blew at its birth, a damaged plane's trail and a crash's burst, plume and wreck column drift with it, thick smoke keeps its
 #      shadow (the shadows are drawn from the same drifted puffs), the layer hands it to both; with none every run is exactly what it was
 #      (the two random numbers a puff's drift draws are drawn either way)
+#  10. THE WIND BY HEIGHT (decision wind-with-height: "The wind should pick up as the smoke rises"; a FAKE Wind with the sim's height profile): a
+#      puff drifts by the wind at its CURRENT height, so the integral of the height factor over its climb: a plume stands over its tree and bends
+#      downwind as it rises; the LOW smoke (a puff drift_s old) ends exactly at wind x drift_s from its tree, where the sim keeps its untrackable
+#      zone (the near-ground wind), and the upper plume trails further; a damaged plane's trail at its altitude drifts with the faster wind up
+#      there; a crash's low column barely; with a wind of one speed at every height, or none, nothing is different
 #   8. THE SANDBOX: with the fire knob on (Suppress), the real sandbox makes the view, the layer holds the World's feed and the map's
 #      provider the trunks of the trees already out; with the fire off the sandbox makes none and the map and the layer are untouched
 
@@ -47,15 +52,21 @@ const TS := 5.0
 class FakeWind extends RefCounted:
 	var v := Vector2(3.0, 0.0)
 	var ramp := Vector2.ZERO
+	var exponent := 0.0   # the wind's power law with height: factor = (h / 10) ^ exponent between 2 m and 500 m; 0 is one wind at every height
 	var calls := 0
-	func _init(velocity: Vector2 = Vector2(3.0, 0.0), per_second: Vector2 = Vector2.ZERO) -> void:
+	func _init(velocity: Vector2 = Vector2(3.0, 0.0), per_second: Vector2 = Vector2.ZERO, height_exponent: float = 0.0) -> void:
 		v = velocity
 		ramp = per_second
+		exponent = height_exponent
 	func at(t: float) -> Vector2:
 		calls += 1
 		return v + ramp * t
 	func mean() -> Vector2:
 		return v
+	func height_factor(h: float) -> float:
+		return pow(clampf(h, 2.0, 500.0) / 10.0, exponent)
+	func at_height(t: float, h: float) -> Vector2:
+		return at(t) * height_factor(h)
 
 class FakeFire extends RefCounted:
 	var revision := 0
@@ -94,6 +105,7 @@ func setup(main) -> void:
 	_check_view()
 	check(_check_wind(main, data), "9. the wind section ran to its end (a runtime error aborts a function in silence)")
 	check(_check_real_wind(data), "9. the real Wind section ran to its end")
+	check(_check_wind_height(data), "10. the wind-by-height section ran to its end")
 	await _check_sandbox(main)
 	check(FxData.shared().ok(), "no data error was raised by any of the above: %s" % str(FxData.shared().errors))
 	finish()
@@ -175,7 +187,8 @@ func _check_smoke(data: FxData) -> void:
 	eq(fire.columns_at(10.0), 1, "2. one column for the one burning tree")
 	# in the middle of the burn: a stream of thick puffs, each a shadow caster, fading and greying with age
 	var mid := fire.puffs_at(12.0)
-	check(mid.size() >= int(life / iv) - 1 and mid.size() <= int(ceil(life / iv)) + 1, "2. about life/interval puffs make the column (%d)" % mid.size())
+	var live_s := minf(life, 12.0 - t_on)   # (the column is only 12 - t_on seconds old, and a puff lasts life_s)
+	check(mid.size() >= int(live_s / iv) - 1 and mid.size() <= int(ceil(live_s / iv)) + 1, "2. about life/interval puffs make the column (%d)" % mid.size())
 	mid.sort_custom(func(p: Dictionary, q: Dictionary) -> bool: return float(p["u"]) < float(q["u"]))
 	var prev_a := 2.0
 	var prev_stage := 0
@@ -188,7 +201,10 @@ func _check_smoke(data: FxData) -> void:
 		eq(int(p["tone"]), FxData.i(fire.cfg, "tone_burning"), "2. mid-burn every puff is thick")
 		if FxPuff.casts_shadow(fire.option, int(p["tone"])):
 			shadow_casters += 1
-		near(float(p["h"]), FxData.f(fire.cfg, "base_height_m") + FxData.f(fire.cfg, "rise_mps") * float(p["u"]) * life, 1e-3, "2. it rises")
+		var age_p: float = float(p["u"]) * life
+		var tau: float = FxData.f(fire.cfg, "rise_tau_s")
+		var climbed: float = FxData.f(fire.cfg, "rise_mps") * (age_p if tau <= 0.0 else tau * (1.0 - exp(-age_p / tau)))
+		near(float(p["h"]), FxData.f(fire.cfg, "base_height_m") + climbed, 1e-3, "2. it rises, and slows as it rises (rise_tau_s %.1f s)" % tau)
 	eq(shadow_casters, mid.size(), "2. thick smoke casts a shadow (smoke-shadow)")
 	# the shadow is visible by the planes' rule at the map's play scale: a puff thick enough (alpha 0.25) and high enough
 	var st := FxStyle.shared() as FxStyle
@@ -212,7 +228,7 @@ func _check_smoke(data: FxData) -> void:
 	eq(fire.puffs_at(gone + 0.01).size(), 0, "2. life_s after the last puff the column is gone")
 	eq(fire.columns_at(gone + 0.01), 0, "2. no column")
 	# the smoke thins away within about a turn or two of the burn-out (PROPOSED: tail + life)
-	check(gone - t_end <= 2.0 * TS, "2. it is gone within two turns of the burn-out (%.1f s)" % (gone - t_end))
+	check(gone - t_end <= 3.0 * TS, "2. it is gone within three turns of the burn-out (%.1f s)" % (gone - t_end))
 	# the trunk: from the end of out_turn, never before
 	eq(fire.burnt_at(t_end - 0.01).size(), 0, "2. not a trunk while it burns")
 	var burnt := fire.burnt_at(t_end)
@@ -644,6 +660,7 @@ func _strip_wind(puffs: Array) -> String:
 	for p: Dictionary in puffs:
 		var q := p.duplicate()
 		q.erase("wind")
+		q.erase("jit")
 		copy.append(q)
 	return JSON.stringify(copy)
 
@@ -657,28 +674,32 @@ func _check_wind(main: Node, data: FxData) -> bool:
 	check(fire.wind == null, "9. no wind unless one is set")
 	var plain := fire.puffs_at(t)
 	var plain_json := JSON.stringify(plain)
-	check(fire.zone_age_s() > 0.5 and fire.zone_age_s() < FxData.f(fire.cfg, "life_s"), "9. the column's visual mass sits at an age inside a puff's life (%.2f s)" % fire.zone_age_s())
+	near(fire.drift_integral(3.0), 3.0, 1e-9, "9. with no wind (a flat profile) the seconds of drift are the age")
 	var calm_wind := FakeWind.new(Vector2.ZERO)
 	fire.set_wind(calm_wind)
 	var calm_puffs := fire.puffs_at(t)
 	var calm := _mass_centre(calm_puffs, tree)
 	# the drift_s the sim reads: fix one (the data's is read at start; this makes the test independent of the number)
 	fire.set_drift_s(3.0)
-	check(fire.drift_gain() > 0.25 and fire.drift_gain() < 4.0, "9. the gain on the wind that follows from drift_s is sane (%.2f)" % fire.drift_gain())
+	near(fire.drift_gain(), 1.0, 1e-9, "9. in a wind of one speed at every height the gain on the wind is 1: a puff drift_s old has drifted drift_s of wind")
 	for v: Vector2 in [Vector2(4.0, 0.0), Vector2(-4.0, 0.0), Vector2(0.0, 4.0), Vector2(2.5, -2.5), Vector2(1.0, 0.0)]:
 		fire.set_wind(FakeWind.new(v))
 		var wp := fire.puffs_at(t)
 		eq(wp.size(), calm_puffs.size(), "9. the same puffs in a wind and in a calm")
 		var dir := v.normalized()
-		var reach := 0.0
+		var reach_low := 0.0
 		var across := 0.0
+		var worst_d := 0.0
 		for k in mini(wp.size(), calm_puffs.size()):
 			var d := (wp[k]["pos"] as Vector2) - (calm_puffs[k]["pos"] as Vector2)
+			var age: float = float(wp[k]["u"]) * FxData.f(fire.cfg, "life_s")
 			across = maxf(across, absf(d.cross(dir)))
-			if float(wp[k]["alpha"]) >= FxFire.THICK_ALPHA:
-				reach = maxf(reach, d.dot(dir))
+			worst_d = maxf(worst_d, absf(d.dot(dir) - v.length() * fire.drift_gain() * fire.drift_integral(age)))
+			if age <= 3.0:
+				reach_low = maxf(reach_low, d.dot(dir))
 		var far := 3.0 * v.length()
-		check(reach <= far + 0.05 and reach >= far * 0.6, "9. wind %s: the farthest puff that still reads as smoke is %.1f m downwind, drift_s (3 s) of wind = %.1f m: it fills the zone and no more" % [v, reach, far])
+		check(reach_low <= far + 0.05 and reach_low >= far * 0.4, "9. wind %s: the low smoke (a puff of up to drift_s, 3 s) ends %.1f m downwind, drift_s of wind = %.1f m: where the sim keeps its zone, and no further" % [v, reach_low, far])
+		check(worst_d < 0.05, "9. each puff has drifted wind x gain x D(age) (worst error %.3f m)" % worst_d)
 		check(across < 0.02, "9. and it drifts straight along the wind (%.3f m across)" % across)
 		var c := _mass_centre(wp, tree) - calm
 		if v.length() >= 2.0:
@@ -833,4 +854,167 @@ func _check_real_wind(data: FxData) -> bool:
 		check(not field.puffs.is_empty() and off == 0, "9. the %s wind: a damaged plane's trail drifts with the sim's Wind at each puff's birth" % pair[0])
 	check((leans["day"] as Vector2).length() > (leans["dawn"] as Vector2).length() * 2.0, "9. a day's sea breeze leans the smoke much further than a dawn calm (%.1f m against %.1f m)" % [(leans["day"] as Vector2).length(), (leans["dawn"] as Vector2).length()])
 	check((leans["day"] as Vector2).dot((leans["night"] as Vector2)) < 0.0, "9. and the night's land breeze leans it the other way")
+	return true
+
+# --- 10. the wind by height ------------------------------------------------------------------------------------------------
+
+# D(age) by brute force: the integral of the wind's height factor over a climb of constant rise, in small steps.
+func _brute_d(w: FakeWind, h0: float, rise: float, age: float) -> float:
+	var n := 2000
+	var sum := 0.0
+	for i in n:
+		var tau := (float(i) + 0.5) / float(n) * age
+		sum += w.height_factor(h0 + rise * tau)
+	return sum / float(n) * age
+
+func _check_wind_height(data: FxData) -> bool:
+	var tree := Vector2(100.0, 200.0)
+	var feed := [_tree("a", tree.x, tree.y, 2, 1.5, 4)]
+	var t := 12.0
+	var life: float = FxData.f(FxFire.new(data).cfg, "life_s")
+	var fire := FxFire.new(data)
+	fire.set_feed(feed)
+	fire.set_drift_s(3.0)
+	var calm_fire := FxFire.new(data)
+	calm_fire.set_feed(feed)
+	calm_fire.set_drift_s(3.0)
+	calm_fire.set_wind(FakeWind.new(Vector2.ZERO, Vector2.ZERO, 0.2))
+	var calm_puffs := calm_fire.puffs_at(t)
+	var v := Vector2(3.5, -1.0)
+	var dir := v.normalized()
+	var air := FakeWind.new(v, Vector2.ZERO, 0.2)
+	fire.set_wind(air)
+	var wp := fire.puffs_at(t)
+	eq(wp.size(), calm_puffs.size(), "10. the same puffs in a wind and in a calm")
+	# the drift table is the integral of the factor over the climb the data gives (rise_mps slowing with rise_tau_s), the gain pins the low smoke
+	var tau: float = FxData.f(fire.cfg, "rise_tau_s")
+	var h0: float = FxData.f(fire.cfg, "base_height_m")
+	var r0: float = FxData.f(fire.cfg, "rise_mps")
+	var brute := 0.0
+	var steps := 4000
+	for i in steps:
+		var tt := (float(i) + 0.5) / float(steps) * 6.0
+		var hh := h0 + (r0 * tt if tau <= 0.0 else r0 * tau * (1.0 - exp(-tt / tau)))
+		brute += air.height_factor(hh) * (6.0 / float(steps))
+	near(fire.drift_integral(6.0), brute, 0.02, "10. D(6 s) is the integral of the wind's height factor over the climb")
+	check(fire.drift_integral(6.0) / 6.0 > fire.drift_integral(2.0) / 2.0 * 1.04, "10. the wind picks up as the smoke rises: it has drifted faster, on average, by 6 s than by 2 s (%.2f against %.2f)" % [fire.drift_integral(6.0) / 6.0, fire.drift_integral(2.0) / 2.0])
+	check(fire.drift_integral(6.0) - fire.drift_integral(5.0) > fire.drift_integral(2.0) - fire.drift_integral(1.0), "10. and its drift per second keeps growing: the plume BENDS downwind as it climbs")
+	check(fire.drift_gain() > 0.4 and fire.drift_gain() < 1.0, "10. the gain on the wind is under 1 when the wind picks up (%.2f): the smoke drifts at the wind's own speed at its height, held back only so the low smoke meets the zone" % fire.drift_gain())
+	near(fire.drift_gain() * fire.drift_integral(3.0), 3.0, 1e-6, "10. a puff drift_s old has drifted exactly wind x drift_s: the LOW smoke ends where the sim's zone does (the near-ground wind)")
+	# the puffs: each is where the model says, the low smoke ends at the zone, the upper plume trails further
+	var reach_low := 0.0
+	var reach_top := 0.0
+	var worst := 0.0
+	var across := 0.0
+	var first_age := 99.0
+	var first_pos := Vector2.ZERO
+	for k in mini(wp.size(), calm_puffs.size()):
+		var d := (wp[k]["pos"] as Vector2) - (calm_puffs[k]["pos"] as Vector2)
+		var age: float = float(wp[k]["u"]) * life
+		worst = maxf(worst, absf(d.dot(dir) - v.length() * fire.drift_gain() * fire.drift_integral(age)))
+		across = maxf(across, absf(d.cross(dir)))
+		if age <= 3.0:
+			reach_low = maxf(reach_low, d.dot(dir))
+		if float(wp[k]["alpha"]) >= 0.25:
+			reach_top = maxf(reach_top, d.dot(dir))
+		if age < first_age:
+			first_age = age
+			first_pos = (wp[k]["pos"] as Vector2) - tree
+	var far := 3.0 * v.length()
+	check(worst < 0.05 and across < 0.02, "10. every puff has drifted by wind x gain x D(age), along the wind (worst error %.3f m, %.3f m across)" % [worst, across])
+	check(reach_low <= far + 0.05 and reach_low >= far * 0.35, "10. the low smoke ends %.1f m downwind, the zone's far end (wind x drift_s) is %.1f m" % [reach_low, far])
+	check(reach_top > reach_low * 1.25, "10. and the upper plume (still thick) trails further: %.1f m against %.1f m" % [reach_top, reach_low])
+	check(first_pos.length() < 9.0, "10. the youngest puff is over its tree (%.1f m from it)" % first_pos.length())
+	# the climb: a puff is born at the tree top and its height never falls
+	var prev_h := -1.0
+	var ordered := wp.duplicate()
+	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["u"]) < float(b["u"]))
+	var monotone := true
+	for p: Dictionary in ordered:
+		if float(p["h"]) < prev_h:
+			monotone = false
+		prev_h = float(p["h"])
+	check(monotone and float((ordered[0] as Dictionary)["h"]) < h0 + 30.0, "10. the younger the puff, the lower it is: the plume stands low over its tree and climbs")
+	# thick smoke casts its shadow, by the altitude rule, on the drifted puffs: some puff is thick enough and high enough for a visible gap at 2 px/m
+	var st := FxStyle.shared() as FxStyle
+	var min_px: float = FxData.shared().common_num("min_shadow_px")
+	var seen := 0
+	for p: Dictionary in wp:
+		if float(p["alpha"]) >= 0.25 and FxPuff.casts_shadow(fire.option, int(p["tone"])) and st.plane_shadow_offset_m(float(p["h"])).length() * 2.0 >= min_px:
+			seen += 1
+	check(seen > 0, "10. thick smoke still casts a visible shadow, on the drifted puffs (%d puffs)" % seen)
+	# a wind of one speed at every height (the sim's 'uniform' rule, or a Wind without the method) is what it was: D is the age
+	var flat := FxFire.new(data)
+	flat.set_feed(feed)
+	flat.set_drift_s(3.0)
+	flat.set_wind(FakeWind.new(v, Vector2.ZERO, 0.0))
+	near(flat.drift_integral(5.0), 5.0, 1e-9, "10. one speed at every height: D is the age")
+	near(flat.drift_gain(), 1.0, 1e-9, "10. and the gain is 1")
+	# --- the effects field ---
+	var j: float = FxData.f(FxField.new(data).smoke_o, "wind_jitter_mps")
+	var field := FxField.new(data)
+	field.wind = air
+	field.emit_damage_smoke("p1", Vector2(500.0, 500.0), 400.0, 0.4, 10.0, 9.0, 0.0)
+	field.emit_damage_smoke("p1", Vector2(560.0, 500.0), 400.0, 0.4, 14.0, 9.0, 0.0)
+	check(field.puffs.size() > 3, "10. a plane damaged at 400 m leaves a trail (%d puffs)" % field.puffs.size())
+	var f400 := air.height_factor(400.0)
+	check(f400 > 2.0 and f400 < 2.2, "10. the fake wind's profile is the sim's: about 2.1 at 400 m (%.2f)" % f400)
+	var worst_t := 0.0
+	var jit_ok := true
+	for p: Dictionary in field.puffs:
+		var jit: Vector2 = p["jit"]
+		var born: float = float(p["born"])
+		var moved := (field.puff_state(p, born + 4.0)["pos"] as Vector2) - (p["pos"] as Vector2)
+		var want := air.at(born) * f400 * 4.0 + jit * 4.0
+		worst_t = maxf(worst_t, (moved - want).length())
+		if absf(jit.x) > j + 1e-6 or absf(jit.y) > j + 1e-6:
+			jit_ok = false
+		check(((p["wind"] as Vector2) - jit - air.at(born)).length() < 1e-5, "10. the puff's own velocity stays the air at its birth plus the spread")
+	check(worst_t < 0.02, "10. a trail at 400 m drifts with the wind at 400 m, %.1f times the near-ground wind (worst error %.3f m)" % [f400, worst_t])
+	check(jit_ok, "10. the per-puff spread is the option's, and is not scaled by the height")
+	# a low climb: the integral over the climb, not a single factor
+	var cf := FxField.new(data)
+	cf.wind = FakeWind.new(Vector2(-2.0, 1.5), Vector2.ZERO, 0.2)
+	cf.impact("u1", Vector2(800.0, 800.0), 20.0, 9.0, 0.0)
+	var checked := 0
+	var worst_c := 0.0
+	for p: Dictionary in cf.puffs:
+		if str(p["kind"]) != "smolder" or not p.has("jit"):
+			continue
+		var w2 := cf.wind as FakeWind
+		var born2: float = float(p["born"])
+		var age2: float = minf(float(p["life"]) * 0.8, 30.0)
+		var moved2 := (cf.puff_state(p, born2 + age2)["pos"] as Vector2) - (p["pos"] as Vector2)
+		var d2 := _brute_d(w2, float(p["h"]), float(p.get("rise", 0.0)), age2)
+		var want2 := w2.at(born2) * d2 + (p["jit"] as Vector2) * age2
+		worst_c = maxf(worst_c, (moved2 - want2).length() / maxf(want2.length(), 1.0))
+		checked += 1
+	check(checked > 3 and worst_c < 0.01, "10. a wreck's column, climbing from the ground, drifts by the integral of the factor over its climb (%d puffs, worst relative error %.4f)" % [checked, worst_c])
+	# with no wind (or a wind of one speed): exactly the velocity x the age, as before
+	var plain_field := FxField.new(data)
+	plain_field.emit_damage_smoke("p1", Vector2(500.0, 500.0), 400.0, 0.4, 10.0, 9.0, 0.0)
+	var pf: Dictionary = plain_field.puffs[0]
+	var moved_plain := (plain_field.puff_state(pf, float(pf["born"]) + 4.0)["pos"] as Vector2) - (pf["pos"] as Vector2)
+	check((moved_plain - (pf["wind"] as Vector2) * 4.0).length() < 1e-4 and not pf.has("jit"), "10. with no wind a puff drifts on its data velocity x its age, as before")
+	var uniform := FxField.new(data)
+	uniform.wind = FakeWind.new(Vector2(2.0, 0.0), Vector2.ZERO, 0.0)
+	uniform.emit_damage_smoke("p1", Vector2(500.0, 500.0), 400.0, 0.4, 10.0, 9.0, 0.0)
+	var pu: Dictionary = uniform.puffs[0]
+	var moved_u := (uniform.puff_state(pu, float(pu["born"]) + 4.0)["pos"] as Vector2) - (pu["pos"] as Vector2)
+	check((moved_u - (pu["wind"] as Vector2) * 4.0).length() < 1e-4, "10. in a wind of one speed at every height a puff drifts as it did before the height was in")
+	# the sim's own Wind, when it has the profile: the same drawing
+	var real: Object = WindScript.from_params({"hour": 14.0, "toward_sea": [-0.93, 0.37], "seed": SEED, "v": 1}, WindScript.PATH, true)
+	if real != null and real.has_method("height_factor"):
+		var rf := FxField.new(data)
+		rf.wind = real
+		rf.emit_damage_smoke("p1", Vector2(500.0, 500.0), 400.0, 0.4, 10.0, 9.0, 0.0)
+		var rp: Dictionary = rf.puffs[0]
+		var born_r: float = float(rp["born"])
+		var moved_r := (rf.puff_state(rp, born_r + 4.0)["pos"] as Vector2) - (rp["pos"] as Vector2)
+		var want_r: Vector2 = (real.call("at", born_r) as Vector2) * float(real.call("height_factor", 400.0)) * 4.0 + (rp["jit"] as Vector2) * 4.0
+		check((moved_r - want_r).length() < 0.05, "10. the sim's own Wind: a trail at 400 m drifts with Wind.at_height (%.2f m off)" % (moved_r - want_r).length())
+		var rfire := FxFire.new(data)
+		rfire.set_feed(feed)
+		rfire.set_wind(real)
+		check(rfire.drift_gain() < 1.0 and rfire.drift_gain() > 0.4, "10. the sim's own Wind: the fire's gain is under 1 (%.2f), drift_s %.1f s from data/sim/fire.json" % [rfire.drift_gain(), rfire.drift_s()])
 	return true

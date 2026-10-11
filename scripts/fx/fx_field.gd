@@ -32,6 +32,13 @@ extends RefCounted
 # one sheet. With no wind (the boards, a shot without a World) the option's own data wind is used, exactly as before: _wind() draws the
 # same two random numbers either way, so nothing else in a run changes. Set it through FxLayer.set_wind().
 #
+# THE WIND BY HEIGHT (decision wind-with-height, 2026-10-11: "The wind should pick up as the smoke rises"): the wind's direction and base speed
+# are taken at the puff's birth time as above, and its speed at the puff's CURRENT height is that times Wind.height_factor(height) (1.0 at 10 m,
+# about 1.6 at 100 m, about 2 at 300 m, flat above 500 m), so a puff that climbs drifts faster as it goes: its position is the birth position plus
+# at(birth) x D(age), D the integral of the factor over its climb (fx_wind_profile.gd), plus the option's per-puff spread x age. A plume then
+# stands over its source and bends downwind as it climbs; a damaged plane's trail at its altitude drifts with the faster wind up there. A Wind
+# without height_factor is the same at every height (D = age), as is no wind.
+#
 # Colours and looks are not here; only numbers and ids.
 
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
@@ -42,6 +49,7 @@ const FxBake = preload("res://scripts/fx/fx_bake.gd")
 const FxRuin = preload("res://scripts/fx/fx_ruin.gd")
 const FxStyle = preload("res://scripts/fx/fx_style.gd")
 const FxTracer = preload("res://scripts/fx/fx_tracer.gd")
+const FxWindProfile = preload("res://scripts/fx/fx_wind_profile.gd")
 
 var data: FxData
 var world_seed: int = 20261009
@@ -66,7 +74,12 @@ var bomb_o: Dictionary = {}
 var ruin_o: Dictionary = {}
 
 # The air (a Wind: at(game_s) -> Vector2 m/s) every puff drifts with, or null for the option's own data wind (see THE WIND above).
-var wind: Object = null
+var wind: Object = null:
+	set(w):
+		wind = w
+		profile = FxWindProfile.from_wind(w)
+# The wind's factor by height, tabulated (fx_wind_profile.gd): rebuilt whenever `wind` is set.
+var profile: RefCounted = null
 
 var puffs: Array[Dictionary] = []
 var bursts: Array[Dictionary] = []
@@ -254,17 +267,38 @@ func _wind(o: Dictionary, rng: Mulberry32, born: float = NAN) -> Vector2:
 	var j := FxData.f(o, "wind_jitter_mps")
 	var jx := (rng.next() - 0.5) * 2.0 * j
 	var jy := (rng.next() - 0.5) * 2.0 * j
+	_last_jit = Vector2.ZERO
 	if wind != null and not is_nan(born):
 		var v: Vector2 = wind.at(born)
+		_last_jit = Vector2(jx, jy)
+		_jit_fresh = true
 		return Vector2(v.x + jx, v.y + jy)
 	var w := FxData.arr(o, "wind_mps")
 	return Vector2(float(w[0]) + jx, float(w[1]) + jy)
+
+# The per-puff spread of the last _wind() that used a Wind: _add_puff() puts it on the puff ("jit") so puff_state() can scale only the wind part by
+# the height (the puff's "wind" stays the velocity at birth, the air's plus the spread, as it always was).
+var _last_jit := Vector2.ZERO
+var _jit_fresh := false
+
+# A puff's drift (m) after `age` seconds: with a wind it is the air at its birth, scaled by the integral of the wind's height factor over the
+# climb, plus the spread x age; without one (the puff has no "jit") its velocity x age, as before.
+func puff_drift(p: Dictionary, age: float) -> Vector2:
+	var w: Vector2 = p["wind"]
+	if profile == null or not p.has("jit") or (profile as FxWindProfile).flat:
+		return w * age
+	var jit: Vector2 = p["jit"]
+	var d: float = (profile as FxWindProfile).integral(float(p["h"]), float(p.get("rise", 0.0)), age)
+	return (w - jit) * d + jit * age
 
 func _new_id() -> int:
 	_next_id += 1
 	return _next_id
 
 func _add_puff(p: Dictionary) -> void:
+	if _jit_fresh and p.has("wind"):
+		p["jit"] = _last_jit
+	_jit_fresh = false
 	if not puffs.is_empty() and float(p["born"]) < float((puffs[puffs.size() - 1] as Dictionary)["born"]):
 		_dirty = true
 	puffs.append(p)
@@ -304,7 +338,7 @@ func puff_state(p: Dictionary, t: float) -> Dictionary:
 		thrown = (p["vel"] as Vector2) * (tau * (1.0 - exp(-age / tau)))
 	return {
 		"alive": true,
-		"pos": (p["pos"] as Vector2) + (p["wind"] as Vector2) * age + thrown,
+		"pos": (p["pos"] as Vector2) + puff_drift(p, age) + thrown,
 		"h": float(p["h"]) + float(p.get("rise", 0.0)) * age,
 		"alpha": FxPuff.alpha_at(o, u),
 		"scale": FxPuff.grow_at(o, u),

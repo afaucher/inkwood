@@ -58,6 +58,16 @@ class FakeWind:
 	func at(game_s: float) -> Vector2:
 		return v if game_s < switch_s else v_after
 
+	# The wind with height (decision wind-with-height): the near-ground wind times (height / 10) ^ exponent between 2 m and 500 m; exponent 0 (the default) is
+	# one wind at every height.
+	var exponent := 0.0
+
+	func height_factor(height_m: float) -> float:
+		return pow(clampf(height_m, 2.0, 500.0) / 10.0, exponent)
+
+	func at_height(game_s: float, height_m: float) -> Vector2:
+		return at(game_s) * height_factor(height_m)
+
 static func tree(n: int, x: float, y: float, r: float) -> Dictionary:
 	return {"id": "f%d" % n, "x_m": x, "y_m": y, "r_m": r, "kx": n, "ky": n * 7 + 3}
 
