@@ -1922,7 +1922,7 @@
       "parameters": {
         "tracers": "machine guns only (proposed list); look on variants/tracers/, a working default proposed",
         "start_tails": "a ribbon behind every moving unit at mission start, as if it had flown on at its normal speed; visual only",
-        "unit_dot": "removed behind a data switch"
+        "unit_dot": "the red/blue side badge and its tie, off for every unit (data/ui/ui.json marker.side_badge.drawn_for 'none'; 'non_air' and 'all' bring it back)"
       },
       "applied_to": [
         "data/fx/fx.json tracers",
@@ -1930,7 +1930,7 @@
         "data/ui/ui.json"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'We should show tracers for machine guns.' / 'There is still a line between the selected plane and the roster. Remove it.' / 'The plane motion tails don't render at the start. Create a tail for them assuming they are moving forward at normal speed.' / 'When the motion tail converts to a dotted red or blue solid thin line, remove that trail. Maybe we want that for 'post battle retrospective/replay' but not right now. It is visually distracting.' / 'Remove the indicator on where you clicked to set a units motion. A little X and dotted line. More visual noise and we don't care about the specific spot.' / 'The red/blue indicator dot for each unit (planes at least) with the dotted line. We can remove that. The tail serves this purpose well.' The roster line, the thin trail line and the click X were removed by cc76f61 after that build (leader_to_roster, whole_flight_line, clamp_marks: false); a replay may bring the whole-flight line back later."
+      "notes": "Alex: 'We should show tracers for machine guns.' / 'There is still a line between the selected plane and the roster. Remove it.' / 'The plane motion tails don't render at the start. Create a tail for them assuming they are moving forward at normal speed.' / 'When the motion tail converts to a dotted red or blue solid thin line, remove that trail. Maybe we want that for 'post battle retrospective/replay' but not right now. It is visually distracting.' / 'Remove the indicator on where you clicked to set a units motion. A little X and dotted line. More visual noise and we don't care about the specific spot.' / 'The red/blue indicator dot for each unit (planes at least) with the dotted line. We can remove that. The tail serves this purpose well.' The roster line, the thin trail line and the click X were removed by cc76f61 after that build (leader_to_roster, whole_flight_line, clamp_marks: false); a replay may bring the whole-flight line back later. Asked whether tanks, ships and static units keep the badge (they have no ribbon, and tanks are about 10 px at the opening zoom): 'No badge on units. We can figure something else out of we need it.'"
     },
     {
       "id": "motion-range-look",
