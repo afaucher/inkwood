@@ -1686,6 +1686,24 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Strike board - F2 Ragged Burst is the only open one I want to make right now'. The tower's ruin (R1) and the bombs' area of effect stay open."
+    },
+    {
+      "id": "general-ai",
+      "date": "2026-10-11",
+      "area": "AI",
+      "question": "A general player-side AI that can control any unit in any mission, or per-test scripts?",
+      "board": "none (said in chat)",
+      "options": [],
+      "chosen": "add it to the plans; do not flesh it out now",
+      "parameters": {
+        "today": "player side in tests: a hand-written, all-seeing script per mission; enemy: one role per unit (strike, escort, patrol, sail, drive, roam), no specials",
+        "uses": "headless playtests with honest numbers, an empty co-op seat, real enemy tactics"
+      },
+      "applied_to": [
+        "docs/status.md, Later"
+      ],
+      "status": "chosen by Alex; deferred",
+      "notes": "Alex: 'Do we have a full player AI which can control them or are we just faking it per test?' Then: 'Lets add it to our plans but not flesh it out right now.'"
     }
   ]
 }

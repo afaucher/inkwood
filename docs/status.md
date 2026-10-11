@@ -31,6 +31,14 @@ Decisions and open questions live in the Decision Ledger
 4. **Terrain variety board** (decision water-layer): beaches, coastal cliffs, marsh,
    rock, orchards, wood density.
 
+## Later (planned, not fleshed out)
+
+- **A general player-side AI** (decision general-ai, deferred): plans any unit in any mission from what its
+  side can see, specials included. Uses: headless playtests with honest numbers, an empty co-op seat, real
+  enemy tactics. Today the player side in tests is a hand-written, all-seeing script per mission
+  (strike_play.gd, suppress_play.gd, ...), and the enemy AI plays one role per unit and never uses specials.
+  Revisit after the Hold the bridge playtest.
+
 ## Waiting on Alex (looks with working defaults)
 
 - The tower's ruin (R1): Strike Boards. (Flak is decided: F2, the ragged burst.)
