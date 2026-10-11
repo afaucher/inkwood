@@ -9,9 +9,13 @@ extends "res://scripts/test_support/test_case.gd"
 #                another seed is another water.
 #   DRY SITES    on seed 20261009 the village (outline and inside), the radio tower, both batteries, every field
 #                and the whole road, but the gap at the river, are dry; so on six more seeds.
-#   THE SEA      the three depth steps exist and start at 0, 6 and 18 m; an upland is never water (a coastal cliff
-#                or an islet, never a drowned plateau); the sea's rings are closed, nested by step, outer rings
-#                clockwise on screen.
+#   THE SEA      the three depth steps exist and start at 0, 6 and 18 m; the terrain's field is CAPPED by the water's mask
+#                so no upland stands in deep water (islands are islands of landness, not upland patches); the sea's rings
+#                are closed, nested by step, outer rings clockwise on screen.
+#   THE SHAPE    NOT A SQUARE OF LAND (Alex, 2026-10-10): over ten seeds the shore leaves a straight line (coast_stats().spread
+#                above a floor in data quality.*, per seed and in the median), the mainland does not fill its bounding box
+#                (fill under a ceiling), the sea has a real coast, the seeds differ (at least four shapes, and sea shares
+#                that differ), and no seed's sea floods the layout.
 #   THE RIVER    it crosses the road once, square, in a gap no longer than the data says; it is as wide there as the
 #                data says, widens and deepens downstream, and runs to the sea.
 #   COLOURS      the water steps are roles: in gamut, lighter than the shadow tint and the enemy accent, darker than
@@ -24,10 +28,12 @@ const WaterContour = preload("res://scripts/world/water_contour.gd")
 const WaterDraw = preload("res://scripts/render/water_draw.gd")
 const Terrain = preload("res://scripts/world/terrain.gd")
 const RenderParams = preload("res://scripts/world/render_params.gd")
+const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const TerrainDraw = preload("res://scripts/render/terrain_draw.gd")
 
 const SEED := 20261009
+const SHAPE_SEEDS := [20261009, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 func setup(_main) -> void:
 	timeout_seconds = 300.0
@@ -50,7 +56,8 @@ func _body() -> String:
 	_river(water)
 	_colours()
 	_contour()
-	_other_seeds()
+	_cap(water, terrain)
+	_shapes()
 	return "done"
 
 # --- data -------------------------------------------------------------------------------------------------------
@@ -84,7 +91,7 @@ func _determinism(water: WaterGen) -> void:
 
 # --- the sites stay dry -------------------------------------------------------------------------------------------------------
 
-static func _sites_dry(water: WaterGen, terrain: Terrain) -> Dictionary:
+static func _sites_dry(water: WaterGen, _terrain: Terrain, use_level: bool = true) -> Dictionary:
 	var lay: RefCounted = water.layout()
 	var v: Dictionary = lay.village()
 	var wet: Array[String] = []
@@ -92,7 +99,7 @@ static func _sites_dry(water: WaterGen, terrain: Terrain) -> Dictionary:
 	var poly: PackedVector2Array = v.polygon
 	for p in poly:
 		n += 1
-		if water.is_wet(p.x, p.y):
+		if _wet(water, p.x, p.y, use_level):
 			wet.append("village outline %s" % p)
 	var rect := Rect2(poly[0], Vector2.ZERO)
 	for p in poly:
@@ -103,35 +110,35 @@ static func _sites_dry(water: WaterGen, terrain: Terrain) -> Dictionary:
 		while x < rect.end.x:
 			if Geometry2D.is_point_in_polygon(Vector2(x, y), poly):
 				n += 1
-				if water.is_wet(x, y):
+				if _wet(water, x, y, use_level):
 					wet.append("village %s" % Vector2(x, y))
 			x += 20.0
 		y += 20.0
 	var sites: Dictionary = lay.sites()
 	var tower: Vector2 = sites.radio_tower
 	n += 1
-	if water.is_wet(tower.x, tower.y):
+	if _wet(water, tower.x, tower.y, use_level):
 		wet.append("tower")
 	for b: Vector2 in sites.aa_battery:
 		n += 1
-		if water.is_wet(b.x, b.y):
+		if _wet(water, b.x, b.y, use_level):
 			wet.append("battery %s" % b)
 		for k in 4:
 			var q := b + Vector2.from_angle(float(k) * PI * 0.5) * 25.0
 			n += 1
-			if water.is_wet(q.x, q.y):
+			if _wet(water, q.x, q.y, use_level):
 				wet.append("battery ring %s" % q)
 	for f: PackedVector2Array in lay.fields():
 		for p in f:
 			n += 1
-			if water.is_wet(p.x, p.y):
+			if _wet(water, p.x, p.y, use_level):
 				wet.append("field corner %s" % p)
 		var c := Vector2.ZERO
 		for p in f:
 			c += p
 		c /= float(f.size())
 		n += 1
-		if water.is_wet(c.x, c.y):
+		if _wet(water, c.x, c.y, use_level):
 			wet.append("field centre %s" % c)
 	var road: PackedVector2Array = lay.road()
 	var map := water.map_rect()
@@ -141,9 +148,12 @@ static func _sites_dry(water: WaterGen, terrain: Terrain) -> Dictionary:
 		if water.river_crossing.is_finite() and p.distance_to(water.river_crossing) <= 130.0:
 			continue
 		n += 1
-		if water.is_wet(p.x, p.y):
+		if _wet(water, p.x, p.y, use_level):
 			wet.append("road %s" % p)
 	return {"wet": wet, "samples": n}
+
+static func _wet(water: WaterGen, x: float, y: float, use_level: bool) -> bool:
+	return water.is_wet(x, y) if use_level else water.s_at(x, y) > 0.0
 
 func _dry(water: WaterGen, terrain: Terrain) -> void:
 	var r := _sites_dry(water, terrain)
@@ -168,29 +178,77 @@ func _steps(water: WaterGen, terrain: Terrain) -> void:
 	for k in ["shallows", "shelf", "deep"]:
 		check(float(wf[k]) > 0.005, "step %s exists (%.3f of the map)" % [k, wf[k]])
 	print("[water] seed %d: water %.1f%% of the map: shallows %.1f%%, shelf %.1f%%, deep %.1f%%" % [SEED, 100.0 * float(wf["water"]), 100.0 * float(wf["shallows"]), 100.0 * float(wf["shelf"]), 100.0 * float(wf["deep"])])
-	# an upland is never water, a level-0 point under water is
-	var islets := 0
+	# no upland stands in deep water (the cap), and a level-0 point under water is water
+	var deep_uplands := 0
 	var wet0 := 0
+	var shore_uplands := 0
 	var y := 300.0
 	while y < 4800.0:
-		var x := 3600.0
+		var x := 150.0
 		while x < 4900.0:
-			var s := water.s_at(x, y)
-			if s > 0.0:
-				var lev := int(terrain.level_at(x, y))
+			var sv := water.s_at(x, y)
+			if sv > 3.0:
+				var lev := int(water.terrain().level_at(x, y))
 				if lev > 0:
-					islets += 1
-					check(not water.is_wet(x, y), "an upland in the sea is not water at (%d, %d)" % [x, y])
+					deep_uplands += 1
 				else:
 					wet0 += 1
 					check(water.is_wet(x, y), "level-0 ground under the sea is water at (%d, %d)" % [x, y])
-			x += 97.0
-		y += 97.0
-	check(islets > 0, "the sea has islets and cliffs: uplands that stay land (%d samples)" % islets)
-	print("[water] sea samples: %d wet level-0, %d on uplands (islets, cliffs)" % [wet0, islets])
+			elif sv > 0.0 and int(water.terrain().level_at(x, y)) > 0:
+				shore_uplands += 1
+				check(not water.is_wet(x, y), "an upland at the shore is not water at (%d, %d)" % [x, y])
+			x += 131.0
+		y += 131.0
+	eq(deep_uplands, 0, "no upland stands more than 3 m under the sea (the terrain's field is capped by the water's mask)")
+	check(wet0 > 50, "the sea has deep level-0 ground (%d samples)" % wet0)
+	print("[water] sea samples: %d deep level-0 water, %d uplands under more than 3 m of water, %d coastal cliffs (upland at the shore, s 0 to 3 m)" % [wet0, deep_uplands, shore_uplands])
+
+# THE CAP (what integration will need from the terrain): the capped terrain's field is the raw field under the mask, the mask is
+# above the field's range inland and under the first threshold under the sea, and the layout (made on the raw terrain) stands.
+func _cap(water: WaterGen, terrain: Terrain) -> void:
+	var capped: RefCounted = water.terrain()
+	var thr0: float = terrain.thresholds[0]
+	var lower := 0
+	var same := 0
+	var worse := 0
+	var rng := Mulberry32.new(77)
+	for i in 400:
+		var x := rng.next() * 5000.0
+		var y := rng.next() * 5000.0
+		var raw: float = terrain.field_at(x, y)
+		var c: float = capped.field_at(x, y)
+		var cap: float = water.field_cap(x, y)
+		if c > raw + 1e-12:
+			worse += 1
+		elif c < raw - 1e-12:
+			lower += 1
+		else:
+			same += 1
+		check(absf(c - minf(raw, cap)) < 1e-9, "the capped field is min(field, cap) at (%d, %d)" % [x, y])
+		if water.sea_s(x, y) > 1.0:
+			check(cap < thr0, "under the sea the cap is under the first threshold (%.3f < %.3f) at (%d, %d)" % [cap, thr0, x, y])
+	eq(worse, 0, "the cap never raises ground")
+	check(lower > 0 and same > 100, "the cap lowers ground near the sea and leaves the rest (%d lowered, %d unchanged of 400)" % [lower, same])
+	# the layout was made on the raw terrain and is the same one
+	eq(capped.layout().signature(), terrain.layout().signature(), "the capped terrain shares the raw terrain's layout")
+	print("[water] cap: %d of 400 samples lowered, %d unchanged" % [lower, same])
+
+# A point of a coast of this water: the first dry-to-wet change on the row nearest the middle of the map that has one.
+func _shore_of(water: WaterGen) -> Vector2:
+	for dy in [0.0, 150.0, -150.0, 300.0, -300.0, 600.0, -600.0, 900.0, -900.0, 1200.0, -1200.0]:
+		var y := 2500.0 + float(dy)
+		var x := 100.0
+		var prev := water.sea_s(x, y) > 0.0
+		while x < 4900.0:
+			x += 10.0
+			var now := water.sea_s(x, y) > 0.0
+			if now != prev and x > 800.0 and x < 4200.0 and y > 800.0 and y < 4200.0:
+				return Vector2(x, y)
+			prev = now
+	return Vector2(2500, 2500)
 
 func _rings(water: WaterGen) -> void:
-	var shore := Vector2(3930, 2600)
+	var shore := _shore_of(water)
 	var rect := Rect2(shore - Vector2(500, 300), Vector2(1000, 600))
 	var areas: Array[float] = []
 	for k in 3:
@@ -334,20 +392,58 @@ func _contour() -> void:
 			neg += 1
 	check(pos == 1 and neg == 1, "one outer ring (clockwise) and one hole (anticlockwise)")
 
-# --- other seeds ----------------------------------------------------------------------------------------------------------------------
+# --- the shape of the sea over many seeds ---------------------------------------------------------------------------------------
 
-func _other_seeds() -> void:
+func _shapes() -> void:
+	var q: Dictionary = {}
+	var cand := WaterGen.new(SEED)
+	q = cand.quality
+	var spreads: Array[float] = []
+	var fills: Array[float] = []
+	var shares: Array[float] = []
+	var kinds: Dictionary = {}
 	var made := 0
-	for sd in [1, 2, 3, 4, 5, 6]:
+	var islands_seen := 0
+	var cliffs := 0.0
+	for sd: int in SHAPE_SEEDS:
 		var t := Terrain.new(sd)
 		var w := WaterGen.new(sd, t)
 		if not check(w.ok(), "seed %d: the water builds: %s" % [sd, w.errors]):
 			continue
-		var r := _sites_dry(w, t)
+		var r := _sites_dry(w, t, false)
 		eq(r["wet"], [] as Array[String], "seed %d: every site of the layout is dry" % sd)
+		var st := w.coast_stats()
 		var sea: Dictionary = w.diagnostics["sea"]
 		var riv: Dictionary = w.diagnostics["river"]
 		if bool(riv.get("made", false)):
 			made += 1
-		print("[water] seed %d: sea edges %s (first try dry %s, %d adapt steps), river %s, %d samples dry" % [sd, sea["edges"], sea["dry_first_try"], sea["adapt_steps"], riv.get("made", false), r["samples"]])
-	check(made >= 5, "a river on at least five of six seeds (%d)" % made)
+		kinds[w.archetype] = int(kinds.get(w.archetype, 0)) + 1
+		islands_seen += int(st["islands"])
+		cliffs += float(st["cliff_share"])
+		check(float(st["cliff_share"]) <= 0.4, "seed %d: coastal cliffs are occasional, not the whole coast (%.2f of it)" % [sd, st["cliff_share"]])
+		spreads.append(float(st["spread"]))
+		fills.append(float(st["fill"]))
+		shares.append(float(st["share"]))
+		check(float(st["spread"]) >= float(q["min_coast_spread"]), "seed %d (%s): the shore is not one straight line: spread %.2f >= %.2f" % [sd, w.archetype, st["spread"], q["min_coast_spread"]])
+		check(float(st["fill"]) <= float(q["max_land_fill"]), "seed %d (%s): the land is not a square block: it fills %.2f of its box <= %.2f" % [sd, w.archetype, st["fill"], q["max_land_fill"]])
+		check(float(st["coast_m"]) >= float(q["min_coast_m"]), "seed %d (%s): a real coast: %.0f m >= %.0f" % [sd, w.archetype, st["coast_m"], q["min_coast_m"]])
+		print("[water] seed %d: %s %s, sea %.0f%% of the map, coast %.0f m (%.0f%% parallel to an edge, spread %.2f, %.0f%% cliffs), %d islands, land fill %.2f, first try dry %s (%d attempts, accepted %d), river %s" % [
+			sd, w.archetype, sea["components"], 100.0 * float(st["share"]), st["coast_m"], 100.0 * float(st["axis_share"]), st["spread"], 100.0 * float(st["cliff_share"]), st["islands"], st["fill"],
+			sea["dry_first_try"], (sea["attempts"] as Array).size(), sea["accepted"], riv.get("made", false)])
+	var med_spread := _median(spreads)
+	var med_fill := _median(fills)
+	check(med_spread >= float(q["min_median_coast_spread"]), "the median shore spread over %d seeds is %.2f >= %.2f (a straight coast along an edge scores 0.06 to 0.10)" % [SHAPE_SEEDS.size(), med_spread, q["min_median_coast_spread"]])
+	check(med_fill <= float(q["max_median_land_fill"]), "the median land fill is %.2f <= %.2f (a square block scores 0.93 and up)" % [med_fill, q["max_median_land_fill"]])
+	check(kinds.size() >= int(q["min_archetypes"]), "the seeds make at least %d different shapes: %s" % [int(q["min_archetypes"]), kinds])
+	shares.sort()
+	check(shares[shares.size() - 1] - shares[0] >= float(q["min_share_spread"]), "the sea's share differs between seeds: %.2f to %.2f (spread >= %.2f)" % [shares[0], shares[shares.size() - 1], q["min_share_spread"]])
+	check(islands_seen >= 2, "some seeds have real islands (%d over the seeds)" % islands_seen)
+	check(cliffs > 0.05, "some coasts have a cliff where an upland meets the sea (%.2f of a coast, summed over the seeds)" % cliffs)
+	check(made >= SHAPE_SEEDS.size() - 1, "a river on all but at most one of the seeds (%d of %d)" % [made, SHAPE_SEEDS.size()])
+	print("[water] %d seeds: median shore spread %.2f, median land fill %.2f, shapes %s, sea share %.2f to %.2f, %d islands, rivers %d" % [
+		SHAPE_SEEDS.size(), med_spread, med_fill, kinds, shares[0], shares[shares.size() - 1], islands_seen, made])
+
+static func _median(a: Array[float]) -> float:
+	var b := a.duplicate()
+	b.sort()
+	return b[b.size() / 2]

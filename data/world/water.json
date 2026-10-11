@@ -1,24 +1,104 @@
 {
-  "_about": "The WATER LAYER's rules and looks (scripts/world/water_gen.gd generates from them; scripts/render/water_draw.gd and the board scripts/ui/boards/water_board_shot.gd draw from them). Track WB, 2026-10-10: a PROTOTYPE for the board variants/water/, NOT wired into the map. What is ALEX'S (decisions water-stepped-depth and water-layer, 2026-10-10): water is stepped colour washes in blue on the SAME height system as the land, with the same shadows; three depth steps (shallows, shelf, deep) at -3, -10 and -30 m ('Sounds good' to the lead's proposal); water is GENERATED from the seed like the rest of the map (the design doc's premise: an island, rivers running downhill to the sea, a road with a bridge where it crosses a river). EVERYTHING ELSE IS PROPOSED by Track WB: every number below carries _proposed. Record shape as in data/terrain/terrain.json ({value, _proposed, _reason}); keys starting with _ are documentation; scripts/world/terrain_data.gd reads it and test_water_gen proves that nothing in the file is unread. LENGTHS ARE METRES. COLOURS ARE ROLES, NOT HEXES: the water hue is new to the palette, so every colour is written as OKLCH numbers off the paper (lightness below the paper's, chroma, one hue) and resolved at load by water_draw.gd -- no hex in draw code (CLAUDE.md rule 6, docs/proposals/palette-architecture.md).",
+  "_about": "The WATER LAYER's rules and looks (scripts/world/water_gen.gd generates from them; scripts/render/water_draw.gd and the board scripts/ui/boards/water_board_shot.gd draw from them). Track WB, 2026-10-10: a PROTOTYPE for the board variants/water/, NOT wired into the map. What is ALEX'S (decisions water-stepped-depth and water-layer, 2026-10-10): water is stepped colour washes in blue on the SAME height system as the land, with the same shadows; three depth steps (shallows, shelf, deep) at -3, -10 and -30 m ('Sounds good' to the lead's proposal); water is GENERATED from the seed like the rest of the map (the design doc's premise: an island, rivers running downhill to the sea, a road with a bridge where it crosses a river). EVERYTHING ELSE IS PROPOSED by Track WB: every number below carries _proposed. Record shape as in data/terrain/terrain.json ({value, _proposed, _reason}); keys starting with _ are documentation; scripts/world/terrain_data.gd reads it and test_water_gen proves that nothing in the file is unread. LENGTHS ARE METRES. COLOURS ARE ROLES, NOT HEXES: the water hue is new to the palette, so every colour is written as OKLCH numbers off the paper (lightness below the paper's, chroma, one hue) and resolved at load by water_draw.gd -- no hex in draw code (CLAUDE.md rule 6, docs/proposals/palette-architecture.md). SECOND REVISION (2026-10-10, after Alex: 'the seeds are too uniform. It looks like a big square of land'): the sea's SHAPE is now data too -- `shape` (a domain warp, the six archetypes, islands, inlets, lagoons), `cap` (the mask uplands fade into the sea by, read by the terrain at integration) and `quality` (the floors test_water_gen holds the shapes to).",
 
   "seed": {
     "salt": { "value": 5107, "_proposed": true, "_reason": "mixed into the world seed for the water's streams (which edges are sea, the river's choices); water's randomness never correlates with the terrain's or the layout's" }
   },
 
   "sea": {
-    "noise_per_m": { "value": 0.0008, "_proposed": true, "_reason": "the large-scale field that bends the coast: a lattice every 1,250 m with three octaves (to about 300 m), so bays and headlands are kilometres long" },
-    "octaves": { "value": 3, "_proposed": true, "_reason": "1,250 / 615 / 300 m features" },
-    "noise_weight": { "value": 0.5, "_proposed": true, "_reason": "landness L = base + noise_weight x (noise - 0.5) + terrain_weight x (terrain field - 0.5) - strength x edge bias; this moves the coast by about +/- 460 m" },
-    "terrain_weight": { "value": 0.45, "_proposed": true, "_reason": "the terrain's own height field (the one the levels are cut from) shapes the coast too: the same field gives the coast its bays and spurs at 30 to 250 m, so land and sea read as one relief, and an upland (level 1 or 2) is never water: where the coast meets one it is a coastal cliff, and one out in the sea is an islet" },
-    "base_land": { "value": 0.4, "_proposed": true, "_reason": "L inland stays above zero (no inland lakes by accident); only the edge bias takes L below zero" },
-    "strength": { "value": 1.3, "_proposed": true, "_reason": "the edge bias at the map edge; the coast is where the bias reaches base_land / strength, about 0.31 of the reach in" },
-    "reach_m": { "value": 1900, "_proposed": true, "_reason": "the bias falls from 1 at a sea edge to 0 this far in (before the seeded jitter), so the coast lies about 1,400 m inside the edge: a fifth to a third of a 5 km map is sea on a sea edge" },
-    "reach_jitter": { "value": 0.2, "_proposed": true, "_reason": "each sea edge's reach is scaled by 1 +/- this, seeded" },
-    "edge_count": { "value": [0.45, 0.55], "_proposed": true, "_reason": "the chance that a seed has one sea edge, and that it has two (two adjacent edges: a corner of sea, an island's coast; never two opposite ones, which would leave a strip of land); 'a coast on some edges' (the lead's brief). The edge the village's road leaves by is never a sea edge: a road into the sea would need a harbour" },
-    "depth_per_unit_m": { "value": 80, "_proposed": true, "_reason": "metres of water per unit of landness below zero: about 6 m of depth 115 m out from the coast and 18 m about 350 m out, 70 m at the map edge, so the three steps are broad bands at the 0.35 planning zoom (1.8 x 1 km)" },
+    "noise_per_m": { "value": 0.0009, "_proposed": true, "_reason": "the large-scale noise that bends every coast, evaluated at the domain-warped position (shape.warp_m): a lattice every 1,100 m with four octaves (to about 140 m), so bays, headlands and spits are hundreds of metres to kilometres across" },
+    "octaves": { "value": 4, "_proposed": true, "_reason": "1,100 / 550 / 270 / 135 m features" },
+    "noise_weight": { "value": 0.9, "_proposed": true, "_reason": "landness L = base + noise_weight x (noise - 0.5) + terrain_weight x (terrain field - 0.5) - strength x sea bias + island lift; this moves a coast by about +/- 450 m" },
+    "terrain_weight": { "value": 0.35, "_proposed": true, "_reason": "the terrain's own height field (the one the levels are cut from) shapes the coast at 30 to 250 m, so land and sea read as one relief" },
+    "base_land": { "value": 0.5, "_proposed": true, "_reason": "L inland stays above zero (no inland lakes by accident); only a sea component or an island takes L through zero" },
+    "strength": { "value": 1.5, "_proposed": true, "_reason": "the sea bias at its peak (1) takes L down by this; the coast is where the bias reaches base_land / strength, about 0.31" },
+    "depth_per_unit_m": { "value": 80, "_proposed": true, "_reason": "metres of water per unit of landness below zero: about 6 m of depth 115 m out from a coast and 18 m about 350 m out, so the three steps are broad bands at the 0.35 planning zoom (1.8 x 1 km)" },
     "seed_offset": { "value": 211, "_proposed": true, "_reason": "sea noise seed = scene seed % 9973 + this (the terrain's is + 101)" },
-    "adapt_shrink": { "value": 0.85, "_proposed": true, "_reason": "when a sea would flood one of the layout's sites, its reach is multiplied by this and tried again" },
-    "adapt_steps": { "value": 8, "_proposed": true, "_reason": "how many times; then the offending edge is dropped, and if no edge is left the seed has no sea (a river only)" }
+    "adapt_shrink": { "value": 0.85, "_proposed": true, "_reason": "when a sea would flood one of the layout's sites, the sea's strength is multiplied by this (its coast pulls back) and tried again" },
+    "adapt_steps": { "value": 8, "_proposed": true, "_reason": "how many times; then the last sea component is dropped, and if none is left the seed has no sea (a river only)" }
+  },
+
+  "shape": {
+    "warp_m": { "value": 1500, "_proposed": true, "_reason": "THE COAST IS NOT PARALLEL TO AN EDGE (Alex, 2026-10-10: 'the seeds are too uniform. It looks like a big square of land'). Every sea component and island is evaluated at a position pushed by a low-frequency vector noise this far (a field of up to +/- 900 m, typically a third of that), so an edge's coast wanders, a blob's outline is irregular and bays and headlands appear that no edge falloff makes" },
+    "warp_per_m": { "value": 0.0007, "_proposed": true, "_reason": "the warp's lattice: every 2 km, so the bends are kilometre-scale" },
+    "warp_octaves": { "value": 3, "_proposed": true, "_reason": "2 km and 1 km bends" },
+    "reach_wobble": { "value": 0.35, "_proposed": true, "_reason": "an edge component's reach varies along the edge by +/- this share (noise), so even before the warp a coast leaves the straight" },
+    "reach_wobble_per_m": { "value": 0.0006, "_proposed": true, "_reason": "that variation's lattice along the edge: every 1.7 km" },
+    "archetype_weights": {
+      "value": { "coast": 0.14, "corner": 0.17, "peninsula": 0.16, "bay": 0.2, "islands": 0.21, "lagoon": 0.12 },
+      "_proposed": true,
+      "_reason": "the seed picks one shape for its sea: coast (one wavy coast, perhaps an inlet), corner (two adjacent coasts round a bay), peninsula (sea on three sides, a tongue of land to the road's edge), bay (a big bay bitten into one edge, perhaps a second), islands (a coast with a few real islands offshore) or lagoon (mostly land, an inland lagoon joined to an edge by an estuary). Weights, not facts: the lead's brief asked for variety (some a peninsula, some a bay, some two coasts, some islands, some a lagoon)"
+    },
+    "coast": { "reach_m": { "value": [1500, 2300], "_proposed": true, "_reason": "a coast's edge reach: the coast lies about 0.69 x reach inside the edge (1,000 to 1,600 m)" } },
+    "corner": { "reach_m": { "value": [1300, 2000], "_proposed": true, "_reason": "each of the two adjacent edges' reach (the corner of sea is rounded by the warp)" } },
+    "peninsula": {
+      "side_reach_m": { "value": [750, 1150], "_proposed": true, "_reason": "the two side edges' reach: a tongue of land about 2.5 to 3.3 km wide runs from the road's edge" },
+      "far_reach_m": { "value": [2300, 3000], "_proposed": true, "_reason": "the far edge's reach: the tongue ends 1.6 to 2.1 km short of it" }
+    },
+    "bay": {
+      "radius_along_m": { "value": [1900, 2800], "_proposed": true, "_reason": "the bay is an ellipse of sea; its radius of influence along the edge (the water itself reaches 0.69 of it)" },
+      "radius_in_m": { "value": [1300, 2000], "_proposed": true, "_reason": "and into the map" },
+      "centre_in_m": { "value": [-200, 500], "_proposed": true, "_reason": "how far inside the edge the ellipse's middle is (negative: outside it, a half-bay)" },
+      "turn_rad": { "value": 0.5, "_proposed": true, "_reason": "the ellipse is turned off the edge's direction by up to this much either way" },
+      "second_chance": { "value": 0.4, "_proposed": true, "_reason": "the chance of a second, smaller bay on another edge" },
+      "second_scale": { "value": 0.6, "_proposed": true, "_reason": "its size as a share of the first's" }
+    },
+    "islands": {
+      "reach_m": { "value": [2300, 3000], "_proposed": true, "_reason": "the coast the islands lie off is a broad sea, so there is room for them" },
+      "count": { "value": [3, 7], "_proposed": true, "_reason": "a few real islands, clustered, not every upland patch" },
+      "radius_m": { "value": [320, 1100], "_proposed": true, "_reason": "an island's radius of influence (the land is about half of it: 160 to 550 m); the first is the biggest, the rest follow a falling curve" },
+      "cluster_m": { "value": 800, "_proposed": true, "_reason": "the islands scatter this far round the cluster's middle" },
+      "cluster_in": { "value": [0.2, 0.45], "_proposed": true, "_reason": "the cluster's middle lies this share of the coast's reach in from the edge (deep water, off the shore)" },
+      "min_sea_landness": { "value": -0.25, "_proposed": true, "_reason": "an island is only made where the sea is at least this deep (landness), and with open water all round it (the sea at its influence radius is at least a little below zero in eight directions), so it rises out of open water and is never a spit of the coast" },
+      "peak_landness": { "value": [0.14, 0.40], "_proposed": true, "_reason": "an island's middle stands this high above sea level (landness: 0.1 is a low island of a few metres, 0.25 has room for a hill)" },
+      "min_gap_m": { "value": 150, "_proposed": true, "_reason": "islands are at least this far apart (influence radii not counted)" }
+    },
+    "lagoon": {
+      "inland_m": { "value": [1100, 1900], "_proposed": true, "_reason": "the lagoon's middle lies this far in from its edge: a map that is mostly land" },
+      "radius_m": { "value": [650, 1000], "_proposed": true, "_reason": "the lagoon's radius of influence; its water is about half of it" },
+      "peak": { "value": 0.62, "_proposed": true, "_reason": "the lagoon's sea bias at its middle (below 1: it is shallow, 30 m at most)" },
+      "channel_half_width_m": { "value": [80, 140], "_proposed": true, "_reason": "the estuary's water half width (its radius of influence is twice that)" },
+      "channel_strength": { "value": 0.6, "_proposed": true, "_reason": "the estuary's sea bias at its middle: it is a shelf deep, not deep" },
+      "channel_extra_m": { "value": 300, "_proposed": true, "_reason": "the estuary runs this far past the map edge, so it opens to the sea" }
+    },
+    "inlet": {
+      "chance": { "value": 0.7, "_proposed": true, "_reason": "the chance that a coast has an inlet: a narrow arm of sea run into the land from it" },
+      "length_m": { "value": [500, 1100], "_proposed": true, "_reason": "the inlet's length inland from the coast" },
+      "half_width_m": { "value": [80, 160], "_proposed": true, "_reason": "its water half width (the radius of influence is twice that)" },
+      "strength": { "value": 0.62, "_proposed": true, "_reason": "its sea bias at its middle" },
+      "turn_rad": { "value": 0.45, "_proposed": true, "_reason": "it is turned off the coast's normal by up to this much" }
+    },
+    "stray": {
+      "chance": { "value": 0.3, "_proposed": true, "_reason": "the chance that a map that is not an 'islands' map has one or two islands offshore" },
+      "count": { "value": [1, 2], "_proposed": true, "_reason": "how many" },
+      "radius_m": { "value": [260, 700], "_proposed": true, "_reason": "their size" }
+    },
+    "attempts": { "value": 12, "_proposed": true, "_reason": "a seed tries its shapes in turn (its own stream per attempt: a fresh draw of archetype and numbers) until one is dry round the layout and has enough sea; a sea is MOVED, not shrunk to a puddle. The first attempt is the seed's first choice (the survey's 'first try')" },
+    "attempt_shrink_steps": { "value": 3, "_proposed": true, "_reason": "an attempt may pull its coast back this many times (adapt_shrink each) before it is given up on" },
+    "min_share": { "value": { "coast": 0.14, "corner": 0.2, "peninsula": 0.3, "bay": 0.08, "islands": 0.2, "lagoon": 0.03 }, "_proposed": true, "_reason": "the least sea an attempt may leave, as a share of the map, for its kind: a map with a coast must have a real coast (not a puddle in a corner), a lagoon map is mostly land" },
+    "site_tries": { "value": 12, "_proposed": true, "_reason": "a bay or a lagoon is placed at the best of this many seeded tries: the one farthest from the layout's keep-dry points" }
+  },
+
+  "cap": {
+    "margin_far": { "value": 0.10, "_proposed": true, "_reason": "UPLANDS FADE INTO THE SEA. The terrain's height field is capped by a mask the water makes: an upland stands only where landness is above this margin (about 150 m inland of a coast), so no upland is a speckle on the water and none is a drowned plateau" },
+    "margin_cliff": { "value": -0.02, "_proposed": true, "_reason": "...except where a low-frequency noise says CLIFF: there the margin is this, and an upland runs to the very shore and meets the sea as a coastal cliff (the occasional cliff)" },
+    "ramp": { "value": 0.10, "_proposed": true, "_reason": "how much landness it takes for the cap to rise from the first threshold to the field's top: about 150 m of coast over which the plateaus taper" },
+    "cliff_noise_per_m": { "value": 0.0011, "_proposed": true, "_reason": "the cliff noise's lattice: every 900 m" },
+    "cliff_from": { "value": 0.46, "_proposed": true, "_reason": "the cliff noise's smoothstep: below this no cliff" },
+    "cliff_to": { "value": 0.58, "_proposed": true, "_reason": "and at or above this a full cliff coast (cliffs are about a tenth to a fifth of a coast where there is an upland to make one)" },
+    "floor_below_threshold": { "value": 0.03, "_proposed": true, "_reason": "the cap's lowest value is the terrain's first threshold less this, so capped ground is low ground (level 0)" }
+  },
+
+  "quality": {
+    "grid_m": { "value": 50, "_proposed": true, "_reason": "the whole-map grid the shape measures (coast_stats) run on: 100 x 100 samples" },
+    "axis_tolerance_deg": { "value": 12, "_proposed": true, "_reason": "a coast segment within this of horizontal or vertical (parallel to a map edge) counts toward axis_share, reported by the survey (it does not tell a straight coast from a wavy one: the old generator's wiggles scored as many aligned segments as a natural coast, so the floors are on spread and fill)" },
+    "min_coast_spread": { "value": 0.13, "_proposed": true, "_reason": "FLOOR AGAINST A SQUARE OF LAND, per seed: the shore's spread (sqrt of the minor over the major variance of its points: how far it leaves one straight line, coast_stats().spread) is at least this. The first generator (a straight falloff from an edge) scored 0.06 to 0.10 on twelve seeds; this one 0.16 to 0.66 (an L, a bay, a peninsula or a scatter of islands scores 0.3 and up)" },
+    "min_median_coast_spread": { "value": 0.28, "_proposed": true, "_reason": "and the median over the test's seeds at least this (the first generator's was 0.08)" },
+    "max_land_fill": { "value": 0.97, "_proposed": true, "_reason": "the mainland (the land that reaches the map border) fills at most this share of its bounding box, per seed: a square block of land fills nearly all of it" },
+    "max_median_land_fill": { "value": 0.9, "_proposed": true, "_reason": "and the median over the test's seeds at most this (the first generator's was 0.93, this one's 0.85)" },
+    "min_archetypes": { "value": 4, "_proposed": true, "_reason": "the test's twelve seeds make at least this many different shapes" },
+    "min_share_spread": { "value": 0.15, "_proposed": true, "_reason": "and their sea shares differ by at least this much between the least and the most sea" },
+    "min_coast_m": { "value": 4500, "_proposed": true, "_reason": "every seed with a sea has at least this much coast (a map edge is 5,000 m: a straight coast along one has about that)" }
   },
 
   "levels": {

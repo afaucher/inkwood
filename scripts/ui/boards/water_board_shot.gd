@@ -29,6 +29,11 @@ extends SceneTree
 # frames.json (every frame's file, look, zoom and a caption), board.json (the seed, the switches per option, the numbers, "chosen": null).
 #
 # EVERY OPTION AND VALUE IS PROPOSED by Track WB; none is a decision.
+#
+# NOTE (2026-10-10, later): this script and variants/water/board.png are of the FIRST revision of the generator, the board Alex chose
+# from (A, hue 222). The sea's shape was reworked after his note ("the seeds are too uniform"): the coast spots below were picked
+# for the first revision and no longer lie on a coast of seed 20261009. scripts/ui/boards/water_shape_shot.gd photographs the
+# reworked generator (the 12-seed overviews, the coast frames, shape.png).
 
 const WaterGen = preload("res://scripts/world/water_gen.gd")
 const WaterFrame = preload("res://scripts/ui/boards/water_frame.gd")

@@ -24,19 +24,32 @@ extends RefCounted
 # steps are the wash beneath.
 #
 # HOW IT IS MADE
-#  1. THE SEA. Landness L(x, y) = base + w_n (noise - 0.5) + w_t (terrain field - 0.5) - strength x
-#     bias. The noise is a large-scale fbm (a lattice every 1,250 m), the terrain field is the very
-#     field the land's levels are cut from (so the coast follows the same bays and spurs and the
-#     relief is one relief), and `bias` is 1 at a SEA EDGE and falls linearly to 0 `reach` metres in:
-#     the map is part of an island with a coast on one or two of its edges. The sea is where L < 0;
-#     its depth is s = -L x depth_per_unit_m. The sea edges are picked by seed from the edges the
-#     village's road does NOT leave by (a road into the sea would need a harbour).
-#  2. THE KEEP-DRY SET. From the world layout: the village's outline, the fields, the radio tower
-#     (its compound), the two anti-aircraft battery sites and the road (but for the crossing). If a
-#     sea would flood any of them its reach is shrunk (adapt_shrink), then the offending edge is
-#     dropped; a seed whose layout leaves no room has no sea. diagnostics.sea says what happened and
-#     whether the FIRST choice (no adapting) was already dry: the survey's number.
-#  3. THE RIVER. It crosses the road at a point `crossing.min_m` to `max_m` from the village, square
+#  1. THE SEA. Landness L(x, y) = base + w_n (noise(q) - 0.5) + w_t (terrain field - 0.5) - strength x bias(q)
+#     + island lift(q), at q = the point pushed by a low-frequency VECTOR NOISE (shape.warp_m: a domain warp), so
+#     nothing is parallel to anything. The sea is where L < 0; its depth is s = -L x depth_per_unit_m. The bias
+#     is built from SEA COMPONENTS the seed chooses (an ARCHETYPE): an edge falloff (a coast, wavy by a noisy
+#     reach), an ellipse (a bay, a lagoon) or a capsule (an inlet, an estuary). The archetypes are `coast`
+#     (one coast, perhaps an inlet), `corner` (two adjacent coasts), `peninsula` (sea on three sides, a tongue of
+#     land to the road's edge), `bay` (a big ellipse of sea bitten into an edge, perhaps a second), `islands`
+#     (a coast with 3 to 7 real islands offshore, clustered) and `lagoon` (mostly land: an inland lagoon joined
+#     to an edge by an estuary). The edge the village's road leaves by is never a sea edge (a road into the sea
+#     would need a harbour). Maps that are not `islands` sometimes have one or two stray islands.
+#  2. UPLANDS FADE INTO THE SEA (the lead's brief: 'offshore islands should be deliberate'). The terrain's
+#     height field is CAPPED by a mask the water makes, field_cap(x, y): an upland stands only where landness is
+#     above a margin (about 150 m inland of a coast), and the cap rises over a ramp, so plateaus taper toward the
+#     coast and vanish under the sea; where a low-frequency 'cliff' noise is high the margin drops to the shore
+#     itself and an upland meets the sea as a coastal cliff (the occasional cliff). An island is an island of
+#     landness (shape.islands), not an upland patch. terrain() is a Terrain whose field is min(field, cap)
+#     (scripts/world/water_terrain.gd, a subclass: what integration will need from the terrain is those two lines).
+#     The layout (village, road, fields, batteries) is made on the RAW terrain and is unchanged: the cap only
+#     lowers ground, and the sites are low ground already, so no site gains a scarp.
+#  3. THE KEEP-DRY SET. From the world layout: the village's outline, the fields, the radio tower (its compound),
+#     the two anti-aircraft battery sites and the road (but for the crossing). If a sea would flood any of
+#     them its strength is shrunk (adapt_shrink: the coast pulls back), then its last component is dropped; a
+#     seed whose layout leaves no room has no sea. A bay or a lagoon is placed at the best of a few seeded tries
+#     (farthest from the keep-dry set). diagnostics.sea says what happened and whether the FIRST choice (no
+#     adapting) was already dry: the survey's number.
+#  4. THE RIVER. It crosses the road at a point `crossing.min_m` to `max_m` from the village, square
 #     across it (routed through two waypoints along the road's normal), from a spring at the foot of
 #     high ground (low ground just beside an upland) down to the sea. The routing is weighted A* on a
 #     40 m grid that avoids the keep-dry set, climbs no scarp and prefers low ground; the route is
@@ -75,6 +88,7 @@ const S_ROUTE := 4
 const S_SOURCE := 5
 const S_MEANDER := 6
 const S_JITTER := 7
+const S_SHAPE := 8
 
 # s returned where no river is near (far under any depth).
 const DRY := -1000.0
@@ -86,8 +100,9 @@ var errors: Array[String] = []
 var diagnostics: Dictionary = {}
 
 # --- the sea -------------------------------------------------------------------------------------
-var sea_edges: Array[int] = []            # 0 west, 1 east, 2 north, 3 south (the layout's numbering)
-var sea_reach := PackedFloat64Array()     # metres, per entry of sea_edges
+var sea_edges: Array[int] = []            # the edges that carry a sea component: 0 west, 1 east, 2 north, 3 south (the layout's numbering)
+var archetype := ""                       # the shape of this seed's sea (coast, corner, peninsula, bay, islands, lagoon)
+var quality: Dictionary = {}              # data quality.*: the floors test_water_gen holds coast_stats() to
 var step_from := PackedFloat64Array()     # depth at which each step begins, metres
 var heights_m := PackedFloat64Array()     # the seabed height of each step, metres (negative)
 var step_names: Array[String] = []
@@ -110,9 +125,14 @@ var _sea_wn: float
 var _sea_wt: float
 var _sea_base: float
 var _sea_strength: float
-var _sea_reach_m: float
-var _sea_reach_jit: float
-var _sea_counts := PackedFloat64Array()
+var _warp_m: float
+var _warp_f: float
+var _warp_oct: int
+var _reach_wob: float
+var _reach_wob_f: float
+var _arch_weights: Dictionary = {}
+var _sp: Dictionary = {}          # shape.<path> -> its value
+var _cap: Dictionary = {}         # cap.<key> -> number
 var _sea_dpu: float
 var _sea_seed: int
 var _sea_shrink: float
@@ -181,6 +201,11 @@ var _kd_road_t := PackedByteArray()      # 1 where the point is a road sample (e
 var _kd_kind: Array[String] = []
 
 var _rbuckets: Dictionary = {}           # Vector2i -> PackedInt32Array of segment indices
+var _comps: Array = []                   # the sea's components: {kind: "edge" | "blob" | "cap", ...}
+var _islands: Array = []                 # {c, r, a}: a lift of landness round c
+var _sea_scale := 1.0                    # the adapt loop's shrink of the sea's strength
+var _shape_seed := 0
+var _tc: Variant = null                  # the capped Terrain (terrain())
 var _grid_cache: Dictionary = {}
 
 func _init(seed_v: int, terrain: Variant = null, path: String = DEFAULT_PATH) -> void:
@@ -232,9 +257,24 @@ func _read() -> void:
 	_sea_wt = d.num("sea.terrain_weight")
 	_sea_base = d.num("sea.base_land")
 	_sea_strength = d.num("sea.strength")
-	_sea_reach_m = d.num("sea.reach_m")
-	_sea_reach_jit = d.num("sea.reach_jitter")
-	_sea_counts = d.floats("sea.edge_count")
+	_warp_m = d.num("shape.warp_m")
+	_warp_f = d.num("shape.warp_per_m")
+	_warp_oct = d.integer("shape.warp_octaves")
+	_reach_wob = d.num("shape.reach_wobble")
+	_reach_wob_f = d.num("shape.reach_wobble_per_m")
+	_arch_weights = d.dict("shape.archetype_weights")
+	for k: String in ["coast.reach_m", "corner.reach_m", "peninsula.side_reach_m", "peninsula.far_reach_m", "bay.radius_along_m", "bay.radius_in_m",
+			"bay.centre_in_m", "bay.turn_rad", "bay.second_chance", "bay.second_scale", "islands.reach_m", "islands.count", "islands.radius_m",
+			"islands.cluster_m", "islands.cluster_in", "islands.min_sea_landness", "islands.peak_landness", "islands.min_gap_m", "lagoon.inland_m",
+			"lagoon.radius_m", "lagoon.peak", "lagoon.channel_half_width_m", "lagoon.channel_strength", "lagoon.channel_extra_m", "inlet.chance", "attempts", "attempt_shrink_steps", "min_share",
+			"inlet.length_m", "inlet.half_width_m", "inlet.strength", "inlet.turn_rad", "stray.chance", "stray.count", "stray.radius_m", "site_tries"]:
+		_sp[k] = d.value("shape." + k)
+	for k: String in ["margin_far", "margin_cliff", "ramp", "cliff_noise_per_m", "cliff_from", "cliff_to", "floor_below_threshold"]:
+		_cap[k] = d.num("cap." + k)
+	for k: String in ["grid_m", "axis_tolerance_deg", "min_coast_spread", "min_median_coast_spread", "max_land_fill", "max_median_land_fill",
+			"min_archetypes", "min_share_spread", "min_coast_m"]:
+		quality[k] = d.num("quality." + k)
+	_shape_seed = seed_value % 9973 + 307
 	_sea_dpu = d.num("sea.depth_per_unit_m")
 	_sea_seed = seed_value % 9973 + d.integer("sea.seed_offset")
 	_sea_shrink = d.num("sea.adapt_shrink")
@@ -294,7 +334,7 @@ func _read() -> void:
 	_chaikin = d.integer("draw.chaikin_passes")
 	_resample = d.num("draw.resample_m")
 	errors.append_array(d.errors)
-	for pair in [[_sea_counts, 2, "sea.edge_count"], [step_from, 3, "levels.step_from_m"], [heights_m, 3, "levels.heights_m"],
+	for pair in [[step_from, 3, "levels.step_from_m"], [heights_m, 3, "levels.heights_m"],
 			[_s_band, 2, "river.source.foot_band"], [_sh_meander, 2, "river.shape.meander_m"], [_sh_hw, 2, "river.shape.half_width_m"],
 			[_sh_dm, 2, "river.shape.centre_depth_m"]]:
 		if (pair[0] as PackedFloat64Array).size() != pair[1]:
@@ -318,17 +358,91 @@ func _edge_dist(edge: int, x: float, y: float) -> float:
 		2: return y - _map.position.y
 	return _map.end.y - y
 
-func _bias(x: float, y: float) -> float:
-	var b := 0.0
-	for k in sea_edges.size():
-		b = maxf(b, clampf(1.0 - _edge_dist(sea_edges[k], x, y) / sea_reach[k], 0.0, 1.0))
-	return b
+# A point of edge e, t of the way along it (0 to 1), and the direction into the map from it.
+func _edge_pt(e: int, t: float) -> Vector2:
+	match e:
+		0: return Vector2(_map.position.x, _map.position.y + t * _map.size.y)
+		1: return Vector2(_map.end.x, _map.position.y + t * _map.size.y)
+		2: return Vector2(_map.position.x + t * _map.size.x, _map.position.y)
+	return Vector2(_map.position.x + t * _map.size.x, _map.end.y)
+
+func _edge_in(e: int) -> Vector2:
+	match e:
+		0: return Vector2(1.0, 0.0)
+		1: return Vector2(-1.0, 0.0)
+		2: return Vector2(0.0, 1.0)
+	return Vector2(0.0, -1.0)
+
+# The domain warp: the point pushed by a low-frequency vector noise, so no coast keeps to a map edge.
+func _warp(x: float, y: float) -> Vector2:
+	if _warp_m <= 0.0:
+		return Vector2(x, y)
+	var a := ValueNoise.fbm(x * _warp_f, y * _warp_f, _shape_seed, _warp_oct) - 0.5
+	var b := ValueNoise.fbm(x * _warp_f + 53.1, y * _warp_f - 29.7, _shape_seed + 5, _warp_oct) - 0.5
+	return Vector2(x + a * 2.0 * _warp_m, y + b * 2.0 * _warp_m)
+
+# The sea bias at a (warped) point, 0 to 1: the strongest of the components.
+func _sea_bias(q: Vector2) -> float:
+	var best := 0.0
+	for c: Dictionary in _comps:
+		var v := 0.0
+		var kind: String = c["kind"]
+		if kind == "edge":
+			var e: int = c["edge"]
+			var along := q.y if e < 2 else q.x
+			var wob := 1.0 + _reach_wob * (ValueNoise.vnoise(along * _reach_wob_f, float(e) * 7.3, _shape_seed + 11) * 2.0 - 1.0)
+			v = clampf(1.0 - _edge_dist(e, q.x, q.y) / (float(c["reach"]) * wob), 0.0, 1.0)
+		elif kind == "blob":
+			var u: Vector2 = (q - (c["c"] as Vector2)).rotated(-float(c["rot"]))
+			var ux := u.x / float(c["rx"])
+			var uy := u.y / float(c["ry"])
+			v = clampf(1.0 - sqrt(ux * ux + uy * uy), 0.0, 1.0) * float(c["peak"])
+		else:
+			var a: Vector2 = c["a"]
+			var ab: Vector2 = (c["b"] as Vector2) - a
+			var l2 := ab.length_squared()
+			var t := 0.0 if l2 == 0.0 else clampf((q - a).dot(ab) / l2, 0.0, 1.0)
+			v = clampf(1.0 - q.distance_to(a + ab * t) / float(c["hw"]), 0.0, 1.0) * float(c["peak"])
+		best = maxf(best, v)
+	return best
+
+# How much the islands lift landness at a (warped) point.
+func _island_lift(q: Vector2) -> float:
+	var best := 0.0
+	for i: Dictionary in _islands:
+		var d := q.distance_to(i["c"] as Vector2) / float(i["r"])
+		if d < 1.0:
+			var t := clampf((1.0 - d) / 0.75, 0.0, 1.0)
+			best = maxf(best, float(i["a"]) * t * t * (3.0 - 2.0 * t))
+	return best
 
 # Landness: above zero is land, below is sea.
 func landness(x: float, y: float) -> float:
-	var cn := ValueNoise.fbm(x * _sea_np, y * _sea_np, _sea_seed, _sea_oct)
+	var q := _warp(x, y)
+	var cn := ValueNoise.fbm(q.x * _sea_np, q.y * _sea_np, _sea_seed, _sea_oct)
 	var f: float = _t.field_at(x, y)
-	return _sea_base + _sea_wn * (cn - 0.5) + _sea_wt * (f - 0.5) - _sea_strength * _bias(x, y)
+	return _sea_base + _sea_wn * (cn - 0.5) + _sea_wt * (f - 0.5) - _sea_strength * _sea_scale * _sea_bias(q) + _island_lift(q)
+
+# THE MASK THE TERRAIN READS (integration): the cap on the terrain's height field at (x, y), in the field's own
+# units. Above the field's range (1.0) inland; falling to a little under the first threshold at the coast, so
+# ground there is level 0. The field is min(field, cap): plateaus taper toward a coast, vanish under the sea, and
+# meet it as a cliff only where the cliff noise says so.
+func field_cap(x: float, y: float) -> float:
+	return _cap_of(landness(x, y), x, y)
+
+func _cap_of(l: float, x: float, y: float) -> float:
+	var cn := ValueNoise.fbm(x * float(_cap["cliff_noise_per_m"]), y * float(_cap["cliff_noise_per_m"]), _sea_seed + 77, 2)
+	var m := lerpf(float(_cap["margin_far"]), float(_cap["margin_cliff"]), smoothstep(float(_cap["cliff_from"]), float(_cap["cliff_to"]), cn))
+	var t := clampf((l - m) / float(_cap["ramp"]), 0.0, 1.0)
+	var lo := _thr0 - float(_cap["floor_below_threshold"])
+	return lo + (1.0 - lo) * (t * t * (3.0 - 2.0 * t))
+
+# The water at a point and the CAPPED height field there, in one go (the overview draws a pixel with it): Vector2(s,
+# capped field). The same numbers as s_at() and terrain().field_at(), at about a third of the cost.
+func s_and_field(x: float, y: float) -> Vector2:
+	var l := landness(x, y)
+	var f: float = _t.field_at(x, y)
+	return Vector2(maxf(-l * _sea_dpu, river_s(x, y)), minf(f, _cap_of(l, x, y)))
 
 # The sea's s: metres of water (> 0) or minus the land's elevation proxy.
 func sea_s(x: float, y: float) -> float:
@@ -374,9 +488,18 @@ func step_at(x: float, y: float) -> int:
 	return step_of(s_at(x, y))
 
 func is_wet(x: float, y: float) -> bool:
-	return s_at(x, y) > 0.0 and int(_t.level_at(x, y)) == 0
+	return s_at(x, y) > 0.0 and int(terrain().level_at(x, y)) == 0
 
+# The terrain the water is drawn on and judged by: the raw terrain with its height field capped by field_cap()
+# (scripts/world/water_terrain.gd). Made on first use. The layout was made on the RAW terrain (raw_terrain()).
 func terrain() -> Variant:
+	if _tc == null:
+		var script: GDScript = load("res://scripts/world/water_terrain.gd")
+		_tc = script.new(seed_value)
+		_tc.set_cap(Callable(self, "field_cap"))
+	return _tc
+
+func raw_terrain() -> Variant:
 	return _t
 
 func layout() -> Variant:
@@ -462,53 +585,276 @@ func _build_sea() -> void:
 		if e != road_edge:
 			cands.append([ValueNoise.hash2(e, 7, _stream_seed(S_EDGES)), e])
 	cands.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
-	var rc := _stream(S_COUNT)
-	var want := 1 if rc.next() * (_sea_counts[0] + _sea_counts[1]) < _sea_counts[0] else 2
-	want = mini(want, cands.size())
-	var rj := _stream(S_JITTER)
-	var base_edges: Array[int] = []
-	var base_reach := PackedFloat64Array()
-	for k in want:
-		var e := int(cands[k][1])
-		# a second sea edge is ADJACENT to the first (a corner of sea, an island's coast), never the opposite one
-		if k == 1 and (e >> 1) == (base_edges[0] >> 1):
-			var found := false
-			for c: Array in cands:
-				if (int(c[1]) >> 1) != (base_edges[0] >> 1):
-					e = int(c[1])
-					found = true
-					break
-			if not found:
-				break
-		base_edges.append(e)
-		base_reach.append(_sea_reach_m * (1.0 + _sea_reach_jit * (rj.next() * 2.0 - 1.0)))
-	# The first choice, undisturbed: is it already dry? (the survey's number)
-	sea_edges = base_edges.duplicate()
-	sea_reach = base_reach.duplicate()
-	var first_ok: bool = _dry_check(Vector2(INF, INF), 0.0)["ok"]
-	var trail: Array = []
-	var scale := 1.0
+	var edges: Array[int] = []
+	for c: Array in cands:
+		edges.append(int(c[1]))
+	# ATTEMPTS. The seed's first shape is the first attempt; if it floods the layout (even after pulling the coast back a
+	# little) or leaves too little sea for its kind, the seed's NEXT draw is tried, and so on: a sea is moved, not shrunk to
+	# nothing. The first attempt that is dry and big enough stands; else the driest-and-biggest; else the first attempt
+	# with the old remedy (shrink, then drop components).
+	var min_share: Dictionary = _sp["min_share"]
+	var shrink_steps := int(_sp["attempt_shrink_steps"])
+	var best: Dictionary = {}
+	var first_ok := false
+	var first_state: Dictionary = {}
+	var tried: Array = []
+	var accepted := -1
+	var n_att := int(_sp["attempts"])
+	for att in n_att:
+		var rs := _stream(S_SHAPE, att)
+		var arch := _pick_archetype(rs)
+		_make_shape(arch, edges, road_edge, rs)
+		archetype = arch
+		_sea_scale = 1.0
+		var dry_now: bool = _dry_check(Vector2(INF, INF), 0.0)["ok"]
+		if att == 0:
+			first_ok = dry_now
+			first_state = _snapshot()
+		var steps := 0
+		while not dry_now and steps < shrink_steps:
+			steps += 1
+			_sea_scale *= _sea_shrink
+			dry_now = _dry_check(Vector2(INF, INF), 0.0)["ok"]
+		var share := _share_estimate(125.0) if dry_now else 0.0
+		var big_enough := share >= float(min_share[arch])
+		tried.append({"archetype": arch, "dry": dry_now, "share": snappedf(share, 0.001), "scale": snappedf(_sea_scale, 0.001)})
+		if dry_now and (best.is_empty() or share > float(best["share"])):
+			best = _snapshot()
+			best["share"] = share
+			best["attempt"] = att
+		if dry_now and big_enough:
+			accepted = att
+			break
 	var adapted := 0
-	var dropped: Array[int] = []
-	while not _dry_check(Vector2(INF, INF), 0.0)["ok"]:
-		adapted += 1
-		if scale > pow(_sea_shrink, _sea_adapt) * 0.999 and not sea_edges.is_empty():
-			scale *= _sea_shrink
-			for k in sea_reach.size():
-				sea_reach[k] = base_reach[k] * scale
-		elif not sea_edges.is_empty():
-			dropped.append(sea_edges[sea_edges.size() - 1])
-			sea_edges.remove_at(sea_edges.size() - 1)
-			base_reach.remove_at(base_reach.size() - 1)
-			sea_reach = base_reach.duplicate()
-			scale = 1.0
+	var dropped: Array = []
+	if accepted >= 0:
+		_restore(best)
+	elif not best.is_empty():
+		_restore(best)
+	else:
+		_restore(first_state)
+		var scale_min := pow(_sea_shrink, _sea_adapt) * 0.999
+		while not _dry_check(Vector2(INF, INF), 0.0)["ok"]:
+			adapted += 1
+			if _sea_scale > scale_min and not _comps.is_empty():
+				_sea_scale *= _sea_shrink
+			elif not _comps.is_empty():
+				dropped.append(str((_comps[_comps.size() - 1] as Dictionary)["kind"]))
+				_comps.remove_at(_comps.size() - 1)
+				_sea_scale = 1.0
+				if _comps.is_empty():
+					_islands = []
+			else:
+				break
+			if adapted > 200:
+				break
+	sea_edges = []
+	for c: Dictionary in _comps:
+		if c["kind"] == "edge":
+			sea_edges.append(int(c["edge"]))
+	diagnostics["sea"] = {"road_edge": road_edge, "archetype": archetype, "components": _kinds(), "edges": sea_edges.duplicate(),
+		"dropped": dropped, "reach_scale": snappedf(_sea_scale, 0.001), "dry_first_try": first_ok, "adapt_steps": adapted,
+		"islands_made": _islands.size(), "attempts": tried, "accepted": accepted}
+
+func _snapshot() -> Dictionary:
+	return {"arch": archetype, "comps": _comps.duplicate(true), "islands": _islands.duplicate(true), "scale": _sea_scale}
+
+func _restore(st: Dictionary) -> void:
+	archetype = st["arch"]
+	_comps = (st["comps"] as Array).duplicate(true)
+	_islands = (st["islands"] as Array).duplicate(true)
+	_sea_scale = float(st["scale"])
+
+# The sea's share of the map (s > 0), on a lattice of `step` metres: the attempts' measure of 'enough sea'.
+func _share_estimate(step: float) -> float:
+	var n := 0
+	var wet := 0
+	var y := _map.position.y + step * 0.5
+	while y < _map.end.y:
+		var x := _map.position.x + step * 0.5
+		while x < _map.end.x:
+			n += 1
+			if sea_s(x, y) > 0.0:
+				wet += 1
+			x += step
+		y += step
+	return float(wet) / float(maxi(n, 1))
+
+func _kinds() -> Array:
+	var out: Array = []
+	for c: Dictionary in _comps:
+		out.append(str(c["kind"]))
+	return out
+
+# One of the archetypes, by the data's weights.
+func _pick_archetype(rs: Mulberry32) -> String:
+	var names: Array = _arch_weights.keys()
+	names.sort()
+	var total := 0.0
+	for n: String in names:
+		total += float(_arch_weights[n])
+	var u := rs.next() * total
+	for n: String in names:
+		u -= float(_arch_weights[n])
+		if u < 0.0:
+			return n
+	return str(names[names.size() - 1])
+
+# A seeded number in the data's [lo, hi] range at `path` of shape.*.
+func _rv(rs: Mulberry32, path: String) -> float:
+	var r: Array = _sp[path]
+	return lerpf(float(r[0]), float(r[1]), rs.next())
+
+func _make_shape(arch: String, edges: Array[int], road_edge: int, rs: Mulberry32) -> void:
+	_comps = []
+	_islands = []
+	_sea_scale = 1.0
+	if edges.is_empty():
+		return
+	var e1 := edges[0]
+	match arch:
+		"coast":
+			var r := _rv(rs, "coast.reach_m")
+			_comps.append({"kind": "edge", "edge": e1, "reach": r})
+			if rs.next() < float(_sp["inlet.chance"]):
+				_add_inlet(rs, e1, r)
+		"corner":
+			_comps.append({"kind": "edge", "edge": e1, "reach": _rv(rs, "corner.reach_m")})
+			for e: int in edges:
+				if (e >> 1) != (e1 >> 1):
+					_comps.append({"kind": "edge", "edge": e, "reach": _rv(rs, "corner.reach_m")})
+					break
+		"peninsula":
+			var land_edge := road_edge if road_edge >= 0 else edges[edges.size() - 1]
+			var far := land_edge ^ 1
+			_comps.append({"kind": "edge", "edge": far, "reach": _rv(rs, "peninsula.far_reach_m")})
+			for e in 4:
+				if e != land_edge and e != far:
+					_comps.append({"kind": "edge", "edge": e, "reach": _rv(rs, "peninsula.side_reach_m")})
+		"bay":
+			_comps.append(_best_bay(rs, e1, 1.0))
+			if edges.size() > 1 and rs.next() < float(_sp["bay.second_chance"]):
+				_comps.append(_best_bay(rs, edges[1], float(_sp["bay.second_scale"])))
+		"islands":
+			var r := _rv(rs, "islands.reach_m")
+			_comps.append({"kind": "edge", "edge": e1, "reach": r})
+			_make_islands(rs, "islands", e1, r)
+		"lagoon":
+			_make_lagoon(rs, e1)
+	if arch != "islands" and not _comps.is_empty() and rs.next() < float(_sp["stray.chance"]):
+		_make_islands(rs, "stray", -1, 0.0)
+
+# A narrow arm of sea run inland from a coast.
+func _add_inlet(rs: Mulberry32, e: int, reach: float) -> void:
+	var base := _edge_pt(e, lerpf(0.2, 0.8, rs.next()))
+	var n := _edge_in(e)
+	var start := base + n * (0.69 * reach - 150.0)
+	var turn := (rs.next() * 2.0 - 1.0) * float(_sp["inlet.turn_rad"])
+	var length := _rv(rs, "inlet.length_m")
+	var hw := _rv(rs, "inlet.half_width_m")
+	_comps.append({"kind": "cap", "a": start, "b": start + n.rotated(turn) * length, "hw": hw * 2.0, "peak": float(_sp["inlet.strength"])})
+
+# The smallest distance from c to any point the layout wants dry.
+func _clearance(c: Vector2) -> float:
+	var best := INF
+	for p in _kd_pts:
+		best = minf(best, c.distance_squared_to(p))
+	return sqrt(best)
+
+# A bay: an ellipse of sea on edge e, at the best of a few seeded tries.
+func _best_bay(rs: Mulberry32, e: int, scale: float) -> Dictionary:
+	var best: Dictionary = {}
+	var best_clear := -INF
+	for k in int(_sp["site_tries"]):
+		var c := _edge_pt(e, lerpf(0.2, 0.8, rs.next())) + _edge_in(e) * _rv(rs, "bay.centre_in_m")
+		var rx := _rv(rs, "bay.radius_along_m") * scale
+		var ry := _rv(rs, "bay.radius_in_m") * scale
+		var rot := (PI * 0.5 if e < 2 else 0.0) + (rs.next() * 2.0 - 1.0) * float(_sp["bay.turn_rad"])
+		var clear := _clearance(c) - 0.69 * maxf(rx, ry)
+		if clear > best_clear:
+			best_clear = clear
+			best = {"kind": "blob", "c": c, "rx": rx, "ry": ry, "rot": rot, "peak": 1.0}
+	return best
+
+# A lagoon inland and the estuary that joins it to edge e.
+func _make_lagoon(rs: Mulberry32, e: int) -> void:
+	var best_c := Vector2.ZERO
+	var best_t := 0.5
+	var best_r := 800.0
+	var best_clear := -INF
+	for k in int(_sp["site_tries"]):
+		var t := lerpf(0.2, 0.8, rs.next())
+		var c := _edge_pt(e, t) + _edge_in(e) * _rv(rs, "lagoon.inland_m")
+		var r := _rv(rs, "lagoon.radius_m")
+		var clear := _clearance(c) - 0.5 * r
+		if clear > best_clear:
+			best_clear = clear
+			best_c = c
+			best_t = t
+			best_r = r
+	_comps.append({"kind": "blob", "c": best_c, "rx": best_r, "ry": best_r, "rot": 0.0, "peak": float(_sp["lagoon.peak"])})
+	var hw := _rv(rs, "lagoon.channel_half_width_m")
+	_comps.append({"kind": "cap", "a": best_c, "b": _edge_pt(e, best_t) - _edge_in(e) * float(_sp["lagoon.channel_extra_m"]),
+		"hw": hw * 2.0, "peak": float(_sp["lagoon.channel_strength"])})
+
+# Landness of the sea alone (no islands yet).
+func _sea_only_landness(p: Vector2) -> float:
+	return landness(p.x, p.y)
+
+# Islands: `islands` (clustered off coast edge e, deep water) or `stray` (a few anywhere the sea is deep).
+func _make_islands(rs: Mulberry32, which: String, e: int, reach: float) -> void:
+	var cnt: Array = _sp["%s.count" % which]
+	var n := clampi(int(lerpf(float(cnt[0]), float(cnt[1]) + 1.0, rs.next())), int(cnt[0]), int(cnt[1]))
+	var rr: Array = _sp["%s.radius_m" % which]
+	var min_sea := float(_sp["islands.min_sea_landness"])
+	var cluster := float(_sp["islands.cluster_m"]) if which == "islands" else 350.0
+	var centre := Vector2(INF, INF)
+	var inner := _map.grow(-350.0)
+	for k in 90:
+		var p: Vector2
+		if e >= 0:
+			var ci: Array = _sp["islands.cluster_in"]
+			p = _edge_pt(e, rs.next()) + _edge_in(e) * lerpf(float(ci[0]), float(ci[1]), rs.next()) * reach
 		else:
+			p = _map.position + Vector2(rs.next() * _map.size.x, rs.next() * _map.size.y)
+		if inner.has_point(p) and _sea_only_landness(p) < min_sea - 0.1:
+			centre = p
 			break
-		trail.append({"scale": snappedf(scale, 0.001), "edges": sea_edges.duplicate()})
-		if adapted > 200:
+	if not centre.is_finite():
+		return
+	var peaks: Array = _sp["islands.peak_landness"]
+	var gap := float(_sp["islands.min_gap_m"])
+	for k in n:
+		for tries in 25:
+			var p := centre + Vector2((rs.next() + rs.next() - 1.0) * cluster * 1.4, (rs.next() + rs.next() - 1.0) * cluster * 1.4)
+			if k == 0:
+				p = centre
+			var r: float
+			if k == 0:
+				r = lerpf(0.65, 1.0, rs.next()) * float(rr[1])
+			else:
+				var u := rs.next()
+				r = lerpf(float(rr[0]), 0.65 * float(rr[1]), u * u)
+			var l_sea := _sea_only_landness(p)
+			if not inner.has_point(p) or l_sea > min_sea:
+				continue
+			# OFFSHORE: open water all round the island's influence (an island is not a spit of the coast)
+			var ringed := true
+			for q in 8:
+				var rp := p + Vector2.from_angle(float(q) * TAU / 8.0) * r
+				if not _map.has_point(rp) or _sea_only_landness(rp) > -0.08:
+					ringed = false
+					break
+			if not ringed:
+				continue
+			var apart := true
+			for i: Dictionary in _islands:
+				if p.distance_to(i["c"] as Vector2) < (r + float(i["r"])) * 0.5 + gap:
+					apart = false
+			if not apart:
+				continue
+			_islands.append({"c": p, "r": r, "a": lerpf(float(peaks[0]), float(peaks[1]), rs.next()) - l_sea})
 			break
-	diagnostics["sea"] = {"road_edge": road_edge, "edges_wanted": base_edges.size() + dropped.size(), "edges": sea_edges.duplicate(),
-		"dropped": dropped, "reach_scale": snappedf(scale, 0.001), "dry_first_try": first_ok, "adapt_steps": adapted}
 
 # --- 3. the river ------------------------------------------------------------------------------------------
 
@@ -1114,11 +1460,155 @@ func wet_fraction(step_m: float = 100.0) -> Dictionary:
 	return {"samples": n, "shallows": float(wet[0]) / n, "shelf": float(wet[1]) / n, "deep": float(wet[2]) / n,
 		"water": float(wet[0] + wet[1] + wet[2]) / n}
 
+# THE SHAPE OF THE SEA, measured (the board's survey and test_water_gen: a seed whose land is a square block with a
+# straight coast along an edge fails data quality.*): the sea alone (islands and estuaries in, the river out) on a
+# whole-map grid of `cell` metres. {share, coast_m, axis_share, islands, island_share, fill, land_share}:
+#   share        the sea's share of the map
+#   coast_m      the length of shore inside the map (the map's own border is not a coast)
+#   axis_share   the share of that shore (by length) running within quality.axis_tolerance_deg of parallel to a map edge
+#   cliff_share  the share of the shore that is a coastal cliff (an upland at the water's edge: the cap's cliff mask)
+#   spread       how far the shore leaves one straight line (sqrt of minor over major variance of the shore's points: a straight
+#                coast across the map is about 0.05, an L, a bay or a coast with islands is 0.3 or more)
+#   islands      land that does not touch the map's border, in pieces of at least three samples
+#   island_share their share of the land
+#   fill         the land that touches the border: its area over its bounding box's (a square block is near 1)
+func coast_stats(cell: float = -1.0) -> Dictionary:
+	if cell <= 0.0:
+		cell = float(quality["grid_m"])
+	var cols := int(ceil(_map.size.x / cell)) + 1
+	var rows := int(ceil(_map.size.y / cell)) + 1
+	var pc := cols + 2
+	var pr := rows + 2
+	var x0 := _map.position.x - cell
+	var y0 := _map.position.y - cell
+	var vals := PackedFloat64Array()
+	vals.resize(pc * pr)
+	for j in pr:
+		var y := clampf(y0 + float(j) * cell, _map.position.y, _map.end.y - 0.01)
+		for i in pc:
+			vals[j * pc + i] = sea_s(clampf(x0 + float(i) * cell, _map.position.x, _map.end.x - 0.01), y)
+	var wet := 0
+	var n := 0
+	for j in range(1, rows + 1):
+		for i in range(1, cols + 1):
+			n += 1
+			if vals[j * pc + i] > 0.0:
+				wet += 1
+	# the shore: marching squares at the sea's edge, the pad's false shore left out
+	var inside := _map.grow(-0.5 * cell)
+	var tol := deg_to_rad(float(quality["axis_tolerance_deg"]))
+	var coast := 0.0
+	var aligned := 0.0
+	var cliff := 0.0
+	var mw := 0.0
+	var mx := 0.0
+	var my := 0.0
+	var mxx := 0.0
+	var mxy := 0.0
+	var myy := 0.0
+	for ring: Dictionary in WaterContour.rings(vals, pc, pr, x0, y0, cell, 0.0, 0, 0.0):
+		var pts: PackedVector2Array = ring["pts"]
+		for k in pts.size():
+			var a := pts[k]
+			var b := pts[(k + 1) % pts.size()]
+			var l := a.distance_to(b)
+			if l < 1e-6 or not inside.has_point((a + b) * 0.5):
+				continue
+			coast += l
+			var mid := (a + b) * 0.5
+			mw += l
+			mx += l * mid.x
+			my += l * mid.y
+			mxx += l * mid.x * mid.x
+			mxy += l * mid.x * mid.y
+			myy += l * mid.y * mid.y
+			var ang := fposmod(atan2(b.y - a.y, b.x - a.x), PI * 0.5)
+			if minf(ang, PI * 0.5 - ang) <= tol:
+				aligned += l
+			# a coastal cliff: an upland (the capped field over the first threshold) 6 m inland of the shore
+			var inl := mid - Vector2(-(b.y - a.y), b.x - a.x) / l * 6.0
+			if s_and_field(inl.x, inl.y).y >= _thr0:
+				cliff += l
+	# the land's pieces
+	var label := PackedInt32Array()
+	label.resize(pc * pr)
+	var islands := 0
+	var island_nodes := 0
+	var land_nodes := 0
+	var main_nodes := 0
+	var bi0 := 1 << 30
+	var bi1 := -1
+	var bj0 := 1 << 30
+	var bj1 := -1
+	var next_label := 0
+	for j0 in range(1, rows + 1):
+		for i0 in range(1, cols + 1):
+			if vals[j0 * pc + i0] > 0.0 or label[j0 * pc + i0] != 0:
+				continue
+			next_label += 1
+			var stack: Array[Vector2i] = [Vector2i(i0, j0)]
+			label[j0 * pc + i0] = next_label
+			var size_nodes := 0
+			var touches := false
+			var mi0 := 1 << 30
+			var mi1 := -1
+			var mj0 := 1 << 30
+			var mj1 := -1
+			while not stack.is_empty():
+				var c: Vector2i = stack.pop_back()
+				size_nodes += 1
+				mi0 = mini(mi0, c.x)
+				mi1 = maxi(mi1, c.x)
+				mj0 = mini(mj0, c.y)
+				mj1 = maxi(mj1, c.y)
+				if c.x == 1 or c.y == 1 or c.x == cols or c.y == rows:
+					touches = true
+				for d: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+					var q := c + d
+					if q.x < 1 or q.y < 1 or q.x > cols or q.y > rows:
+						continue
+					var qi := q.y * pc + q.x
+					if vals[qi] <= 0.0 and label[qi] == 0:
+						label[qi] = next_label
+						stack.append(q)
+			land_nodes += size_nodes
+			if touches:
+				main_nodes += size_nodes
+				bi0 = mini(bi0, mi0)
+				bi1 = maxi(bi1, mi1)
+				bj0 = mini(bj0, mj0)
+				bj1 = maxi(bj1, mj1)
+			elif size_nodes >= 3:
+				islands += 1
+				island_nodes += size_nodes
+	var fill := 0.0
+	if bi1 >= 0:
+		fill = float(main_nodes) / float((bi1 - bi0 + 1) * (bj1 - bj0 + 1))
+	# the coast's spread: sqrt(minor / major) of the shore points' covariance (length-weighted): a coast that is one straight
+	# line is near 0, an L, a bay, a peninsula or a scatter of islands is not
+	var spread := 0.0
+	if mw > 0.0:
+		var cx := mx / mw
+		var cy := my / mw
+		var vxx := mxx / mw - cx * cx
+		var vyy := myy / mw - cy * cy
+		var vxy := mxy / mw - cx * cy
+		var tr := vxx + vyy
+		var disc := sqrt(maxf(tr * tr * 0.25 - (vxx * vyy - vxy * vxy), 0.0))
+		var l1 := tr * 0.5 + disc
+		var l2 := maxf(tr * 0.5 - disc, 0.0)
+		spread = sqrt(l2 / maxf(l1, 1e-9))
+	return {"share": float(wet) / float(maxi(n, 1)), "coast_m": coast, "axis_share": aligned / maxf(coast, 1.0), "cliff_share": cliff / maxf(coast, 1.0), "spread": spread, "islands": islands,
+		"island_share": float(island_nodes) / float(maxi(land_nodes, 1)), "fill": fill, "land_share": float(land_nodes) / float(maxi(n, 1))}
+
 # A string that changes when anything in the water does (tests compare waters with it).
 func signature() -> String:
-	var parts: Array[String] = [",".join(sea_edges.map(func(e: int) -> String: return str(e)))]
-	for r in sea_reach:
-		parts.append("%.3f" % r)
+	var parts: Array[String] = [archetype, ",".join(sea_edges.map(func(e: int) -> String: return str(e))), str(_comps.size()), str(_islands.size()), "%.3f" % _sea_scale]
+	for c: Dictionary in _comps:
+		var key: String = "reach" if c["kind"] == "edge" else "peak"
+		parts.append("%s%.3f" % [c["kind"], float(c[key])])
+	for i: Dictionary in _islands:
+		parts.append("%.2f,%.2f,%.2f" % [(i["c"] as Vector2).x, (i["c"] as Vector2).y, float(i["r"])])
 	parts.append(str(river_pts.size()))
 	if river_pts.size() > 0:
 		var mid := river_pts[river_pts.size() / 2]
