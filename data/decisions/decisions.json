@@ -1847,25 +1847,45 @@
       "id": "ship-sinks",
       "date": "2026-10-11",
       "area": "Units, Water",
-      "question": "How is a destroyed ship drawn?",
+      "question": "How is a destroyed ship drawn, and what happens to a plane that comes down over water?",
       "board": "none (said in chat)",
       "options": [
         "a broken wreck afloat (proposed by Track BB)",
         "sunk to the bottom under the water"
       ],
-      "chosen": "sunk to the bottom: the intact hull on the bottom, flooded with the water's own wash for that depth; no damage drawn",
+      "chosen": "it sinks like a downed plane falls: its height drops through the water until it reaches the floor, drawn intact under the water's own wash for the depth above it; no damage drawn. A plane that comes down over water does the same.",
       "parameters": {
-        "hull": "intact, on the bottom",
-        "cover": "the water layer's depth wash at its position",
-        "damage": "none"
+        "hull": "intact",
+        "height": "falls from the surface (0 m) to the floor (minus the water depth), like a downed plane's fall",
+        "cover": "the water layer's depth wash for the metres of water above it",
+        "damage": "none",
+        "planes": "a plane whose fall reaches the water keeps falling through it to the floor"
       },
       "applied_to": [
-        "scripts/ui/unit_marker_art_boats.gd (the wreck)",
+        "scripts/sim/world.gd (the fall)",
+        "scripts/sim/combat_resolver.gd (a sea unit's fate)",
+        "data/sim/combat.json (the sink rate)",
+        "scripts/ui/unit_marker_art_boats.gd (the sunk hull)",
         "data/world/boats.json game.wreck",
         "scripts/tests/test_boats_live.gd"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'For destroyed ships, ideally we just sink them to the bottom.' Then: 'We don't even need to show damage if we just height-appropriately flood them with water.' PROPOSED (not Alex's): the flood rises from the waterline to full depth over the resolve after the down event; the standard down flash stays, the boat's smoke column goes; it applies to every sea unit (cutter, barge, cruiser). The bridge's ruin is unchanged."
+      "notes": "Alex: 'For destroyed ships, ideally we just sink them to the bottom.' Then: 'We don't even need to show damage if we just height-appropriately flood them with water.' Then: 'Just like a downed plane it's altitude should decrease until it hits the floor. It just does so through the water.' And: 'In fact we could have planes do the same if they crash there.' PROPOSED (not Alex's): the sink rate; a splash ring in the water's ink where it goes under; the standard down flash stays and the ground crash's smoke is not drawn over water; it applies to every sea unit (cutter, barge, cruiser). The bridge's ruin is unchanged."
+    },
+    {
+      "id": "wreck-litter",
+      "date": "2026-10-11",
+      "area": "Water, Environment",
+      "question": "Sunken wrecks (boats and planes) placed in the water as environment, for character?",
+      "board": "not made yet",
+      "options": [],
+      "chosen": null,
+      "parameters": {
+        "reuse": "the sunk-hull drawing from ship-sinks, placed by seed"
+      },
+      "applied_to": [],
+      "status": "open",
+      "notes": "Alex: 'And consider some 'wreaked' litter just for visual interest. A sunken boat or plane in the water adds some character.' PROPOSED: a board after the sinking lands, with how many, where (shallows, where they show) and which kinds; the same art as a sunk unit, placed by seed."
     }
   ]
 }
