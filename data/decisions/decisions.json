@@ -1332,13 +1332,14 @@
         "boats": "two: an armed patrol boat and an unarmed supply boat (Alex: 'Sounds good'); in the Strike just as environment (Alex: 'Add the boats just as environment'); look board variants/boats/",
         "bridges": "yes, where the road crosses the river, drawn like the buildings, destroyable (Alex: 'Sounds good'); look board variants/bridge/",
         "terrain_variety": "beaches, coastal cliffs, marsh at the river mouth, rock outcrops, orchards and more field types, thin and dense woods (Alex: 'Sounds good'); a board after the water look; mountains still deferred",
-        "boats_role": "real units that sail real patrol routes and can be hit, with no specific part in the mission; the patrol boat's guns fire as any unit's do (Alex: 'Let it fire if it wants')"
+        "boats_role": "real units that sail real patrol routes and can be hit, with no specific part in the mission; the patrol boat's guns fire as any unit's do (Alex: 'Let it fire if it wants')",
+        "strike_map": "seed 20261009's water (islands shape: about 30% sea, a wavy east coast, an island pair, a river to the sea) is right for the Strike; no change to the generator's odds (Alex: '20261009', 'It will work fine')"
       },
       "applied_to": [
         "planning"
       ],
       "status": "chosen by Alex; looks on boards",
-      "notes": "Alex: 'Let's do a water layer next. We need to settle the water design. I like the same height system with a blue color wash. Same shadows. We need at least one small boat. Maybe two? Maybe bridges? What else? More terrain variety.' Answers: '1. I thought the map was random? 2. Sounds good 3. Make the board 4-6. Sounds good 7. Add the boats just as environment' On the boats: 'Correct, part of the environment with real patrols but no specific part in the mission'. Then, on the patrol boat's guns: 'Let it fire if it wants'."
+      "notes": "Alex: 'Let's do a water layer next. We need to settle the water design. I like the same height system with a blue color wash. Same shadows. We need at least one small boat. Maybe two? Maybe bridges? What else? More terrain variety.' Answers: '1. I thought the map was random? 2. Sounds good 3. Make the board 4-6. Sounds good 7. Add the boats just as environment' On the boats: 'Correct, part of the environment with real patrols but no specific part in the mission'. Then, on the patrol boat's guns: 'Let it fire if it wants'. On the reworked generator's seeds: '20261009' and 'It will work fine'."
     },
     {
       "id": "water-look",
