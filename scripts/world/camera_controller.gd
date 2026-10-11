@@ -1,9 +1,9 @@
 extends Node
 
 # THE CAMERA CONTROLLER, first option (Track F, exit criterion 7): pan (drag
-# and keys), wheel zoom about the cursor, a hard zoom range, follow-selected-
-# unit and frame-this-plan. Every number is in data/view/camera.json, all
-# proposed.
+# and keys), wheel zoom (in toward the cursor, out about the centre), a hard
+# zoom range, follow-selected-unit and frame-this-plan. Every number is in
+# data/view/camera.json, all proposed.
 #
 # It DRIVES A Camera2D IT IS GIVEN (Track V's MapView has its own; the
 # controller never makes one inside it):
@@ -40,11 +40,14 @@ extends Node
 # 2026-10-09): a card under the pointer stops mouse motion and swallows the
 # release, which stalled the drag and left it stuck on.
 # THE LEFT BUTTON IS TRACK U'S (click and drag inside a plane's fan plans its
-# motion): the controller never pans on it. Wheel and trackpad magnify zoom
-# about the cursor; the drag buttons (data: middle, right) and a trackpad pan
-# drag the map; held keys (data: WASD and arrows, Q/E and -/=) pan at a
-# screen speed and zoom about the view centre. A manual pan stops following
-# (follow.break_on_pan).
+# motion): the controller never pans on it. Wheel and trackpad magnify zoom IN
+# TOWARD THE CURSOR and OUT ABOUT THE CENTRE of the map area (the view less the
+# HUD insets: zoom_centre()) -- Alex, 2026-10-11 (decision zoom-anchors), as
+# Spring RTS does: zooming out and back in at a spot moves the view toward it,
+# so zoom pans (about the cursor both ways the round trip went nowhere). The
+# drag buttons (data: middle, right) and a trackpad pan drag the map; held keys
+# (data: WASD and arrows, Q/E and -/=) pan at a screen speed and zoom about
+# zoom_centre(). A manual pan stops following (follow.break_on_pan).
 #
 # FAR ZOOM (far_zoom.mode, proposed "overview_topo"): overview_amount() is how
 # much of the topographic overview should show at the current zoom (0..1);
@@ -294,6 +297,14 @@ func zoom_at(z: float, anchor: Vector2) -> void:
 func zoom_by(factor: float, anchor: Vector2) -> void:
 	zoom_at(camera.zoom.x * factor, anchor)
 
+# The player's zoom: in (factor > 1) toward `cursor`, out about zoom_centre().
+func zoom_player(factor: float, cursor: Vector2) -> void:
+	zoom_by(factor, cursor if factor > 1.0 else zoom_centre())
+
+# The centre of the map area on screen, the view less the HUD insets (screen px).
+func zoom_centre() -> Vector2:
+	return view_size() * 0.5 + inset_offset()
+
 # Drag the map by `delta` screen px (the map follows the pointer).
 func pan_screen(delta: Vector2) -> void:
 	if delta == Vector2.ZERO:
@@ -399,7 +410,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if mb.pressed and (mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN):
 			var notches := mb.factor if mb.factor > 0.0 else 1.0
 			var f := pow(wheel_step, notches)
-			zoom_by(f if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / f, mb.position)
+			zoom_player(f if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / f, mb.position)
 			_handled()
 		elif drag_buttons.has(mb.button_index):
 			if mb.pressed:
@@ -412,7 +423,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_handled()
 	elif event is InputEventMagnifyGesture:
 		var mg := event as InputEventMagnifyGesture
-		zoom_by(mg.factor, mg.position)
+		zoom_player(mg.factor, mg.position)
 		_handled()
 	elif event is InputEventPanGesture:
 		pan_screen(-(event as InputEventPanGesture).delta * trackpad_px)
@@ -452,7 +463,7 @@ func _process(delta: float) -> void:
 			pan_screen(-dir.normalized() * pan_keys_speed * delta)
 		var zdir := float(_held("zoom_in")) - float(_held("zoom_out"))
 		if zdir != 0.0:
-			zoom_by(pow(keys_zoom_rate, zdir * delta), view_size() * 0.5)
+			zoom_by(pow(keys_zoom_rate, zdir * delta), zoom_centre())
 	step_follow(delta)
 
 # One follow step of `delta` seconds (called every frame; public for tests).

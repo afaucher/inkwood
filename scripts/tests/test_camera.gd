@@ -15,6 +15,11 @@ extends "res://scripts/test_support/test_case.gd"
 #            zoom_at and by a wheel event), and the controller's transform is
 #            the one the engine's Camera2D actually applies (the viewport's
 #            canvas transform, after a frame).
+#   WHEEL    (Alex, 2026-10-11, decision zoom-anchors) the wheel and the pinch zoom
+#            IN toward the cursor and OUT about the centre of the map area
+#            (zoom_centre: the view less the HUD insets), so out-and-back-in at a
+#            spot pans toward it: the centre moves by (step - 1) x the cursor's
+#            offset / zoom; held keys zoom about zoom_centre.
 #   PAN      a drag (middle or right button) moves the map with the pointer; a
 #            left drag does nothing; a pan stops following.
 #   FRAME    frame_plan fits every planned point of a unit's turn inside the
@@ -173,11 +178,70 @@ func _cursor() -> void:
 	near(_ctl.zoom_level(), 0.35 * _ctl.wheel_step, 1e-6, "a wheel notch zooms in by zoom.wheel_step")
 	near(_ctl.screen_to_world_px(at).distance_to(w0), 0.0, 0.02, "and keeps the point under the cursor")
 	ev.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	var c_in := _ctl.center()
 	_ctl._unhandled_input(ev)
 	near(_ctl.zoom_level(), 0.35, 1e-6, "a notch back zooms out again")
+	near(_ctl.center().distance_to(c_in), 0.0, 1e-6, "WHEEL: a notch out zooms about the centre (no HUD insets: the view's), not the cursor")
+	_wheel()
 	# Round trip, metres.
 	var p := Vector2(1234.5, 3210.25)
 	near(_ctl.screen_to_world(_ctl.world_to_screen(p)).distance_to(p), 0.0, 1e-3, "world_to_screen and screen_to_world are inverses (metres)")
+
+# --- the wheel: in toward the cursor, out about the centre (Alex, decision zoom-anchors) -------------
+
+func _wheel() -> void:
+	var step := _ctl.wheel_step
+	var mid := Vector2(SIZE) * 0.5
+	# Out and back in at a spot moves the view toward it: the centre by (step - 1) x offset / zoom.
+	for at: Vector2 in [Vector2(1000.0, 500.0), Vector2(150.0, 90.0), Vector2(640.0, 360.0)]:
+		_ctl.set_view(_at(0.5, 0.5), 0.35)
+		var c0 := _ctl.center()
+		_wheel_event(MOUSE_BUTTON_WHEEL_DOWN, at)
+		_wheel_event(MOUSE_BUTTON_WHEEL_UP, at)
+		near(_ctl.zoom_level(), 0.35, 1e-6, "WHEEL: out and back in returns to the zoom")
+		var want := c0 + (at - mid) * (step - 1.0) / 0.35
+		near(_ctl.center().distance_to(want), 0.0, 1e-3, "WHEEL: out and back in at %s moves the view toward it by (step - 1) x offset / zoom" % at)
+	# Five notches out (the cursor anywhere) and five in on a target: it ends 1 / step^5 as far from the centre.
+	_ctl.set_view(_at(0.5, 0.5), 0.35)
+	var target := _ctl.screen_to_world_px(Vector2(1100.0, 600.0))
+	var d0 := _ctl.world_px_to_screen(target).distance_to(mid)
+	for i in 5:
+		_wheel_event(MOUSE_BUTTON_WHEEL_DOWN, Vector2(5.0, 5.0))
+	var on_target := _ctl.world_px_to_screen(target)
+	for i in 5:
+		_wheel_event(MOUSE_BUTTON_WHEEL_UP, on_target)
+	var d1 := _ctl.world_px_to_screen(target).distance_to(mid)
+	near(d1 / d0, 1.0 / pow(step, 5.0), 1e-6, "WHEEL: five notches out and five in on a target bring it %.0f%% closer to the centre" % (100.0 * (1.0 - 1.0 / pow(step, 5.0))))
+	print("[camera] wheel out-and-in: a target %.0f px from the centre ends %.0f px from it (step %.2f, five notches)" % [d0, d1, step])
+	# The pinch: in toward the fingers, out about the centre.
+	_ctl.set_view(_at(0.5, 0.5), 0.35)
+	var pinch_at := Vector2(1000.0, 200.0)
+	var w := _ctl.screen_to_world_px(pinch_at)
+	var mg := InputEventMagnifyGesture.new()
+	mg.position = pinch_at
+	mg.factor = 1.2
+	_ctl._unhandled_input(mg)
+	near(_ctl.screen_to_world_px(pinch_at).distance_to(w), 0.0, 0.02, "WHEEL: a pinch in keeps the point under the fingers")
+	var c1 := _ctl.center()
+	mg.factor = 1.0 / 1.2
+	_ctl._unhandled_input(mg)
+	near(_ctl.center().distance_to(c1), 0.0, 1e-6, "WHEEL: a pinch out zooms about the centre")
+	# With the HUD on the right, out is about the centre of the map area, not of the window.
+	_ctl.set_insets(0.0, 0.0, 354.0, 0.0)
+	_ctl.set_view(_at(0.5, 0.5), 0.35)
+	near(_ctl.zoom_centre().distance_to(Vector2((1280.0 - 354.0) * 0.5, 360.0)), 0.0, 1e-9, "WHEEL: zoom_centre is the centre of the view less the HUD insets")
+	var wc := _ctl.screen_to_world_px(_ctl.zoom_centre())
+	_wheel_event(MOUSE_BUTTON_WHEEL_DOWN, Vector2(1200.0, 700.0))
+	near(_ctl.screen_to_world_px(_ctl.zoom_centre()).distance_to(wc), 0.0, 1e-3, "WHEEL: with a HUD inset a notch out keeps the map area's centre")
+	_ctl.set_insets(0.0, 0.0, 0.0, 0.0)
+
+func _wheel_event(button: int, at: Vector2) -> void:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = button
+	ev.pressed = true
+	ev.position = at
+	ev.factor = 1.0
+	_ctl._unhandled_input(ev)
 
 # --- pan -------------------------------------------------------------------------------------
 

@@ -1649,6 +1649,26 @@
       ],
       "status": "chosen by Alex; deferred",
       "notes": "Alex: 'Future feature absolutely. A plane at low altitude can do a low pass. Potentially this is the last height band that has some interaction with hills.'"
+    },
+    {
+      "id": "zoom-anchors",
+      "date": "2026-10-11",
+      "area": "Camera",
+      "question": "Where does the wheel zoom about? Both ways about the cursor, out-and-back-in at one spot returns the same view, so zoom cannot be used to pan.",
+      "board": "none (said in chat; research: Spring RTS made zoom-out not follow the mouse by default, CamSpringZoomOutFromMousePos)",
+      "options": [
+        "about the cursor both ways (as built)",
+        "in toward the cursor, out about the centre",
+        "about the screen centre both ways"
+      ],
+      "chosen": "in toward the cursor, out about the centre; no option to switch it",
+      "parameters": {},
+      "applied_to": [
+        "scripts/world/camera_controller.gd: zoom_player (wheel and pinch), zoom_centre (the view less the HUD insets; the held zoom keys use it too)",
+        "scripts/tests/test_camera.gd: WHEEL"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'I think we center the zoom on the mouse for both mouse zoom in and out. I suspect the actual typical implementation zooms in on mouse position but out in screen position.' 'Like it doesn't serve as a way to pan.' Then: 'in toward the cursor, out about the centre - no option needed. just do it unless we find an obviously better alternative.' The centre is the map area's (the view less the roster sidebar), PROPOSED by the camera session."
     }
   ]
 }
