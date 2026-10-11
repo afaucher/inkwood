@@ -32,7 +32,7 @@ Decisions and open questions live in the Decision Ledger
 
 ## Waiting on Alex (looks with working defaults)
 
-- Flak bursts (F1) and the tower's ruin (R1): Strike Boards.
+- The tower's ruin (R1): Strike Boards. (Flak is decided: F2, the ragged burst.)
 - Bombs' area of effect (D, tiers): Strike Boards.
 - Fields (D, mixed).
 - The drop picture and target marks, and static units at twice the plane scale:
