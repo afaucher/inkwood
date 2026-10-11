@@ -112,6 +112,10 @@ class Art:
 	var wake: Texture2D = null
 	var wake_origin := Vector2.ZERO
 	var cast_height_m: float = 0.0
+	# THE SMALL BOATS' (Track BB, 2026-10-11): the shadow of the parts above the hull, in the art's own frame and size: [{tex, heights}], each mask
+	# drawn by the marker as stepped copies of itself at those heights in metres (the layer's cast rule lifts each one), so the house and the mast
+	# throw their longer shadows at any heading. The art's own `mask` is the top copy of the low class, at cast_height_m.
+	var shadow_parts: Array = []
 
 class Model:
 	var silhouette: String
@@ -203,6 +207,10 @@ static func is_static(silhouette: String) -> bool:
 static func is_ship(silhouette: String) -> bool:
 	return SHIPS.has(silhouette)
 
+# Drawn at the MAP's scale by the marker (its k = 1), not at the planes': the bridge (Track BB). The marker layer sets the marker's `map_scale` from this.
+static func is_map_scale(silhouette: String) -> bool:
+	return silhouette == "bridge"
+
 static var _ship_script: GDScript = null
 
 # unit_marker_art_ship.gd, loaded the first time a ship needs it.
@@ -237,6 +245,7 @@ static func _variant_of(st: RefCounted, silhouette: String) -> int:
 static func art_for(st: RefCounted, silhouette: String, accent: Color, ppm: float, rot: float = 0.0) -> Art:
 	if silhouette == "mobile_aa": return load("res://scripts/ui/unit_marker_art_mobile_aa.gd").art_for(st, accent, ppm)   # Track M2U, mission 2: the mobile gun (its own file, its own cache entries here)
 	if silhouette == "military_complex": return _statics().complex_art(st, accent, ppm, rot)   # Track M2U, mission 2: the military complex, drawn at the map's scale (unit_marker_art_static.gd)
+	if silhouette == "patrol_boat" or silhouette == "supply_boat" or silhouette == "bridge": return load("res://scripts/ui/unit_marker_art_boats.gd").art_for(st, silhouette, accent, ppm, rot)   # Track BB: the cutter, the barge and the stone arch (its own file, its own cache entries here)
 	if not (is_plane(silhouette) or is_tank(silhouette) or is_static(silhouette) or is_ship(silhouette)):
 		return null
 	var lo: float = st.num("unit_art.min_bake_ppm")

@@ -48,6 +48,7 @@ const UnitStandout = preload("res://scripts/ui/unit_standout.gd")
 const UiFate = preload("res://scripts/ui/ui_fate.gd")
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const UiLabels = preload("res://scripts/ui/ui_labels.gd")
+const UnitSunk = preload("res://scripts/ui/unit_sunk.gd")
 
 var world: World = null
 var mapping: UiMapping = null
@@ -125,12 +126,27 @@ func sync_units() -> void:
 		if UnitMarkerArt.is_static(u.def.silhouette):
 			m.base_scale = style.num("marker.static_scale")   # the tower and the batteries read at the planning zoom
 			m.draw_scale = m.base_scale
+		elif UnitMarkerArt.is_map_scale(u.def.silhouette):
+			m.map_scale = true   # the bridge: drawn at the MAP's scale, not the planes' (Track BB)
 		m.setup(style, id, u.def.silhouette, u.def.size_m, style.side_color(u.side), _shadows, _under)
 		_planes.add_child(m)
 		markers[id] = m
 		m.selected = selection != null and selection.unit_id == id
 		if not _standout.is_empty():
 			m.set_standout(_standout)
+	_order_markers()
+
+# The markers' drawing order (Track BB): boats and ships first, then the map-scale scenery (the bridge), then everything else, so a boat sails
+# UNDER the bridge and a tank drives over its deck, a plane over both. A marker keeps its place among its own tier.
+func _order_markers() -> void:
+	var idx := 0
+	for tier in 2:
+		for id: String in markers:
+			var m: UnitMarker = markers[id]
+			var t := 0 if str(world.units[id].def.domain) == "sea" else (1 if m.map_scale else 2)
+			if t == tier and m.get_parent() == _planes:
+				_planes.move_child(m, idx)
+				idx += 1
 
 func marker(id: String) -> UnitMarker:
 	return markers.get(id)
@@ -200,6 +216,8 @@ func fall_wobble(id: String) -> float:
 	if not is_playing() or not unit_falling(id):
 		return 0.0
 	var u = world.units[id]
+	if str(u.def.domain) == "sea" or float(pose_of(id).get("height_m", 0.0)) <= 0.0:
+		return 0.0   # a hull going down does not rock, and nothing rocks under the water (Track BB, decision ship-sinks)
 	var turn_s: float = world.rules.turn_seconds
 	var game_t := float(playback_turn - 1) * turn_s + playback_t
 	var phase := float(hash(id) & 0xFF) / 255.0 * TAU
@@ -244,6 +262,14 @@ func update_poses() -> void:
 		var falling := UiFate.falling_at(u, playback_t, playing)
 		var h := fall_height_above_ground(pose) if falling else height_above_ground(pose)
 		m.underway = absf(float(pose.get("speed", 0.0))) > style.num("unit_art.ship.underway_mps")
+		# BELOW THE WATER (Track BB, decision ship-sinks): a ship that sank or a plane that came down over water is drawn intact under the water
+		# layer's own depth wash for the metres of water above it (UnitSunk): none at the surface, the map's colour at its floor by the metres.
+		var under_m := -float(pose.get("height_m", 0.0))
+		if under_m > 0.001 and world.has_water():
+			var wsh := UnitSunk.wash(world, style, world.water_depth_at(wp.x, wp.y), under_m)
+			m.set_sunk(wsh["color"], float(wsh["amount"]))
+		else:
+			m.set_sunk(Color.WHITE, 0.0)
 		var off: Vector2 = shadow_offset_px(wp, h, m.draw_scale)
 		var cast_h := cast_height_m(style, m)
 		if cast_h > 0.0:
@@ -434,6 +460,9 @@ func _flown_line_replaced(m: UnitMarker) -> bool:
 # The height (m) printed for a unit now: the simulation's, or the ground's by data (labels.height_ref); during a
 # playback the pose the marker is drawn at.
 func unit_height_m(id: String) -> float:
+	var under: float = float(pose_of(id).get("height_m", 0.0))
+	if under < -0.001:
+		return under   # under the water: the label says how deep (Track BB)
 	var falling := unit_falling(id)
 	var ground := func(pose: Dictionary) -> float:
 		return fall_height_above_ground(pose) if falling else height_above_ground(pose)

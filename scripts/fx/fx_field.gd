@@ -35,6 +35,7 @@ const FxBurst = preload("res://scripts/fx/fx_burst.gd")
 const FxBake = preload("res://scripts/fx/fx_bake.gd")
 const FxRuin = preload("res://scripts/fx/fx_ruin.gd")
 const FxStyle = preload("res://scripts/fx/fx_style.gd")
+const FxTracer = preload("res://scripts/fx/fx_tracer.gd")
 
 var data: FxData
 var world_seed: int = 20261009
@@ -67,7 +68,9 @@ var riders: Dictionary = {}             # unit id -> the last pose given to ride
 var craters: Array[Dictionary] = []     # the pits bombs leave: they stay for the rest of the game
 var ruins: Array[Dictionary] = []       # what a destroyed tower leaves: it stays for the rest of the game
 var drops: Array[Dictionary] = []       # bombs in the air
+var splashes: Array[Dictionary] = []    # (Track BB, decision ship-sinks) a unit going under the water: rings in the ink, a moment each
 
+var tracers: FxTracer.Book = null       # machine-gun tracers (Track TR, proposed): the state is fx_tracer.gd's, made on first use
 var _emit: Dictionary = {}              # unit id -> emitter state
 var _next_id: int = 0
 var _dirty: bool = false
@@ -111,10 +114,27 @@ func clear() -> void:
 	craters.clear()
 	ruins.clear()
 	drops.clear()
+	splashes.clear()
+	if tracers != null:
+		tracers.clear()   # (Track TR)
 	riders.clear()
 	_emit.clear()
 	_next_id = 0
 	_dirty = false
+
+# --- Machine-gun tracers (Track TR, 2026-10-11, PROPOSED; fx.json tracers, scripts/fx/fx_tracer.gd) -------------------------------
+
+func tracer_book() -> FxTracer.Book:
+	if tracers == null:
+		tracers = FxTracer.Book.new(data)
+	return tracers
+
+func select_tracers(option_name: String) -> void:
+	tracer_book().select(option_name)
+
+# One tracer for a "fire" event of a machine gun (the arguments are fx_tracer.gd's Book.add). Returns whether one was made.
+func tracer(shot_id: String, weapon: String, muzzle: Vector2, centre: Vector2, aim: Vector2, aim_size_m: float, t: float, hit: bool, accent: String = "", draw_k: float = 1.0, seen_shooter: bool = true, seen_target: bool = true) -> bool:
+	return tracer_book().add(world_seed, shot_id, weapon, muzzle, centre, aim, aim_size_m, t, hit, accent, draw_k, seen_shooter, seen_target)
 
 func counts() -> Dictionary:
 	return {"puffs": puffs.size(), "bursts": bursts.size(), "debris": debris.size(), "scars": scars.size(), "riders": riders.size(),
@@ -776,12 +796,39 @@ func ruin(unit_id: String, world_pos: Vector2, t: float, kind: String = "radio_t
 	_add_plume(unit_id, tag, FxData.grp(o, "plume"), world_pos, 0.0, t, size_m, rng, size_m)
 	_add_smolder(unit_id, FxData.grp(o, "smolder"), world_pos, t, size_m, rng, size_m, ":" + tag)
 
+# --- A unit going under the water (Track BB, 2026-10-11; Alex, decision ship-sinks) ---------------------------------------------------
+# THE DOWN FLASH of a sea unit that sinks: the flash every destroyed unit gets (the ruin's own flash burst), with none of the ruin's smoke burst,
+# column, smouldering or ruin on the ground: Alex wants no damage shown, the ship just goes down (scripts/ui/unit_sunk.gd).
+func down_flash(unit_id: String, world_pos: Vector2, t: float, size_m: float) -> void:
+	var fl := FxData.grp(ruin_o, "flash")
+	var rng := Mulberry32.new(_seed_call("down_flash", unit_id, t))
+	bursts.append({
+		"id": _new_id(), "unit": unit_id, "phase": "tower", "grp": "ruin", "hit": false, "t0": t, "pos": world_pos, "h": 0.0,
+		"size_m": size_m, "seed": int(rng.next() * 2147483647.0), "end_s": FxData.f(fl, "end_s"),
+		"radius_m": FxData.f(fl, "radius_frac") * size_m,
+	})
+
+# The splash where a unit goes under (a ship at the moment it goes down, a plane at the surface): rings that widen and fade (fx_layer draws them).
+func add_splash(unit_id: String, world_pos: Vector2, t: float, size_m: float) -> void:
+	splashes.append({"id": _new_id(), "unit": unit_id, "pos": world_pos, "t0": t, "size_m": size_m})
+
+# How many splashes are still moving at game time t (the layer redraws while there are).
+func splashes_live(t: float, life_s: float) -> int:
+	var n := 0
+	for s: Dictionary in splashes:
+		if t >= float(s["t0"]) and t <= float(s["t0"]) + life_s:
+			n += 1
+	return n
+
 # What the flash and the smoke of a destroyed unit are sized by: its size_m, except the military complex's (mission 2, Track M2U): an
 # 80 m compound is not blown up as one 80 m ball, the blast is its main building's (data/ui/unit_art_mission2.json
 # military_complex.ruin.effects_size_frac, PROPOSED).
 func _effects_size(kind: String, size_m: float) -> float:
 	if kind == "military_complex":
 		return size_m * float(load("res://scripts/ui/unit_marker_art_static.gd").mc_effects_frac())
+	var boats = load("res://scripts/ui/unit_marker_art_boats.gd")   # Track BB: a bridge's and a wrecked boat's blast are a share of their size_m too
+	if boats.has_ruin(kind):
+		return size_m * float(boats.effects_frac(kind))
 	return size_m
 
 # The ruin alone (a game in progress put back): the same record ruin() makes from `seed_v`; returns it.

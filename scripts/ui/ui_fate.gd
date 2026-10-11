@@ -65,6 +65,8 @@ static func alive_until(u: Object) -> float:
 		Unit.FATE_EXPLODED, Unit.FATE_DESTROYED:
 			return float(u.get("down_at")) if went_down_this_turn(u) else 0.0
 		Unit.FATE_CRASHED:
+			if under_water(u):
+				return INF   # on the water's floor: it stays on the map, under the wash (Track BB, decision ship-sinks)
 			var c := crash_t(u)
 			return c if is_finite(c) else 0.0
 	return INF
@@ -78,12 +80,20 @@ static func falls_from(u: Object) -> float:
 		return INF
 	return float(u.get("down_at")) if went_down_this_turn(u) else 0.0
 
+# Whether the unit lies BELOW the water's surface: a ship that sank, a plane that came down over water (Track BB, decision ship-sinks). Its fall
+# height is negative: the sim lowers it through the water to the floor (World._fall_step), and it stays there (fate crashed, height = the floor).
+static func under_water(u: Object) -> bool:
+	if u == null:
+		return false
+	var h: Variant = u.get("fall_height_m")
+	return h != null and is_finite(float(h)) and float(h) < 0.0
+
 # Whether the unit is drawn as a plane at `t` seconds into the turn. `playing` false: the
-# state after the turn (an exploded or crashed unit is not a plane any more).
+# state after the turn (an exploded or crashed unit is not a plane any more -- a crash on the water's floor is still there, under the wash).
 static func on_map(u: Object, t: float, playing: bool) -> bool:
 	if not playing:
 		var f := fate(u)
-		return f != Unit.FATE_EXPLODED and f != Unit.FATE_CRASHED and f != Unit.FATE_DESTROYED
+		return f != Unit.FATE_EXPLODED and (f != Unit.FATE_CRASHED or under_water(u)) and f != Unit.FATE_DESTROYED
 	return t < alive_until(u)
 
 # Whether the unit is falling out of control at `t` (or, not playing, right now).

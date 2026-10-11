@@ -118,6 +118,34 @@
     "wash": { "title": "Pale wash trail", "about": "A tapering trail of the paper tone behind the stern, ragged-edged, laid in six thin washes that fade out, a pale sliver along each side of the bow, and a broken ink line on each outer edge.", "layers": 6, "alpha": 0.46, "edge_alpha": 0.26 }
   },
 
+  "game": {
+    "_about": "THE BOATS IN THE GAME (Track BB, 2026-10-11; scripts/ui/unit_marker_art_boats.gd draws them). ALEX'S: the patrol boat is P1, the Cutter, and the supply boat is S2, the Barge with deck cargo (decision boat-looks), the wake is the ink V (decision boat-wake), the boats are drawn at the planes' scale and are real units with patrols whose guns fire (decision water-layer). EVERYTHING ELSE HERE IS PROPOSED by Track BB: how a boat's shadow is made from its parts' heights, and the wreck.",
+    "looks": { "patrol": "p1", "supply": "s2", "decision": "boat-looks" },
+    "wake": { "value": "ink_v", "decision": "boat-wake", "_reason": "Alex: 'Ink V is the best'. The wake is baked on a texture of its own and shown only while the boat is under way (ui.json unit_art.ship.underway_mps), as the cruiser's is" },
+    "shadow": {
+      "_about": "A boat is baked nose up and turned by the marker like a plane, so its shadow cannot be baked in the screen's frame; instead the parts are sorted by height into three masks and each is drawn as stepped copies of itself at heights between its base and top (the prototype's own way of throwing a prop's shadow: three stepped copies), each copy lifted away from the sun by the marker layer's cast rule (height x the sun's length x the drawn scale). The copies of one mask overlap into one prism; the three masks join in the layer's shadow group, which composites once, so no overlap darkens twice.",
+      "hull_class_top_above_freeboard_m": { "value": 1.8, "_proposed": true, "_reason": "parts whose top is under the freeboard plus this (the hull, gun mounts, hatch coamings, deck cargo) are the LOW mask" },
+      "works_class_top_above_freeboard_m": { "value": 5.2, "_proposed": true, "_reason": "parts under the freeboard plus this (the bridge house, the funnel, a cargo stack) are the MIDDLE mask; taller (a mast, a derrick) the TALL one" },
+      "copies": { "value": [2, 3, 4], "_proposed": true, "_reason": "stepped copies of the low, the middle and the tall mask: enough that the sweep of a part reads as one prism at the drawn scale (a copy every 1.2 m of height is under a pixel apart at 4 px/m x 0.97)" }
+    },
+    "sunk": {
+      "_about": "A DESTROYED SEA UNIT (Alex, decision ship-sinks, 2026-10-11: 'For destroyed ships, ideally we just sink them to the bottom.', 'We don't even need to show damage if we just height-appropriately flood them with water.', 'Just like a downed plane it's altitude should decrease until it hits the floor. It just does so through the water.', 'In fact we could have planes do the same if they crash there.'). The sim does the falling (data/sim/combat.json sink_descent_mps; World._fall_step): a destroyed ship's height goes from 0 m at the surface to minus the water's depth, a plane's from the air through 0 m to the same floor. THE DRAWING (scripts/ui/unit_sunk.gd) is the unit's own intact art under the water layer's own depth wash for the metres of water above it: no wash at the surface, nearly the water's colour in deep water, the hull showing through in the shallows; no shadow and no wake below the surface; no damage drawn. EVERYTHING BELOW IS PROPOSED by Track BB (Alex's words stop at 'sink them to the bottom' and 'flood them with water'). The wreck I first proposed (a hull broken in two, charred decks, drifting planks) is GONE with its keys.",
+      "extinction_m": { "value": 10, "_proposed": true, "_reason": "metres of water over a sunk unit that wash it out to 63 percent (the wash is 1 - exp(-metres above / this)): 3 m (the shallows) 26 percent, 6 m 45, 10 m 63, 18 m 83, 30 m (deep) 95 percent. The colour it fades toward is the map's own step colour at the unit's floor (shallows, shelf or deep), so in deep water a hull on the floor is all but the water's own colour and in the shallows it shows through" },
+      "effects_size_frac": { "value": 0.7, "_proposed": true, "_reason": "the down flash (the standard flash every destroyed unit gets; no smoke column for a sinking ship, no damage drawn) is sized by this share of the unit's size_m, so a 27 m cutter's is a 19 m flash and not a 27 m one" },
+      "splash": {
+        "_about": "THE SPLASH where a ship goes under or a plane enters the water (PROPOSED): a few rings in the ink, widening and fading, drawn on the water under the unit. The ink is the effects palette's own (data/fx/fx.json roles: ink); no new colour",
+        "duration_s": { "value": 2.6, "_proposed": true, "_reason": "how long the rings last" },
+        "rings": { "value": 3, "_proposed": true, "_reason": "rings, each starting a little after the last" },
+        "stagger_s": { "value": 0.3, "_proposed": true, "_reason": "the delay between one ring's start and the next's" },
+        "radius_start_m": { "value": 2.0, "_proposed": true, "_reason": "a ring's radius when it starts, metres of the drawn scale (the planes' rule, like the units)" },
+        "radius_end_frac": { "value": 0.8, "_proposed": true, "_reason": "a ring's radius at the end, a share of the unit's size_m (a 27 m cutter's ring ends 21.6 m out; a 9 m fighter's 7 m)" },
+        "alpha": { "value": 0.55, "_proposed": true, "_reason": "the ink's alpha at the start of a ring; it fades to nothing over the ring's life" },
+        "line_px": { "value": 1.1, "_proposed": true, "_reason": "the ring's line width on the screen" },
+        "squash": { "value": 0.8, "_proposed": true, "_reason": "the rings are ellipses, this much shorter across the screen than along it, so they sit on the water rather than stand off it" }
+      }
+    }
+  },
+
   "roles": {
     "_about": "Every colour the boats draw, as a role (base, shade, toward, t, alpha). Hue is reserved for paper, ink, shadow and the side accents; lightness is the ramp off paper; material is linework. The only role that is not on that rule is the PLACEHOLDER water (below).",
     "hull_patrol": { "base": "roof_lit" },

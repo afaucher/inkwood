@@ -57,6 +57,7 @@ extends RefCounted
 const UiFate = preload("res://scripts/ui/ui_fate.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
 const World = preload("res://scripts/sim/world.gd")
+const FxTracer = preload("res://scripts/fx/fx_tracer.gd")   # (Track TR) FxTracer.feed_event: a fire event becomes the layer's tracer() call
 
 var world: Object = null
 var fx: Variant = null              # the FxLayer (or a fake with its calls)
@@ -147,7 +148,8 @@ func on_event(ev: Dictionary) -> void:
 		"fire":
 			if marks != null:
 				marks.add_shot(ev, game_t)
-			_flak(ev, game_t)
+			if not _tracer(ev, game_t):   # a machine gun draws a tracer (Track TR), anything else from the ground at a plane is flak
+				_flak(ev, game_t)
 		"bomb_release":
 			_bomb_drops(ev, turn_no)
 		"bomb_impact":
@@ -168,16 +170,25 @@ func on_event(ev: Dictionary) -> void:
 					var s: Dictionary = world.sample(id, float(ev.get("t", 0.0)), "history")
 					fx.explode_midair(id, Vector2(float(ev.get("x", s.get("x", 0.0))), float(ev.get("y", s.get("y", 0.0)))),
 						marker_layer.height_above_ground(s), game_t, float(u.def.size_m), float(s.get("heading", NAN)))
+			elif fate == Unit.FATE_OUT_OF_CONTROL and str(u.def.domain) == "sea":
+				_sinks(id, u, ev, game_t)   # a ship goes down: the standard flash, then it sinks (no smoke, no damage drawn)
 			elif fate == Unit.FATE_OUT_OF_CONTROL:
 				_falling[id] = true
 				_ride(id, float(ev.get("t", 0.0)), game_t)
 			elif fate == Unit.FATE_DESTROYED:
 				_destroyed(id, u, ev, game_t)
+		"splash":
+			# a ship at the moment it goes down, a plane at the surface: rings in the ink where it goes under (Track BB, decision ship-sinks)
+			if world.units.has(id) and _may_show(id) and fx.has_method("splash"):
+				fx.splash(id, Vector2(float(ev.get("x", 0.0)), float(ev.get("y", 0.0))), game_t, float(world.units[id].def.size_m))
 		"crash":
 			if not world.units.has(id):
 				return
 			_falling.erase(id)
 			var u2 = world.units[id]
+			if UiFate.under_water(u2):
+				_scarred[id] = true   # on the water's floor: no ground crash, no smoke, no scar -- the unit lies there under the wash
+				return
 			var s2: Dictionary = world.sample(id, float(ev.get("t", 0.0)), "history")
 			var pos := Vector2(float(ev.get("x", s2.get("x", 0.0))), float(ev.get("y", s2.get("y", 0.0))))
 			var hd := float(s2.get("heading", NAN))
@@ -188,6 +199,48 @@ func on_event(ev: Dictionary) -> void:
 			_scarred[id] = true
 
 # --- The strike: flak, bombs, a ruin -----------------------------------------------------------
+
+# MACHINE-GUN TRACERS (Track TR, 2026-10-11, PROPOSED; decision tracers-mg; scripts/fx/fx_tracer.gd, data/fx/fx.json tracers). A "fire" event of a
+# weapon in the effects data's tracer list draws a tracer from the gun toward the target: tracer(shot id, weapon, muzzle, centre, aim, aim size,
+# t, hit, accent, draw_k, seen_shooter, seen_target) on the layer, at the event's game time. centre = the shooter's centre at the event
+# (World.sample), the aim size = the target's size_m x its marker's draw scale, the accent = the shooter's side accent (a palette name),
+# seen_* = whether the player can see each unit (the data's fog policy decides). Returns true when the weapon is a tracer weapon, whether or
+# not one was drawn (out of sight it is still no flak); false when it is not, or the layer has no tracers (a fake without them is fine).
+func _tracer(ev: Dictionary, game_t: float) -> bool:
+	if fx == null or not fx.has_method("tracer_weapon") or not bool(fx.tracer_weapon(str(ev.get("weapon", "")))):
+		return false
+	var sid := str(ev.get("unit", ""))
+	var tid := str(ev.get("target", ""))
+	if not world.units.has(sid) or not world.units.has(tid):
+		return true
+	var su = world.units[sid]
+	var tu = world.units[tid]
+	var s: Dictionary = world.sample(sid, float(ev.get("t", 0.0)), "history")
+	var centre := Vector2(float(s["x"]), float(s["y"])) if not s.is_empty() else Vector2(float(ev.get("x", 0.0)), float(ev.get("y", 0.0)))
+	var accent_v: Variant = style.lookup("sides.accent." + str(su.side))
+	var seen: Callable = marker_layer.unit_visible
+	var seen_shooter: bool = not seen.is_valid() or bool(seen.call(sid))
+	var seen_target: bool = not seen.is_valid() or bool(seen.call(tid))
+	if style.flag("combat.fx.smoke_when_hidden"):
+		seen_shooter = true
+		seen_target = true
+	var lead := Vector2.ZERO   # the target flies on while the round does: aim where it will be when the round arrives
+	if fx.has_method("tracer_flight_s"):
+		var t_ev := float(ev.get("t", 0.0))
+		var p0: Dictionary = world.sample(tid, t_ev, "history")
+		var p1: Dictionary = world.sample(tid, t_ev + float(fx.tracer_flight_s()), "history")
+		if not p0.is_empty() and not p1.is_empty():
+			lead = Vector2(float(p1["x"]) - float(p0["x"]), float(p1["y"]) - float(p0["y"]))
+	FxTracer.feed_event(fx, ev, game_t, centre, float(tu.def.size_m) * _draw_scale(tid), str(accent_v) if accent_v is String else "", _draw_scale(sid), seen_shooter, seen_target, lead)
+	return true
+
+# A unit's marker draw scale (1 for a plane, more for what is drawn larger), 1 without a marker.
+func _draw_scale(id: String) -> float:
+	if marker_layer != null and marker_layer.has_method("marker"):
+		var m: Object = marker_layer.marker(id)
+		if m != null:
+			return float(m.draw_scale)
+	return 1.0
 
 # A ground unit's shot at an aircraft: a burst of flak beside it (or on it, when the roll hit).
 func _flak(ev: Dictionary, game_t: float) -> void:
@@ -302,6 +355,16 @@ func _destroyed(id: String, u: Object, ev: Dictionary, game_t: float) -> void:
 		fx.add_ruin(id, pos, game_t, kind, float(u.def.size_m), float(u.heading), _scar_seed(id))
 	_scarred[id] = true
 
+# A SEA UNIT GOING DOWN (Track BB, decision ship-sinks): the flash every destroyed unit gets, sized by data game.sunk.effects_size_frac, and
+# nothing else of the unit's own: no smoke column, no ruin, no scar. The sim lowers it through the water and the marker draws it under the
+# water layer's wash (unit_sunk.gd).
+func _sinks(id: String, u: Object, ev: Dictionary, game_t: float) -> void:
+	if not _may_show(id) or not fx.has_method("down_flash"):
+		return
+	var boats = load("res://scripts/ui/unit_marker_art_boats.gd")
+	var pos := Vector2(float(ev.get("x", u.x)), float(ev.get("y", u.y)))
+	fx.down_flash(id, pos, game_t, float(u.def.size_m) * float(boats.effects_frac("patrol_boat")))
+
 # --- Smoke and the fall -----------------------------------------------------------------------
 
 # Damage smoke along the stretch flown from the last call to `to_game_t`, at the unit's
@@ -327,8 +390,8 @@ func _ride(id: String, t: float, game_t: float) -> void:
 		return
 	var u = world.units[id]
 	var s: Dictionary = world.sample(id, t, "history")
-	if s.is_empty():
-		return
+	if s.is_empty() or float(s.get("height_m", 0.0)) < 0.0:
+		return   # (under the water the fall has no smoke)
 	fx.falling(id, Vector2(float(s["x"]), float(s["y"])), marker_layer.fall_height_above_ground(s), game_t,
 		float(u.def.size_m), float(s["heading"]))
 
@@ -361,8 +424,8 @@ func restore_wrecks(playing: bool, now_game_t: float, clear: bool = false) -> in
 			_scarred[id] = true
 			n += 1
 			continue
-		if UiFate.fate(u) != Unit.FATE_CRASHED or bool(_scarred.get(id, false)):
-			continue
+		if UiFate.fate(u) != Unit.FATE_CRASHED or bool(_scarred.get(id, false)) or UiFate.under_water(u):
+			continue   # (a unit on the water's floor leaves no scar: it lies there under the wash)
 		if playing and UiFate.crash_t(u) > 0.0:
 			continue
 		fx.add_scar(id, Vector2(float(u.x), float(u.y)), now_game_t - float(style.num("combat.fx.restore_age_s")),

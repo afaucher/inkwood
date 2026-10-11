@@ -1858,15 +1858,19 @@
         "height": "falls from the surface (0 m) to the floor (minus the water depth), like a downed plane's fall",
         "cover": "the water layer's depth wash for the metres of water above it",
         "damage": "none",
-        "planes": "a plane whose fall reaches the water keeps falling through it to the floor"
+        "planes": "a plane whose fall reaches the water keeps falling through it to the floor",
+        "sink_rate": "3 m/s (PROPOSED; data/sim/combat.json sink_descent_mps)",
+        "wash": "1 - exp(-metres / extinction_m), extinction_m 10 m (PROPOSED; data/world/boats.json game.sunk)"
       },
       "applied_to": [
         "scripts/sim/world.gd (the fall)",
         "scripts/sim/combat_resolver.gd (a sea unit's fate)",
         "data/sim/combat.json (the sink rate)",
         "scripts/ui/unit_marker_art_boats.gd (the sunk hull)",
-        "data/world/boats.json game.wreck",
-        "scripts/tests/test_boats_live.gd"
+        "data/world/boats.json game.sunk",
+        "scripts/tests/test_boats_live.gd",
+        "scripts/ui/unit_sunk.gd (the sunk picture: kind, position, heading, depth)",
+        "scripts/tests/test_sinking.gd"
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'For destroyed ships, ideally we just sink them to the bottom.' Then: 'We don't even need to show damage if we just height-appropriately flood them with water.' Then: 'Just like a downed plane it's altitude should decrease until it hits the floor. It just does so through the water.' And: 'In fact we could have planes do the same if they crash there.' PROPOSED (not Alex's): the sink rate; a splash ring in the water's ink where it goes under; the standard down flash stays and the ground crash's smoke is not drawn over water; it applies to every sea unit (cutter, barge, cruiser). The bridge's ruin is unchanged."
@@ -1974,10 +1978,33 @@
         "revisit": "other direct-fire weapons, like the tank's gun"
       },
       "applied_to": [
-        "data/fx/fx.json tracers"
+        "data/fx/fx.json tracers.weapons (wing_guns, nose_gun, dorsal_turret, tail_turret, rear_gunner, aa_guns; PROPOSED list)"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. The tracers' look is still open (variants/tracers/)."
+      "notes": "Alex: 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. The tracers' look is still open (variants/tracers/). PROPOSED: aa_guns is also the cruiser's and the mobile AA's gun, so they draw tracers instead of flak puffs; a tracer shows only when its shooter is seen."
+    },
+    {
+      "id": "tracers-look",
+      "date": "2026-10-11",
+      "area": "Effects",
+      "question": "How does a machine-gun tracer look (variants/tracers/)?",
+      "board": "variants/tracers/",
+      "options": [
+        "T1 ink dashes on a paper halo",
+        "T2 a tapered light streak with an ink edge",
+        "T3 the streak in the shooter's side colour",
+        "T4 bunches of ink dots",
+        "T5 an ink streak with a dot for a hit and a tick for a miss"
+      ],
+      "chosen": null,
+      "parameters": {
+        "working_default": "T2 (PROPOSED)"
+      },
+      "applied_to": [
+        "data/fx/fx.json working_default.tracers"
+      ],
+      "status": "open",
+      "notes": "Alex asked for tracers in the second playtest; the look is open. T2 is the working default so the next playtest has them."
     }
   ]
 }

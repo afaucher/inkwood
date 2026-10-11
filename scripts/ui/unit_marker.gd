@@ -21,6 +21,7 @@ extends Node2D
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UnitStandout = preload("res://scripts/ui/unit_standout.gd")
+const UnitSunk = preload("res://scripts/ui/unit_sunk.gd")
 
 var unit_id: String = ""
 var silhouette: String = ""
@@ -40,6 +41,15 @@ var draw_scale: float = 1.0
 # a tank, data marker.static_scale for a static unit (the tower, a battery: Track U3), so the target and
 # the flak read at the planning zoom. draw_scale carries it (and the stand-out's, for an own plane).
 var base_scale: float = 1.0
+# DRAWN AT THE MAP'S SCALE (Track BB, the bridge): true makes the marker's drawn scale exactly the map's (k = 1, whatever the planes' rule
+# is at this zoom), by keeping base_scale and draw_scale at 1 / marker.true_scale every pose. Set by the layer for a silhouette that
+# UnitMarkerArt.is_map_scale names.
+var map_scale: bool = false
+# BELOW THE WATER'S SURFACE (Track BB, decision ship-sinks): a unit that has gone under is drawn intact under the water layer's own depth
+# wash (UnitSunk): `sunk_amount` of the way to `sunk_color` (the map's step colour at its floor), 0 at or above the surface. Set by the layer
+# each pose (set_sunk); a unit that is under has no shadow and no wake.
+var sunk_amount: float = 0.0
+var sunk_color := Color.WHITE
 var ring: Dictionary = {}
 var _shapes: Array = []        # UnitStandout.Shape nodes, in the layer's under node
 var _under_parent: Node = null
@@ -51,6 +61,9 @@ var plane: Sprite2D
 var wake: Sprite2D = null
 var underway: bool = false
 var shadow: Sprite2D           # lives in the layer's shadow group, not under this node
+# The extra shadow copies of a boat's parts (Art.shadow_parts; Track BB), in the same group as `shadow`.
+var _shadow_parent: Node = null
+var _part_sprites: Array = []
 
 var screen_ppm: float = 1.0    # the host's px per metre where the unit is
 var screen_heading: float = 0.0
@@ -68,6 +81,7 @@ var _fallback_ink := Color.BLACK
 func setup(style: RefCounted, id: String, silhouette_id: String, size: float, side_accent: Color, shadow_parent: Node, under_parent: Node = null) -> void:
 	_style = style as UiStyle
 	_under_parent = under_parent
+	_shadow_parent = shadow_parent
 	unit_id = id
 	silhouette = silhouette_id
 	size_m = size
@@ -89,6 +103,10 @@ func setup(style: RefCounted, id: String, silhouette_id: String, size: float, si
 func _exit_tree() -> void:
 	if is_instance_valid(shadow):
 		shadow.queue_free()
+	for s: Variant in _part_sprites:
+		if is_instance_valid(s):
+			(s as Node).queue_free()
+	_part_sprites.clear()
 	_clear_shapes()
 
 # Applies a UnitStandout spec (parse()): builds or drops the shapes under the
@@ -136,6 +154,9 @@ func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_off
 	screen_heading = heading_screen
 	wobble = wobble_rad
 	shadow_offset = shadow_offset_px
+	if map_scale:
+		base_scale = 1.0 / maxf(_style.num("marker.true_scale"), 1e-6)
+		draw_scale = base_scale
 	var k: float = _style.num("marker.true_scale") * draw_scale
 	# The art is baked for ppm x true_scale (x the stand-out scale, 1.0 unless
 	# "larger" is on), so a change of ANY of them re-checks it
@@ -157,19 +178,27 @@ func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_off
 		plane.offset = -art.origin
 		plane.rotation = sprite_rot
 		plane.scale = sc
+		UnitSunk.apply(plane, sunk_color, sunk_amount)
 		shadow.texture = art.mask
 		shadow.offset = -art.origin
 		shadow.rotation = sprite_rot
 		shadow.scale = sc
 		shadow.position = screen_pos + shadow_offset_px
-		shadow.visible = visible
+		shadow.visible = visible and sunk_amount <= 0.0   # (under the water it casts none)
 		_pose_wake(sc, sprite_rot)
+		_pose_shadow_parts(sc, sprite_rot, screen_pos, shadow_offset_px)
 	else:
 		shadow.visible = false
+		_pose_shadow_parts(Vector2.ONE, 0.0, screen_pos, shadow_offset_px)
 		if wake != null:
 			wake.visible = false
 	_pose_shapes()
 	queue_redraw()
+
+# The layer tells the marker how far under the water it lies: `amount` of the way to the water's `color` (UnitSunk.wash), 0 at or above the surface.
+func set_sunk(color: Color, amount: float) -> void:
+	sunk_color = color
+	sunk_amount = amount
 
 # The wake sprite of a ship's art, posed as the plane is, shown while the ship is under way.
 func _pose_wake(sc: Vector2, sprite_rot: float) -> void:
@@ -187,12 +216,43 @@ func _pose_wake(sc: Vector2, sprite_rot: float) -> void:
 	wake.offset = -art.wake_origin
 	wake.rotation = sprite_rot
 	wake.scale = sc
-	wake.visible = underway
+	wake.visible = underway and sunk_amount <= 0.0
+
+# A boat's extra shadow copies (Art.shadow_parts, Track BB): one sprite per copy, in the layer's shadow group, drawn like the marker's own
+# shadow but lifted by its own height: the layer's offset is for the art's cast_height_m, so a copy at h metres is that x h / cast_height_m.
+func _pose_shadow_parts(sc: Vector2, sprite_rot: float, screen_pos: Vector2, off: Vector2) -> void:
+	var copies: Array = []
+	if art != null and art.texture != null and art.cast_height_m > 0.0 and visible and sunk_amount <= 0.0:
+		for part: Dictionary in art.shadow_parts:
+			for h: Variant in (part["heights"] as Array):
+				copies.append({"tex": part["tex"], "h": float(h)})
+	while _part_sprites.size() < copies.size() and _shadow_parent != null:
+		var spr := Sprite2D.new()
+		spr.centered = false
+		spr.name = "ShadowPart_%s_%d" % [unit_id, _part_sprites.size()]
+		spr.modulate = shadow.modulate
+		_shadow_parent.add_child(spr)
+		_part_sprites.append(spr)
+	for i in _part_sprites.size():
+		var spr := _part_sprites[i] as Sprite2D
+		if i >= copies.size():
+			spr.visible = false
+			continue
+		var c: Dictionary = copies[i]
+		spr.texture = c["tex"]
+		spr.offset = -art.origin
+		spr.rotation = sprite_rot
+		spr.scale = sc
+		spr.position = screen_pos + off * (float(c["h"]) / art.cast_height_m)
+		spr.visible = true
 
 # Hides (or shows again) the stand-out shapes with the marker: a marker the layer hides
 # (fog, a unit that exploded) is not posed any more, so its shapes follow its visibility here.
 func refresh_shapes() -> void:
 	_pose_shapes()
+	if not visible:
+		for s: Variant in _part_sprites:
+			(s as Sprite2D).visible = false
 
 # Re-bake only when the host's scale has drifted past the data's ratio.
 func _ensure_art() -> void:

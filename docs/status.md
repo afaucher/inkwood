@@ -9,8 +9,6 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| Draw the boats and the bridge in the game (item 1 below), and sinking (decision ship-sinks: a destroyed ship, and a plane that comes down over water, fall through the water to the floor) | lead session (builder) | scripts/ui/unit_marker_art*.gd (boat and bridge dispatch only), new scripts/ui/unit_marker_art_boats.gd, scripts/fx/ (the bridge's ruin, the splash), data/ui/ui.json unit_art keys; for sinking: the fall functions in scripts/sim/world.gd, the sea-unit fate in scripts/sim/combat_resolver.gd, sink keys in data/sim/combat.json | 2026-10-11 |
-| Machine-gun tracers: a board and a working default (proposed) | lead session (builder TR) | new scripts/fx/fx_tracer*.gd and its hook in fx_layer.gd/fx_field.gd; data/fx/fx.json tracers; variants/tracers/; scripts/tests/test_tracers.gd | 2026-10-11 |
 | Board: the range-of-motion indicator for every unit type (no live change until Alex picks) | lead session (builder BM) | variants/motion-range/; scripts/ui/boards/motion_range_board_shot.gd; a mode switch in the fan's drawing in scripts/ui/motion_planner.gd (today's look the default); data/ui/ui.json planner.fan keys | 2026-10-11 |
 | Board: shadows from the time of day (no live change until Alex picks) | lead session (builder BS) | variants/sun-time/; a new board shot script; the sun's direction and length in data and their readers (ui_style.gd, fx_style.gd, scripts/render/ink_structs.gd shadow_dir), today's sun the default | 2026-10-11 |
 | Forest fire (decision forest-fire): the mechanic has landed (below); next the board for a burning grove and a burnt-out trunk, then playtesting in Suppress | fire session (nice-dewdney worktree) | new data/sim/fire.json, scripts/sim/fire*.gd, scripts/tests/test_fire*.gd; the fire step and its net state in scripts/sim/world.gd (and the snapshot in scripts/net/world_sync.gd); burnt cover in scripts/sim/concealment.gd, data/sim/concealment.json; smoke denies tracking in scripts/sim/spotting.gd, bombs.gd (followed aim), scripts/ui/ui_target.gd and the enemy-click lines of scripts/ui/unit_ui.gd; new scripts/fx/fx_fire*.gd and its hook in fx_field.gd/fx_layer.gd; per-chunk rebake in scripts/render/map_view.gd, chunk_terrain_provider.gd; data/scenarios/suppress.json (fire on); a fire knob in scripts/debug/debug_settings.gd | 2026-10-11 |
@@ -19,18 +17,11 @@ Decisions and open questions live in the Decision Ledger
 
 ## Next, free to take
 
-1. **Draw the boats and the bridge in the game**, replacing the stand-in arrows:
-   the P1 cutter and S2 barge with the ink V wake at the planes' scale, the stone
-   arch with a flat deck spanning the river at the road, and its ruin. The art
-   already exists as board code: `scripts/render/boat_art.gd`, `bridge_art.gd`,
-   `data/world/boats.json`, `bridges.json` (decisions boat-looks, boat-wake,
-   bridge-look). Wire them into the marker layer (`scripts/ui/unit_marker_art*.gd`)
-   and the effects layer's ruin.
-2. **A playtest build** with Strike, Suppress and Hold the bridge.
+1. **A playtest build** with Strike, Suppress and Hold the bridge.
    build.ps1 closes a running game: ask Alex first.
-3. **Terrain variety board** (decision water-layer): beaches, coastal cliffs, marsh,
+2. **Terrain variety board** (decision water-layer): beaches, coastal cliffs, marsh,
    rock, orchards, wood density.
-4. **Wreck litter board** (decision wreck-litter, open): sunken boats and planes in the
+3. **Wreck litter board** (decision wreck-litter, open): sunken boats and planes in the
    water as environment, for character. After sinking lands: reuse the sunk-hull art,
    placed by seed; the board picks how many, where and which kinds.
 
@@ -52,6 +43,12 @@ Decisions and open questions live in the Decision Ledger
 
 ## Recently landed
 
+- 2026-10-11: the boats and the bridge are drawn in the game (P1 cutter, S2 barge, ink V wake, the flat-deck arch and its ruin;
+  `scripts/ui/unit_marker_art_boats.gd`), and sinking (decision ship-sinks): a destroyed ship, and a plane that comes down over water,
+  falls through the water to the floor at 3 m/s (proposed), drawn intact under the water's own depth wash (`scripts/ui/unit_sunk.gd`),
+  with a splash of ink rings; no damage drawn (test_sinking, test_boats_live).
+- 2026-10-11: machine-gun tracers (decision tracers-mg: machine guns only, for now; the weapon list is data). The look is a board,
+  variants/tracers/ (decision tracers-look, open); T2, a light streak with an ink edge, is the working default (test_tracers).
 - 2026-10-11: the second playtest's fixes (decision playtest-2). Every moving unit starts with a tail, as if it had flown on at its normal speed
   (`scripts/ui/wingtip_trails.gd` start_tail_record; visual only, from the initial state; data `marker.trails.start_tail`, proposed). The side
   badge (the red/blue roundel and its tie) is off for every unit (Alex: 'No badge on units. We can figure something else out of we need it.';
