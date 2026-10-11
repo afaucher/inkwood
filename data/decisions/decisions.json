@@ -2076,6 +2076,37 @@
       ],
       "status": "chosen by Alex",
       "notes": "The lead asked: 'should bombs aim at the last place you saw any lost target? ... a target lost in fog or woods is still followed. I recommend yes, to match the cruiser's guns.' Alex: '1. We should do last place for fog. Keep trees as they are for now.'"
+    },
+    {
+      "id": "coastal-wind",
+      "date": "2026-10-11",
+      "area": "Environment, Effects",
+      "question": "A slight wind or variety over time, after the natural pattern near a coast (Alex: 'We also need a slight wind or variety over time. What is the natural pattern near the coast?')",
+      "board": "none (said in chat, on the lead's four proposals; the coastal pattern from general meteorology: a sea breeze onshore by day, a weaker land breeze offshore at night, calms at dawn and dusk, gusts and direction wobble on top)",
+      "options": [
+        "1 the breeze from the mission's time of day and where the sea lies: by day a gentle onshore wind of 2-5 m/s from the sea toward the battle area; at night a lighter offshore wind of 1-3 m/s; at dawn and dusk near calm with a wandering direction",
+        "2 variety over time: the direction wanders +/-15 degrees and the speed +/-30% over a few turns, with short gusts on top, seeded so every player sees the same wind",
+        "3 what it moves: all smoke drifts with the one wind (fire, damaged planes, wrecks); fire spreads further downwind (45 m downwind, 20 m upwind instead of 30 m all round, the same 40%); the untrackable smoke zone moves with the smoke; planes and bombs not affected for now",
+        "4 the look board for the burning grove and the trunks after the wind is in"
+      ],
+      "chosen": "1, 2 and 3: the wind comes from the mission's time of day and the coast (sea breeze by day, land breeze at night, near calm at dawn and dusk), wanders slowly with gusts on a seed every player shares, drifts all smoke, leans fire spread downwind and carries the untrackable smoke zone with it; planes and bombs are not affected for now. 4 (the look board) not answered yet",
+      "parameters": {
+        "day": "onshore, 2-5 m/s, from the sea toward the battle area",
+        "night": "offshore, 1-3 m/s",
+        "dawn_dusk": "near calm, wandering direction",
+        "wander": "direction +/-15 degrees and speed +/-30% over a few turns, plus short gusts; seeded (the same on every peer)",
+        "smoke": "all smoke drifts with the one wind: fire, damaged planes, wrecks",
+        "spread": "45 m downwind, 20 m upwind (30 m all round in a calm); the 40% at touching canopies stays",
+        "smoke_zone": "the untrackable zone moves with the drifting smoke",
+        "not_affected": "planes and bombs, for now",
+        "hour": "PROPOSED: the hour comes from the sun (scripts/world/sun.gd) when its mode is clock_at_start (decision sun-time); while the sun is 'fixed' (the default until the sun-time board is picked) the wind takes a mid-afternoon hour, the sea breeze",
+        "speeds_and_transitions": "PROPOSED: the hours of each regime and the blend between them, the wander's period, the gusts' size and length, how the spread reach scales with wind speed"
+      },
+      "applied_to": [
+        "to be built (track 'Forest fire'): data/sim/wind.json, scripts/sim/wind.gd, the fire's spread and smoke zone, the effects layer's smoke drift"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'We also need a slight wind or variety over time. What is the natural pattern near the coast?' The lead answered with the coastal breeze cycle (typical figures, not from a checked source) and noted that a mission is 2-3 minutes of game time (5 s turns), so the daily swing is set at the start from the time of day, as the sun is, and variety during a mission comes from gusts and slow wander. Alex: '1-3 looks good'."
     }
   ]
 }
