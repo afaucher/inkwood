@@ -1,0 +1,843 @@
+{
+  "id": "water",
+  "about": "Every frame of the board as its own PNG at native size (1280 x 720), in frames/: <option>_<subject>_<zoom>.png (zoom 035 is the planning zoom 0.35), the palette row's pal_<hue>_*.png, and the generator's overview_<seed>.png (one frame a seed, the whole 5 km map). board.png is the sheet of 1:1 crops of these.",
+  "frames": [
+    {
+      "file": "frames/A_coast_035.png",
+      "option": "A",
+      "subject": "coast",
+      "zoom": 0.35,
+      "focus_m": [
+        4058.0,
+        2600.0
+      ],
+      "title": "A  ·  Stepped wash, an ink line at each depth step  ·  coast  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/B_coast_035.png",
+      "option": "B",
+      "subject": "coast",
+      "zoom": 0.35,
+      "focus_m": [
+        4058.0,
+        2600.0
+      ],
+      "title": "B  ·  Stepped wash, no step lines, an inked shoreline  ·  coast  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/C_coast_035.png",
+      "option": "C",
+      "subject": "coast",
+      "zoom": 0.35,
+      "focus_m": [
+        4058.0,
+        2600.0
+      ],
+      "title": "C  ·  Stepped wash, a soft shore and a pale band on the land  ·  coast  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/D_coast_035.png",
+      "option": "D",
+      "subject": "coast",
+      "zoom": 0.35,
+      "focus_m": [
+        4058.0,
+        2600.0
+      ],
+      "title": "D  ·  Stepped wash, ink ripple lines along the shore  ·  coast  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/E_coast_035.png",
+      "option": "E",
+      "subject": "coast",
+      "zoom": 0.35,
+      "focus_m": [
+        4058.0,
+        2600.0
+      ],
+      "title": "E  ·  A smooth gradient (the reference's way), for comparison  ·  coast  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/F_coast_035.png",
+      "option": "F",
+      "subject": "coast",
+      "zoom": 0.35,
+      "focus_m": [
+        4058.0,
+        2600.0
+      ],
+      "title": "F  ·  Stepped wash, pale step edges and no ink on the water  ·  coast  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/A_coast_1.png",
+      "option": "A",
+      "subject": "coast",
+      "zoom": 1.0,
+      "focus_m": [
+        4058.0,
+        2600.0
+      ],
+      "title": "A  ·  Stepped wash, an ink line at each depth step  ·  coast  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/B_coast_1.png",
+      "option": "B",
+      "subject": "coast",
+      "zoom": 1.0,
+      "focus_m": [
+        4058.0,
+        2600.0
+      ],
+      "title": "B  ·  Stepped wash, no step lines, an inked shoreline  ·  coast  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/C_coast_1.png",
+      "option": "C",
+      "subject": "coast",
+      "zoom": 1.0,
+      "focus_m": [
+        4058.0,
+        2600.0
+      ],
+      "title": "C  ·  Stepped wash, a soft shore and a pale band on the land  ·  coast  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/D_coast_1.png",
+      "option": "D",
+      "subject": "coast",
+      "zoom": 1.0,
+      "focus_m": [
+        4058.0,
+        2600.0
+      ],
+      "title": "D  ·  Stepped wash, ink ripple lines along the shore  ·  coast  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/E_coast_1.png",
+      "option": "E",
+      "subject": "coast",
+      "zoom": 1.0,
+      "focus_m": [
+        4058.0,
+        2600.0
+      ],
+      "title": "E  ·  A smooth gradient (the reference's way), for comparison  ·  coast  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/F_coast_1.png",
+      "option": "F",
+      "subject": "coast",
+      "zoom": 1.0,
+      "focus_m": [
+        4058.0,
+        2600.0
+      ],
+      "title": "F  ·  Stepped wash, pale step edges and no ink on the water  ·  coast  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/A_river_035.png",
+      "option": "A",
+      "subject": "river",
+      "zoom": 0.35,
+      "focus_m": [
+        1728.8,
+        1292.2
+      ],
+      "title": "A  ·  Stepped wash, an ink line at each depth step  ·  river  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/B_river_035.png",
+      "option": "B",
+      "subject": "river",
+      "zoom": 0.35,
+      "focus_m": [
+        1728.8,
+        1292.2
+      ],
+      "title": "B  ·  Stepped wash, no step lines, an inked shoreline  ·  river  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/C_river_035.png",
+      "option": "C",
+      "subject": "river",
+      "zoom": 0.35,
+      "focus_m": [
+        1728.8,
+        1292.2
+      ],
+      "title": "C  ·  Stepped wash, a soft shore and a pale band on the land  ·  river  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/D_river_035.png",
+      "option": "D",
+      "subject": "river",
+      "zoom": 0.35,
+      "focus_m": [
+        1728.8,
+        1292.2
+      ],
+      "title": "D  ·  Stepped wash, ink ripple lines along the shore  ·  river  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/E_river_035.png",
+      "option": "E",
+      "subject": "river",
+      "zoom": 0.35,
+      "focus_m": [
+        1728.8,
+        1292.2
+      ],
+      "title": "E  ·  A smooth gradient (the reference's way), for comparison  ·  river  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/F_river_035.png",
+      "option": "F",
+      "subject": "river",
+      "zoom": 0.35,
+      "focus_m": [
+        1728.8,
+        1292.2
+      ],
+      "title": "F  ·  Stepped wash, pale step edges and no ink on the water  ·  river  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/A_river_1.png",
+      "option": "A",
+      "subject": "river",
+      "zoom": 1.0,
+      "focus_m": [
+        1457.5,
+        1184.4
+      ],
+      "title": "A  ·  Stepped wash, an ink line at each depth step  ·  river  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/B_river_1.png",
+      "option": "B",
+      "subject": "river",
+      "zoom": 1.0,
+      "focus_m": [
+        1457.5,
+        1184.4
+      ],
+      "title": "B  ·  Stepped wash, no step lines, an inked shoreline  ·  river  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/C_river_1.png",
+      "option": "C",
+      "subject": "river",
+      "zoom": 1.0,
+      "focus_m": [
+        1457.5,
+        1184.4
+      ],
+      "title": "C  ·  Stepped wash, a soft shore and a pale band on the land  ·  river  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/D_river_1.png",
+      "option": "D",
+      "subject": "river",
+      "zoom": 1.0,
+      "focus_m": [
+        1457.5,
+        1184.4
+      ],
+      "title": "D  ·  Stepped wash, ink ripple lines along the shore  ·  river  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/E_river_1.png",
+      "option": "E",
+      "subject": "river",
+      "zoom": 1.0,
+      "focus_m": [
+        1457.5,
+        1184.4
+      ],
+      "title": "E  ·  A smooth gradient (the reference's way), for comparison  ·  river  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/F_river_1.png",
+      "option": "F",
+      "subject": "river",
+      "zoom": 1.0,
+      "focus_m": [
+        1457.5,
+        1184.4
+      ],
+      "title": "F  ·  Stepped wash, pale step edges and no ink on the water  ·  river  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/A_shadows_035.png",
+      "option": "A",
+      "subject": "shadows",
+      "zoom": 0.35,
+      "focus_m": [
+        1449.3,
+        1171.3
+      ],
+      "title": "A  ·  Stepped wash, an ink line at each depth step  ·  shadows  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/B_shadows_035.png",
+      "option": "B",
+      "subject": "shadows",
+      "zoom": 0.35,
+      "focus_m": [
+        1449.3,
+        1171.3
+      ],
+      "title": "B  ·  Stepped wash, no step lines, an inked shoreline  ·  shadows  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/C_shadows_035.png",
+      "option": "C",
+      "subject": "shadows",
+      "zoom": 0.35,
+      "focus_m": [
+        1449.3,
+        1171.3
+      ],
+      "title": "C  ·  Stepped wash, a soft shore and a pale band on the land  ·  shadows  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/D_shadows_035.png",
+      "option": "D",
+      "subject": "shadows",
+      "zoom": 0.35,
+      "focus_m": [
+        1449.3,
+        1171.3
+      ],
+      "title": "D  ·  Stepped wash, ink ripple lines along the shore  ·  shadows  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/E_shadows_035.png",
+      "option": "E",
+      "subject": "shadows",
+      "zoom": 0.35,
+      "focus_m": [
+        1449.3,
+        1171.3
+      ],
+      "title": "E  ·  A smooth gradient (the reference's way), for comparison  ·  shadows  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/F_shadows_035.png",
+      "option": "F",
+      "subject": "shadows",
+      "zoom": 0.35,
+      "focus_m": [
+        1449.3,
+        1171.3
+      ],
+      "title": "F  ·  Stepped wash, pale step edges and no ink on the water  ·  shadows  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/A_shadows_1.png",
+      "option": "A",
+      "subject": "shadows",
+      "zoom": 1.0,
+      "focus_m": [
+        1449.3,
+        1171.3
+      ],
+      "title": "A  ·  Stepped wash, an ink line at each depth step  ·  shadows  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/B_shadows_1.png",
+      "option": "B",
+      "subject": "shadows",
+      "zoom": 1.0,
+      "focus_m": [
+        1449.3,
+        1171.3
+      ],
+      "title": "B  ·  Stepped wash, no step lines, an inked shoreline  ·  shadows  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/C_shadows_1.png",
+      "option": "C",
+      "subject": "shadows",
+      "zoom": 1.0,
+      "focus_m": [
+        1449.3,
+        1171.3
+      ],
+      "title": "C  ·  Stepped wash, a soft shore and a pale band on the land  ·  shadows  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/D_shadows_1.png",
+      "option": "D",
+      "subject": "shadows",
+      "zoom": 1.0,
+      "focus_m": [
+        1449.3,
+        1171.3
+      ],
+      "title": "D  ·  Stepped wash, ink ripple lines along the shore  ·  shadows  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/E_shadows_1.png",
+      "option": "E",
+      "subject": "shadows",
+      "zoom": 1.0,
+      "focus_m": [
+        1449.3,
+        1171.3
+      ],
+      "title": "E  ·  A smooth gradient (the reference's way), for comparison  ·  shadows  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/F_shadows_1.png",
+      "option": "F",
+      "subject": "shadows",
+      "zoom": 1.0,
+      "focus_m": [
+        1449.3,
+        1171.3
+      ],
+      "title": "F  ·  Stepped wash, pale step edges and no ink on the water  ·  shadows  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/A_markers_035.png",
+      "option": "A",
+      "subject": "markers",
+      "zoom": 0.35,
+      "focus_m": [
+        4122.0,
+        2600.0
+      ],
+      "title": "A  ·  Stepped wash, an ink line at each depth step  ·  markers  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/B_markers_035.png",
+      "option": "B",
+      "subject": "markers",
+      "zoom": 0.35,
+      "focus_m": [
+        4122.0,
+        2600.0
+      ],
+      "title": "B  ·  Stepped wash, no step lines, an inked shoreline  ·  markers  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/C_markers_035.png",
+      "option": "C",
+      "subject": "markers",
+      "zoom": 0.35,
+      "focus_m": [
+        4122.0,
+        2600.0
+      ],
+      "title": "C  ·  Stepped wash, a soft shore and a pale band on the land  ·  markers  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/D_markers_035.png",
+      "option": "D",
+      "subject": "markers",
+      "zoom": 0.35,
+      "focus_m": [
+        4122.0,
+        2600.0
+      ],
+      "title": "D  ·  Stepped wash, ink ripple lines along the shore  ·  markers  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/E_markers_035.png",
+      "option": "E",
+      "subject": "markers",
+      "zoom": 0.35,
+      "focus_m": [
+        4122.0,
+        2600.0
+      ],
+      "title": "E  ·  A smooth gradient (the reference's way), for comparison  ·  markers  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/F_markers_035.png",
+      "option": "F",
+      "subject": "markers",
+      "zoom": 0.35,
+      "focus_m": [
+        4122.0,
+        2600.0
+      ],
+      "title": "F  ·  Stepped wash, pale step edges and no ink on the water  ·  markers  ·  planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/A_markers_1.png",
+      "option": "A",
+      "subject": "markers",
+      "zoom": 1.0,
+      "focus_m": [
+        4122.0,
+        2600.0
+      ],
+      "title": "A  ·  Stepped wash, an ink line at each depth step  ·  markers  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/B_markers_1.png",
+      "option": "B",
+      "subject": "markers",
+      "zoom": 1.0,
+      "focus_m": [
+        4122.0,
+        2600.0
+      ],
+      "title": "B  ·  Stepped wash, no step lines, an inked shoreline  ·  markers  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/C_markers_1.png",
+      "option": "C",
+      "subject": "markers",
+      "zoom": 1.0,
+      "focus_m": [
+        4122.0,
+        2600.0
+      ],
+      "title": "C  ·  Stepped wash, a soft shore and a pale band on the land  ·  markers  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/D_markers_1.png",
+      "option": "D",
+      "subject": "markers",
+      "zoom": 1.0,
+      "focus_m": [
+        4122.0,
+        2600.0
+      ],
+      "title": "D  ·  Stepped wash, ink ripple lines along the shore  ·  markers  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/E_markers_1.png",
+      "option": "E",
+      "subject": "markers",
+      "zoom": 1.0,
+      "focus_m": [
+        4122.0,
+        2600.0
+      ],
+      "title": "E  ·  A smooth gradient (the reference's way), for comparison  ·  markers  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/F_markers_1.png",
+      "option": "F",
+      "subject": "markers",
+      "zoom": 1.0,
+      "focus_m": [
+        4122.0,
+        2600.0
+      ],
+      "title": "F  ·  Stepped wash, pale step edges and no ink on the water  ·  markers  ·  zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/pal_teal_coast_035.png",
+      "option": "A",
+      "subject": "coast",
+      "zoom": 0.35,
+      "palette_variant": "teal",
+      "hue_deg": 200.0,
+      "title": "palette row: hue 200 (teal) · option A · coast · planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/pal_blue_working_default_coast_035.png",
+      "option": "A",
+      "subject": "coast",
+      "zoom": 0.35,
+      "palette_variant": "blue (working default)",
+      "hue_deg": 222.0,
+      "title": "palette row: hue 222 (blue (working default)) · option A · coast · planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/pal_shadow_hue_coast_035.png",
+      "option": "A",
+      "subject": "coast",
+      "zoom": 0.35,
+      "palette_variant": "shadow hue",
+      "hue_deg": 242.0,
+      "title": "palette row: hue 242 (shadow hue) · option A · coast · planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/pal_teal_markers_035.png",
+      "option": "A",
+      "subject": "markers",
+      "zoom": 0.35,
+      "palette_variant": "teal",
+      "hue_deg": 200.0,
+      "title": "palette row: hue 200 (teal) · option A · markers · planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/pal_blue_working_default_markers_035.png",
+      "option": "A",
+      "subject": "markers",
+      "zoom": 0.35,
+      "palette_variant": "blue (working default)",
+      "hue_deg": 222.0,
+      "title": "palette row: hue 222 (blue (working default)) · option A · markers · planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/pal_shadow_hue_markers_035.png",
+      "option": "A",
+      "subject": "markers",
+      "zoom": 0.35,
+      "palette_variant": "shadow hue",
+      "hue_deg": 242.0,
+      "title": "palette row: hue 242 (shadow hue) · option A · markers · planning zoom 0.35",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/pal_teal_markers_1.png",
+      "option": "A",
+      "subject": "markers",
+      "zoom": 1.0,
+      "palette_variant": "teal",
+      "hue_deg": 200.0,
+      "title": "palette row: hue 200 (teal) · option A · markers · zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/pal_blue_working_default_markers_1.png",
+      "option": "A",
+      "subject": "markers",
+      "zoom": 1.0,
+      "palette_variant": "blue (working default)",
+      "hue_deg": 222.0,
+      "title": "palette row: hue 222 (blue (working default)) · option A · markers · zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "frames/pal_shadow_hue_markers_1.png",
+      "option": "A",
+      "subject": "markers",
+      "zoom": 1.0,
+      "palette_variant": "shadow hue",
+      "hue_deg": 242.0,
+      "title": "palette row: hue 242 (shadow hue) · option A · markers · zoom 1",
+      "size": [
+        1280,
+        720
+      ]
+    }
+  ]
+}

@@ -1,0 +1,609 @@
+{
+  "id": "water",
+  "date": "2026-10-10",
+  "area": "Terrain, Water",
+  "question": "How does water look: stepped washes on the land's own height system, three depth steps, the same shadows? Alex (decisions water-stepped-depth, water-layer): 'I like the same height system with a blue color wash. Same shadows.'",
+  "source": "scripts/ui/boards/water_board_shot.gd: the generated water of seed 20261009 (scripts/world/water_gen.gd, data/world/water.json) drawn by scripts/ui/boards/water_frame.gd and scripts/render/water_draw.gd over the game's own drawing layer (ink_ground, terrain_draw, terrain_shadows, village_draw, ink_sprites, ink_structs, the unit markers); NOT wired into the chunk baker or the terrain provider",
+  "seed": 20261009,
+  "held_constant": {
+    "ground": "the terrain's levels, contours, hachures and shadows, the village's road and fields, trees (never on water) and houses are identical under every option; only data/world/water.json draw.options switches change between the six columns",
+    "shadows": "the water surface is flat at sea level, so shadows land on it as on level-0 land: scripts/render/terrain_shadows.gd is unchanged. Shadow strength 0.44, steel tint.",
+    "placed_for_the_board": "the bank scene's five trees and two houses and the plane (not generated); the six markers of the markers row",
+    "depth_steps": {
+      "from_m": [
+        0,
+        6,
+        18
+      ],
+      "seabed_heights_m": [
+        -3,
+        -10,
+        -30
+      ],
+      "decision": "water-layer"
+    },
+    "zooms": "0.35 (the planning zoom) and 1.0"
+  },
+  "parameter": "data/world/water.json (generator and draw.*: every value a proposed record but the three depths); draw.options is each option's switches, draw.working_default the option the data defaults to",
+  "options": [
+    {
+      "name": "A",
+      "title": "Stepped wash, an ink line at each depth step",
+      "switches": {
+        "title": "Stepped wash, an ink line at each depth step",
+        "mode": "stepped",
+        "shore_line": true,
+        "step_lines": true,
+        "soft": false,
+        "halo": false,
+        "ripples": false,
+        "pale_edges": false
+      },
+      "files": [
+        "frames/A_coast_035.png",
+        "frames/A_coast_1.png",
+        "frames/A_river_035.png",
+        "frames/A_river_1.png",
+        "frames/A_shadows_035.png",
+        "frames/A_shadows_1.png",
+        "frames/A_markers_035.png",
+        "frames/A_markers_1.png"
+      ],
+      "proposed": true,
+      "working_default": true
+    },
+    {
+      "name": "B",
+      "title": "Stepped wash, no step lines, an inked shoreline",
+      "switches": {
+        "title": "Stepped wash, no step lines, an inked shoreline",
+        "mode": "stepped",
+        "shore_line": true,
+        "step_lines": false,
+        "soft": false,
+        "halo": false,
+        "ripples": false,
+        "pale_edges": false
+      },
+      "files": [
+        "frames/B_coast_035.png",
+        "frames/B_coast_1.png",
+        "frames/B_river_035.png",
+        "frames/B_river_1.png",
+        "frames/B_shadows_035.png",
+        "frames/B_shadows_1.png",
+        "frames/B_markers_035.png",
+        "frames/B_markers_1.png"
+      ],
+      "proposed": true,
+      "working_default": false
+    },
+    {
+      "name": "C",
+      "title": "Stepped wash, a soft shore and a pale band on the land",
+      "switches": {
+        "title": "Stepped wash, a soft shore and a pale band on the land",
+        "mode": "stepped",
+        "shore_line": false,
+        "step_lines": false,
+        "soft": true,
+        "halo": true,
+        "ripples": false,
+        "pale_edges": false
+      },
+      "files": [
+        "frames/C_coast_035.png",
+        "frames/C_coast_1.png",
+        "frames/C_river_035.png",
+        "frames/C_river_1.png",
+        "frames/C_shadows_035.png",
+        "frames/C_shadows_1.png",
+        "frames/C_markers_035.png",
+        "frames/C_markers_1.png"
+      ],
+      "proposed": true,
+      "working_default": false
+    },
+    {
+      "name": "D",
+      "title": "Stepped wash, ink ripple lines along the shore",
+      "switches": {
+        "title": "Stepped wash, ink ripple lines along the shore",
+        "mode": "stepped",
+        "shore_line": false,
+        "step_lines": false,
+        "soft": false,
+        "halo": false,
+        "ripples": true,
+        "pale_edges": false
+      },
+      "files": [
+        "frames/D_coast_035.png",
+        "frames/D_coast_1.png",
+        "frames/D_river_035.png",
+        "frames/D_river_1.png",
+        "frames/D_shadows_035.png",
+        "frames/D_shadows_1.png",
+        "frames/D_markers_035.png",
+        "frames/D_markers_1.png"
+      ],
+      "proposed": true,
+      "working_default": false
+    },
+    {
+      "name": "E",
+      "title": "A smooth gradient (the reference's way), for comparison",
+      "switches": {
+        "title": "A smooth gradient (the reference's way), for comparison",
+        "mode": "smooth",
+        "shore_line": false,
+        "step_lines": false,
+        "soft": true,
+        "halo": true,
+        "ripples": false,
+        "pale_edges": false
+      },
+      "files": [
+        "frames/E_coast_035.png",
+        "frames/E_coast_1.png",
+        "frames/E_river_035.png",
+        "frames/E_river_1.png",
+        "frames/E_shadows_035.png",
+        "frames/E_shadows_1.png",
+        "frames/E_markers_035.png",
+        "frames/E_markers_1.png"
+      ],
+      "proposed": true,
+      "working_default": false
+    },
+    {
+      "name": "F",
+      "title": "Stepped wash, pale step edges and no ink on the water",
+      "switches": {
+        "title": "Stepped wash, pale step edges and no ink on the water",
+        "mode": "stepped",
+        "shore_line": false,
+        "step_lines": false,
+        "soft": false,
+        "halo": false,
+        "ripples": false,
+        "pale_edges": true
+      },
+      "files": [
+        "frames/F_coast_035.png",
+        "frames/F_coast_1.png",
+        "frames/F_river_035.png",
+        "frames/F_river_1.png",
+        "frames/F_shadows_035.png",
+        "frames/F_shadows_1.png",
+        "frames/F_markers_035.png",
+        "frames/F_markers_1.png"
+      ],
+      "proposed": true,
+      "working_default": false
+    }
+  ],
+  "palette_check": {
+    "water_hue_deg": 222.0,
+    "steps_oklch": [
+      {
+        "step": "shallows",
+        "L": 0.817,
+        "C": 0.032,
+        "h": 222.0
+      },
+      {
+        "step": "shelf",
+        "L": 0.737,
+        "C": 0.05,
+        "h": 222.0
+      },
+      {
+        "step": "deep",
+        "L": 0.647,
+        "C": 0.066,
+        "h": 222.0
+      }
+    ],
+    "shadow_tint_oklch": {
+      "L": 0.513,
+      "C": 0.076,
+      "h": 242.4
+    },
+    "side_a_oklch": {
+      "L": 0.551,
+      "C": 0.1,
+      "h": 30.3
+    },
+    "side_b_oklch": {
+      "L": 0.551,
+      "C": 0.1,
+      "h": 259.6
+    },
+    "paper_oklch": {
+      "L": 0.847,
+      "C": 0.048,
+      "h": 89.6
+    },
+    "oklab_distance_of_step_to_accent": {
+      "shallows": {
+        "to_side_b": 0.277,
+        "to_side_a": 0.297
+      },
+      "shelf": {
+        "to_side_b": 0.198,
+        "to_side_a": 0.238
+      },
+      "deep": {
+        "to_side_b": 0.114,
+        "to_side_a": 0.191
+      }
+    },
+    "how_it_stays_one_palette": "Hue is reserved for paper, ink, shadow and accents; the water adds one hue (222 degrees) but only as a lightness ramp BELOW the paper (the paper less 0.03, 0.11 and 0.20) with a chroma that stays under the shadow tint's and the accents': water is the quietest blue. It is 20 degrees from the shadow tint and 38 from the enemy accent. Colours are roles in data/world/water.json (OKLCH numbers off the paper, resolved in scripts/render/water_draw.gd), never hex in draw code."
+  },
+  "generator": {
+    "sea": "landness = base + noise + terrain field - edge bias; the sea is where it is below zero; one or two ADJACENT sea edges by seed, never the edge the village's road leaves by; uplands are never water (a coastal cliff, or an islet)",
+    "river": "from a spring at the foot of high ground, routed on a 40 m grid that avoids the village, the fields, the tower and the batteries and does not climb a scarp, square across the village's road once, to the sea; width and depth grow downstream (26 m at the road)",
+    "seed_20261009": {
+      "sea": {
+        "road_edge": 2,
+        "edges_wanted": 1,
+        "edges": [
+          1
+        ],
+        "dropped": [],
+        "reach_scale": 1.0,
+        "dry_first_try": true,
+        "adapt_steps": 0
+      },
+      "river": {
+        "made": true,
+        "why": "",
+        "crossing_candidates": 109,
+        "tried": [
+          {
+            "road_index": 165,
+            "ok": true,
+            "why": "",
+            "length_m": 4835.0,
+            "sea": true
+          },
+          {
+            "road_index": 94,
+            "ok": true,
+            "why": "",
+            "length_m": 4127.0,
+            "sea": true
+          },
+          {
+            "road_index": 117,
+            "ok": true,
+            "why": "",
+            "length_m": 4264.0,
+            "sea": true
+          },
+          {
+            "road_index": 83,
+            "ok": true,
+            "why": "",
+            "length_m": 4341.0,
+            "sea": true
+          },
+          {
+            "road_index": 128,
+            "ok": true,
+            "why": "",
+            "length_m": 4526.0,
+            "sea": true
+          },
+          {
+            "road_index": 129,
+            "ok": true,
+            "why": "",
+            "length_m": 4465.0,
+            "sea": true
+          },
+          {
+            "road_index": 115,
+            "ok": true,
+            "why": "",
+            "length_m": 4400.0,
+            "sea": true
+          },
+          {
+            "road_index": 123,
+            "ok": true,
+            "why": "",
+            "length_m": 4513.0,
+            "sea": true
+          },
+          {
+            "road_index": 168,
+            "ok": true,
+            "why": "",
+            "length_m": 4884.0,
+            "sea": true
+          },
+          {
+            "road_index": 85,
+            "ok": true,
+            "why": "",
+            "length_m": 3918.0,
+            "sea": true
+          },
+          {
+            "road_index": 127,
+            "ok": true,
+            "why": "",
+            "length_m": 4460.0,
+            "sea": true
+          },
+          {
+            "road_index": 108,
+            "ok": true,
+            "why": "",
+            "length_m": 4314.0,
+            "sea": true
+          }
+        ],
+        "crossing_index": 85,
+        "length_m": 3918.4,
+        "crossing": "(1457.513, 1184.357)",
+        "half_width_at_crossing_m": 13.0,
+        "source": "(1520.0, 680.0)",
+        "mouth": "(3726.535, 1483.872)",
+        "ends_in": "sea"
+      },
+      "build_ms": 1053.903,
+      "keep_dry_ok": true,
+      "keep_dry_samples": 979
+    },
+    "survey_seeds_1_to_20": {
+      "seeds": "1..20",
+      "dry_first_try": 13,
+      "dry_after_adapting": 20,
+      "river_crosses_road": 19,
+      "river_ends_in_sea": 19,
+      "rows": [
+        {
+          "seed": 1,
+          "sea_edges": [
+            2
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 2365.2,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 2,
+          "sea_edges": [
+            2
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 4036.4,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 3,
+          "sea_edges": [
+            1,
+            3
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 2283.9,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 4,
+          "sea_edges": [
+            2,
+            0
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 2239.9,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 5,
+          "sea_edges": [
+            3,
+            0
+          ],
+          "dry_first_try": false,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 4820.0,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 6,
+          "sea_edges": [
+            0
+          ],
+          "dry_first_try": false,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 1072.7,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 7,
+          "sea_edges": [
+            1,
+            2
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 3259.7,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 8,
+          "sea_edges": [
+            2,
+            0
+          ],
+          "dry_first_try": false,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 2358.9,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 9,
+          "sea_edges": [
+            3,
+            0
+          ],
+          "dry_first_try": false,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 1375.5,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 10,
+          "sea_edges": [
+            0,
+            2
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": false,
+          "river_length_m": 0.0,
+          "river_ends_in": ""
+        },
+        {
+          "seed": 11,
+          "sea_edges": [
+            0,
+            2
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 1988.7,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 12,
+          "sea_edges": [
+            3
+          ],
+          "dry_first_try": false,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 1627.3,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 13,
+          "sea_edges": [
+            1
+          ],
+          "dry_first_try": false,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 1441.4,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 14,
+          "sea_edges": [
+            0,
+            2
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 2218.0,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 15,
+          "sea_edges": [
+            1
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 3387.3,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 16,
+          "sea_edges": [
+            3,
+            1
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 1651.8,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 17,
+          "sea_edges": [
+            0,
+            3
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 1801.0,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 18,
+          "sea_edges": [
+            3,
+            0
+          ],
+          "dry_first_try": false,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 1414.3,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 19,
+          "sea_edges": [
+            2
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 2055.2,
+          "river_ends_in": "sea"
+        },
+        {
+          "seed": 20,
+          "sea_edges": [
+            0,
+            3
+          ],
+          "dry_first_try": true,
+          "dry_after_adapting": true,
+          "river": true,
+          "river_length_m": 1387.3,
+          "river_ends_in": "sea"
+        }
+      ]
+    }
+  },
+  "recommendation_proposed": "A, the working default in data (PROPOSED, not Alex's): see the sheet",
+  "frames": "frames.json (every frame whole, with its caption)",
+  "sheet": "board.png (rows: coast, river, bank, markers at 0.35 and 1; the palette row; the palette strip; the generator's overview of six seeds)",
+  "chosen": null,
+  "chosen_by": null
+}

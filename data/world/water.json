@@ -1,0 +1,162 @@
+{
+  "_about": "The WATER LAYER's rules and looks (scripts/world/water_gen.gd generates from them; scripts/render/water_draw.gd and the board scripts/ui/boards/water_board_shot.gd draw from them). Track WB, 2026-10-10: a PROTOTYPE for the board variants/water/, NOT wired into the map. What is ALEX'S (decisions water-stepped-depth and water-layer, 2026-10-10): water is stepped colour washes in blue on the SAME height system as the land, with the same shadows; three depth steps (shallows, shelf, deep) at -3, -10 and -30 m ('Sounds good' to the lead's proposal); water is GENERATED from the seed like the rest of the map (the design doc's premise: an island, rivers running downhill to the sea, a road with a bridge where it crosses a river). EVERYTHING ELSE IS PROPOSED by Track WB: every number below carries _proposed. Record shape as in data/terrain/terrain.json ({value, _proposed, _reason}); keys starting with _ are documentation; scripts/world/terrain_data.gd reads it and test_water_gen proves that nothing in the file is unread. LENGTHS ARE METRES. COLOURS ARE ROLES, NOT HEXES: the water hue is new to the palette, so every colour is written as OKLCH numbers off the paper (lightness below the paper's, chroma, one hue) and resolved at load by water_draw.gd -- no hex in draw code (CLAUDE.md rule 6, docs/proposals/palette-architecture.md).",
+
+  "seed": {
+    "salt": { "value": 5107, "_proposed": true, "_reason": "mixed into the world seed for the water's streams (which edges are sea, the river's choices); water's randomness never correlates with the terrain's or the layout's" }
+  },
+
+  "sea": {
+    "noise_per_m": { "value": 0.0008, "_proposed": true, "_reason": "the large-scale field that bends the coast: a lattice every 1,250 m with three octaves (to about 300 m), so bays and headlands are kilometres long" },
+    "octaves": { "value": 3, "_proposed": true, "_reason": "1,250 / 615 / 300 m features" },
+    "noise_weight": { "value": 0.5, "_proposed": true, "_reason": "landness L = base + noise_weight x (noise - 0.5) + terrain_weight x (terrain field - 0.5) - strength x edge bias; this moves the coast by about +/- 460 m" },
+    "terrain_weight": { "value": 0.45, "_proposed": true, "_reason": "the terrain's own height field (the one the levels are cut from) shapes the coast too: the same field gives the coast its bays and spurs at 30 to 250 m, so land and sea read as one relief, and an upland (level 1 or 2) is never water: where the coast meets one it is a coastal cliff, and one out in the sea is an islet" },
+    "base_land": { "value": 0.4, "_proposed": true, "_reason": "L inland stays above zero (no inland lakes by accident); only the edge bias takes L below zero" },
+    "strength": { "value": 1.3, "_proposed": true, "_reason": "the edge bias at the map edge; the coast is where the bias reaches base_land / strength, about 0.31 of the reach in" },
+    "reach_m": { "value": 1900, "_proposed": true, "_reason": "the bias falls from 1 at a sea edge to 0 this far in (before the seeded jitter), so the coast lies about 1,400 m inside the edge: a fifth to a third of a 5 km map is sea on a sea edge" },
+    "reach_jitter": { "value": 0.2, "_proposed": true, "_reason": "each sea edge's reach is scaled by 1 +/- this, seeded" },
+    "edge_count": { "value": [0.45, 0.55], "_proposed": true, "_reason": "the chance that a seed has one sea edge, and that it has two (two adjacent edges: a corner of sea, an island's coast; never two opposite ones, which would leave a strip of land); 'a coast on some edges' (the lead's brief). The edge the village's road leaves by is never a sea edge: a road into the sea would need a harbour" },
+    "depth_per_unit_m": { "value": 80, "_proposed": true, "_reason": "metres of water per unit of landness below zero: about 6 m of depth 115 m out from the coast and 18 m about 350 m out, 70 m at the map edge, so the three steps are broad bands at the 0.35 planning zoom (1.8 x 1 km)" },
+    "seed_offset": { "value": 211, "_proposed": true, "_reason": "sea noise seed = scene seed % 9973 + this (the terrain's is + 101)" },
+    "adapt_shrink": { "value": 0.85, "_proposed": true, "_reason": "when a sea would flood one of the layout's sites, its reach is multiplied by this and tried again" },
+    "adapt_steps": { "value": 8, "_proposed": true, "_reason": "how many times; then the offending edge is dropped, and if no edge is left the seed has no sea (a river only)" }
+  },
+
+  "levels": {
+    "step_from_m": { "value": [0, 6, 18], "_proposed": true, "_reason": "where each depth step begins, as metres of depth below sea level: shallows 0 to 6, shelf 6 to 18, deep beyond. The boundaries sit roughly midway between the steps' own depths (-3, -10, -30 m) on a geometric scale, as the land's thresholds sit between its levels" },
+    "heights_m": { "value": [-3, -10, -30], "decision": "water-layer", "_reason": "Alex: 'Sounds good' to the lead's proposal of -3, -10 and -30 m: shallows, shelf, deep. The water SURFACE is flat at sea level (z = 0), so a shadow falls on it exactly as on level 0 land; these heights are the seabed's, they colour the wash and name the steps" },
+    "names": { "value": ["shallows", "shelf", "deep"], "decision": "water-layer", "_reason": "Alex: three steps, shallows / shelf / deep" }
+  },
+
+  "river": {
+    "enabled": { "value": true, "_proposed": true, "_reason": "the river is made unless this is off (a test knob)" },
+    "crossing": {
+      "min_m": { "value": 450, "_proposed": true, "_reason": "the river crosses the road at least this far from the village's centre (along the straight line), so the village is not on the bank; the board's river frame shows the road, the bank and the village together" },
+      "max_m": { "value": 1300, "_proposed": true, "_reason": "and at most this far; the road is about 1,700 m long" },
+      "map_margin_m": { "value": 250, "_proposed": true, "_reason": "the crossing lies at least this far inside the map edge" },
+      "cliff_clear_m": { "value": 40, "_proposed": true, "_reason": "and this far from a height boundary: the river meets the road on low ground" },
+      "battery_gap_m": { "value": 220, "_proposed": true, "_reason": "and this far from either anti-aircraft battery" },
+      "waypoint_m": { "value": 90, "_proposed": true, "_reason": "the river runs square across the road: it is routed through points this far either side of the crossing, along the road's normal" },
+      "exempt_m": { "value": 130, "_proposed": true, "_reason": "the road within this of the crossing may be wet; every other point of the road stays dry" },
+      "gap_max_m": { "value": 90, "_proposed": true, "_reason": "but the wet stretch of the road at the crossing (the gap where a bridge will go) is at most this long: a river that runs along the road for 100 m is not a crossing" },
+      "length_max_m": { "value": 7000, "_proposed": true, "_reason": "a course longer than this winds round the keep-out areas like a moat; another crossing is tried instead" },
+      "length_good_m": { "value": 2400, "_proposed": true, "_reason": "the search keeps the SHORTEST valid course; one this short ends it" },
+      "tries": { "value": 12, "_proposed": true, "_reason": "crossing points tried (a seeded order) before the seed has a river that does not cross the road, or none" }
+    },
+    "route": {
+      "step_m": { "value": 40, "_proposed": true, "_reason": "the coarse grid the river is routed on (126 x 126 over the map); the route is then rounded and given meanders" },
+      "upland_weight": { "value": 30, "_proposed": true, "_reason": "cost multiplier on high ground (the terrain field at or above the first threshold less a margin): a river does not climb a scarp" },
+      "low_weight": { "value": 5, "_proposed": true, "_reason": "cost added by landness: the route prefers low ground, so it runs down the valley the large-scale field makes" },
+      "wiggle": { "value": 0.5, "_proposed": true, "_reason": "cost = 1 + this x noise per cell, so no two rivers run alike" },
+      "wiggle_noise_per_cell": { "value": 0.18, "_proposed": true, "_reason": "the frequency of that noise per cell" },
+      "village_gap_m": { "value": 140, "_proposed": true, "_reason": "no route cell nearer than this to the village's outline" },
+      "field_gap_m": { "value": 60, "_proposed": true, "_reason": "nor to a field" },
+      "compound_gap_m": { "value": 170, "_proposed": true, "_reason": "nor to the radio tower" },
+      "battery_gap_m": { "value": 130, "_proposed": true, "_reason": "nor to a battery site" },
+      "road_corridor_m": { "value": 60, "_proposed": true, "_reason": "cells this close to the road (away from the crossing) cost road_weight times more, so the river does not run along it" },
+      "road_weight": { "value": 8, "_proposed": true, "_reason": "that cost multiplier" }
+    },
+    "source": {
+      "min_m": { "value": 500, "_proposed": true, "_reason": "the spring is at least this far (straight line) upstream of the crossing" },
+      "max_m": { "value": 1900, "_proposed": true, "_reason": "and at most this far" },
+      "foot_band": { "value": [0.04, 0.005], "_proposed": true, "_reason": "a spring rises at the foot of high ground: where the terrain field is between 0.04 and 0.005 under the first threshold (low ground just beside an upland)" },
+      "candidates": { "value": 6, "_proposed": true, "_reason": "springs routed to, the cheapest route wins" }
+    },
+    "mouth": {
+      "depth_m": { "value": 3, "_proposed": true, "_reason": "the river ends where the sea is this deep, and runs on a little way into it" },
+      "extend_m": { "value": 70, "_proposed": true, "_reason": "that little way" },
+      "goals": { "value": 3, "_proposed": true, "_reason": "sea cells routed to, the nearest to the crossing first" }
+    },
+    "shape": {
+      "smooth_passes": { "value": 5, "_proposed": true, "_reason": "Chaikin passes over the routed polyline (the prototype's way of turning a polyline into a hand-drawn curve)" },
+      "sample_m": { "value": 8, "_proposed": true, "_reason": "the spacing of the river's vertices" },
+      "meander_m": { "value": [6, 26], "_proposed": true, "_reason": "amplitude of the sideways meander, from the spring to the mouth" },
+      "meander_wavelength_m": { "value": 240, "_proposed": true, "_reason": "its length scale" },
+      "meander_taper_m": { "value": 150, "_proposed": true, "_reason": "no meander within this of the crossing, so the river meets the road square" },
+      "source_taper_m": { "value": 120, "_proposed": true, "_reason": "nor within this of the spring" },
+      "half_width_m": { "value": [2.5, 26], "_proposed": true, "_reason": "half width from the spring to the mouth (a brook of 5 m to an estuary of 52 m)" },
+      "half_width_power": { "value": 0.9, "_proposed": true, "_reason": "half width = lerp(first, last, u), u = (distance from the spring / the distance at which the width reaches the crossing width) ^ this" },
+      "crossing_half_width_m": { "value": 13, "_proposed": true, "_reason": "half width where the river crosses the road, wherever that is along its course (26 m: the span a bridge will have to cover); it widens to the last of half_width_m further down" },
+      "centre_depth_m": { "value": [1.4, 13], "_proposed": true, "_reason": "depth in the middle, from the spring to the mouth; the section is a parabola, so a brook is shallows all through, and the lower river has a shelf in its middle" },
+      "centre_depth_power": { "value": 1.0, "_proposed": true, "_reason": "centre depth = lerp(first, last, u ^ this), u as for the width: a wider river is a deeper one" }
+    }
+  },
+
+  "keep_dry": {
+    "village_margin_m": { "value": 40, "_proposed": true, "_reason": "the village's outline grown by this must stay dry (the village's own polygon already has room round its houses)" },
+    "field_margin_m": { "value": 20, "_proposed": true, "_reason": "each field grown by this" },
+    "tower_ring_m": { "value": 45, "_proposed": true, "_reason": "a ring this far round the radio tower's site (its compound)" },
+    "battery_ring_m": { "value": 40, "_proposed": true, "_reason": "a ring this far round each battery site (the layout wants 25 m of open ground round it)" },
+    "sample_m": { "value": 25, "_proposed": true, "_reason": "spacing of the sample points inside a keep-dry area" },
+    "road_sample_m": { "value": 10, "_proposed": true, "_reason": "spacing of the road's points that must stay dry (except at the crossing)" }
+  },
+
+  "draw": {
+    "px_per_m": { "value": 2, "_proposed": true, "_reason": "the board draws at the map's scale (data/terrain/terrain.json scale.px_per_m, the demo baseline)" },
+    "grid_cell_m": { "value": 8, "_proposed": true, "_reason": "the sea's contour grid, as the terrain's (chunks.cell_m); rivers are not on it (they are drawn as ribbons: an 8 m grid cannot hold a 5 m brook)" },
+    "chaikin_passes": { "value": 2, "_proposed": true, "_reason": "as the terrain's boundaries" },
+    "resample_m": { "value": 1, "_proposed": true, "_reason": "as the terrain's boundaries" },
+
+    "palette": {
+      "hue_deg": { "value": 222, "_proposed": true, "_reason": "WORKING DEFAULT for the water's hue (OKLCH). 20 degrees from the shadow tint (steel, 242) and 38 from the slate-blue side accent (side_b, 260), so the three blues are three blues and not one; the board shows it beside teal (200) and the shadow's own hue (242)" },
+      "lightness_below_paper": { "value": [0.03, 0.11, 0.2], "_proposed": true, "_reason": "L of each depth step = the paper's L less this (paper 0.847): shallows 0.817, shelf 0.737, deep 0.647. Lightness is the ramp off paper, darker with depth, the way the land lifts from paper with height. The deep step stays well above the shadow tint (0.513) so a shadow still reads on it, and above the slate accent (0.551) so the enemy's colour is the darker thing" },
+      "chroma": { "value": [0.032, 0.05, 0.066], "_proposed": true, "_reason": "more saturated with depth (Alex), and always under the shadow tint's 0.076 and the accents' 0.100: water is the quietest blue in the drawing" },
+      "wash_alpha": { "value": 1.0, "_proposed": true, "_reason": "alpha of the wash; the paper's own mottle shows through by paper_mottle instead" },
+      "paper_mottle": { "value": 0.85, "_proposed": true, "_reason": "how much of the paper tint's variation (the paper shader's low-frequency mottle, +/- 5 percent) the wash keeps, so water looks like a wash on paper and not a flat digital fill" },
+      "halo_lift": { "value": 0.045, "_proposed": true, "_reason": "L added to the land at the water's edge in the soft options (C, E): the reference's pale band. Lightness off paper, no new hue" },
+      "halo_chroma_scale": { "value": 0.7, "_proposed": true, "_reason": "chroma of the pale band as a fraction of the paper's (it eases down as it lightens, like the land's level fills)" }
+    },
+
+    "line": {
+      "ink_weight": { "value": "wall_edges", "_proposed": true, "_reason": "named multiplier from render_defaults.json linework: the shoreline is an edge like a scarp's contour (1.15)" },
+      "ink_alpha": { "value": 0.9, "_proposed": true, "_reason": "the land's contour alpha" },
+      "step_weight": { "value": "road_ruts", "_proposed": true, "_reason": "named multiplier: a depth step is a fainter line than the shore (0.8)" },
+      "step_alphas": { "value": [0.9, 0.55, 0.4], "_proposed": true, "_reason": "alpha of the line at each step's top (the shore, the shelf's edge, the deep's edge): fading with depth like the land's nested contours (0.9, 0.6, 0.4)" },
+      "wobble": { "value": 0.5, "_proposed": true, "_reason": "as the terrain's contour wobble" },
+      "wobble_noise_per_px": { "value": 0.03, "_proposed": true, "_reason": "as the terrain's contour wobble" },
+      "pale_alpha": { "value": 0.8, "_proposed": true, "_reason": "alpha of option F's pale step edge (paper-coloured, lifted)" },
+      "pale_lift": { "value": 0.07, "_proposed": true, "_reason": "L added to the step above for option F's pale edge" },
+      "pale_width_px": { "value": 1.6, "_proposed": true, "_reason": "option F's pale edge width at zoom 1 (scaled by the zoom, not below 1 px)" }
+    },
+
+    "soft": {
+      "blur_m": { "value": 11, "_proposed": true, "_reason": "gaussian sigma of the sea shore's soft edge (C, E), in metres: the shallows melt into the ground over about 3 sigma = 33 m" },
+      "river_blur_m": { "value": 3, "_proposed": true, "_reason": "sigma of a river's soft edge: a 26 m river keeps a readable bank (a blur as wide as the sea's would wipe it out)" },
+      "river_halo_m": { "value": 5, "_proposed": true, "_reason": "sigma of the pale band along a river bank" },
+      "halo_m": { "value": 12, "_proposed": true, "_reason": "sigma of the pale band on the land (C, E)" },
+      "gradient_blur_m": { "value": [11, 34, 60], "_proposed": true, "_reason": "option E's smooth gradient is the same three masks blurred by these sigmas (shore, shelf edge, deep edge), so the steps run into one another" }
+    },
+
+    "ripples": {
+      "offsets_m": { "value": [7, 15, 26], "_proposed": true, "_reason": "option D: water-lining, ink lines this far from the shore into the water" },
+      "alphas": { "value": [0.75, 0.55, 0.38], "_proposed": true, "_reason": "fading with distance (hairlines at the planning zoom lose alpha with width, so these start strong)" },
+      "weight": { "value": "cusp_ticks", "_proposed": true, "_reason": "named multiplier: the lightest ink line that is not a hatch (0.75)" },
+      "break_noise_per_px": { "value": 0.05, "_proposed": true, "_reason": "the prototype's pen-lift noise (rut lines 0.045 per 3 px)" },
+      "break_threshold": { "value": [0.32, 0.4, 0.48], "_proposed": true, "_reason": "per line: a line lifts the pen where the noise is under this, so the outer lines are more broken (dashes)" }
+    },
+
+    "working_default": { "value": "A", "_proposed": true, "_reason": "the option the board's data defaults to until Alex picks (chosen: null in variants/water/board.json). A is the most literal reading of 'the same height system with a blue colour wash': the land's contours continue under the water as lines at each step. PROPOSED by Track WB, not a decision" },
+
+    "options": {
+      "value": {
+        "A": { "title": "Stepped wash, an ink line at each depth step", "mode": "stepped", "shore_line": true, "step_lines": true, "soft": false, "halo": false, "ripples": false, "pale_edges": false },
+        "B": { "title": "Stepped wash, no step lines, an inked shoreline", "mode": "stepped", "shore_line": true, "step_lines": false, "soft": false, "halo": false, "ripples": false, "pale_edges": false },
+        "C": { "title": "Stepped wash, a soft shore and a pale band on the land", "mode": "stepped", "shore_line": false, "step_lines": false, "soft": true, "halo": true, "ripples": false, "pale_edges": false },
+        "D": { "title": "Stepped wash, ink ripple lines along the shore", "mode": "stepped", "shore_line": false, "step_lines": false, "soft": false, "halo": false, "ripples": true, "pale_edges": false },
+        "E": { "title": "A smooth gradient (the reference's way), for comparison", "mode": "smooth", "shore_line": false, "step_lines": false, "soft": true, "halo": true, "ripples": false, "pale_edges": false },
+        "F": { "title": "Stepped wash, pale step edges and no ink on the water", "mode": "stepped", "shore_line": false, "step_lines": false, "soft": false, "halo": false, "ripples": false, "pale_edges": true }
+      },
+      "_proposed": true,
+      "_reason": "A to E are the lead's list; F is the one more Track WB suggests: the steps are divided by a thin PAPER-coloured line instead of ink (the white rim of a hand-coloured chart), so nothing dark competes with the planes' ink outlines or the enemy accent on the water, and the shore is the wash's own edge. Each option is a few switches; the drawing reads them from here"
+    },
+
+    "palette_variants": {
+      "value": [
+        { "name": "teal", "hue_deg": 200 },
+        { "name": "blue (working default)", "hue_deg": 222 },
+        { "name": "shadow hue", "hue_deg": 242 }
+      ],
+      "_proposed": true,
+      "_reason": "the board's palette row re-renders the coast and the markers at these hues with the working default option; the question is how the water blue sits beside the shadow tint (242) and the slate-blue accent (260)"
+    }
+  }
+}
