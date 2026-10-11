@@ -173,6 +173,22 @@ mixed-warfare): water is generated per seed (`scripts/world/water_gen.gd`,
   turn: the aim the drop was planned with (PROPOSED). `data/sim/bombs.json`
   `lost_target_mode` / `lost_target_fallback`, `Spotting.in_sight_of`,
   `World._target_lost`; `test_fire_lost`.
+  **The coastal wind** (decision coastal-wind, Alex "1-3 looks good"):
+  `world.wind` (`scripts/sim/wind.gd`, numbers `data/sim/wind.json`; null when a
+  scenario says `"wind": false`, on otherwise) is ONE wind for the map, a pure
+  function of the game second: `wind.at(game_s) -> Vector2` m/s on the map's
+  axes (x east, y south, the units'), `wind.mean()`. By day an onshore breeze
+  of 2-5 m/s from the sea toward the battle area, by night an offshore one of
+  1-3, near calm at dawn and dusk with a wandering direction, +/-15 degrees and
+  +/-30% wander and seeded gusts on top. Its hour is taken once at the mission
+  start from the sun (`Sun.current().asked_hour` in clock_at_start, else a
+  mid-afternoon `fixed_hour`), the sea is found with `WaterGen.sea_s` on rings
+  round the mission's centre (none: a light prevailing wind); `params()` travel
+  in the snapshot and every turn result (`World.net_wind` / `apply_net_wind`),
+  a client never derives its own. The fire leans on it: spread reach 45 m
+  downwind, 20 m upwind, 30 m in a calm (`fire.json spread`), and the
+  untrackable smoke zone is the canopy swept along wind x `smoke.drift_s`.
+  Planes and bombs are not moved by it. Test: `test_wind`.
 - The sun has ONE source: `data/params/sun.json`, read through `scripts/world/sun.gd`
   (`Sun.current()`) by RenderParams, UiStyle, FxStyle, InkCanvas's pen and the demo
   frame. Never read a sun direction anywhere else (`test_sun`).

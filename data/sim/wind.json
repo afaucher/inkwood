@@ -1,0 +1,145 @@
+{
+  "_about": "THE COASTAL WIND (decision coastal-wind, 2026-10-11; scripts/sim/wind.gd reads this and holds the model, scripts/sim/fire.gd and the effects layer ask it). ALEX: 'We also need a slight wind or variety over time. What is the natural pattern near the coast?' and, on the lead's answer (the sea breeze by day, the land breeze at night, calms between, wander and gusts on top), '1-3 looks good'. WHAT IT IS: ONE wind for the whole map, the air's velocity in m/s on the map's axes (x east, y south, the units' own), a pure function of the game second: Wind.at(game_s) = f(the mission's start hour, where the sea lies, a seed). Nothing is rolled while the game runs, so any peer asks in any order and gets the same answer. THE HOUR is taken ONCE at the mission start, as the sun is (decision sun-time): scripts/world/sun.gd's asked_hour when its mode is clock_at_start, else fixed_hour below; the daily swing is therefore set at the start and the variety DURING a mission (2-3 minutes of game time) is the wander and the gusts. THE SEA: the direction in which the sea lies from the mission's centre is found with the water generator (rings of samples round the centre); the day wind blows FROM the sea toward the battle area, the night wind the other way; with no sea in reach a light prevailing wind blows from a fixed bearing. EVERY NUMBER ALEX SAID is {value, decision}: day 2-5 m/s onshore, night 1-3 m/s offshore, near calm at dawn and dusk with a wandering direction, the direction wanders +/-15 degrees and the speed +/-30% over a few turns with short gusts on top. Everything else is the lead's or this track's PROPOSAL and says so. The spread reach (45 m downwind, 20 m upwind, 30 m in a calm) and the smoke's drift are in data/sim/fire.json. Planes and bombs are not moved by the wind (Alex: 'for now'). The wind is part of the snapshot and of the turn result (the host's parameters), so every peer builds the very same Wind whatever its own clock says.",
+
+  "fixed_hour": {
+    "value": 15.0,
+    "_proposed": true,
+    "_reason": "the local hour the wind takes while the sun's mode is 'fixed' (the default until the sun-time board is picked): mid-afternoon, when the sea breeze is at its strongest (the lead's proposal, decision coastal-wind). When the sun's mode is clock_at_start the wind takes the sun's own asked hour (Sun.current().asked_hour); the wind never reads the sun's data itself"
+  },
+
+  "day": {
+    "range_mps": {
+      "value": [2.0, 5.0],
+      "decision": "coastal-wind",
+      "_reason": "Alex: by day a gentle onshore wind of 2-5 m/s, from the sea toward the battle area. The wind's speed stays inside this range at full day (the wander and the gusts below are checked against it when the file loads): the regime's mean is the middle of it"
+    }
+  },
+  "night": {
+    "range_mps": {
+      "value": [1.0, 3.0],
+      "decision": "coastal-wind",
+      "_reason": "Alex: at night a lighter offshore wind of 1-3 m/s. The speed stays inside this range at full night; the mean is the middle of it"
+    }
+  },
+
+  "schedule": {
+    "value": [[0.0, -1.0], [5.0, -1.0], [6.5, 0.0], [8.5, 0.0], [10.5, 1.0], [16.0, 1.0], [18.0, 0.0], [19.5, 0.0], [21.0, -1.0], [24.0, -1.0]],
+    "_proposed": true,
+    "_reason": "the hours of each regime and the blends between them (decision coastal-wind: 'PROPOSED: the hours of each regime and the blend between them'). Pairs [hour, level]: level +1 is the full day sea breeze (onshore), -1 the full night land breeze (offshore), 0 a calm; the level between two hours is a smoothstep of the one before and the one after. Night until 05:00, calm at dawn from 06:30 to 08:30, the sea breeze built by 10:30 and blowing until 16:00, calm at dusk from 18:00 to 19:30, the land breeze set in by 21:00. Hours 0 and 24 are the same hour. The mean speed at a level is level x the middle of the day range (level > 0) or of the night range (level < 0)"
+  },
+
+  "calm": {
+    "speed_mps": {
+      "value": 0.5,
+      "_proposed": true,
+      "_reason": "the speed of the drifting air at a dead calm: near calm, not none (under about 1 m/s with the wander and gusts on it: dawn and dusk, Alex), so the smoke still wanders"
+    },
+    "below_mps": {
+      "value": 1.0,
+      "_proposed": true,
+      "_reason": "the regime's mean speed under which the wandering calm air starts to mix in: it is all of the wind at a calm (mean 0) and none of it from this speed up, so that day and night are the steady onshore and offshore wind Alex described and the blends between are continuous"
+    },
+    "wander_deg": {
+      "value": 180.0,
+      "_proposed": true,
+      "_reason": "Alex: 'near calm at dawn and dusk, with a wandering direction'. The calm air's direction wanders by up to this many degrees either side of a seeded bearing (180 is any direction), over the same period as the other wander"
+    }
+  },
+
+  "wander": {
+    "direction_deg": {
+      "value": 15.0,
+      "decision": "coastal-wind",
+      "_reason": "Alex: the direction wanders +/-15 degrees over a few turns"
+    },
+    "speed_frac": {
+      "value": 0.3,
+      "decision": "coastal-wind",
+      "_reason": "Alex: the speed wanders +/-30% over a few turns"
+    },
+    "period_s": {
+      "value": 40.0,
+      "_proposed": true,
+      "_reason": "'over a few turns' (decision coastal-wind): the slow wander is a seeded smooth function of the game second with this period, eight turns of 5 s; a second wave of a shorter period rides on it so that it does not repeat as a pure sine. A dial for how restless the wind is"
+    },
+    "second_ratio": {
+      "value": 0.41,
+      "_proposed": true,
+      "_reason": "the second wave's period as a share of the first (an awkward ratio, so the sum does not repeat within a mission)"
+    },
+    "second_weight": {
+      "value": 0.5,
+      "_proposed": true,
+      "_reason": "the second wave's size as a share of the first; the sum is scaled so that it never leaves -1..+1, so +/-15 degrees and +/-30% are exact limits"
+    }
+  },
+
+  "gusts": {
+    "window_s": {
+      "value": 10.0,
+      "_proposed": true,
+      "_reason": "game time is cut into windows of this many seconds (two turns) and each holds at most one gust, whose size, length and moment are seeded by the window's number: a gust is a pure function of the game second and no dice are rolled while playing"
+    },
+    "chance": {
+      "value": 0.6,
+      "_proposed": true,
+      "_reason": "the chance a window holds a gust (about one in two turns of gust)"
+    },
+    "length_s": {
+      "value": [1.5, 4.0],
+      "_proposed": true,
+      "_reason": "Alex: 'short gusts'. A gust lasts between these many seconds (one turn or less), rising and falling as sin squared"
+    },
+    "size_min": {
+      "value": 0.4,
+      "_proposed": true,
+      "_reason": "the smallest size of a gust as a share of the biggest"
+    },
+    "size_frac": {
+      "value": 0.1,
+      "_proposed": true,
+      "_reason": "the biggest gust adds this share of the mean speed on top of the wander (+30% wander and +10% gust is +40%: 4.9 m/s of a 3.5 m/s day wind, inside Alex's 2-5, and 2.8 m/s of a 2 m/s night wind, inside his 1-3)"
+    }
+  },
+
+  "sea": {
+    "ring_radii_m": {
+      "value": [400.0, 800.0, 1200.0, 1600.0, 2000.0],
+      "_proposed": true,
+      "_reason": "WHERE THE SEA LIES from the mission's centre (the lead's proposed method): the sea (WaterGen.sea_s, not the river) is sampled on rings of these radii round the centre. The farthest ring is how far the sea may be and still count as 'in reach'"
+    },
+    "directions": {
+      "value": 24,
+      "_proposed": true,
+      "_reason": "samples round each ring, evenly spaced (15 degrees apart)"
+    },
+    "deep_m": {
+      "value": 2.0,
+      "_proposed": true,
+      "_reason": "a sample counts as sea where it holds at least this many metres of sea water"
+    },
+    "min_hits": {
+      "value": 4,
+      "_proposed": true,
+      "_reason": "fewer sea samples than this in all and there is no sea in reach: the prevailing wind blows instead"
+    },
+    "min_bias": {
+      "value": 0.15,
+      "_proposed": true,
+      "_reason": "the sea's direction is the mean of the directions of the sea samples; if their mean is shorter than this (the sea on every side: an island), there is no one direction to the sea and the prevailing wind blows instead"
+    }
+  },
+
+  "prevailing": {
+    "from_bearing_deg": {
+      "value": 270.0,
+      "_proposed": true,
+      "_reason": "with no sea in reach, a light prevailing wind blows FROM this compass bearing (0 north, 90 east, the map's north up: 270 is a westerly)"
+    },
+    "speed_mps": {
+      "value": 1.5,
+      "_proposed": true,
+      "_reason": "its mean speed: light, under the day breeze, with the same wander and gusts"
+    }
+  }
+}

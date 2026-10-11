@@ -5,7 +5,7 @@ extends SceneTree
 #
 #   $env:INKWOOD_STEAM = "off"
 #   build\deps\godot\4.7-stable\Godot_v4.7-stable_win64_console.exe --path . `
-#       --script res://scripts/render/fire_shot.gd -- [seed] [out=tmp/fire] [size=1600x900] [what=all|frames|cost] [trees=N]
+#       --script res://scripts/render/fire_shot.gd -- [seed] [out=tmp/fire] [size=1600x900] [what=all|frames|wind|cost] [trees=N]
 #
 # Finds the densest grove of the seed's terrain (default 20261009), builds a feed over its trees -- the west third burnt out to trunks, the
 # middle burning since an earlier turn, the east third just lit, the rest beside it unburnt -- and draws it through a MapView and the
@@ -18,6 +18,15 @@ extends SceneTree
 #   05_burning_close.png        zoom 2.0 on the border between the burnt and the burning
 #   06_tail_play.png            a turn and a half later: the middle third is out too (the map baked again), its smoke thinning away
 #
+# THE WIND (decision coastal-wind, 2026-10-11; what=wind, and part of all): the same burning grove under the sim's own Wind (scripts/sim/wind.gd, built
+# from its params as a client builds it: the day at 14:00, the night at 01:30, the dawn calm at 07:30, the sea lying to the west-south-west; the seed is the
+# shot's) -- a stand-in FakeWind with its shape is used only if that Wind will not load -- each at play zoom, at 0.35 and (the day) close:
+#
+#   08_wind_day_play.png / 08_wind_day_plan.png / 08_wind_day_close.png     the plumes lean and trail downwind
+#   09_wind_night_play.png / 09_wind_night_plan.png                          lighter, and the other way
+#   10_wind_dawn_play.png / 10_wind_dawn_plan.png                            near calm: the smoke stands over its trees
+#   11_plumes_day.png / 12_plumes_night.png / 13_plumes_dawn.png            six trees burning alone, so each plume's lean can be read
+#
 # and PRINTS the cost: how long the chunks took to bake again, and the frame time with the grove burning against the same view with no fire
 # (VSync off, 180 frames, the smoke advancing), with what the smoke's own code spent (make the puffs, record the draws). A script that quits
 # with the baker's workers running segfaults (CLAUDE.md), so it clears the baker first.
@@ -28,6 +37,32 @@ const FxLayer = preload("res://scripts/fx/fx_layer.gd")
 
 const TS := 5.0
 const GRID_M := 30.0
+
+# A stand-in for the sim's Wind (at(game_s) -> Vector2 m/s, world axes; mean()): a base velocity whose direction wanders +-15 degrees and whose speed
+# wanders +-30% over a few turns, with a short gust now and then.
+const WindScript = preload("res://scripts/sim/wind.gd")
+
+# The wind of one hour of the day, on the sim's own model (a stand-in FakeWind if it will not load).
+func _wind_for(hour: float, fallback: Vector2, phase: float) -> Object:
+	var w: Object = WindScript.from_params({"hour": hour, "toward_sea": [-0.93, 0.37], "seed": seed_value, "v": 1}, WindScript.PATH, true)
+	if w != null and bool(w.call("ok")):
+		return w
+	printerr("[fire-shot] the sim's Wind did not load (%s): a FakeWind stands in" % str(w.get("errors") if w != null else "null"))
+	return FakeWind.new(fallback, phase)
+
+class FakeWind extends RefCounted:
+	var base := Vector2(3.8, -1.3)
+	var phase := 0.0
+	func _init(velocity: Vector2 = Vector2(3.8, -1.3), ph: float = 0.0) -> void:
+		base = velocity
+		phase = ph
+	func at(t: float) -> Vector2:
+		var ang := deg_to_rad(15.0) * sin(t * TAU / 27.0 + phase)
+		var speed := 1.0 + 0.3 * sin(t * TAU / 19.0 + phase * 1.7)
+		var gust := 1.0 + 0.35 * pow(maxf(0.0, sin(t * TAU / 7.3 + phase * 0.6)), 6.0)
+		return base.rotated(ang) * speed * gust
+	func mean() -> Vector2:
+		return base
 
 var out_dir := "tmp/fire"
 var seed_value := 20261009
@@ -40,6 +75,7 @@ var fx: FxLayer = null
 var canvas: CanvasLayer = null
 var centre_m := Vector2.ZERO
 var feed: Array = []
+var all_trees: Array = []          # the middle of the map's trees: {x_m, y_m, r_m, id}
 var t_show := 0.0
 var code := 0
 
@@ -94,6 +130,9 @@ func _run() -> void:
 	_say("the grove at play zoom, cold bake: %.1f s" % t_cold)
 	if what == "all" or what == "frames":
 		await _frames_run()
+	if what == "all" or what == "wind":
+		await _wind_run()
+		await _plume_run()
 	if what == "all" or what == "cost":
 		await _cost_run()
 	_finish(code)
@@ -168,6 +207,7 @@ func _find_grove() -> void:
 			best = sum
 			best_cell = cell
 	centre_m = (Vector2(best_cell) + Vector2(0.5, 0.5)) * GRID_M
+	all_trees = all
 	_say("%d trees in the middle of the map; the densest grove (5 x 5 cells of %d m) has %d, centred at %s m" % [all.size(), int(GRID_M), best, centre_m.round()])
 	# the feed: the trees within the radius, west to east: burnt out, burning, just lit; beyond the east edge unburnt
 	var radius := float(opts.get("radius", "95"))
@@ -260,6 +300,100 @@ func _frames_run() -> void:
 	await _wait_complete(120.0, true)
 	_say("a turn and a half later (%.1f s): %d trees are trunks, %d chunks baked again" % [t_tail, burnt2.size(), changed2])
 	_save("06_tail_play.png")
+
+# --- The wind -----------------------------------------------------------------------------------------------------------------
+
+# How far the smoke sits downwind of its trees: the mean displacement (m) of a puff from its tree, over the feed's burning columns.
+func _mean_lean() -> String:
+	var puffs: Array = fx.fire.puffs_at(t_show)
+	if puffs.is_empty():
+		return "no puffs"
+	var trees := {}
+	for rec: Dictionary in feed:
+		trees[str(rec["id"])] = Vector2(rec["x_m"], rec["y_m"])
+	var sum := Vector2.ZERO
+	for p: Dictionary in puffs:
+		sum += (p["pos"] as Vector2) - (trees[str(p["tree"])] as Vector2)
+	sum /= float(puffs.size())
+	return "%.1f m east, %.1f m south of its tree on average (%.1f m)" % [sum.x, sum.y, sum.length()]
+
+func _wind_run() -> void:
+	view.look_at_m(centre_m)
+	view.set_zoom(1.0)
+	fx.set_fire_feed(feed, TS)
+	fx.set_time(t_show)
+	view.set_burnt_trees(fx.fire.burnt_at(t_show))
+	await _wait_complete(120.0, true)
+	_say("WIND: the grove burning at %.1f s; drift_s from data/sim/fire.json: %s, the gain on the wind %.2f (a puff reads as smoke for %.2f s)" % [
+		t_show, str(fx.fire.drift_s()) if fx.fire.drift_s() > 0.0 else "none yet (the sim builder adds it): the wind is used as it blows", fx.fire.drift_gain(), fx.fire.zone_age_s()])
+	_say("WIND: with no wind, the options' data wind (2.5 east, 1.0 south m/s): smoke %s" % _mean_lean())
+	var regimes := [
+		["day (14:00)", "08_wind_day", _wind_for(14.0, Vector2(3.8, -1.3), 0.0), true],
+		["night (01:30)", "09_wind_night", _wind_for(1.5, Vector2(-1.8, 0.7), 1.3), false],
+		["dawn (07:30)", "10_wind_dawn", _wind_for(7.5, Vector2(0.25, 0.12), 2.1), false],
+	]
+	for r: Array in regimes:
+		var w: Object = r[2]
+		fx.set_wind(w)
+		fx.set_time(t_show)
+		view.look_at_m(centre_m)
+		view.set_zoom(1.0)
+		await _frames(4)
+		var at: Vector2 = w.at(t_show)
+		_say("WIND %s: the air blows %.1f m/s toward (%.1f, %.1f) at %.1f s (the regime's mean (%.1f, %.1f)); smoke %s" % [r[0], at.length(), at.x, at.y, t_show, w.mean().x, w.mean().y, _mean_lean()])
+		_save("%s_play.png" % r[1])
+		view.set_zoom(0.35)
+		await _wait_complete(120.0, true)
+		_save("%s_plan.png" % r[1])
+		if bool(r[3]):
+			view.look_at_m(centre_m)
+			view.set_zoom(2.0)
+			await _wait_complete(120.0, true)
+			_save("%s_close.png" % r[1])
+	fx.set_wind(null)
+	view.set_zoom(1.0)
+
+# A few trees burning alone (spaced out, none in the grove, the biggest), under the same three winds, at zoom 2: each plume's lean can be read.
+func _plume_run() -> void:
+	var picks: Array = []
+	var cand: Array = []
+	for t: Dictionary in all_trees:
+		var d := Vector2(t["x_m"], t["y_m"]).distance_to(centre_m)
+		if d > 120.0 and d < 330.0:
+			cand.append(t)
+	cand.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["r_m"]) > float(b["r_m"]) or (float(a["r_m"]) == float(b["r_m"]) and str(a["id"]) < str(b["id"])))
+	for t: Dictionary in cand:
+		var p := Vector2(t["x_m"], t["y_m"])
+		var ok := true
+		for q: Dictionary in picks:
+			var dq := p.distance_to(Vector2(q["x_m"], q["y_m"]))
+			if dq < 55.0 or dq > 120.0:
+				ok = false
+		if ok:
+			picks.append(t)
+		if picks.size() >= 4:
+			break
+	if picks.size() < 3:
+		return
+	var lone: Array = []
+	var mid := Vector2.ZERO
+	for i in picks.size():
+		var t: Dictionary = picks[i]
+		lone.append({"id": t["id"], "x_m": t["x_m"], "y_m": t["y_m"], "r_m": t["r_m"], "lit_turn": 2, "lit_t": 0.4 * float(i), "out_turn": 5})
+		_say("plume tree %d: %s, canopy radius %.1f m" % [i, Vector2(t["x_m"], t["y_m"]).round(), float(t["r_m"])])
+		mid += Vector2(t["x_m"], t["y_m"])
+	mid /= float(picks.size())
+	fx.set_fire_feed(lone, TS)
+	view.set_burnt_trees([])
+	view.look_at_m(mid)
+	view.set_zoom(2.0)
+	await _wait_complete(120.0, true)
+	for r: Array in [["day", "11_plumes_day", _wind_for(14.0, Vector2(3.8, -1.3), 0.0)], ["night", "12_plumes_night", _wind_for(1.5, Vector2(-1.8, 0.7), 1.3)], ["dawn", "13_plumes_dawn", _wind_for(7.5, Vector2(0.25, 0.12), 2.1)]]:
+		fx.set_wind(r[2])
+		fx.set_time(t_show + 1.0)
+		await _frames(4)
+		_save("%s.png" % r[1])
+	fx.set_wind(null)
 
 # --- The cost ------------------------------------------------------------------------------------------------------------
 

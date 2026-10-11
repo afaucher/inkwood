@@ -25,14 +25,17 @@ extends RefCounted
 #   IGNITION   a bomb_impact, a shell_impact (radius: the event's blast_m) and a crash (radius: ignite.crash_radius_m, PROPOSED 20 m) light each
 #              tree whose canopy is within the radius of the point, 50% each, at the event's moment. The dice are per (event, tree).
 #   SPREAD     once a turn, each tree burning from an EARLIER turn (PROPOSED) may light each unlit tree within spread.reach_m of it, canopy edge to
-#              canopy edge (PROPOSED): 40% when the canopies touch or overlap, falling linearly to 0 at 30 m. A tree lit by spread is lit at a
+#              canopy edge (PROPOSED): 40% when the canopies touch or overlap, falling linearly to 0 at 30 m -- IN A CALM. With the coastal wind (decision
+#              coastal-wind, scripts/sim/wind.gd; the wind at the turn's start: PROPOSED) the reach leans: 45 m downwind and 20 m upwind at full wind
+#              (4 m/s: PROPOSED), 30 m across it, the 40% at touching canopies the same (FireRules.spread_reach). A tree lit by spread is lit at a
 #              seeded moment inside the turn (PROPOSED), so its smoke starts during the playback. The dice are per (source, target) pair.
 #   BURNING    a tree burns burn.turns turns, the turn it is lit counting as the first (PROPOSED reading); it is then BURNT OUT, a trunk.
 #   DAMAGE     a ground or sea unit loses 1 pip with the chance damage.chance_near at a burning canopy's edge, fading linearly to 0 at 25 m beyond
 #              it; several burning trees combine as 1 - product(1 - p) and a unit loses at most one pip a turn (PROPOSED), judged at the moment of
 #              the turn its path is most exposed (the event's t); a unit that loses its last pip is DESTROYED (the existing down machinery).
 #   SMOKE      a tree smokes from its lit moment to the end of its last burning turn. A ground or sea unit (mobile and static, PROPOSED) within
-#              smoke.reach_m (PROPOSED 20 m) of a smoking canopy is IN THE SMOKE. Smoke is NOT cover: the unit stays as visible as it was (the fog,
+#              smoke.reach_m (PROPOSED 20 m) of a smoking canopy is IN THE SMOKE -- and the smoke drifts with the wind (decision coastal-wind): the canopy
+#              grown by that reach and swept along wind x smoke.drift_s (PROPOSED 4 s), a capsule (smoke_at, drift_at). Smoke is NOT cover: the unit stays as visible as it was (the fog,
 #              the AI's knowledge, the woods radius). It cannot be TRACKED (Alex): see Spotting (fire control), World._resolve_followed_drops
 #              (bombs follow the last place it was tracked) and UiTarget (a click sets a point).
 #   BURNT COVER  a burnt-out tree takes its woods cover with it (Alex, '5 - yes'): Concealment scales the woods density by burnt_scale().
@@ -70,6 +73,9 @@ var turn_seconds: float = 5.0
 # The trees the fire can light: a FireTrees (scripts/sim/fire_trees.gd) or any object with trees_in_disc(x, y, reach) and max_canopy_m(). null: a state
 # that only carries trees (a client that joined without the terrain): it lights nothing and the burnt-out share is 1.
 var source: Object = null
+# THE WIND (decision coastal-wind; scripts/sim/wind.gd): a Wind, or null in a calm world (the World keeps it in step: World.wind). With one, the spread leans
+# downwind (rules.spread_reach) and the smoke zone drifts with the smoke (smoke_at).
+var wind: RefCounted = null
 var revision: int = 0               # counts the changes (the map and the effects redraw when it moves)
 
 var trees: Dictionary = {}          # id -> {id, x_m, y_m, r_m, kx, ky, lit_turn, lit_t, out_turn, cause, from}
@@ -195,16 +201,32 @@ func burnt_out(rec: Dictionary, time_s: float) -> bool:
 
 # --- The smoke ----------------------------------------------------------------------------------------------------------
 
-# Is the point within smoke.reach_m of the canopy edge of a tree that is smoking at the game second?
+# Is the point within smoke.reach_m of the smoke of a tree that is burning at the game second? The smoke DRIFTS (decision coastal-wind: "the untrackable zone
+# moves with the drifting smoke"): the zone of a tree is its canopy grown by smoke.reach_m and swept along the wind at that second times smoke.drift_s
+# (PROPOSED about 4 s, the puffs' rise), a capsule from the canopy to where the smoke has got to. No wind (a calm world): the zone stays on the canopy.
 func smoke_at(x_m: float, y_m: float, time_s: float) -> bool:
 	var reach := rules.smoke_reach_m
-	for t: Dictionary in _near(x_m, y_m, reach + _max_r):
+	var drift := drift_at(time_s)
+	var p := Vector2(x_m, y_m)
+	for t: Dictionary in _near(x_m, y_m, reach + _max_r + drift.length()):
 		if not smoking(t, time_s):
 			continue
-		var d := Vector2(float(t["x_m"]) - x_m, float(t["y_m"]) - y_m).length()
-		if d - float(t["r_m"]) <= reach:
+		var c := Vector2(float(t["x_m"]), float(t["y_m"]))
+		if _segment_dist(p, c, c + drift) - float(t["r_m"]) <= reach:
 			return true
 	return false
+
+# How far the smoke has drifted at the game second: the wind then times smoke.drift_s (Vector2.ZERO with no wind).
+func drift_at(time_s: float) -> Vector2:
+	if wind == null or not (rules.drift_s > 0.0):
+		return Vector2.ZERO
+	return (wind.at(time_s) as Vector2) * rules.drift_s
+
+static func _segment_dist(p: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var l2 := ab.length_squared()
+	var u := 0.0 if l2 <= 0.0 else clampf((p - a).dot(ab) / l2, 0.0, 1.0)
+	return p.distance_to(a + ab * u)
 
 # Does the smoke deny tracking of a unit of this definition standing at the point at the game second (the tracking rule is on, the unit's domain
 # and mobility are listed, and it is in the smoke)?
@@ -288,16 +310,31 @@ func resolve_turn(turn: int, rng_seed: int, units: Dictionary, events: Array, sa
 			if from_ok and int(rec["out_turn"]) >= turn:
 				spreaders.append(rec)
 		var cmax2: float = float(source.max_canopy_m())
+		# THE WIND at the turn's start (PROPOSED; spread.wind_at) leans the reach downwind: rules.spread_reach by the angle between the way to the target and
+		# the way the wind blows. No wind, or a calm: the same reach all round.
+		var wdx := 0.0
+		var wdy := 0.0
+		var skew := 0.0
+		if wind != null:
+			var wv: Vector2 = wind.at(game_time(turn, 0.0 if rules.wind_at_mode == "turn_start" else 0.5 * turn_seconds))
+			skew = rules.skew_of(wv.length())
+			if skew > 0.0:
+				wdx = wv.x / wv.length()
+				wdy = wv.y / wv.length()
+		var reach_q := rules.spread_reach_max() if skew > 0.0 else rules.spread_reach_m
 		for s: Dictionary in spreaders:
 			var sx := float(s["x_m"])
 			var sy := float(s["y_m"])
-			for u: Dictionary in source.trees_in_disc(sx, sy, rules.spread_reach_m + float(s["r_m"]) + cmax2):
+			for u: Dictionary in source.trees_in_disc(sx, sy, reach_q + float(s["r_m"]) + cmax2):
 				var uid := str(u["id"])
 				if trees.has(uid):
 					continue
-				var d := Vector2(float(u["x_m"]) - sx, float(u["y_m"]) - sy).length()
+				var ux := float(u["x_m"]) - sx
+				var uy := float(u["y_m"]) - sy
+				var d := sqrt(ux * ux + uy * uy)
 				var gap := d - float(s["r_m"]) - float(u["r_m"]) if rules.gap_measure == "canopy_edge" else d
-				var p := rules.spread_p(gap)
+				var cos_phi := (ux * wdx + uy * wdy) / d if skew > 0.0 and d > 0.0 else 0.0
+				var p := rules.spread_p_dir(gap, cos_phi, skew)
 				if p <= 0.0:
 					continue
 				var rng := Mulberry32.new(_seed(rng_seed, turn, KIND_SPREAD, [int(s["kx"]), int(s["ky"]), int(u["kx"]), int(u["ky"])]))

@@ -59,6 +59,15 @@ extends Node2D
 #       of the field's cap), at the MAP's scale. FxFireView (the sandbox makes it when the World has a fire) hands the feed over once per fire
 #       revision and the burnt-out trees to the MapView as trunks. An empty feed makes and draws nothing; clear() empties it.
 #
+# THE WIND (decision coastal-wind, 2026-10-11; the sim's Wind is scripts/sim/wind.gd):
+#   fx.set_wind(wind)
+#       `wind` is a Wind (or any object with at(game_s) -> Vector2: the air's velocity, m/s, world axes) or null. With one set ALL smoke drifts
+#       with it: every puff takes its drift from wind.at(its birth game time) (a damaged plane's trail, a crash's burst, plume and wreck column, a
+#       bomb's, a flak shell's and a ruin's smoke -- fx_field.gd) and a burning tree's column leans downwind by the sim's smoke.drift_s
+#       (fx_fire.gd), so the smoke you see sits where the sim's untrackable zone is. Thick smoke's shadow follows the drifted puffs. With null
+#       (the boards, a shot without a World) every option keeps its own data wind, exactly as before. Puffs already made keep the drift they were
+#       born with; the burning trees' columns are made again from the new wind. The sandbox sets it from `world.wind` (sandbox.gd _sync_wind).
+#
 # FROM THE SIM'S EVENTS (scripts/sim/combat.gd; game time t = (turn - 1) x turn_seconds + the event's t):
 #   hit   -> the unit's health fraction (health / its def's health) for emit_damage_smoke, each frame
 #            of the playback while 0 < health < full (a full-health plane makes no smoke)
@@ -118,6 +127,8 @@ var field: FxField = null
 # THE FOREST FIRE's smoke (track 'Forest fire', decision forest-fire; scripts/fx/fx_fire.gd): one column per burning tree, from the
 # sim's feed (set_fire_feed). Empty feed: nothing is made or drawn and the layer is as it was.
 var fire: FxFire = null
+# THE WIND (decision coastal-wind): the air all smoke drifts with, or null for each option's own data wind (see set_wind).
+var wind: Object = null
 var mapping: UiMapping = null
 
 var true_scale: float = 1.0          # the plane's drawn px per metre / the mapping's, set by the host
@@ -350,6 +361,15 @@ func set_fire_feed(feed: Array, turn_seconds: float = -1.0) -> void:
 	if turn_seconds > 0.0:
 		fire.set_turn_seconds(turn_seconds)
 	fire.set_feed(feed)
+	queue_redraws()
+
+# THE WIND (header): the air all smoke drifts with -- a Wind, or null for today's data winds. Safe to call again with another (or the same,
+# changed in place) wind.
+func set_wind(w: Object) -> void:
+	_build()
+	wind = w
+	field.wind = w
+	fire.set_wind(w)
 	queue_redraws()
 
 # The game ends or restarts: every puff, burst, piece and scar goes. The baked art stays

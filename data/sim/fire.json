@@ -1,5 +1,5 @@
 {
-  "_about": "THE FOREST FIRE (decision forest-fire, 2026-10-11; scripts/sim/fire_rules.gd reads this, scripts/sim/fire.gd holds the state and the turn step). ALEX'S WORDS: 'I am thinking that the fire is actually just smoke coming from the trees. It spreads from tree to tree based on distance. It can inflict damage to nearby units with low power and low chance.' 'It should generate smoke which makes it harder to see.' On the lead's proposals: '1 - yes 2 - yes 3 - lets fade the change with distance as well ... 5 - yes, lets burn down to the trunks? 6 - that is what I wanted 7 - suppress sounds good'. On how the smoke makes things harder to see (the cover reading 'a' was replaced): '1 visible but untrackable and 2 last place you saw it' -- a unit in smoke stays VISIBLE exactly as it would be without smoke (the fog, the enemy AI's knowledge and the woods radius ignore smoke), but it cannot be TRACKED: fire control (the cruiser's spotted target) does not hold it, a bomb that follows it aims at the last place it was tracked, and a click on it sets a point target. No flame is drawn (decision fire-colour: 'No fire for now. Just smoke.'). EVERY NUMBER Alex accepted is {value, decision}; every detail the lead proposed (and this track's reading of it) is {value, _proposed, _reason}; the balance is not calibrated (decision balance-uncalibrated). The fire is OFF unless a scenario's 'fire' switch (data/scenarios/suppress.json) or the sandbox knob 'fire' turns it on. Units: metres, seconds into a turn, whole turns. A tree is the terrain's tree (scripts/world/terrain.gd, world px at 2 px per metre; here in metres), identified by its place.",
+  "_about": "THE FOREST FIRE (decision forest-fire, 2026-10-11; scripts/sim/fire_rules.gd reads this, scripts/sim/fire.gd holds the state and the turn step). ALEX'S WORDS: 'I am thinking that the fire is actually just smoke coming from the trees. It spreads from tree to tree based on distance. It can inflict damage to nearby units with low power and low chance.' 'It should generate smoke which makes it harder to see.' On the lead's proposals: '1 - yes 2 - yes 3 - lets fade the change with distance as well ... 5 - yes, lets burn down to the trunks? 6 - that is what I wanted 7 - suppress sounds good'. On how the smoke makes things harder to see (the cover reading 'a' was replaced): '1 visible but untrackable and 2 last place you saw it' -- a unit in smoke stays VISIBLE exactly as it would be without smoke (the fog, the enemy AI's knowledge and the woods radius ignore smoke), but it cannot be TRACKED: fire control (the cruiser's spotted target) does not hold it, a bomb that follows it aims at the last place it was tracked, and a click on it sets a point target. No flame is drawn (decision fire-colour: 'No fire for now. Just smoke.'). EVERY NUMBER Alex accepted is {value, decision}; every detail the lead proposed (and this track's reading of it) is {value, _proposed, _reason}; the balance is not calibrated (decision balance-uncalibrated). The fire is OFF unless a scenario's 'fire' switch (data/scenarios/suppress.json) or the sandbox knob 'fire' turns it on. Units: metres, seconds into a turn, whole turns. THE WIND (decision coastal-wind, scripts/sim/wind.gd, data/sim/wind.json): the spread leans downwind and the smoke zone drifts with the smoke; a World with no wind is a calm. A tree is the terrain's tree (scripts/world/terrain.gd, world px at 2 px per metre; here in metres), identified by its place.",
 
   "ignite": {
     "chance": {
@@ -33,7 +33,27 @@
     "reach_m": {
       "value": 30,
       "decision": "forest-fire",
-      "_reason": "the chance falls to 0 at this distance (Alex: '2 - yes'; the lead's option: 'falling to 0 at 30 m')"
+      "_reason": "the chance falls to 0 at this distance (Alex: '2 - yes'; the lead's option: 'falling to 0 at 30 m'). This is the reach IN A CALM, 30 m all round, and across the wind; with the coastal wind (decision coastal-wind) it leans: reach_downwind_m and reach_upwind_m below"
+    },
+    "reach_downwind_m": {
+      "value": 45,
+      "decision": "coastal-wind",
+      "_reason": "Alex (decision coastal-wind, '1-3 looks good'): fire spreads further downwind -- 45 m downwind at full wind, instead of the calm's 30 m all round; the 40% at touching canopies stays. The reach leans with the wind (scripts/sim/fire_rules.gd spread_reach); the wind is scripts/sim/wind.gd's"
+    },
+    "reach_upwind_m": {
+      "value": 20,
+      "decision": "coastal-wind",
+      "_reason": "Alex: 20 m upwind at full wind, instead of 30 m all round"
+    },
+    "full_skew_mps": {
+      "value": 4.0,
+      "_proposed": true,
+      "_reason": "how the lean scales with the wind's speed (decision coastal-wind: 'PROPOSED: how the spread reach scales with wind speed'): the reach is 30 m all round in a calm, 45 m / 20 m downwind / upwind at this speed or more, and in proportion below it. 4 m/s is about the middle of the day breeze (2-5 m/s), so a typical day wind leans the fire almost fully and a night wind (1-3 m/s) about half"
+    },
+    "wind_at": {
+      "value": "turn_start",
+      "_proposed": true,
+      "_reason": "the wind a turn's spread is judged by is the wind at the turn's start (the lead's proposal); 'turn_middle' takes the wind in the middle of the turn instead"
     },
     "fall": {
       "value": "linear",
@@ -123,6 +143,11 @@
       "value": 20,
       "_proposed": true,
       "_reason": "a unit is IN THE SMOKE when it is within this of the canopy edge of a tree that is smoking at that moment (the lead's proposal: the column drifts a little beyond the crown). A tree smokes from the moment it is lit (lit_t of its turn) to the end of its last burning turn; a burnt-out tree smokes no more"
+    },
+    "drift_s": {
+      "value": 4.0,
+      "_proposed": true,
+      "_reason": "the seconds of drift that place the smoke DOWNWIND (decision coastal-wind: 'the untrackable smoke zone moves with the drifting smoke'): the zone is the burning canopy grown by reach_m and swept along the wind times this many seconds (a capsule), and the effects layer's puffs drift for as long as they rise (about 4 s), so the zone and the picture agree. 0: the zone stays on the canopy. Read by scripts/sim/fire.gd smoke_at and by the drawing"
     },
     "domains": {
       "value": ["ground", "sea"],

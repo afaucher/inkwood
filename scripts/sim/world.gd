@@ -124,6 +124,8 @@ extends RefCounted
 # snapshot (net_fire / apply_net_fire); clients never roll. SMOKE DENIES TRACKING (Alex: "visible but untrackable ... last place you saw it"): a
 # ground or sea unit in the smoke is seen as before but is not SPOTTED for fire control (spotting.gd; _gun_analysis; a salvo at it is a poor shot
 # at the last place it was tracked) and a bomb that follows it aims at that place (_resolve_followed_drops). tracking_denied() answers it.
+# THE COASTAL WIND (decision coastal-wind): world.wind, a Wind or null, is one wind for the whole map as a pure function of the game second; the fire's spread leans
+# downwind and its smoke zone drifts with it (fire.gd), and every smoke is drawn drifting with it. Planes and bombs are not moved by it, for now.
 # LOST TARGETS (decision lost-target-last-seen): the same goes for a followed unit that is out of the bombing side's SIGHT at the release (sight circles and
 # line of sight; the woods' concealment does not count): _target_lost / _last_seen_place; data/sim/bombs.json lost_target_mode.
 #
@@ -157,6 +159,7 @@ const Spotting = preload("res://scripts/sim/spotting.gd")
 const GroundRules = preload("res://scripts/sim/ground_rules.gd")
 const FireRules = preload("res://scripts/sim/fire_rules.gd")
 const FireState = preload("res://scripts/sim/fire.gd")
+const Wind = preload("res://scripts/sim/wind.gd")
 const JsMath = preload("res://scripts/core/js_math.gd")
 
 const PHASE_PLANNING := "planning"
@@ -206,6 +209,10 @@ var gun_memory: Array = []
 var ground: GroundRules
 # THE FOREST FIRE (the header; enable_fire): null while it is off.
 var fire: FireState = null
+# THE COASTAL WIND (decision coastal-wind; scripts/sim/wind.gd): null when the scenario has none. wind.at(game_s) is the air's velocity, m/s, on the map's axes;
+# the fire leans its spread and drifts its smoke zone with it, the effects layer drifts every smoke with it. Built where the scenario builds the World
+# (SandboxScenario.populate), carried by net_wind() in the snapshot and in the turn result so that a client never derives its own.
+var wind: Wind = null
 var _fan_cache: Dictionary = {}   # key -> PackedVector2Array: the ruled fans asked for lately (_ruled_outline)
 
 var _combat_resolver: CombatResolver
@@ -332,7 +339,32 @@ func enable_fire(trees: Object, rules_path: String = FireRules.PATH) -> bool:
 		return false
 	fire = FireState.new(fr, rules.turn_seconds)
 	fire.source = trees
+	fire.wind = wind
 	return true
+
+# --- The coastal wind (decision coastal-wind) -------------------------------------------------------------------------------
+
+# Give the World its wind (a Wind, scripts/sim/wind.gd; null takes it away). The fire, if there is one, leans and drifts with it.
+func set_wind(w: Wind) -> void:
+	wind = w
+	if fire != null:
+		fire.wind = w
+
+# The wind's defining parameters for a joining client and the turn result (empty while there is no wind), and its twin: a client builds the very same Wind from
+# the host's (its own clock may say another hour) and never derives one itself while a host's is present. Applying what it already has changes nothing.
+func net_wind() -> Dictionary:
+	return wind.params() if wind != null else {}
+
+func apply_net_wind(d: Dictionary) -> void:
+	if d.is_empty():
+		return   # (a host with no wind sends none)
+	if wind != null and wind.params() == d:
+		return
+	var w: RefCounted = Wind.from_params(d, Wind.PATH, quiet)
+	if not w.ok():
+		errors.append_array(w.errors)
+		return
+	set_wind(w as Wind)
 
 # The fire's state for a joining client and the turn result (empty while the fire is off), and its twin. A World that has no fire and is handed
 # a non-empty one (a client whose fire knob differs from the host's) takes the host's, without the terrain: it shows and judges the smoke.
@@ -1296,6 +1328,8 @@ func resolve() -> Dictionary:
 	result.merge(net_guns())
 	if fire != null:
 		result["fire"] = net_fire()   # (a World with no fire adds nothing to its result)
+	if wind != null:
+		result["wind"] = net_wind()   # (nor one with no wind)
 	return result
 
 # THE NETWORK CONTRACT (proposed by the lead for the first fight, 2026-10-09;
@@ -1337,6 +1371,8 @@ func apply_resolution(result: Dictionary) -> bool:
 	apply_net_guns(result)
 	if result.has("fire"):
 		apply_net_fire(result["fire"])
+	if result.has("wind"):
+		apply_net_wind(result["wind"])
 	spotting.forget()
 	_set_phase(PHASE_RESOLVED)
 	var events: Array = (result["events"] as Array).duplicate(true)
