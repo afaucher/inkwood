@@ -252,6 +252,6 @@
   "recommendation_proposed": "PROPOSED by Track BB, Alex decides: B, the steel truss, if the bridge has to be found and read at the planning zoom (the lattice, on the span and as a lattice of shadow, is the most legible thing of the three at 0.7 px per metre); A, the stone arch, if it should look like the village's own masonry (it shares the walls' two tones and is the most like the buildings); C, the wooden trestle, as the cheap, light variant (a second bridge type for the back roads). They need not be one: the generator can pick a look per crossing (a stone arch in the village, a trestle on the track).",
   "frames": "frames.json (every frame whole, native size)",
   "sheet": "board.png (each look whole and destroyed at zoom 1 and the planning zoom, a zoom-2 close-up, a range check, a palette strip)",
-  "chosen": null,
-  "chosen_by": null
+  "chosen": "arch, with a flat deck (data/world/bridges.json arch.humped_deck false)",
+  "chosen_by": "Alex, 2026-10-10: 'I like the shape of the stone arch but not the blue stripes' (the stripes were the humped deck's shaded halves; the arch frames here are re-rendered flat)"
 }

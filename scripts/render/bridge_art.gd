@@ -109,6 +109,7 @@ static func gen(kind: String, d: Dictionary, rng: Mulberry32, ruin: bool, river_
 			p.crown_h = float(val(kd["crown_h"]))
 			p.pier_h = float(val(kd["pier_h"]))
 			p.slab_h = float(val(kd["slab_h"]))
+			p.humped_deck = bool(val(kd["humped_deck"])) if kd.has("humped_deck") else true
 		"truss":
 			var pl := _rr(rng, kd["panel_len"])
 			p.panels = maxi(4, int(round(float(p.river_w) / pl)))
@@ -839,7 +840,9 @@ static func _draw_arch(g, M: Model, V: A.View, ink: A.Ink, roles: Dictionary) ->
 		var o := A._path(pn, poly, {"fill": roles["stone"], "weight": 0.0})
 		deck_px.append(o)
 		A.stipple(g, ink, o, {"rng": A._rng(pn), "density": 2.4, "r": 0.45, "alpha": 0.42})
-	for hmp: Dictionary in G.humps:
+	# (Alex 2026-10-10: the shaded halves read as blue stripes across the deck. With humped_deck false the deck is one
+	# flat stone surface; the arches show in the piers, the cutwaters and the shadow on the water.)
+	for hmp: Dictionary in (G.humps if bool(p.get("humped_deck", true)) else []):
 		var half_rect := V.tps(A.rect_p(float(hmp.xm), -dw / 2.0 - 0.5, float(hmp.x1), dw / 2.0 + 0.5))
 		for o: PackedVector2Array in deck_px:
 			for part: PackedVector2Array in Geometry2D.intersect_polygons(o, half_rect):

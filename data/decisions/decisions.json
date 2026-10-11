@@ -1411,6 +1411,30 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'P1 cutter'. 'S2 barge'."
+    },
+    {
+      "id": "bridge-look",
+      "date": "2026-10-10",
+      "area": "Structures, Water",
+      "question": "How does a bridge look (variants/bridge/)?",
+      "board": "variants/bridge/ (the Inkwood Boats and Bridges viewer)",
+      "options": [
+        "A stone arch",
+        "B steel truss",
+        "C wooden trestle"
+      ],
+      "chosen": "the stone arch's shape, without the blue stripes: a flat deck",
+      "parameters": {
+        "kind": "arch",
+        "humped_deck": false
+      },
+      "applied_to": [
+        "data/world/bridges.json arch.humped_deck false",
+        "scripts/render/bridge_art.gd (the switch)",
+        "variants/bridge/ arch frames re-rendered"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'And I like the shape of the stone arch but not the blue stripes, what are those?' They were the humped deck: each arch's roadway drawn as a roof of two halves, the half away from the sun in the slope tone (stone mixed toward the shadow tint). Now flat; the arches show in the piers, cutwaters and the shadow on the water. River width and the boat scale are still open."
     }
   ]
 }

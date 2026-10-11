@@ -10,6 +10,7 @@
     "about": "Round arches (one to four, three over a 60 m river) on piers with pointed cutwaters, a humped deck (each arch is a roof of two halves: the half facing away from the sun in the slope tone, a ridge line at its crown) between stone parapets that flare out into wing walls at the banks. A solid bridge: it casts a solid slab of shadow (the light under the arches is not drawn).",
     "river_w": [54, 62], "pier_w": [3.6, 4.4], "cutwater_m": [2.2, 2.8], "parapet_w": [1.0, 1.2], "wing_m": [6.5, 8.0],
     "arch_span_m": { "value": 19, "_proposed": true, "_reason": "the span of one arch: the number of arches is the river's width over this, from 1 to 4 (one arch over a 26 m river, two over 42, three over 54 to 62, four over 78)" },
+    "humped_deck": { "value": false, "_reason": "Alex 2026-10-10: 'I like the shape of the stone arch but not the blue stripes': the stripes were the humped deck's halves facing away from the sun, in the slope tone (stone mixed toward the shadow tint). Off: the deck is one flat stone surface; true brings the humps back" },
     "crown_h": { "value": 6.5, "_proposed": true, "_reason": "the crown of the roadway above the water: its shadow lands this x 0.93 metres away from it" },
     "pier_h": { "value": 4.2, "_proposed": true, "_reason": "the top of a pier above the water, where the arches spring" },
     "slab_h": { "value": 1.6, "_proposed": true, "_reason": "the thickness of the roadway slab over the arch ring, the part of the shadow that floats clear of the pier" },
