@@ -1516,6 +1516,23 @@
       ],
       "status": "direction from Alex; details open",
       "notes": "Alex: 'Let's plan some more units. I love the idea of mixed warfare. You have a huge ship parked off the coast but you need tanks to move inland to spot the aa batteries for the ship. Once it gets those to clear for airstrikes. Or you need airstrikes to clear artillery so the warships can engage the supply boats. Airplanes could land at a little airfield to repair and rearm. A train is a perfect target. Observation balloons could let the enemy know where you are. Mobile artillery could follow tanks to provide more firepower without taking direct fire.' Then: 'Each mission would only have a few elements'. Then: 'Capturing an airfield intact with tanks might make you able to base there (as mission objective, don't need to sim that part.' Answers to the four questions: '1. Ground objectives can just start closer. I am not sure what engagement ranges make sense yet. 2. Yes 3 yes 4 not a full battleship, something smaller that would operate more independently'. Then: '1. The sea guns have a range limit. You can attack coast not inland. Also the target location can be undetermined and needs to be found. But wait, we are mixing role and mission. A mission can always have limited units. No airbase? No planes. Mobile target? Needs spotters. We need to think through some fun mission ideas. Let's think through some historical tactics and how they might apply. For now our goal is a small set of missions that are fun tactics games. We can tie them together later. Find the fun first! Capture and hold a bridge, but you are at the far end of ship range so your shots need to be really on point to hit. Clear mobile Aa units and their escorts to enable a bombing run of a military complex. Rapel a bombing run with mobile aa and a spotter plane. Capture key tech and evac through enemy territory.' Then: 'Rescue a downed pilot and his spy footage' -- 'That was another idea but sounds similar to one you suggested. I like #1 the most, it lets us exercise more dynamic gameplay then we have now.'"
+    },
+    {
+      "id": "bridge-mission",
+      "date": "2026-10-11",
+      "area": "Missions",
+      "question": "The first mixed mission: hold the bridge at the far end of ship range. How is it built?",
+      "board": "none (the lead's proposal in chat)",
+      "options": [],
+      "chosen": "as proposed: 2 tanks at the bridge and the cruiser offshore, the tanks the only spotters; waves of enemy tanks down the road (about 3 waves of 2, a few turns apart); win by holding until relief (a turn count); lose if an enemy tank crosses, both tanks are lost, or the bridge is destroyed (own shells included); shallow water keeps the ship at the edge of its range; a seed found by search where a road bridge sits near the edge of gun range; enemy waves start 600-800 m out",
+      "parameters": {
+        "purpose": "an initial playtest of all the units involved; then playtesting to find what makes it engaging"
+      },
+      "applied_to": [
+        "to build after the tank and cruiser tracks land"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Build it like that. I want to do play testing to figure out how to make it more engaging. But as an initial test of all the units involved that should be fantastic.'"
     }
   ]
 }
