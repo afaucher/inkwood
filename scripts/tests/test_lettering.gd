@@ -295,7 +295,7 @@ func _check_drawn() -> void:
 	var by_text := {}
 	for e: Dictionary in entries:
 		by_text[str(e["text"])] = e
-	for s: String in ["TARGET", "off the map", "outside the cone", "Bomb Drop", "85 m/s", "400 m", "2 turns left", "turn 18 of 20", "side view, step 2"]:
+	for s: String in ["TARGET", "off the map", "outside the cone", "Bomb Drop", "85 m/s", "400 m", "2 turns left", "turn 18 of 20", "views, step 2"]:
 		check(by_text.has(s) or _any_text_contains(entries, s), "4. '%s' is on the screen" % s)
 	check(_any_text_contains(entries, "plan: 3 of 3 steps") or _any_text_contains(entries, "no plan (flies on)"), "4. the roster's plan status is on the screen")
 	check(_any_text_contains(entries, "Bomber · 85 m/s · high"), "4. the roster's second line is on the screen")

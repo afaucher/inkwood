@@ -693,6 +693,7 @@
       "_proposed": true,
       "_reason": "THE TOP STRIP (decision side-view-views, 2026-10-11; the projection is PROPOSED by the builder). The horizontal plane through the unit: the map's own cone wash (cone_overlay.gd's records and drawing) made small, in the unit's own frame, so it replaces the map's wash now that the map's is off by default. nose_deg is the screen angle of the nose (0 = to the right, -90 = up): PROPOSED 0, so the picture shares its horizontal axis and its scale rule with the Side strip and fills a card that is wider than it is tall (a nose-up picture is a thin sliver for a fighter's guns); the weapons keep their sides (the right wing is down the page). footprint: a weapon whose cone misses that plane (the bomber's dorsal turret covers what is ABOVE it) is drawn as its footprint, dashed, as cone_overlay.gd draws the overhead footprint (planner.cones.overhead_*); the map itself draws none (planner.cones.overhead_footprint false). pitch_shift: the plane is the horizontal one, so a climb or a dive changes each cone's slice (each horizontal direction is put through the airframe's pitch as combat.gd does, and the azimuths inside the cone are the wedge), as the Side strip tilts its cones.",
       "nose_deg": 0,
+      "_nose_deg": "DECIDED by Alex (decision side-view-views, 2026-10-11): the Top strip draws the unit nose RIGHT, as the Side strip does (to the camera session's 'nose-right instead of up: OK?': 'To the right'). -90 would be nose up.",
       "footprint": true,
       "pitch_shift": true
     },
@@ -764,9 +765,10 @@
     "text": {
       "_about": "The words. enabled false drops the quiet line under the picture (the weapon labels are not here: Alex took them off the graph as noise). PROPOSED default: on, because the picture shows the angle and the line gives the two numbers that make it exact (the slant distance and the height difference), a single line of soft italic.",
       "enabled": true,
-      "head_step": "side view, step %d",
-      "head_now": "side view, now",
-      "head_live": "side view, live",
+      "_head": "Was 'side view, step %d' / 'side view, now' / 'side view, live'. Renamed by Alex (decision side-view-views, 2026-10-11): the panel holds three views now ('Panel heading still says side view, step N above Top/Front/Side; rename?': 'Yes').",
+      "head_step": "views, step %d",
+      "head_now": "views, now",
+      "head_live": "views, live",
       "unit_line": "%s · %d m · %s",
       "above": "%d m above",
       "below": "%d m below",
