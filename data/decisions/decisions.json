@@ -1957,14 +1957,18 @@
         "E hatch",
         "F rim_ticks (a quiet rim and a ruler with ticks at the slowest and fastest reach)"
       ],
-      "chosen": null,
+      "chosen": "C, a wash under one thin inked rim, for every unit type",
       "parameters": {
         "switch": "data/ui/ui.json planner.fan.mode (today's 'ribs' is the default)",
-        "recommendation": "C for every unit (PROPOSED)"
+        "recommendation": "C for every unit (PROPOSED)",
+        "mode": "wash_rim"
       },
-      "applied_to": [],
-      "status": "open",
-      "notes": "Alex: 'I want to look at the design of the 'acceptable range of motion' indicator for planes. Is there a style that makes more sense across all unit types? Should we just have a little shaded area where you can set the node? Show me some options before commiting this.' PROPOSED by the board's builder: C, because B's tone alone vanishes at the start zoom (the fighter's fan is a 3 x 24 px streak) and one thin rim keeps it findable; D and E turn into a dotted line and a ladder on a 9 px band; F alone shows reach. Found: the cruiser's fan sits under its own hull (the markers draw over the planner), so no look shows it until that changes."
+      "applied_to": [
+        "data/ui/ui.json planner.fan.mode",
+        "variants/motion-range/board.json chosen"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'I want to look at the design of the 'acceptable range of motion' indicator for planes. Is there a style that makes more sense across all unit types? Should we just have a little shaded area where you can set the node? Show me some options before commiting this.' PROPOSED by the board's builder: C, because B's tone alone vanishes at the start zoom (the fighter's fan is a 3 x 24 px streak) and one thin rim keeps it findable; D and E turn into a dotted line and a ladder on a 9 px band; F alone shows reach. Found: the cruiser's fan sits under its own hull (the markers draw over the planner), so no look shows it until that changes. Alex chose: 'C · Wash and a thin inked rim'."
     },
     {
       "id": "sun-time",
@@ -1973,18 +1977,21 @@
       "question": "Do shadows follow the time of day, and how is the time picked?",
       "board": "variants/sun-time/",
       "options": [],
-      "chosen": "picked once at mission start and fixed for the mission; every shadow follows the one sun",
+      "chosen": "picked once at mission start and fixed; every shadow follows the one sun; night hours fold onto the day; the sun comes from the north side so shadows fall below objects; shorter shadows than the board showed",
       "parameters": {
         "when": "fixed at mission start",
         "what_follows": "every shadow (trees, terrain, structures, planes' altitude shadows, effects)",
         "still_open": "the look across the hours (the board), the clock source in co-op (proposed: the host's), night hours",
         "model": "PROPOSED: bearing 90 at 06:00, 180 at noon, 270 at 18:00; elevation a sine arc peaking at 60 degrees; shadow length 1/tan(elevation), clamped at 3; data/params/sun.json, scripts/world/sun.gd",
         "recommendations": "PROPOSED: (a) the host's clock, sent with mission start, and a scenario may pin an hour; (b) fold the 24 hours onto the day (clamp gives half of all real hours the longest shadows); planes' altitude-shadow gap held at today's length",
-        "rebake": "measured: about 37 to 45 s for all 100 chunks, the same as today's sun; fixed at start means one bake"
+        "rebake": "measured: about 37 to 45 s for all 100 chunks, the same as today's sun; fixed at start means one bake",
+        "night": "fold (Alex)",
+        "direction": "from the north side, so every shadow falls below (south of) its object on the map (Alex); PROPOSED: the bearing runs from 45 (NE) at sunrise through 0 (N) at noon to 315 (NW, today's sun) at sunset",
+        "length": "shorter than the board (Alex: 'reduce the distance a bit'); PROPOSED: the clamp 2.0 instead of 3.0"
       },
       "applied_to": [],
-      "status": "chosen by Alex (in part); the look and the rest open",
-      "notes": "Alex: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.' PROPOSED: every shadow follows one sun, not the trees alone. Then: 'Fixed time at start' and 'Every shadow follows'."
+      "status": "chosen by Alex; the numbers proposed; the co-op clock and the planes' gap proposed",
+      "notes": "Alex: 'Lets have the tree shadows change. The easiest thing to do would be to use the current time of day and use that to select the shadow angles. Show me some options before commiting this.' PROPOSED: every shadow follows one sun, not the trees alone. Then: 'Fixed time at start' and 'Every shadow follows'. Then, on the board: he chose fold for the night hours (quoting the proposal), and: 'But let's reduce the distance a bit and the sun should be coming from north side to keep shadows below the objects not above'."
     },
     {
       "id": "tracers-mg",

@@ -9,6 +9,8 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
+| Range of motion C live (decision motion-range-look) | lead session (builder BM) | data/ui/ui.json planner.fan.mode; tests that expect today's fan | 2026-10-11 |
+| Time-of-day sun live (decision sun-time): north-side arc, shorter shadows, fold, host's clock in co-op | lead session (builder BS) | data/params/sun.json, scripts/world/sun.gd and its readers; the hour in the mission start (scripts/net/world_sync.gd or the session's start message); tests pin the sun; variants/sun-time/ frames | 2026-10-11 |
 | Forest fire (decision forest-fire): the mechanic has landed (below); now the coastal wind (decision coastal-wind: smoke drift, spread downwind); then the look board for a burning grove and a burnt-out trunk | fire session (nice-dewdney worktree) | new data/sim/fire.json, scripts/sim/fire*.gd, scripts/tests/test_fire*.gd; the fire step and its net state in scripts/sim/world.gd (and the snapshot in scripts/net/world_sync.gd); burnt cover in scripts/sim/concealment.gd, data/sim/concealment.json; smoke denies tracking in scripts/sim/spotting.gd, bombs.gd (followed aim), scripts/ui/ui_target.gd and the enemy-click lines of scripts/ui/unit_ui.gd; new scripts/fx/fx_fire*.gd and its hook in fx_field.gd/fx_layer.gd; per-chunk rebake in scripts/render/map_view.gd, chunk_terrain_provider.gd; data/scenarios/suppress.json (fire on); a fire knob in scripts/debug/debug_settings.gd; the wind: new data/sim/wind.json, scripts/sim/wind.gd, test_wind, and the smoke drift in scripts/fx/fx_field.gd (_wind) and fx_fire.gd | 2026-10-11 |
 
 ## Next, free to take
