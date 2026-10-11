@@ -10,6 +10,7 @@ Decisions and open questions live in the Decision Ledger
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
 | Combat answers: bridge durability, the cruiser's shell blast, poor shots for bombs and guns | lead session (builder) | data/units/bridge.json, data/sim/guns.json, data/sim/bombs.json, scripts/sim/guns.gd, gun_rules.gd, combat_resolver.gd (the held-salvo path), their tests | 2026-10-11 |
+| Hatch clipping in the unit art (hatch_lines keeps lines outside the outline) | session "Check hatch clipping in unit marker art" | scripts/ui/unit_marker_art.gd (hatch_lines and its callers) | 2026-10-11 |
 
 ## Next, free to take
 
