@@ -172,7 +172,7 @@ func _ship() -> void:
 	var d := {
 		"id": "test_ship", "name": "Test ship", "domain": "sea", "mobility": "mobile",
 		"bomb_load": {"drops": rec.call(0), "per_drop": rec.call(0)}, "specials": [],
-		"size_m": rec.call(120), "actions_per_turn": rec.call(2), "health": rec.call(20),
+		"size_m": rec.call(120), "draught_m": rec.call(6), "actions_per_turn": rec.call(2), "health": rec.call(20),
 		"sight_range_m": rec.call(3000), "drawing": {"silhouette": "small_cruiser"}, "weapons": [],
 		"envelope": {
 			"speed_min_mps": rec.call(-4), "speed_cruise_mps": rec.call(10), "speed_max_mps": rec.call(15),

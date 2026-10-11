@@ -161,6 +161,37 @@
     }
   },
 
+  "sites": {
+    "_about": "THE SIMULATION'S WATER SITES (Track WS, 2026-10-10; scripts/world/water_sites.gd and WaterGen.sites() make them, a scenario names them: 'water.bridge', 'water.patrol_loop', 'water.supply_route'). What is ALEX'S (decisions water-layer, boat-looks, bridge-look): the bridge where the road crosses the river; an armed patrol boat and an unarmed supply boat that are part of the environment with real patrols and no part in the mission; boats at the planes' scale, so they keep to the coast and the estuary, not up the river. EVERYTHING BELOW IS PROPOSED by Track WS. The sites are a pure function of the seed (and these records): a clearance grid over the map (the distance from each patch of open water to the nearest shore, shoal or map edge), a patrol LOOP fitted to it nearest the river's mouth (or, with no river, the village), and a SUPPLY ROUTE from the coast nearest the mouth to the farthest coast (the mainland's or an island's) the water reaches within a trip's length. Every site is checked against the exact water query (WaterGen.depth_at), not the grid alone.",
+    "grid_m": { "value": 50, "_proposed": true, "_reason": "the clearance grid's cell: 83 x 83 samples over the inset map; the loops and routes are then checked exactly, so the grid only has to be fine enough to find room" },
+    "grid_slack_m": { "value": 25, "_proposed": true, "_reason": "the clearance grid is only good to about half a cell (it cannot see a shoal between two cells, and its distances are a chamfer's): a place passes the grid with this much more clearance than the margin the exact check will ask of it, so the exact check is not failed over a sliver" },
+    "map_inset_m": { "value": 450, "_proposed": true, "_reason": "a boat's loop and route stay this far inside the map's edge (the map edge is an artificial shore): the units stay on the map, and a boat that is turning has room" },
+    "nav_depth_m": { "value": 3, "_proposed": true, "_reason": "open water is water at least this deep: a metre under the deepest keel at least (data/units: patrol_boat draught 2.0 m, supply_boat 1.8 m) and half the generator's first step (the shallows, 0 to 6 m), so boats keep to the water the generator draws as more than a wash of shallows" },
+    "sample_m": { "value": 25, "_proposed": true, "_reason": "a loop or a route is checked every this many metres along its legs" },
+    "bridge": {
+      "tangent_m": { "value": 60, "_proposed": true, "_reason": "the road's heading at the crossing is the direction from this far before the crossing to this far after it (the road is sampled every 10 m and wanders a little)" }
+    },
+    "patrol": {
+      "margin_m": { "value": 90, "_proposed": true, "_reason": "every point of the loop is at least this far from the shore, a shoal shallower than nav_depth_m and the map's inset edge: the boat is 27 m long and turns in a circle 114 m across at cruise, but at the corners of the loop it cuts inside the rectangle, and it strays under 20 m from it; the loop hugs the coast at this distance rather than lying out in the deep" },
+      "half_width_m": { "value": 120, "_proposed": true, "_reason": "the loop is a rectangle, its long legs run along the coast this far either side of its axis (240 m across): wide enough that a boat turning at 10 deg/s (a 57 m radius) rounds the corners without a figure of eight" },
+      "half_lengths_m": { "value": [450, 350, 260, 190], "_proposed": true, "_reason": "half the length of the loop, tried longest first at each spot (900, 700, 520 and 380 m long): the loop is the longest that fits at the first place that has room; at 10 m/s a lap of the longest is about forty turns, of the shortest (as seed 20261009's) about twenty-five" },
+      "orientation_step_deg": { "value": 15, "_proposed": true, "_reason": "the loop's direction is tried every this many degrees, starting from along the coast and fanning out" },
+      "tangent_span_deg": { "value": 30, "_proposed": true, "_reason": "where the coast's direction can be told (the clearance falls toward a shore) only orientations within this of it are tried: the loop runs along the coast, not into it. In open water, where there is no coast to run along, every direction is tried" },
+      "max_candidates": { "value": 600, "_proposed": true, "_reason": "centres tried, nearest the river's mouth first, before the seed is given no patrol loop (and starts, for the supply route, before it is given no route)" }
+    },
+    "supply": {
+      "margin_m": { "value": 150, "_proposed": true, "_reason": "every point of the route is at least this far from the shore, a shoal and the inset edge: room for the barge to swing round at either end of its shuttle (a turn back at 5 m/s is a circle 114 m across, so the boat strays up to 114 m off the route there) with its 34 m hull and a margin to spare" },
+      "length_m": { "value": 1800, "_proposed": true, "_reason": "the route runs up to this far (by water) from its first point, the anchorage nearest the river's mouth, if the water allows: at 5 m/s a one-way trip is about 36 turns, so in the strike's twenty turns the barge is under way, not at its berth" },
+      "min_length_m": { "value": 700, "_proposed": true, "_reason": "a shorter route than this is no route: the seed has no supply boat" },
+      "loop_gap_m": { "value": 250, "_proposed": true, "_reason": "the supply route keeps at least this far from the patrol loop (the nearest point of its rectangle), its first point and every cell of its way: the two boats do not start on top of each other and the barge does not sail through the patrol's beat" },
+      "coast_slack_m": { "value": 40, "_proposed": true, "_reason": "the route's far end HUGS THE COAST: its distance from the real shore (a shoal, an island, the land; not the map's inset edge) is at most the margin plus this plus coast_tolerance_m, so a barge works the shore and does not wander out to the deep" },
+      "coast_tolerance_m": { "value": 60, "_proposed": true, "_reason": "how far past margin plus coast_slack_m a cell may be from the shore and still hug it: the clearance grid is 50 m a cell" },
+      "simplify_m": { "value": 100, "_proposed": true, "_reason": "the way by water is a chain of grid cells; it is straightened (Douglas-Peucker) to a few waypoints, no leg of which strays this far from the chain, and each leg is checked exactly: a leg that fails the check is split again" },
+      "tries": { "value": 12, "_proposed": true, "_reason": "ends tried from one start, the best hugging the coast first, before the next start is tried" },
+      "start_tries": { "value": 6, "_proposed": true, "_reason": "starts tried (the open cells nearest the river's mouth that are clear of the patrol loop and have a way of min_length_m) before the seed is given no supply route" }
+    }
+  },
+
   "keep_dry": {
     "village_margin_m": { "value": 40, "_proposed": true, "_reason": "the village's outline grown by this must stay dry (the village's own polygon already has room round its houses)" },
     "field_margin_m": { "value": 20, "_proposed": true, "_reason": "each field grown by this" },

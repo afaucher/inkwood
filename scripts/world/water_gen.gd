@@ -14,6 +14,10 @@ extends RefCounted
 #   water.is_wet(x, y)      water at (x, y): s > 0 AND the terrain there is level 0 (an upland is
 #                           never water: where the sea meets one it is a coastal cliff, out in the
 #                           sea an islet). The one answer trees, houses and the drawing use.
+#   water.depth_at(x, y)    metres of water a boat floats in at a point (s where is_wet holds, else 0): the simulation's
+#                           query, World.set_water(Callable(water, "depth_at")) (Track WS, 2026-10-10)
+#   water.sites()           where the bridge stands and where the boats sail: bridge, patrol_loop, supply_route (below, and
+#                           scripts/world/water_sites.gd); WaterGen.shared(seed) is the one water the sim and the drawing share
 #   water.sea_rings(rect, k) / water.river_runs(rect, k)     the drawing's geometry (see below)
 #   water.ok() / errors / diagnostics / signature()
 #
@@ -76,6 +80,7 @@ const ValueNoise = preload("res://scripts/render/fast_noise.gd")
 const Geometry = preload("res://scripts/core/geometry.gd")
 const TerrainData = preload("res://scripts/world/terrain_data.gd")
 const WaterContour = preload("res://scripts/world/water_contour.gd")
+const JsMath = preload("res://scripts/core/js_math.gd")
 
 const DEFAULT_PATH := "res://data/world/water.json"
 const TERRAIN_SCRIPT := "res://scripts/world/terrain.gd"
@@ -207,6 +212,10 @@ var _sea_scale := 1.0                    # the adapt loop's shrink of the sea's 
 var _shape_seed := 0
 var _tc: Variant = null                  # the capped Terrain (terrain())
 var _grid_cache: Dictionary = {}
+var _site_p: Dictionary = {}             # sites.<path> -> its value (Track WS: the simulation's water sites)
+var _sites: Dictionary = {}              # sites(), made on first use
+static var _shared_cache: Dictionary = {}
+static var _shared_mutex := Mutex.new()
 
 func _init(seed_v: int, terrain: Variant = null, path: String = DEFAULT_PATH) -> void:
 	seed_value = seed_v
@@ -333,6 +342,11 @@ func _read() -> void:
 	_cell_m = d.num("draw.grid_cell_m")
 	_chaikin = d.integer("draw.chaikin_passes")
 	_resample = d.num("draw.resample_m")
+	for k: String in ["grid_m", "grid_slack_m", "map_inset_m", "nav_depth_m", "sample_m", "bridge.tangent_m", "patrol.margin_m", "patrol.half_width_m",
+			"patrol.orientation_step_deg", "patrol.tangent_span_deg", "patrol.max_candidates", "supply.margin_m", "supply.length_m",
+			"supply.min_length_m", "supply.loop_gap_m", "supply.coast_slack_m", "supply.coast_tolerance_m", "supply.simplify_m", "supply.tries", "supply.start_tries"]:
+		_site_p[k] = d.num("sites." + k)
+	_site_p["patrol.half_lengths_m"] = d.floats("sites.patrol.half_lengths_m")
 	errors.append_array(d.errors)
 	for pair in [[step_from, 3, "levels.step_from_m"], [heights_m, 3, "levels.heights_m"],
 			[_s_band, 2, "river.source.foot_band"], [_sh_meander, 2, "river.shape.meander_m"], [_sh_hw, 2, "river.shape.half_width_m"],
@@ -489,6 +503,102 @@ func step_at(x: float, y: float) -> int:
 
 func is_wet(x: float, y: float) -> bool:
 	return s_at(x, y) > 0.0 and int(terrain().level_at(x, y)) == 0
+
+# THE SIMULATION'S WATER QUERY (Track WS, 2026-10-10): metres of water a boat can float in at a point: s_at() where
+# is_wet() holds, else 0.0 (land, an upland, the dry side of a shore). World.set_water takes it:
+# world.set_water(Callable(water, "depth_at")).
+func depth_at(x: float, y: float) -> float:
+	var s := s_at(x, y)
+	if s <= 0.0 or int(terrain().level_at(x, y)) != 0:
+		return 0.0
+	return s
+
+# The shared water of a seed (the default data, its own terrain), made on first use: the simulation's water query and
+# the drawing's can be one object, as WorldLayout.shared is one. Not for a test that changes the data: make a WaterGen.
+static func shared(seed_v: int, path: String = DEFAULT_PATH) -> RefCounted:
+	var key := "%d|%s|%d" % [seed_v, path, FileAccess.get_file_as_string(path).hash()]
+	_shared_mutex.lock()
+	var hit: Variant = _shared_cache.get(key)
+	_shared_mutex.unlock()
+	if hit != null:
+		return hit
+	var made: RefCounted = (load("res://scripts/world/water_gen.gd") as GDScript).new(seed_v, null, path)
+	_shared_mutex.lock()
+	if not _shared_cache.has(key):
+		_shared_cache[key] = made
+	made = _shared_cache[key]
+	_shared_mutex.unlock()
+	return made
+
+# --- the simulation's sites (Track WS, 2026-10-10) -----------------------------------------------------------------------
+#
+# THE SITES a scenario names (data/world/water.json `sites`; scripts/world/water_sites.gd fits the loop and the route):
+#   sites() -> {
+#     "bridge":       {ok, pos: Vector2, heading (the road's direction, radians, x right, y down, clockwise positive: the
+#                      direction of increasing road index, away from the village), flow_heading (the river's, toward its
+#                      mouth), river_width_m, gap_m (the wet stretch of the road), road_index}      or {} (see "why")
+#     "patrol_loop":  {ok, kind "loop", points: Array[Vector2] (a rectangle's four corners, clockwise on screen, the
+#                      first the nearest the anchor), headings: Array[float] (the bearing to the next point), centre,
+#                      orientation, half_length_m, half_width_m, margin_m, length_m (the perimeter), min_depth_m}   or {}
+#     "supply_route": {ok, kind "shuttle", points: [first, last], headings (first->last, last->first), length_m,
+#                      margin_m, min_depth_m}                                                           or {}
+#     "anchor":       Vector2, the river's mouth, or with no river the radio tower
+#     "why":          {site name: why it is {}}
+#   }
+# Pure: a function of the seed and the data. Made on first use (an unrelated test that never asks pays nothing).
+func sites() -> Dictionary:
+	if _sites.is_empty():
+		_sites = _make_sites()
+	return _sites.duplicate(true)
+
+func _make_sites() -> Dictionary:
+	var why: Dictionary = {}
+	var out: Dictionary = {"bridge": {}, "patrol_loop": {}, "supply_route": {}, "why": why}
+	if not ok():
+		why["all"] = "the water did not build: %s" % [errors]
+		return out
+	out["bridge"] = _bridge_site(why)
+	var SitesScript: GDScript = load("res://scripts/world/water_sites.gd")
+	var fit: RefCounted = SitesScript.new(self, _site_p)
+	var found: Dictionary = fit.build()
+	out["anchor"] = found["anchor"]
+	out["patrol_loop"] = found["patrol_loop"]
+	out["supply_route"] = found["supply_route"]
+	for k: String in (found["why"] as Dictionary):
+		why[k] = found["why"][k]
+	out["grid_cells"] = found.get("grid_cells", 0)
+	return out
+
+# The bridge: where the road crosses the river, with the road's heading there.
+func _bridge_site(why: Dictionary) -> Dictionary:
+	if not river_crossing.is_finite() or river_pts.size() < 2:
+		why["bridge"] = "the seed has no river that crosses the road"
+		return {}
+	var road: PackedVector2Array = _lay.road()
+	var idx := 0
+	var best := INF
+	for i in road.size():
+		var d := road[i].distance_squared_to(river_crossing)
+		if d < best:
+			best = d
+			idx = i
+	var spacing := road[0].distance_to(road[1]) if road.size() > 1 else 10.0
+	var k := maxi(1, roundi(float(_site_p["bridge.tangent_m"]) / maxf(spacing, 1.0)))
+	var a := road[maxi(idx - k, 0)]
+	var b := road[mini(idx + k, road.size() - 1)]
+	var ri := 0
+	best = INF
+	for i in river_pts.size():
+		var d2 := river_pts[i].distance_squared_to(river_crossing)
+		if d2 < best:
+			best = d2
+			ri = i
+	var fa := river_pts[maxi(ri - 3, 0)]
+	var fb := river_pts[mini(ri + 3, river_pts.size() - 1)]
+	return {
+		"ok": true, "pos": river_crossing, "heading": JsMath.atan2(b.y - a.y, b.x - a.x), "flow_heading": JsMath.atan2(fb.y - fa.y, fb.x - fa.x),
+		"river_width_m": 2.0 * _hw_at(river_crossing), "gap_m": _road_gap_m(road, idx), "road_index": idx,
+	}
 
 # The terrain the water is drawn on and judged by: the raw terrain with its height field capped by field_cap()
 # (scripts/world/water_terrain.gd). Made on first use. The layout was made on the RAW terrain (raw_terrain()).

@@ -62,6 +62,8 @@ const LIMIT_TURN := "turn"
 const LIMIT_SPEED := "speed"
 const LIMIT_BAND := "band"
 const LIMIT_CLIMB := "climb"
+# Track WS (water): the World keeps a sea unit on water (World.set_water); a step it slowed or held to stay afloat carries this limit.
+const LIMIT_SHORE := "shore"
 
 var speed_min: float
 var speed_cruise: float

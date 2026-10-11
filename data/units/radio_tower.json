@@ -5,6 +5,7 @@
   "domain": "ground",
   "mobility": "static",
   "size_m": { "value": 12, "_proposed": true, "_reason": "the footprint of a lattice mast and its guy-wire anchors seen from above; the tower itself is thin, so the plan view is mostly its shadow" },
+  "draught_m": { "value": 0, "_proposed": true, "_reason": "a unit that does not float needs no water under it (the water rule, World.set_water, applies to domain sea only): 0" },
   "actions_per_turn": { "value": 1, "_proposed": true, "_reason": "a static unit has nothing to plan: one step a turn that stands still (the World gives it a two-state history, start and end, both the same)" },
   "health": { "value": 8, "_proposed": true, "_reason": "pips the bombs must take (3 for a hit within 12 m, 2 within 25 m, 1 within 45 m: data/sim/bombs.json). 8 pips is three direct hits, or a dozen near misses. A bomber's stick of four at the ideal release angle does 7.9 pips on average from the low band (the tower dies to the first stick 62 percent of the time, 1.4 drops on average), 4.8 from medium (2.2 drops; dead within the bomber's three drops 98 percent of the time) and 1.8 from high (5.3 drops; 19 percent): the tuning table, scripts/test_support/strike_tuning.gd B" },
   "sight_range_m": { "value": 500, "_proposed": true, "_reason": "a tower with a lookout on it sees a fighter a few hundred metres out; the enemy AI counts what its units see (scripts/sim/ai_sense.gd), so this is how far the tower warns the patrol" },

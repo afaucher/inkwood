@@ -210,6 +210,15 @@
     }
   },
 
+  "sail": {
+    "_about": "Role sail (a sea unit: the patrol boat and the supply boat; Track WS, proposed 2026-10-10: water). The boats are part of the environment with real patrols and no part in the mission (Alex), so they have no states beyond sailing: they follow their route (a loop, or back and forth), never engage, and plan only on water (scripts/sim/ai_pilot.gd _plan_sail, the World's water rule in data/sim/sea.json).",
+    "capture_radius_m": { "value": 50, "_proposed": true, "_reason": "a waypoint counts as reached inside this and the boat turns for the next: a little under the 57 m turn radius of both boats at cruise, so a loop's corner is rounded and not orbited, and a step is 12 to 25 m so a waypoint cannot be stepped over" },
+    "speed_fraction_of_cruise": { "value": 1.0, "_proposed": true, "_reason": "a boat sails at its own cruise speed (data/units: 10 m/s the patrol boat, 5 m/s the supply boat): a patrol has no reason to loiter under it" },
+    "uturn_deg": { "value": 100, "_proposed": true, "_reason": "when the next waypoint is more than this off the bow (the end of a shuttle, a loop's corner it overshot) the boat turns at the full rate on one side until the bow is round, instead of aiming, which at 180 degrees has no side: the side is the one with the deeper water" },
+    "side_probe_turn_radii": { "value": 2.0, "_proposed": true, "_reason": "the water is looked at this many turn radii (at cruise) out to the right and to the left of the bow to pick the side of a turn back: the turn's own circle is two radii across" },
+    "escape_speed_fraction": { "value": 0.5, "_proposed": true, "_reason": "when the World had to slow or hold a boat to keep it afloat (it was put, or driven, close to the shore) it BACKS AWAY at this share of its reverse speed (data/units: speed_min_mps), its bow swinging toward the nearest waypoint; if that too is refused it stops. A boat on its route never needs this: the routes keep a margin from the shore" }
+  },
+
   "mission": {
     "_about": "Read by scripts/sim/mission.gd.",
     "sample_dt_s": {

@@ -26,3 +26,14 @@ on Alex's decision `low-band-flak`, 2026-10-10, numbers proposed). Every file ca
 that do (Alex: everything gets at least two). The bombs' physics is shared and
 lives in `data/sim/bombs.json`. All values are proposed; the tuning tables are
 printed by `scripts/test_support/strike_tuning.gd`.
+
+## The water's units (Track WS, 2026-10-10)
+
+`patrol_boat.json` and `supply_boat.json` are `"domain": "sea"` units (the P1 Cutter, 27 m, with
+light AA guns on two mounts; the S2 barge, 34 m, unarmed) and `bridge.json` a static ground unit
+that bombs can destroy like the tower. Every unit file now carries `draught_m`: the depth of
+water a sea unit needs under it (above 0 for domain sea, 0 for the rest). The World keeps a sea
+unit afloat (`World.set_water`, `data/sim/sea.json`: a step that would leave the water is slowed,
+then held, with the limit `shore`); the boats sail their routes under the AI's `sail` role
+(`data/sim/ai.json`). Where they and the bridge stand is `WaterGen.sites()`; `data/scenarios/strike.json`
+carries them behind its `"water"` switch, off until the drawing can show them. All values are proposed.

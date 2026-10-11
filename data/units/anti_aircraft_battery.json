@@ -5,6 +5,7 @@
   "domain": "ground",
   "mobility": "static",
   "size_m": { "value": 14, "_proposed": true, "_reason": "a gun pit, a sandbag ring and two or three guns seen from above" },
+  "draught_m": { "value": 0, "_proposed": true, "_reason": "a unit that does not float needs no water under it (the water rule, World.set_water, applies to domain sea only): 0" },
   "actions_per_turn": { "value": 1, "_proposed": true, "_reason": "a static unit has nothing to plan: one step a turn that stands still" },
   "health": { "value": 4, "_proposed": true, "_reason": "a bomb's direct hit is 3 pips and a near miss 2 or 1 (data/sim/bombs.json): a battery goes down to two near hits or a direct hit and a graze, so the bomber can silence one on its way in at the price of bombs the tower needs" },
   "sight_range_m": { "value": 700, "_proposed": true, "_reason": "spotters with the guns: sees about as far as a fighter's 800 m, a little less; the enemy AI counts what its units see (scripts/sim/ai_sense.gd), including its static units, so this is how far a battery warns the patrol" },

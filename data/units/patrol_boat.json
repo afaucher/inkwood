@@ -1,0 +1,54 @@
+{
+  "_about": "Patrol boat (Track WS, 2026-10-10: water). ALEX'S (decisions water-layer and boat-looks): one armed patrol boat, the P1 Cutter (27 m); 'part of the environment with real patrols but no specific part in the mission'; its guns fire ('Let it fire if it wants'). EVERYTHING ELSE HERE IS PROPOSED by Track WS. The planes' movement system with a boat's numbers: the same envelope (data/units/_schema.json), on the surface band, a slow turn that needs way on, a speed of 10 m/s (about 19 knots) against a fighter's 100: a boat covers 25 m in a 2.5 s step and 50 m in a turn, so a coastal loop of two kilometres is forty turns round. It can reverse once stopped (reverse_from_stop). The WATER RULE (World.set_water, data/sim/sea.json): its steps stay on water at least draught_m deep, at its centre and at both ends of its hull; a step that would leave it is slowed, and held if even the slowest leaves it. Its guns are light anti-aircraft guns, the battery's light flak (data/units/anti_aircraft_battery.json) put on two mounts, fore and aft as the P1 is drawn (data/world/boats.json): all around, aimed up, short (320 m effective, so they reach the low band over the boat and never the medium band), the same volume of fire as the battery's light flak (two mounts at half its roll rate). It carries no bombs. At 0 health it is DESTROYED (fate 'destroyed': it stays where it was, down; the drawing may sink it). Numbers are plausible for a 1940s harbour-defence launch / motor gunboat, scaled to the 5 km map.",
+  "id": "patrol_boat",
+  "name": "Patrol boat",
+  "domain": "sea",
+  "mobility": "mobile",
+  "size_m": { "value": 27, "_proposed": true, "_reason": "the P1 Cutter's length (data/world/boats.json patrol.size_m, three light fighters long): a WWII motor gunboat or harbour launch is 20 to 35 m" },
+  "draught_m": { "value": 2.0, "_proposed": true, "_reason": "a 27 m gunboat draws 1.5 to 2 m; it keeps to water at least this deep, which in the generator's sea (data/world/water.json: 6 m of depth about 115 m out from a coast) is a few tens of metres off the shore, so the loop's own margin (data/world/water.json sites.patrol.margin_m) is what keeps it clear, not the draught" },
+  "actions_per_turn": { "value": 2, "_proposed": true, "_reason": "a slow unit plans two points a turn (2.5 s steps, data/sim/turn.json): a step is 25 m at cruise, short enough that the water rule (data/sim/sea.json) samples it every few metres and the arc is the boat's own turn, and few enough that a boat is not tedious to plan" },
+  "health": { "value": 5, "_proposed": true, "_reason": "a small steel launch: as hard to sink as a heavy fighter (5), two direct bomb hits (3 each) or eight or so rounds of a fighter's guns; the bombs (data/sim/bombs.json) take 3 for a hit within 12 m, 2 within 25 m, 1 within 45 m, so a stick near it sinks it" },
+  "sight_range_m": { "value": 450, "_proposed": true, "_reason": "lookouts on a low deck: a little under the radio tower's 500 m. The enemy AI counts what its units see (scripts/sim/ai_sense.gd), so a boat that sees a plane tells the patrol; the boats have no part in the mission, so this is kept short" },
+  "drawing": { "silhouette": "patrol_boat" },
+  "envelope": {
+    "speed_min_mps": { "value": -3, "_proposed": true, "_reason": "slow astern: a boat can reverse once stopped (design doc, Motion and inertia: ships can reverse once stopped), which is also how it backs off a shore the water rule has held it at" },
+    "speed_cruise_mps": { "value": 10, "_proposed": true, "_reason": "about 19 knots: a coastal patrol's steady speed, a tenth of a light fighter's" },
+    "speed_max_mps": { "value": 15, "_proposed": true, "_reason": "about 29 knots: a motor gunboat's top speed" },
+    "dive_speed_max_mps": { "value": 15, "_proposed": true, "_reason": "a boat cannot dive: equal to speed_max_mps" },
+    "accel_mps2": { "value": 1.2, "_proposed": true, "_reason": "from a stop to cruise in about eight seconds (three steps): a light hull with a lot of power" },
+    "decel_mps2": { "value": 2.0, "_proposed": true, "_reason": "water drag and the engines astern: a boat stops in about five seconds from cruise, faster than it gets going" },
+    "reverse_from_stop": { "value": true, "_proposed": true, "_reason": "design doc, Motion and inertia: ships can reverse once stopped; speed cannot cross zero within a step" },
+    "turn_rate_curve_dps": { "value": [[0, 0], [3, 6], [10, 10], [15, 9]], "_proposed": true, "_reason": "a rudder needs flow (data/units/_schema.json): no turn with no way on, rising to 10 deg/s at cruise, a little less flat out. At cruise that is a turn radius of 57 m (two hull lengths) and a full circle in 36 s, seven turns: a slow turn beside a fighter's 18 s at ten times the speed" },
+    "turn_bleed_mps2": { "value": 0.6, "_proposed": true, "_reason": "a boat loses a little way in a hard turn (the rudder and the slip): at the full rate 0.6 m/s per second, 1.5 m/s over a step" },
+    "turn_bleed_exponent": { "value": 2, "_proposed": true, "_reason": "as the planes' (induced drag): gentle turns are nearly free" },
+    "altitude_bands": { "value": ["surface"], "_proposed": true, "_reason": "it rides the sea: the surface band (data/sim/altitude.json). The bombs reach it (they hurt a unit at the surface)" },
+    "start_band": { "value": "surface", "_proposed": true, "_reason": "it rides the sea" },
+    "bands_per_step": { "value": 0, "_proposed": true, "_reason": "a boat never changes band" },
+    "climb_speed_cost_mps": { "value": 0, "_proposed": true, "_reason": "a boat never changes band" },
+    "dive_speed_gain_mps": { "value": 0, "_proposed": true, "_reason": "a boat never changes band" }
+  },
+  "weapons": [
+    {
+      "id": "aa_guns",
+      "name": "Light AA guns",
+      "kind": "flexible",
+      "hardpoints": { "value": [[8.9, 0, 2.5], [-8.9, 0, 2.5]], "_proposed": true, "_reason": "the two gun mounts of the P1 Cutter as it is drawn (data/world/boats.json patrol.looks.p1: fore at 0.16 to 0.18 and aft at 0.82 to 0.84 of the length, twin mounts under shields): 0.33 of 27 m, 8.9 m, forward and aft of the middle, 2.5 m above the water. Each mount rolls on its own" },
+      "mount_deg": { "value": 0, "_proposed": true, "_reason": "the cone is all around (half_across_deg 180), so the mount does not matter; 0 is the bow" },
+      "half_across_deg": { "value": 180, "_proposed": true, "_reason": "all around, as the battery's flak: the guns fire at anything above them whichever way the boat points (a boat turns slowly, its mounts train)" },
+      "elevation_deg": { "value": 46, "_proposed": true, "_reason": "the battery's flak cone, so the boat and the battery agree on what is above them: centred 46 degrees above the horizon" },
+      "half_height_deg": { "value": 44, "_proposed": true, "_reason": "from 2 degrees above the horizon to straight up, as the battery's flak: nothing is out of the cone for being low" },
+      "effective_range_m": { "value": 320, "_proposed": true, "_reason": "the battery's LIGHT flak (data/units/anti_aircraft_battery.json): short, so it covers the low band (120 m) round the boat and not the medium band (400 m; its reach of 384 m is under the 397 m of a plane right over it). A plane at medium is never touched by a boat" },
+      "base_hit_chance": { "value": 0.07, "_proposed": true, "_reason": "the battery's light flak's own per-roll chance" },
+      "rim_odds_factor": { "value": 1, "_proposed": true, "_reason": "flat, as every flexible gun: a gun crew aims within the arc" },
+      "falloff_exponent": { "value": 1, "_proposed": true, "_reason": "no effect while the factor is flat (rim_odds_factor 1)" },
+      "tracking_dps": { "value": 60, "_proposed": true, "_reason": "the battery's light flak: fast tracking, a light gun" },
+      "damage_pips": { "value": 1, "_proposed": true, "_reason": "one pip a hit like every other gun" },
+      "rolls_per_second": { "value": 2, "_proposed": true, "_reason": "half the battery's light flak (4 a second) on each of TWO mounts, so the boat puts out the battery's light flak's volume (0.28 hits a second on a plane in range before the other factors): the boat is a light flak battery that moves, not a stronger one" }
+    }
+  ],
+  "bomb_load": {
+    "drops": { "value": 0, "_proposed": true, "_reason": "a patrol boat drops nothing" },
+    "per_drop": { "value": 0, "_proposed": true, "_reason": "a patrol boat drops nothing" }
+  },
+  "specials": []
+}

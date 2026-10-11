@@ -33,6 +33,10 @@ extends RefCounted
 #       Fly the loop of waypoints (two or more; round and round, in order, the last
 #       back to the first), engage an enemy that comes within the engage radius, break
 #       off and return to the loop. Needs a fighter with a forward weapon to engage.
+#   {"role": "sail", "route": [[x, y], ...], "mode": "loop" | "shuttle"}          (Track WS, 2026-10-10: the boats)
+#       A SEA unit (the patrol boat, the supply boat) sails the route: "loop" round it in order, the last waypoint back to
+#       the first; "shuttle" to the last and back to the first, and so on. It plans only on water (World.set_water): see
+#       _plan_sail. It never engages (its guns fire on their own) and has no part in any mission.
 # An AI-controlled unit with NO assignment flies straight and keeps off the
 # map edge (role "idle"); a down unit is not planned. A STATIC unit (a tower, a
 # battery) is never planned and takes no assignment: it has no plan to make.
@@ -73,6 +77,7 @@ extends RefCounted
 #                    gone and no other enemy qualifies
 #           return   fly back to the nearest waypoint of the loop, ignoring enemies; `patrol` again
 #                    once a waypoint is captured
+#   sail    sail     follow the route at sail.speed_fraction_of_cruise of cruise (see the role above)
 #   idle    idle     straight on at the current speed
 # Every state is edge-safe: if a plan would run the unit at the map edge (inside
 # edge_margin_turn_radii turn radii and closing on it), it turns to the centre
@@ -96,7 +101,11 @@ extends RefCounted
 # snapshotted when the turn's first plan starts and restored for a re-plan.
 # Deterministic: no randomness, ids iterate in the order units were added.
 
+const MODE_LOOP := "loop"
+const MODE_SHUTTLE := "shuttle"
+
 const World = preload("res://scripts/sim/world.gd")
+const Envelope = preload("res://scripts/sim/envelope.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
 const JsMath = preload("res://scripts/core/js_math.gd")
 const AiParams = preload("res://scripts/sim/ai_params.gd")
@@ -107,6 +116,7 @@ const AiCone = preload("res://scripts/sim/ai_cone.gd")
 const ROLE_STRIKE := "strike"
 const ROLE_ESCORT := "escort"
 const ROLE_PATROL := "patrol"
+const ROLE_SAIL := "sail"
 const ROLE_IDLE := "idle"
 
 const S_ROUTE := "route"
@@ -117,6 +127,7 @@ const S_ENGAGE := "engage"
 const S_RETURN := "return"
 const S_FREE := "free"
 const S_PATROL := "patrol"
+const S_SAIL := "sail"
 const S_IDLE := "idle"
 
 # Transition reason codes (a transition also carries a `detail` sentence).
@@ -248,8 +259,24 @@ func assign(id: String, spec: Variant) -> bool:
 				loop.append(q2)
 			orders["route"] = loop
 			_warn_edge(label, u, loop)
+		ROLE_SAIL:
+			if u.def.domain != "sea":
+				return _refuse("%s: a %s does not sail (domain %s): the sail role is for sea units" % [label, u.type, u.def.domain])
+			if not s.has("route") or not (s["route"] is Array) or (s["route"] as Array).size() < 2:
+				return _refuse("%s: a sail needs a 'route' of two or more [x, y] points" % label)
+			var mode := str(s.get("mode", ""))
+			if mode != MODE_LOOP and mode != MODE_SHUTTLE:
+				return _refuse("%s: a sail's 'mode' is '%s' or '%s', got '%s'" % [label, MODE_LOOP, MODE_SHUTTLE, mode])
+			var course: Array = []
+			for pt4: Variant in (s["route"] as Array):
+				var q4 := _point(pt4)
+				if q4.is_empty():
+					return _refuse("%s: route point %s is not [x, y] of finite numbers" % [label, str(pt4)])
+				course.append(q4)
+			orders["route"] = course
+			orders["mode"] = mode
 		_:
-			return _refuse("%s: role '%s' is not '%s', '%s' or '%s'" % [label, role, ROLE_STRIKE, ROLE_ESCORT, ROLE_PATROL])
+			return _refuse("%s: role '%s' is not '%s', '%s', '%s' or '%s'" % [label, role, ROLE_STRIKE, ROLE_ESCORT, ROLE_PATROL, ROLE_SAIL])
 	assignments[id] = orders
 	_mem.erase(id)
 	_mem_start.erase(id)
@@ -310,6 +337,8 @@ func _plan_unit(id: String) -> void:
 			_plan_escort(id, a, m)
 		ROLE_PATROL:
 			_plan_patrol(id, a, m)
+		ROLE_SAIL:
+			_plan_sail(id, a, m)
 		_:
 			_plan_idle(id, m)
 	_mem[id] = m
@@ -333,6 +362,8 @@ func _fresh_memory(id: String, a: Dictionary) -> Dictionary:
 		state = S_STATION
 	elif str(a["role"]) == ROLE_PATROL:
 		state = S_PATROL
+	elif str(a["role"]) == ROLE_SAIL:
+		state = S_SAIL
 	return {
 		"state": state, "reason": "", "detail": "", "since": world.turn,
 		"target": "", "wp": 0, "no_chance": 0, "chance": false, "alarm": 0,
@@ -597,6 +628,109 @@ func _loop_distance(x: float, y: float, route: Array) -> float:
 		var c := Geometry2D.get_closest_point_to_segment(Vector2(x, y), Vector2(float(q[0]), float(q[1])), Vector2(float(r[0]), float(r[1])))
 		best = minf(best, c.distance_to(Vector2(x, y)))
 	return best
+
+# --- Sail ----------------------------------------------------------------------
+
+# Track WS, proposed 2026-10-10 (water: the patrol boat and the supply boat; no part in any mission). A SEA unit follows its
+# route: round it in order ("loop": the last waypoint back to the first) or back and forth ("shuttle": to the last, then
+# back to the first, and so on). It holds one state, `sail`. It never engages: a boat's guns fire on their own (combat.gd).
+# It plans only on water: the route is fitted to the water (WaterGen.sites()), and each turn the plan is checked against
+# the World's own water rule (World.set_water): a plan that the rule had to slow or hold (a step with the limit "shore") is
+# replaced by an ESCAPE -- the boat backs away from the shore, its bow swinging toward the nearest waypoint, at
+# escape_speed_fraction of its reverse speed; and failing that, it stops. A turn back (the next waypoint more than uturn_deg
+# off the bow) is made on the side where the water is deeper, looked at side_probe_turn_radii turn radii out: a boat at the
+# end of a shuttle does not swing its bow into the shore.
+func _plan_sail(id: String, a: Dictionary, m: Dictionary) -> void:
+	var u: Unit = world.units[id]
+	var route: Array = a["route"]
+	var box: Array = [int(m["wp"]) % route.size(), int(m.get("dir", 1)), int(m.get("side", 0))]
+	var states := steer.fly(id, _sail_ctrl(id, a, box, 1.0))
+	var escaped := false
+	if _hit_shore(states):
+		escaped = true
+		var near := _nearest_waypoint(u.x, u.y, route)
+		box = [near, 1, 0]
+		states = steer.fly(id, _escape_ctrl(id, a, near, params.num("sail", "escape_speed_fraction")))
+		if _hit_shore(states):
+			states = steer.fly(id, _escape_ctrl(id, a, near, 0.0))
+	m["edge"] = false
+	m["wp"] = int(box[0])
+	m["dir"] = int(box[1])
+	m["side"] = int(box[2])
+	m["escaped"] = escaped
+
+# The escape: back away (speed_min x fraction, astern) turning the bow toward waypoint `wp`. Fraction 0: stop.
+func _escape_ctrl(id: String, a: Dictionary, wp: int, fraction: float) -> Callable:
+	var u: Unit = world.units[id]
+	var route: Array = a["route"]
+	var wx := float((route[wp] as Array)[0])
+	var wy := float((route[wp] as Array)[1])
+	var speed := u.def.envelope.speed_min * fraction if u.def.envelope.speed_min < 0.0 else 0.0
+	return func(_i: int, _at: Dictionary, _t: float) -> Dictionary:
+		return {
+			"aim": func(s: Dictionary) -> float: return JsMath.atan2(wy - float(s["y"]), wx - float(s["x"])),
+			"speed": speed,
+		}
+
+# Did the World slow or hold any of these steps to keep the boat afloat?
+func _hit_shore(states: Array) -> bool:
+	for s: Dictionary in states:
+		if (s.get("limits", []) as Array).has(Envelope.LIMIT_SHORE):
+			return true
+	return false
+
+# The controller of a sailing boat: toward the waypoint box[0] (round the loop, or along the route going box[1], +1 or -1),
+# taking the next each time one is within sail.capture_radius_m; box[2] is the side (+1 right, -1 left, 0 none) a turn
+# back is made on. `fraction` is the share of cruise speed it asks for.
+func _sail_ctrl(id: String, a: Dictionary, box: Array, fraction: float) -> Callable:
+	var u: Unit = world.units[id]
+	var route: Array = a["route"]
+	var shuttle := str(a["mode"]) == MODE_SHUTTLE
+	var cap := params.num("sail", "capture_radius_m")
+	var speed := u.def.envelope.speed_cruise * fraction
+	var uturn := deg_to_rad(params.num("sail", "uturn_deg"))
+	var env := u.def.envelope
+	var reach := params.num("sail", "side_probe_turn_radii") * env.turn_radius(maxf(env.speed_cruise, 0.1))
+	var draught := u.def.draught_m
+	return func(_i: int, at: Dictionary, _t: float) -> Dictionary:
+		var w: int = box[0]
+		var guard := 0
+		while guard < route.size() and _near(float(at["x"]), float(at["y"]), route[w], cap):
+			guard += 1
+			if shuttle:
+				var d: int = box[1]
+				if (d > 0 and w >= route.size() - 1) or (d < 0 and w <= 0):
+					d = -d
+					box[1] = d
+				w = clampi(w + d, 0, route.size() - 1)
+			else:
+				w = (w + 1) % route.size()
+		box[0] = w
+		var wx := float((route[w] as Array)[0])
+		var wy := float((route[w] as Array)[1])
+		var heading := float(at["heading"])
+		var off := Envelope.wrap_angle(JsMath.atan2(wy - float(at["y"]), wx - float(at["x"])) - heading)
+		if absf(off) > uturn:
+			# a turn back: on the side with the deeper water, and the same side until the bow is round
+			if int(box[2]) == 0:
+				var px := float(at["x"])
+				var py := float(at["y"])
+				var right := world.water_depth_at(px - JsMath.sin(heading) * reach, py + JsMath.cos(heading) * reach)
+				var left := world.water_depth_at(px + JsMath.sin(heading) * reach, py - JsMath.cos(heading) * reach)
+				var right_ok := right >= draught
+				var left_ok := left >= draught
+				if right_ok and (not left_ok or right >= left):
+					box[2] = 1
+				elif left_ok:
+					box[2] = -1
+				else:
+					box[2] = 1 if right >= left else -1
+			return {"turn": float(box[2]) * PI, "speed": speed}
+		box[2] = 0
+		return {
+			"aim": func(s: Dictionary) -> float: return JsMath.atan2(wy - float(s["y"]), wx - float(s["x"])),
+			"speed": speed,
+		}
 
 # --- Escort --------------------------------------------------------------------
 

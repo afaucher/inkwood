@@ -68,6 +68,23 @@ extends RefCounted
 #              releases nothing and spends no bombs, "poor_shot" releases a poor stick (bombs.gd).
 #              drop_expected() answers the expected-damage line.
 #
+# THE WATER (Track WS, proposed 2026-10-10; Alex's decisions water-layer and boat-looks: boats and bridges are
+# units, part of the environment). A SEA unit (data/units: domain "sea", with a draught_m) sails only on water.
+# The World does not know the generator: it is GIVEN a water query, as a Callable, and without one the rule is
+# off (the sim stays testable on its own):
+#
+#   world.set_water(Callable(water_gen, "depth_at"))   # (x, y) -> metres of water; 0 or less on land
+#   world.afloat_at(x, y, heading, unit_id)            # would this unit's hull be over water deep enough there
+#   world.unit_afloat(unit_id)                         # ... is it, now
+#
+# Water at least draught_m deep must lie under the unit's centre and both ends of its hull (data/sim/sea.json
+# hull_fraction) all along every step it plans. A step that would leave the water is CLAMPED the way the
+# envelope clamps, not refused: the same turn at slower and slower end speeds (down to the floor of the step's
+# speed window), and if even the slowest would leave the water the unit is HELD (it stays where it is, speed
+# 0); either way the step reports clamped and the limit "shore" (Envelope.LIMIT_SHORE). add_unit refuses to
+# put a sea unit where it would not float. The AI never plans onto land (ai_pilot.gd, role "sail"); the clamp
+# is the rule for a human's plan and the net under the AI's.
+#
 # LEAVING THE MAP is an event, not an error: the step state carries
 # out_of_bounds, a "left_bounds" / "returned_to_bounds" event goes into the
 # turn's events, and unit_left_bounds fires. What should happen to such a unit
@@ -91,6 +108,8 @@ const CombatResolver = preload("res://scripts/sim/combat_resolver.gd")
 const BombRules = preload("res://scripts/sim/bomb_rules.gd")
 const Bombs = preload("res://scripts/sim/bombs.gd")
 const BombExpect = preload("res://scripts/sim/bomb_expect.gd")
+const SeaRules = preload("res://scripts/sim/sea_rules.gd")
+const JsMath = preload("res://scripts/core/js_math.gd")
 
 const PHASE_PLANNING := "planning"
 const PHASE_RESOLVING := "resolving"
@@ -121,10 +140,14 @@ var bombs: BombRules            # data/sim/bombs.json: the fall, the cone, the s
 # Bombs released and not yet landed (bombs.gd header has the record): carried across turns by
 # resolve(), handed to a client by apply_resolution(), read by the effects and the interface.
 var bombs_in_flight: Array = []
+# The water rule's numbers (data/sim/sea.json) and the water query a sea unit is kept afloat by (set_water); an
+# invalid Callable means no water: sea units move as any unit does.
+var sea: SeaRules
+var water_depth: Callable = Callable()
 
 var _combat_resolver: CombatResolver
 
-func _init(turn_path: String = SimRules.TURN_PATH, altitude_path: String = SimRules.ALTITUDE_PATH, unit_dir: String = UnitDef.UNITS_DIR, combat_path: String = CombatRules.PATH, bombs_path: String = BombRules.PATH) -> void:
+func _init(turn_path: String = SimRules.TURN_PATH, altitude_path: String = SimRules.ALTITUDE_PATH, unit_dir: String = UnitDef.UNITS_DIR, combat_path: String = CombatRules.PATH, bombs_path: String = BombRules.PATH, sea_path: String = SeaRules.PATH) -> void:
 	rules = SimRules.new(turn_path, altitude_path)
 	units_dir = unit_dir
 	errors.append_array(rules.errors)
@@ -133,6 +156,8 @@ func _init(turn_path: String = SimRules.TURN_PATH, altitude_path: String = SimRu
 	errors.append_array(combat.errors)
 	bombs = BombRules.new(bombs_path)
 	errors.append_array(bombs.errors)
+	sea = SeaRules.new(sea_path)
+	errors.append_array(sea.errors)
 	_combat_resolver = CombatResolver.new(combat, bombs)
 
 func ok() -> bool:
@@ -151,6 +176,36 @@ func unit_def(type_id: String) -> UnitDef:
 		return null
 	defs[type_id] = def
 	return def
+
+# --- Water (Track WS; the header's THE WATER) ----------------------------------------
+
+# Give the World its water: `depth_fn` is a Callable (x: float, y: float) -> float, the metres of water at a point
+# (0 or less where there is none, an upland included). An invalid Callable takes the water away again.
+func set_water(depth_fn: Callable) -> void:
+	water_depth = depth_fn
+
+func has_water() -> bool:
+	return water_depth.is_valid()
+
+# Metres of water at a point; 0.0 when the World has no water.
+func water_depth_at(px: float, py: float) -> float:
+	if not water_depth.is_valid():
+		return 0.0
+	return float(water_depth.call(px, py))
+
+# Would a hull of this unit's type, centred at (px, py) and pointing along `heading`, float there: water at
+# least its draught deep under the centre and under both ends. True when the World has no water or the unit
+# does not float (domain other than sea).
+func afloat_at(px: float, py: float, heading: float, unit_id: String) -> bool:
+	var u := _unit(unit_id)
+	if u == null:
+		return false
+	return _afloat_pose(u.def, px, py, heading)
+
+# Is the unit afloat where it is now?
+func unit_afloat(unit_id: String) -> bool:
+	var u := _unit(unit_id)
+	return u != null and _afloat_pose(u.def, u.x, u.y, u.heading)
 
 # --- Players and units -------------------------------------------------------
 
@@ -192,6 +247,8 @@ func add_unit(spec: Dictionary) -> String:
 	var band := str(spec.get("altitude_band", def.envelope.start_band))
 	if not def.envelope.bands.has(band):
 		return _fail_s("add_unit: a %s cannot be in band '%s' (its bands: %s)" % [type_id, band, str(def.envelope.bands)])
+	if def.domain == "sea" and water_depth.is_valid() and not _afloat_pose(def, float(spec["x"]), float(spec["y"]), float(spec["heading"])):
+		return _fail_s("add_unit: a %s needs water %.1f m deep under it and would not float at (%.0f, %.0f)" % [type_id, def.draught_m, float(spec["x"]), float(spec["y"])])
 	var id := str(spec.get("id", ""))
 	if id == "":
 		var n := 1
@@ -821,6 +878,8 @@ func _step(u: Unit, k: int, prev: Dictionary) -> Dictionary:
 	var planned := k < u.plan.size() and not (u.plan[k] as Dictionary).is_empty()
 	var req: Variant = u.plan[k] if k < u.plan.size() else {}
 	var s := u.def.envelope.clamp_step(prev, req, rules.step_dt(n))
+	if u.def.domain == "sea" and water_depth.is_valid():
+		s = _keep_afloat(u, prev, s, rules.step_dt(n))
 	s["step"] = k
 	s["t"] = rules.turn_seconds * float(k + 1) / float(n)
 	s["planned"] = planned
@@ -828,6 +887,61 @@ func _step(u: Unit, k: int, prev: Dictionary) -> Dictionary:
 	if req is Dictionary and (req as Dictionary).has("drop"):
 		s["drop"] = _drop_state(u, k, prev, s, req)
 	return s
+
+# --- The water rule (Track WS; the header's THE WATER) --------------------------------------------------------
+
+# Is there water deep enough under a hull of `def` at (px, py) heading `heading`: at its centre and at both ends.
+func _afloat_pose(def: UnitDef, px: float, py: float, heading: float) -> bool:
+	if def.domain != "sea" or not water_depth.is_valid():
+		return true
+	var half := sea.hull_fraction * def.size_m
+	var cx := JsMath.cos(heading) * half
+	var cy := JsMath.sin(heading) * half
+	var need := def.draught_m
+	return float(water_depth.call(px, py)) >= need \
+		and float(water_depth.call(px + cx, py + cy)) >= need \
+		and float(water_depth.call(px - cx, py - cy)) >= need
+
+# Is the arc of the step from `from` to `to` afloat all along (the start is the unit's own place and is not
+# asked)? Sampled every sea.sample_m of arc, at least four times.
+func _afloat_along(u: Unit, from: Dictionary, to: Dictionary, dt: float) -> bool:
+	var length := absf(0.5 * (float(from["speed"]) + float(to["speed"]))) * dt
+	var count := maxi(4, ceili(length / sea.sample_m))
+	for i in range(1, count + 1):
+		var p := Envelope.point_on_step(from, to, dt, float(i) / float(count))
+		if not _afloat_pose(u.def, float(p["x"]), float(p["y"]), float(p["heading"])):
+			return false
+	return true
+
+# The step `s` (clamped by the envelope) kept afloat: as it is if its arc is afloat; else slowed (the same turn
+# at end speeds from the planned one down to the slowest the step's speed window allows, sea.slow_tries of them,
+# the first that floats wins); else HELD where it is (speed 0). A changed step is clamped, with the limit "shore".
+func _keep_afloat(u: Unit, prev: Dictionary, s: Dictionary, dt: float) -> Dictionary:
+	if _afloat_along(u, prev, s, dt):
+		return s
+	var env := u.def.envelope
+	var turn := float(s["turn"])
+	# the slowest end speed the step's window allows: the one nearest zero (the window's floor going ahead, its top going astern)
+	var w_lo := float(env.clamp_step(prev, {"turn": turn, "speed": -1.0e9}, dt)["speed"])
+	var w_hi := float(env.clamp_step(prev, {"turn": turn, "speed": 1.0e9}, dt)["speed"])
+	var v_planned := float(s["speed"])
+	var v_slow := clampf(0.0, w_lo, w_hi)
+	for j in range(1, sea.slow_tries + 1):
+		var c := env.clamp_step(prev, {"turn": turn, "speed": lerpf(v_planned, v_slow, float(j) / float(sea.slow_tries))}, dt)
+		if _afloat_along(u, prev, c, dt):
+			return _shore_limited(c)
+	return _shore_limited({
+		"x": prev["x"], "y": prev["y"], "heading": prev["heading"], "speed": 0.0,
+		"altitude_band": prev["altitude_band"], "turn": 0.0, "limits": [],
+	})
+
+static func _shore_limited(c: Dictionary) -> Dictionary:
+	var limits: Array = (c.get("limits", []) as Array).duplicate()
+	if not limits.has(Envelope.LIMIT_SHORE):
+		limits.append(Envelope.LIMIT_SHORE)
+	c["limits"] = limits
+	c["clamped"] = true
+	return c
 
 # --- Bombs (Track S2; scripts/sim/bombs.gd has the model) -----------------------------------------
 

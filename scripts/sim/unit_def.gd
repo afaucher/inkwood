@@ -35,6 +35,9 @@ var domain: String = ""
 # tower, an anti-aircraft battery) never moves, turns or plans; see is_static().
 var mobility: String = ""
 var size_m: float = NAN
+# Metres of water a SEA unit needs under it (data/units/_schema.json "draught_m"; Track WS, 2026-10-10): > 0 for domain "sea",
+# 0 for every other domain. The World keeps a sea unit afloat by it (World.set_water).
+var draught_m: float = NAN
 var actions_per_turn: int = 0
 var health: int = 0
 var sight_range_m: float = NAN
@@ -86,6 +89,7 @@ func _init(unit_source: Variant, band_order: Array, quiet: bool = false, label: 
 		domain = str(v.get("domain", ""))
 		mobility = str(v.get("mobility", ""))
 		size_m = float(v.get("size_m", NAN))
+		draught_m = float(v.get("draught_m", NAN))
 		actions_per_turn = int(v.get("actions_per_turn", 0))
 		health = int(v.get("health", 0))
 		sight_range_m = float(v.get("sight_range_m", NAN))
@@ -209,6 +213,11 @@ func _check(r: Records, stem: String) -> void:
 	if stem != "" and id != "" and id != stem:
 		r.err("id '%s' does not match the file name '%s.json'" % [id, stem])
 	var e := envelope_values
+	# Draught (Track WS, 2026-10-10): a sea unit floats (it needs water under it), nothing else does.
+	if domain == "sea" and not (draught_m > 0.0):
+		r.err("a unit of domain sea needs a draught_m above 0 (the water its hull needs), got %s" % str(draught_m))
+	if domain != "sea" and draught_m > 0.0:
+		r.err("only a unit of domain sea has a draught: draught_m must be 0 for domain '%s', got %s" % [domain, str(draught_m)])
 	var vmin := float(e.get("speed_min_mps", NAN))
 	var vcr := float(e.get("speed_cruise_mps", NAN))
 	var vmax := float(e.get("speed_max_mps", NAN))

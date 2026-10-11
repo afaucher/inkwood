@@ -1,0 +1,36 @@
+{
+  "_about": "Supply boat (Track WS, 2026-10-10: water). ALEX'S (decisions water-layer and boat-looks): one unarmed supply boat, the S2 barge with deck cargo (34 m); 'part of the environment with real patrols but no specific part in the mission'. EVERYTHING ELSE HERE IS PROPOSED by Track WS. The same movement system as the patrol boat with a barge's numbers: slower (5 m/s, about 10 knots, a twentieth of a fighter's), a very slow turn, a deeper keel. It sails a route back and forth (scripts/sim/ai_pilot.gd role 'sail', mode 'shuttle'). The WATER RULE (World.set_water, data/sim/sea.json) applies as to the patrol boat. It has no weapons and carries no bombs; it can be hit, and at 0 health it is DESTROYED (fate 'destroyed': it stays where it was, down; the drawing may sink it).",
+  "id": "supply_boat",
+  "name": "Supply boat",
+  "domain": "sea",
+  "mobility": "mobile",
+  "size_m": { "value": 34, "_proposed": true, "_reason": "the S2 barge's length (data/world/boats.json supply.size_m): a small coaster or a canal barge is 25 to 45 m" },
+  "draught_m": { "value": 1.8, "_proposed": true, "_reason": "a loaded flat-bottomed barge draws 1.5 to 2 m: a little less than the gunboat's keel but a far bigger hull, so it keeps a wider berth (data/world/water.json sites.supply.margin_m is set from the hull, not the draught)" },
+  "actions_per_turn": { "value": 2, "_proposed": true, "_reason": "as the patrol boat's: two 2.5 s steps a turn, 12 m each at cruise" },
+  "health": { "value": 6, "_proposed": true, "_reason": "an unarmoured barge is a big target and carries cargo, not guns: a little tougher than the gunboat (5) because it is a bigger hull, two direct bomb hits (3 each). It is not a target of the mission" },
+  "sight_range_m": { "value": 250, "_proposed": true, "_reason": "a deckhand's watch from a low barge: it sees what is almost alongside. The enemy AI counts what its units see, so this is kept short" },
+  "drawing": { "silhouette": "supply_boat" },
+  "envelope": {
+    "speed_min_mps": { "value": -2, "_proposed": true, "_reason": "slow astern: a barge can reverse once stopped" },
+    "speed_cruise_mps": { "value": 5, "_proposed": true, "_reason": "about 10 knots: a loaded coaster or a tug-and-barge's steady speed, half the patrol boat's" },
+    "speed_max_mps": { "value": 7, "_proposed": true, "_reason": "about 14 knots flat out" },
+    "dive_speed_max_mps": { "value": 7, "_proposed": true, "_reason": "a boat cannot dive: equal to speed_max_mps" },
+    "accel_mps2": { "value": 0.5, "_proposed": true, "_reason": "a loaded hull takes ten seconds to get to cruise from a stop" },
+    "decel_mps2": { "value": 1.0, "_proposed": true, "_reason": "five seconds to stop from cruise: faster than it gets going" },
+    "reverse_from_stop": { "value": true, "_proposed": true, "_reason": "design doc, Motion and inertia: ships can reverse once stopped" },
+    "turn_rate_curve_dps": { "value": [[0, 0], [2, 3], [5, 5], [7, 4.5]], "_proposed": true, "_reason": "a rudder needs flow: no turn with no way on, 5 deg/s at cruise, a very slow turn: a radius of 57 m and a full circle in 72 s" },
+    "turn_bleed_mps2": { "value": 0.3, "_proposed": true, "_reason": "a barge loses a little way in a hard turn" },
+    "turn_bleed_exponent": { "value": 2, "_proposed": true, "_reason": "as the planes': gentle turns are nearly free" },
+    "altitude_bands": { "value": ["surface"], "_proposed": true, "_reason": "it rides the sea: the surface band" },
+    "start_band": { "value": "surface", "_proposed": true, "_reason": "it rides the sea" },
+    "bands_per_step": { "value": 0, "_proposed": true, "_reason": "a boat never changes band" },
+    "climb_speed_cost_mps": { "value": 0, "_proposed": true, "_reason": "a boat never changes band" },
+    "dive_speed_gain_mps": { "value": 0, "_proposed": true, "_reason": "a boat never changes band" }
+  },
+  "weapons": [],
+  "bomb_load": {
+    "drops": { "value": 0, "_proposed": true, "_reason": "a supply boat drops nothing" },
+    "per_drop": { "value": 0, "_proposed": true, "_reason": "a supply boat drops nothing" }
+  },
+  "specials": []
+}

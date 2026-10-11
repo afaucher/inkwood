@@ -17,6 +17,10 @@ const CombatWeapon = preload("res://scripts/sim/combat_weapon.gd")
 # The demo's air units (design doc, Initial unit roster). More files may exist;
 # these must.
 const REQUIRED := ["light_fighter", "heavy_fighter", "bomber", "radio_tower", "anti_aircraft_battery"]
+# The static ground units: never move, never plan (the tower, the batteries, and since Track WS's water the bridge).
+const STATIC_UNITS := ["radio_tower", "anti_aircraft_battery", "bridge"]
+# The water's units (Track WS, 2026-10-10): two sea units with a draught, and the bridge.
+const WATER_UNITS := ["patrol_boat", "supply_boat", "bridge"]
 
 # Tracking rates by mounting, across every unit file (the design: a fixed gun tolerates less crossing than a gunner).
 var _fixed_tracking: Array[float] = []
@@ -35,7 +39,7 @@ func setup(_main) -> void:
 		finish()
 		return
 	var fields: Dictionary = (schema as Dictionary)["fields"]
-	for f: String in ["id", "name", "domain", "mobility", "size_m", "actions_per_turn", "health", "sight_range_m", "drawing", "envelope", "weapons", "bomb_load", "specials"]:
+	for f: String in ["id", "name", "domain", "mobility", "size_m", "draught_m", "actions_per_turn", "health", "sight_range_m", "drawing", "envelope", "weapons", "bomb_load", "specials"]:
 		check(fields.has(f), "schema lists '%s'" % f)
 	var special_fields: Dictionary = (fields.get("specials", {}) as Dictionary).get("item_fields", {})
 	for f: String in ["id", "name", "action"]:
@@ -75,7 +79,7 @@ func setup(_main) -> void:
 			str(def.envelope.bands)])
 		_check_weapons(def)
 		_check_load_and_mobility(def)
-	for id: String in REQUIRED:
+	for id: String in REQUIRED + WATER_UNITS:
 		check(found.has(id), "data/units/%s.json exists" % id)
 	check(not _fixed_tracking.is_empty() and not _gunner_tracking.is_empty() and _fixed_tracking.max() < _gunner_tracking.min(), "every fixed gun tracks worse than every flexible gun and turret (fixed up to %s deg/s, gunners from %s)" % [str(_fixed_tracking.max()), str(_gunner_tracking.min())])
 
@@ -117,6 +121,9 @@ func setup(_main) -> void:
 		["drops without bombs", "bomb_load: drops (3) and per_drop (0)"],
 		["bombs without drops", "bomb_load: drops (0) and per_drop (4)"],
 		["a negative bomb count", "'bomb_load.per_drop' = -1 is below 0"],
+		["no draught", "missing field 'draught_m'"],
+		["a sea unit that does not float", "a unit of domain sea needs a draught_m above 0"],
+		["a plane with a draught", "only a unit of domain sea has a draught"],
 		["no specials list", "missing list 'specials'"],
 		["a special with no action", "missing text 'specials[0].action'"],
 		["a misspelt special key", "unknown field 'specials[0].acton'"],
@@ -249,6 +256,12 @@ func _break(d: Dictionary, what: String) -> void:
 			d["bomb_load"] = {"drops": {"value": 0, "_proposed": true, "_reason": "x"}, "per_drop": {"value": 4, "_proposed": true, "_reason": "x"}}
 		"a negative bomb count":
 			d["bomb_load"] = {"drops": {"value": 3, "_proposed": true, "_reason": "x"}, "per_drop": {"value": -1, "_proposed": true, "_reason": "x"}}
+		"no draught":
+			d.erase("draught_m")
+		"a sea unit that does not float":
+			d["domain"] = "sea"
+		"a plane with a draught":
+			d["draught_m"] = {"value": 1.5, "_proposed": true, "_reason": "x"}
 		"no specials list":
 			d.erase("specials")
 		"a special with no action":
@@ -298,6 +311,18 @@ func _check_weapons(def: UnitDef) -> void:
 			eq(def.weapons[1].mount_deg, 180.0, "the rear gunner points rearward")
 		"radio_tower":
 			eq(ids, [] as Array[String], "radio tower: no weapons")
+		"bridge":
+			eq(ids, [] as Array[String], "bridge: no weapons")
+		"supply_boat":
+			eq(ids, [] as Array[String], "supply boat: unarmed")
+		"patrol_boat":
+			# Track WS: one weapon, light AA guns on two mounts, fore and aft, all around and aimed up like the battery's light flak
+			eq(ids, ["aa_guns"] as Array[String], "patrol boat: one weapon, the light AA guns")
+			eq(def.weapons[0].hardpoints.size(), 2, "...two mounts, fore and aft")
+			check(def.weapons[0].hardpoints[0].x > 0.0 and def.weapons[0].hardpoints[1].x < 0.0, "...one forward of the middle, one aft")
+			eq(def.weapons[0].half_across_deg, 180.0, "...all around")
+			check(def.weapons[0].elevation_deg > 0.0, "...aimed up")
+			eq(def.weapons[0].effective_range_m, 320.0, "...the battery's light flak's 320 m: the low band and not the medium")
 		"anti_aircraft_battery":
 			# Two weapons since Alex's decision low-band-flak (2026-10-10, "make it more dangerous"): the heavy flak and,
 			# proposed by Track F, the light flak, short and fast, that covers the low band near the battery.
@@ -315,8 +340,16 @@ func _check_weapons(def: UnitDef) -> void:
 # other file is mobile; a load is at least two drops (Alex: everything gets at least two) or nothing; the
 # fighters carry none and the bomber carries some; a smaller bomber would carry fewer (nothing here is smaller).
 func _check_load_and_mobility(def: UnitDef) -> void:
-	var is_ground_static := def.id == "radio_tower" or def.id == "anti_aircraft_battery"
-	eq(def.is_static(), is_ground_static, "%s: static exactly for the tower and the battery" % def.id)
+	var is_ground_static := STATIC_UNITS.has(def.id)
+	eq(def.is_static(), is_ground_static, "%s: static exactly for the tower, the batteries and the bridge" % def.id)
+	# Track WS: a sea unit floats (a draught, a surface band, mobile), nothing else has a draught
+	eq(def.domain == "sea", def.draught_m > 0.0, "%s: a draught exactly for a unit of domain sea (%s m)" % [def.id, str(def.draught_m)])
+	if def.domain == "sea":
+		check(not def.is_static() and def.envelope.bands == (["surface"] as Array[String]), "%s: a boat is mobile and rides the surface band" % def.id)
+		check(def.envelope.reverse_from_stop and def.envelope.speed_min < 0.0, "%s: it can reverse once stopped" % def.id)
+		check(def.envelope.turn_rate(0.0) == 0.0, "%s: a rudder needs flow: no turn with no way on" % def.id)
+		check(def.envelope.speed_max < 30.0, "%s: a boat is far slower than a plane (%s m/s)" % [def.id, str(def.envelope.speed_max)])
+		check(not def.carries_bombs(), "%s drops nothing" % def.id)
 	eq(def.mobility, "static" if is_ground_static else "mobile", "%s: mobility is %s" % [def.id, "static" if is_ground_static else "mobile"])
 	check(def.bomb_drops == 0 or def.bomb_drops >= 2, "%s: a bomb load is at least two drops, or none (%d)" % [def.id, def.bomb_drops])
 	check((def.bomb_drops > 0) == (def.bomb_per_drop > 0), "%s: drops and bombs per drop are both there or both absent" % def.id)

@@ -67,6 +67,44 @@
     }
   ],
 
+  "water": false,
+  "_water_note": "THE WATER SWITCH (Track WS, 2026-10-10). Off, the Strike is exactly what 'units' and 'ai' above say (the tests hold it to that). On, the scenario ADDS the units below, all on the defending side and none in the mission, and the World is given the water (scripts/app/sandbox_scenario.gd populate: World.set_water, WaterGen.shared(seed)), so a boat cannot be put or driven onto land. The drawing track turns it on when boats, bridges and water can be drawn. WHAT IS ALEX'S (data/decisions/decisions.json: water-layer, water-look, boat-looks, boat-wake, bridge-look): water is generated from the seed and seed 20261009's is the Strike's; one armed patrol boat (the P1 Cutter, 'Let it fire if it wants') and one unarmed supply boat (the S2 barge), 'part of the environment with real patrols but no specific part in the mission'; a bridge where the road crosses the river, destroyable like the radio tower (the lead's proposal; Alex: 'Sounds good'); the river 26 m wide at the road and the boats at the planes' scale, so they keep to the coast and the estuary. EVERYTHING ELSE IS PROPOSED (Track WS): where they are (the water sites, data/world/water.json sites), their numbers (data/units), their routes.",
+
+  "water_units": [
+    {
+      "id": "bridge_1",
+      "type": "bridge", "side": "side_b", "controller": "ai",
+      "site": "water.bridge", "heading": "site",
+      "_proposed": true,
+      "_reason": "The bridge (Alex: bridges where the road crosses the river, destroyable like the radio tower): at the water's crossing site, the river's crossing of the village road (data/world/water.json, scripts/world/water_gen.gd sites()), with the road's heading there. A static ground unit like the tower (10 pips, data/units/bridge.json); a bomb target in principle, no part of the mission, which names the tower and the bomber only."
+    },
+    {
+      "id": "patrol_boat_1",
+      "type": "patrol_boat", "side": "side_b", "controller": "ai",
+      "site": "water.patrol_loop", "site_index": 0, "heading": "site",
+      "_proposed": true,
+      "_reason": "The armed patrol boat (Alex: the P1 Cutter, part of the environment with a real patrol and no part in the mission, its guns fire): it starts at the first corner of its patrol loop, the corner nearest the river's mouth, heading for the next (the water sites, WaterGen.sites().patrol_loop: a rectangle of open water along the coast off the mouth of the river, clear of the shore by a margin). Its light AA guns reach the low band only (data/units/patrol_boat.json). It has no assignment in the mission and no weapon the AI fires: its guns fire on their own."
+    },
+    {
+      "id": "supply_boat_1",
+      "type": "supply_boat", "side": "side_b", "controller": "ai",
+      "site": "water.supply_route", "site_index": 0, "heading": "site",
+      "_proposed": true,
+      "_reason": "The unarmed supply boat (Alex: the S2 barge, part of the environment with a real patrol and no part in the mission): it starts at the first end of its route, the anchorage nearest the river's mouth, heading along it (the water sites, WaterGen.sites().supply_route: from the mouth out and down the coast and back)."
+    }
+  ],
+
+  "water_assignments": {
+    "patrol_boat_1": {
+      "role": "sail", "mode": "loop", "route": { "site": "water.patrol_loop" },
+      "_reason": "The patrol boat sails its loop, round and round, clockwise on screen (scripts/sim/ai_pilot.gd role sail); the route is the whole of the water's patrol loop, so it follows the sea if the generator changes."
+    },
+    "supply_boat_1": {
+      "role": "sail", "mode": "shuttle", "route": { "site": "water.supply_route" },
+      "_reason": "The supply boat sails its route to the far end and back, again and again (mode shuttle); the route is the whole of the water's supply route."
+    }
+  },
+
   "ai": {
     "kind": "pilot",
     "_proposed": true,

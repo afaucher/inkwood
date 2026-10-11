@@ -1,0 +1,36 @@
+{
+  "_about": "Bridge (Track WS, 2026-10-10: water). ALEX'S (decisions water-layer and bridge-look): a bridge where the village road crosses the river, 'destroyable like the radio tower' (the lead's proposal; Alex: 'Sounds good'), the stone arch with a flat deck. EVERYTHING ELSE HERE IS PROPOSED by Track WS. A STATIC unit (mobility 'static', like the radio tower and the batteries): it never moves, turns or plans, has no weapons, and goes down with the fate 'destroyed' when its health reaches 0, so bombs can bring it down (the World judges it like any ground unit: bombs.json's blast hurts a unit at the surface). It is a bomb target in principle and NO PART OF THE STRIKE'S MISSION (the mission names the radio tower and the bomber only). It stands at the road's crossing of the river (WaterGen.sites().bridge, scenario site 'water.bridge') with the road's heading. Domain ground: a structure on the surface band (a boat sails under it; the drawing draws it, data/world/bridges.json).",
+  "id": "bridge",
+  "name": "Bridge",
+  "domain": "ground",
+  "mobility": "static",
+  "size_m": { "value": 40, "_proposed": true, "_reason": "the span over the river (26 m at the road: Alex, decision water-layer, river_width) plus an abutment of 6 m on each bank (data/world/bridges.json abutment_len_m): about 38 m along the road, rounded to 40; the deck is 16 m wide" },
+  "draught_m": { "value": 0, "_proposed": true, "_reason": "a bridge does not float: only a sea unit needs water under it" },
+  "actions_per_turn": { "value": 1, "_proposed": true, "_reason": "a static unit has nothing to plan: one step a turn that stands still" },
+  "health": { "value": 10, "_proposed": true, "_reason": "pips the bombs must take (3 for a hit within 12 m, 2 within 25 m, 1 within 45 m: data/sim/bombs.json). A stone arch is sturdier than a lattice mast (the tower has 8), and a bridge is long and narrow along the road, so a stick across it spreads its hits: ten pips is a little over three direct hits, or two good sticks. Nothing in the mission depends on it" },
+  "sight_range_m": { "value": 0, "_proposed": true, "_reason": "a bridge sees nothing: it has no crew (the enemy AI counts what its units see, and a bridge warns no one)" },
+  "drawing": { "silhouette": "bridge" },
+  "envelope": {
+    "speed_min_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "speed_cruise_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "speed_max_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "dive_speed_max_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "accel_mps2": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "decel_mps2": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
+    "reverse_from_stop": { "value": false, "_proposed": true, "_reason": "static: never moves" },
+    "turn_rate_curve_dps": { "value": [[0, 0]], "_proposed": true, "_reason": "static: never turns" },
+    "turn_bleed_mps2": { "value": 0, "_proposed": true, "_reason": "static: never turns" },
+    "turn_bleed_exponent": { "value": 1, "_proposed": true, "_reason": "static: never turns (the exponent is unused; it must be a number)" },
+    "altitude_bands": { "value": ["surface"], "_proposed": true, "_reason": "it stands on the ground: the surface band (data/sim/altitude.json)" },
+    "start_band": { "value": "surface", "_proposed": true, "_reason": "it stands on the ground" },
+    "bands_per_step": { "value": 0, "_proposed": true, "_reason": "static: never changes band" },
+    "climb_speed_cost_mps": { "value": 0, "_proposed": true, "_reason": "static: never changes band" },
+    "dive_speed_gain_mps": { "value": 0, "_proposed": true, "_reason": "static: never changes band" }
+  },
+  "weapons": [],
+  "bomb_load": {
+    "drops": { "value": 0, "_proposed": true, "_reason": "a bridge drops nothing" },
+    "per_drop": { "value": 0, "_proposed": true, "_reason": "a bridge drops nothing" }
+  },
+  "specials": []
+}
