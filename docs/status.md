@@ -10,8 +10,6 @@ Decisions and open questions live in the Decision Ledger
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
 | Draw the boats and the bridge in the game (item 1 below), and sinking (decision ship-sinks: a destroyed ship, and a plane that comes down over water, fall through the water to the floor) | lead session (builder) | scripts/ui/unit_marker_art*.gd (boat and bridge dispatch only), new scripts/ui/unit_marker_art_boats.gd, scripts/fx/ (the bridge's ruin, the splash), data/ui/ui.json unit_art keys; for sinking: the fall functions in scripts/sim/world.gd, the sea-unit fate in scripts/sim/combat_resolver.gd, sink keys in data/sim/combat.json | 2026-10-11 |
-| Build Hold the bridge (item 2 below) | lead session (builder) | data/scenarios/bridge.json, scripts/sim/mission.gd, scripts/app/main.gd selector, scripts/debug/debug_settings.gd scenario choices, scripts/test_support/bridge_*.gd, scripts/tests/test_bridge_mission.gd | 2026-10-11 |
-| Playtest 2 fixes: tails at the start (a ribbon behind every moving unit as if it had flown on at its normal speed); the per-unit dot and dotted line removed | lead session (builder PT2) | scripts/ui/wingtip_trails.gd; the per-unit dot and dashed line's drawing (scripts/ui/motion_planner.gd and/or unit_marker_layer.gd, that function only); data/ui/ui.json trails and planner keys; scripts/tests/test_tails_start.gd, test_declutter.gd | 2026-10-11 |
 | Machine-gun tracers: a board and a working default (proposed) | lead session (builder TR) | new scripts/fx/fx_tracer*.gd and its hook in fx_layer.gd/fx_field.gd; data/fx/fx.json tracers; variants/tracers/; scripts/tests/test_tracers.gd | 2026-10-11 |
 | Board: the range-of-motion indicator for every unit type (no live change until Alex picks) | lead session (builder BM) | variants/motion-range/; scripts/ui/boards/motion_range_board_shot.gd; a mode switch in the fan's drawing in scripts/ui/motion_planner.gd (today's look the default); data/ui/ui.json planner.fan keys | 2026-10-11 |
 | Board: shadows from the time of day (no live change until Alex picks) | lead session (builder BS) | variants/sun-time/; a new board shot script; the sun's direction and length in data and their readers (ui_style.gd, fx_style.gd, scripts/render/ink_structs.gd shadow_dir), today's sun the default | 2026-10-11 |
@@ -28,16 +26,11 @@ Decisions and open questions live in the Decision Ledger
    `data/world/boats.json`, `bridges.json` (decisions boat-looks, boat-wake,
    bridge-look). Wire them into the marker layer (`scripts/ui/unit_marker_art*.gd`)
    and the effects layer's ruin.
-2. **Build "Hold the bridge"** (decision bridge-mission): a seed search for a road
-   bridge near the edge of the cruiser's gun range, `data/scenarios/bridge.json`
-   (2 player tanks at the bridge, the cruiser offshore, enemy tank waves on the
-   "drive" role with start turns), a "hold until turn N" win and an "enemy past this
-   point" loss, a menu entry, a test. Needs the bridge drawn (item 1).
-3. **A playtest build** with Strike, Suppress and (when built) Hold the bridge.
+2. **A playtest build** with Strike, Suppress and Hold the bridge.
    build.ps1 closes a running game: ask Alex first.
-4. **Terrain variety board** (decision water-layer): beaches, coastal cliffs, marsh,
+3. **Terrain variety board** (decision water-layer): beaches, coastal cliffs, marsh,
    rock, orchards, wood density.
-5. **Wreck litter board** (decision wreck-litter, open): sunken boats and planes in the
+4. **Wreck litter board** (decision wreck-litter, open): sunken boats and planes in the
    water as environment, for character. After sinking lands: reuse the sunk-hull art,
    placed by seed; the board picks how many, where and which kinds.
 
@@ -59,6 +52,17 @@ Decisions and open questions live in the Decision Ledger
 
 ## Recently landed
 
+- 2026-10-11: the second playtest's fixes (decision playtest-2). Every moving unit starts with a tail, as if it had flown on at its normal speed
+  (`scripts/ui/wingtip_trails.gd` start_tail_record; visual only, from the initial state; data `marker.trails.start_tail`, proposed). The side
+  badge (the red/blue roundel and its tie) is off for every unit (Alex: 'No badge on units. We can figure something else out of we need it.';
+  data `marker.side_badge.drawn_for` none; non_air and all bring it back). Tanks and ships still draw no ribbon (half_span_m 0): open.
+- 2026-10-11: HOLD THE BRIDGE plays (decision bridge-mission; every number proposed, reasons in the data). The menu's scenario selector and
+  `INKWOOD_SCENARIO=bridge` start `data/scenarios/bridge.json` on seed 55 (found by `scripts/test_support/bridge_seed_search.gd`): two player tanks
+  on the village side of a river bridge, the cruiser 2.7 km away in the bay (the far end of its 3 km range; the tanks are its only spotters),
+  three waves of two enemy tanks on the drive role (start turns 2 / 7 / 12), relief at turn 26. Win: `turn_reached` (the bridge held to relief);
+  lose: `side_past` (an enemy tank across the bridge), both tanks down, or the bridge destroyed (own shells included). The two new mission
+  conditions are in `scripts/sim/mission.gd`. Test: `test_bridge_mission` (port 28786); the scripted defence is `scripts/test_support/bridge_play.gd`;
+  shots: `scripts/app/bridge_shot.gd`. Not balanced: it is the first build for Alex's playtest.
 - 2026-10-11: combat answers (Alex's four). Bridge: 14 pips, about 20 turns of one tank's gun (bridge-durability, number proposed). Cruiser
   shell blast: 6 / 12 / 20 m at 4 / 3 / 2 pips (shell-blast, pips proposed). A bomb whose target left its cone and a gun salvo whose
   target is no longer spotted or in reach now fire a POOR shot instead of holding (outside-cone-release): `data/sim/bombs.json`

@@ -70,9 +70,9 @@ const OPTIONS := {
 	"scenario": {
 		"section": "Sandbox",
 		"label": "Scenario",
-		"choices": ["intercept", "sandbox", "strike", "suppress"],
+		"choices": ["intercept", "sandbox", "strike", "suppress", "bridge"],
 		"default": 2,
-		"help": "Which data/scenarios/<id>.json Local, Host and Join start. 'strike' (the default, proposed: the newest layer) is the bombing mission: a bomber and two fighters against a radio tower in a village, its two flak batteries and a patrolling fighter; 'intercept' is the first fight (an AI bomber and its escort); 'sandbox' is the old flight toy (AiDumb, no mission); 'suppress' is the second mission (Track M2L, proposed): a bomber and two fighters against a military complex, three hidden mobile AA guns that shoot and move and give themselves away when they fire, and two escort fighters. The menu's selector sets this knob. Read when a game is built, so set it before pressing Local: INKWOOD_SCENARIO=intercept. Not a live knob (it is not on the F2 panel). Indexes 0 and 1 are the two older scenarios, in the order the tests set them.",
+		"help": "Which data/scenarios/<id>.json Local, Host and Join start. 'strike' (the default, proposed: the newest layer) is the bombing mission: a bomber and two fighters against a radio tower in a village, its two flak batteries and a patrolling fighter; 'intercept' is the first fight (an AI bomber and its escort); 'sandbox' is the old flight toy (AiDumb, no mission); 'suppress' is the second mission (Track M2L, proposed): a bomber and two fighters against a military complex, three hidden mobile AA guns that shoot and move and give themselves away when they fire, and two escort fighters; 'bridge' is the first mixed mission (Track BM, proposed): two tanks hold a river bridge against three waves of enemy tanks with a cruiser at the far end of its gun range that can fire only at what the tanks spot. The menu's selector sets this knob. Read when a game is built, so set it before pressing Local: INKWOOD_SCENARIO=intercept. Not a live knob (it is not on the F2 panel). Indexes 0 and 1 are the two older scenarios, in the order the tests set them.",
 	},
 	"water": {
 		"section": "Sandbox",

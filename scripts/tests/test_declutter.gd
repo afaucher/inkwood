@@ -5,7 +5,8 @@ extends "res://scripts/test_support/test_case.gd"
 # scripts/ui/declutter_shot.gd's (tmp/declutter/).
 #
 #   1. THE DATA holds Alex's removals and the new defaults, with his words as the reasons: no leader line to the roster, no
-#      whole-flight track line, no clamp mark (the little X), no dashed overhead footprint; the arcs start shown; no key for the
+#      whole-flight track line, no clamp mark (the little X), no side badge (the red/blue dot), no dashed overhead footprint; the
+#      arcs start shown; no key for the
 #      arcs; the lettering is larger, upright, semibold, full ink with a firm halo
 #   2. THE LEADER LINE is off by default and comes back by data
 #   3. THE CLAMP MARK (the dashed line to a little X): a clamped step has none while the data says off -- clamp_marks() is what
@@ -17,6 +18,10 @@ extends "res://scripts/test_support/test_case.gd"
 #      "Arcs: off", a click hides every cone on the map and a second shows them, it stays as set (another selection, another
 #      overlay), and there is NO key for it
 #   7. THE LETTERING: the labels are drawn at the data's size in the data's face; the node lettering and the unit labels agree
+#   8. THE SIDE BADGE (the red/blue roundel beside every unit and the thin line tying it to the plane; Alex 2026-10-11, the second
+#      playtest: "The red/blue indicator dot for each unit (planes at least) with the dotted line. We can remove that. The tail
+#      serves this purpose well." Then: "No badge on units. We can figure something else out of we need it."): off for every
+#      unit by default, the selection ring unchanged, and the switch's other settings (non_air, all) work
 
 const World = preload("res://scripts/sim/world.gd")
 const UnitUI = preload("res://scripts/ui/unit_ui.gd")
@@ -61,11 +66,12 @@ func setup(_main) -> void:
 	_check_track_line()
 	_check_overhead()
 	await _check_arcs_button()
+	await _check_badge()
 	_check_lettering()
 	_sentinel = true
 	ConeOverlay.reset_view_setting()
 	print("[test] sections run: %s" % ", ".join(_sections))
-	eq(_sections.size(), 7, "all seven sections ran")
+	eq(_sections.size(), 8, "all eight sections ran")
 	check(_sentinel, "the test ran to its end (a runtime error would have ended it early, leaving every assertion above unrun)")
 	finish()
 
@@ -86,12 +92,15 @@ func _check_data() -> void:
 	eq(_st.flag("marker.leader_to_roster"), false, "1. no leader line to the roster by default")
 	eq(_st.flag("marker.trails.whole_flight_line"), false, "1. no whole-flight track line by default")
 	eq(_st.flag("planner.clamp_marks"), false, "1. no clamp mark (the dashed line to a little X) by default")
+	eq(_st.text("marker.side_badge.drawn_for"), "none", "1. no side badge (the red/blue dot and its line) on any unit by default (Alex)")
+	eq(_st.lookup("marker.side_badge.modes"), ["none", "non_air", "all"], "1. the side badge's scope has three settings")
 	eq(_st.flag("planner.cones.overhead_footprint"), false, "1. no dashed overhead footprint by default")
 	eq(_st.flag("planner.cones.shown"), true, "1. the weapon arcs start shown")
 	# Alex's words are kept beside the switches he asked for.
 	check(_st.text("marker._leader_to_roster").contains("thin black line"), "1. the leader line's reason quotes Alex")
 	check(_st.text("marker.trails._whole_flight_line").contains("extremely thin red/blue line"), "1. the track line's reason quotes Alex")
 	check(_st.text("planner._clamp_marks").contains("The little X is where I left the mouse"), "1. the clamp mark's reason quotes Alex")
+	check(_st.text("marker._side_badge").contains("The tail serves this purpose well") and _st.text("marker._side_badge").contains("PROPOSED"), "1. the side badge's reason quotes Alex and says what is proposed")
 	check(_st.text("planner.cones._shown").contains("No keyboard mapping"), "1. the arcs button's reason quotes Alex")
 	# No key for the arcs: not in the keys block.
 	var keys: Dictionary = _st.lookup("keys")
@@ -301,3 +310,62 @@ func _check_lettering() -> void:
 	var w_old := UiLabels.font(_st).get_string_size("100 m/s", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
 	check(w_big > w_old, "7. at the data's size the lettering is wider than at the old 11 px (%.0f against %.0f px)" % [w_big, w_old])
 	_ui.planner.clear()
+
+# --- 8 -------------------------------------------------------------------------
+
+func _check_badge() -> void:
+	_sections.append("badge")
+	var ml = _ui.marker_layer
+	# A tank, a ship and a tower beside the three planes (the badge is per unit: its domain decides).
+	_w.add_unit({"id": "t1", "type": "tank", "side": "allies", "controller": "player", "x": 1500.0, "y": 3300.0, "heading": 0.0})
+	_w.add_unit({"id": "s1", "type": "patrol_boat", "side": "axis", "controller": "ai", "x": 3000.0, "y": 3300.0, "heading": 0.0})
+	_w.add_unit({"id": "w1", "type": "radio_tower", "side": "axis", "controller": "ai", "x": 3200.0, "y": 2800.0, "heading": 0.0})
+	_ui.select("p1")
+	ml.update_poses()
+	var planes := ["b1", "p1", "e1"]
+	var others := ["t1", "s1", "w1"]
+	for id: String in planes + others:
+		check(ml.marker(id) != null and ml.marker(id).visible, "8. %s is on the map" % id)
+	# By default (none, Alex's): no badge on any unit, aircraft, tank, ship or static unit alike.
+	for id: String in planes + others:
+		eq(ml.side_badge_shown(ml.marker(id)), false, "8. %s: the layer says no badge" % id)
+		eq(ml.side_badge(ml.marker(id)).size(), 0, "8. %s has no side badge by default: the draw routine is handed nothing, no roundel and no tie" % id)
+	# The selection ring is not part of it: the selected unit still has its radius, ticks and ring.
+	var m = ml.marker("p1")
+	check(m.selected and ml.ring_radius(m) > m.radius_px(), "8. the selected unit keeps its ring (radius %.1f px)" % ml.ring_radius(m))
+	check((ml.marker("t1").accent as Color).is_equal_approx(_st.side_color("allies")) and (ml.marker("e1").accent as Color).is_equal_approx(_st.side_color("axis")), "8. the roundel is the unit's side colour (red for the players, blue for the enemy)")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	# "non_air": no badge on an aircraft, the roundel and its tie on a tank, a ship and a static unit.
+	var old: Variant = _flip("marker.side_badge.drawn_for", "non_air")
+	for id: String in planes:
+		eq(ml.side_badge(ml.marker(id)).size(), 0, "8. non_air: %s (aircraft) has no badge" % id)
+	for id: String in others:
+		eq(ml.side_badge_shown(ml.marker(id)), true, "8. non_air: %s (not aircraft) keeps its badge" % id)
+		_check_badge_geometry(ml, id)
+	# "all": the layer as it was, every unit has one.
+	_flip("marker.side_badge.drawn_for", "all")
+	for id: String in planes + others:
+		_check_badge_geometry(ml, id)
+	# An unrecognised setting draws it for all (the old look), it never hides one by mistake.
+	_flip("marker.side_badge.drawn_for", "nonsense")
+	_check_badge_geometry(ml, "p1")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_flip("marker.side_badge.drawn_for", old)
+	eq(ml.side_badge(m).size(), 0, "8. back to none: the plane has none again")
+	eq(ml.side_badge(ml.marker("t1")).size(), 0, "8. and neither has the tank")
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+# A unit's badge as the draw routine is handed it: a roundel at the data's radius past the ring and a two-point tie starting at the unit.
+func _check_badge_geometry(ml, id: String) -> void:
+	var mk = ml.marker(id)
+	var b: Dictionary = ml.side_badge(mk)
+	eq(b.size(), 3, "8. %s: it has its roundel and tie" % id)
+	if b.size() == 3:
+		var tie: PackedVector2Array = b["tie"]
+		eq(tie.size(), 2, "8. %s: a tie of two points" % id)
+		near((b["centre"] as Vector2).distance_to(mk.position), ml.ring_radius(mk) + _st.num("marker.badge_offset_px"), 1e-3, "8. %s: the roundel sits past the ring" % id)
+		eq(float(b["r"]), _st.num("marker.badge_r_px"), "8. %s: at the data's radius" % id)
+		check(tie.size() == 2 and tie[0].distance_to(mk.position) < mk.radius_px() + 3.0, "8. %s: the tie starts at the unit" % id)

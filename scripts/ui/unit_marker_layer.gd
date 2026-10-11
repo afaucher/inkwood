@@ -16,7 +16,8 @@ extends Node2D
 # "none"), every unit's shadow (one CanvasGroup, composited
 # once at the map's shadow strength, so overlapping shadows merge and never
 # darken twice -- the map's own shadow rule), every plane, then the marks: side
-# roundels, the selected unit's inked ring, and its leader line up to its
+# roundels (OFF FOR AIRCRAFT since Alex's second playtest, 2026-10-11 -- data marker.side_badge.drawn_for;
+# the wingtip ribbon says the side; still drawn for ground units, ships and static units, PROPOSED), the selected unit's inked ring, and its leader line up to its
 # roster row (the design doc's proposed selection treatment; the line is OFF since Alex's
 # Strike playtest, 2026-10-10 -- data marker.leader_to_roster -- the ring is not).
 #
@@ -453,6 +454,31 @@ func label_shown(id: String) -> bool:
 
 # --- Marks: side roundels, the selection ring, the leader line ------------------------
 
+# Whether the side badge is drawn for this marker's unit: the little roundel in the unit's side colour beside its marker and the short
+# thin line tying it to the unit. Data marker.side_badge.drawn_for is the scope (Alex 2026-10-11, the playtest of build 2026-10-10.134839:
+# "The red/blue indicator dot for each unit (planes at least) with the dotted line. We can remove that. The tail serves this purpose
+# well."): "non_air" (the default, PROPOSED) draws it for ground units, ships and static units and for no aircraft -- a tank has no wingtip
+# ribbon, so it keeps its badge; "none" for nobody; "all" for everyone, as it was. An unrecognised value draws it for all.
+func side_badge_shown(m: UnitMarker) -> bool:
+	var scope := style.text("marker.side_badge.drawn_for")
+	if scope == "none":
+		return false
+	if scope == "non_air":
+		var u = world.units.get(m.unit_id) if world != null else null
+		return u == null or str(u.def.domain) != "air"
+	return true
+
+# The side badge of a marker, in screen px: {centre, r, tie: [from the plane, to the roundel's edge]}, or {} when it is not drawn
+# (data marker.side_badge.drawn_for does not cover this unit). It sits toward the sun, so the plane's shadow never covers it.
+func side_badge(m: UnitMarker) -> Dictionary:
+	if not side_badge_shown(m):
+		return {}
+	var toward_sun: Vector2 = -style.shadow_dir()
+	var r: float = style.num("marker.badge_r_px")
+	var c := m.position + toward_sun * (ring_radius(m) + style.num("marker.badge_offset_px"))
+	var a := m.position + toward_sun * (m.radius_px() * 0.55 + 2.0)
+	return {"centre": c, "r": r, "tie": PackedVector2Array([a, c - toward_sun * r])}
+
 func ring_radius(m: UnitMarker) -> float:
 	return maxf(style.num("marker.ring_min_px"), m.radius_px() + style.num("marker.ring_pad_px"))
 
@@ -462,20 +488,16 @@ func _draw_marks() -> void:
 	var ink: Color = style.color("ring")
 	var eye: Color = style.color("card_fill")
 	var leader: Color = style.color("leader")
-	var badge_r: float = style.num("marker.badge_r_px")
-	var badge_off: float = style.num("marker.badge_offset_px")
-	# The side mark sits toward the sun, so the plane's shadow never covers it.
-	var toward_sun: Vector2 = -style.shadow_dir()
 	for id: String in markers:
 		var m: UnitMarker = markers[id]
 		if not m.visible:
 			continue
 		var r := ring_radius(m)
-		var bc := m.position + toward_sun * (r + badge_off)
-		var tie_a := m.position + toward_sun * (m.radius_px() * 0.55 + 2.0)
-		var tie_b := bc - toward_sun * badge_r
-		_marks.draw_line(tie_a, tie_b, leader, 1.0, true)
-		UiInk.roundel(_marks, bc, badge_r, m.accent, eye, ink)
+		var badge := side_badge(m)   # {} for a unit marker.side_badge.drawn_for leaves out (aircraft, by Alex's word, 2026-10-11): the roundel and its tie are one mark
+		if not badge.is_empty():
+			var tie: PackedVector2Array = badge["tie"]
+			_marks.draw_line(tie[0], tie[1], leader, 1.0, true)
+			UiInk.roundel(_marks, badge["centre"], float(badge["r"]), m.accent, eye, ink)
 		if m.selected:
 			_draw_ring(m, r, ink, leader)
 		if label_shown(id):
