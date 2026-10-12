@@ -9,9 +9,7 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| Third playtest (decision playtest-3, item 1 below): the card and roster asks, the tank's special and arc | lead session (builder CARD) | scripts/ui/motion_planner_panel.gd, roster.gd, side_view*.gd (the card's sections), data/ui/ui.json card and roster keys, data/units/tank.json (the gun's arc), their tests | 2026-10-11 |
 | Third playtest: the camera zooms in further, the zoom judder | lead session (builder CAM) | scripts/world/camera_controller.gd, data/view/camera.json, scripts/render/map_view.gd (its camera helpers only), scripts/tests/test_camera.gd | 2026-10-11 |
-| Third playtest: two studies, reported to Alex before anything is built (the visual feedback coverage; the shot height model and the heights chart) | lead session (study agents) | read-only; notes in tmp/studies/ | 2026-10-11 |
 | Third playtest: the bridge's smoke (playtest-3 bridge_smoke) | lead session | waiting on Alex's three answers | 2026-10-11 |
 
 ## Next, free to take
@@ -58,6 +56,10 @@ Decisions and open questions live in the Decision Ledger
 
 ## Recently landed
 
+- 2026-10-11: the third playtest's card and roster asks (decision playtest-3): the roster without its plan words and with bigger
+  text; the orders card without 'step X', with a bigger step strip; the VIEWS a card of their own; a unit's special says
+  whether it is set and why it cannot be (a tank has none: 'no special: weapons fire on their own'); the tank's gun on a
+  170-degree forward arc. Two studies for Alex: docs/proposals/visual-feedback.md and shot-heights.md.
 - 2026-10-11: the coastal wind (decisions coastal-wind, wind-with-height): a sea breeze by day and a land breeze
   at night from the sun's hour, wander and gusts, the host's wind on every client; all smoke drifts with the wind at
   its height; fire spreads further downwind. A bomb's target lost in fog or smoke is aimed at its last-seen place

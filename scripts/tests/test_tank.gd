@@ -88,7 +88,10 @@ func _data() -> void:
 	var g = d.weapons[0]
 	eq(g.id, "turret_gun", "1. the turret gun")
 	eq(g.kind, "turret", "1. a turret")
-	eq(g.half_across_deg, 180.0, "1. the turret traverses all the way round")
+	# ALEX (decision playtest-3): 'Tanks should have like a forward 170 arc. Not shoot directly behind.' -- 85 either side of the nose.
+	eq(g.half_across_deg, 85.0, "1. the gun covers a FORWARD arc of 170 degrees (85 either side of the nose)")
+	eq(g.mount_deg, 0.0, "1. centred on the hull's front")
+	eq(g.half_across_deg * 2.0, 170.0, "1. 170 degrees across (Alex's number)")
 	eq(g.elevation_deg, 0.0, "1. a level cone")
 	check(g.half_height_deg >= 5.0 and g.half_height_deg < 20.0, "1. a few degrees up and down (%s)" % g.half_height_deg)
 	check(g.effective_range_m < d.sight_range_m, "1. it sees further than it shoots (%s m of %s m)" % [g.effective_range_m, d.sight_range_m])
@@ -104,8 +107,17 @@ func _data() -> void:
 	var behind := {"x": -200.0, "y": 0.0, "height_m": 0.0}
 	var plane_low := {"x": 100.0, "y": 0.0, "height_m": w.band_height("low")}
 	var params: Dictionary = w.combat.factor_params()
-	check(Combat.evaluate(me, g, 0, on_ground, w.combat.odds_factors, params)["in_cone"], "1. a tank 175 m away to the side is in the gun's cone (a turret turns)")
-	check(Combat.evaluate(me, g, 0, behind, w.combat.odds_factors, params)["in_cone"], "1. ... and one behind it")
+	# (heading 0 points the nose along +x; azimuth is measured from it, clockwise on screen, positive to the right)
+	var ahead := {"x": 200.0, "y": 0.0, "height_m": 0.0}
+	var fore_right := {"x": 50.0, "y": 200.0, "height_m": 0.0}    # 76 degrees round: inside the 85
+	var abeam_back := {"x": 10.0, "y": 200.0, "height_m": 0.0}    # 87 degrees round: just past the 85
+	var astern_left := {"x": -100.0, "y": -100.0, "height_m": 0.0}   # 135 degrees round
+	check(Combat.evaluate(me, g, 0, ahead, w.combat.odds_factors, params)["in_cone"], "1. a tank 200 m dead ahead is in the gun's cone")
+	check(Combat.evaluate(me, g, 0, on_ground, w.combat.odds_factors, params)["in_cone"], "1. a tank 175 m away, 31 degrees off the nose, is in the gun's cone")
+	check(Combat.evaluate(me, g, 0, fore_right, w.combat.odds_factors, params)["in_cone"], "1. one 76 degrees round, nearly abeam, is in it (the arc is 85 either side)")
+	check(not Combat.evaluate(me, g, 0, abeam_back, w.combat.odds_factors, params)["in_cone"], "1. one 87 degrees round, just behind the beam, is NOT (the arc ends at 85)")
+	check(not Combat.evaluate(me, g, 0, astern_left, w.combat.odds_factors, params)["in_cone"], "1. one 135 degrees round is not")
+	check(not Combat.evaluate(me, g, 0, behind, w.combat.odds_factors, params)["in_cone"], "1. a tank dead behind it is NOT in the cone (Alex: 'Not shoot directly behind')")
 	check(not Combat.evaluate(me, g, 0, plane_low, w.combat.odds_factors, params)["in_cone"], "1. a plane in the low band, 100 m away, is not (a tank cannot answer an air attack)")
 	var near_tank := {"x": 14.0, "y": 0.0, "height_m": 0.0}
 	check(Combat.evaluate(me, g, 0, near_tank, w.combat.odds_factors, params)["in_cone"], "1. a tank 14 m away is in the cone (no dead zone round the hull)")
@@ -223,7 +235,8 @@ func _destroyed_bridge() -> void:
 		var w3 := TankWorlds.world("axis", true)       # the bridge is the enemy's: the allied tank's gun is for it
 		w3.rng_seed = seed_v
 		var b := TankWorlds.bridge_site()["pos"] as Vector2
-		TankWorlds.tank(w3, "gun", "allies", "player", b + Vector2(120.0, 40.0), 0.0, 0.0)
+		var gun_at := b + Vector2(120.0, 40.0)
+		TankWorlds.tank(w3, "gun", "allies", "player", gun_at, (b - gun_at).angle(), 0.0)   # (facing the bridge: its gun covers a forward arc of 170 degrees now)
 		var took := 0
 		for i in 70:
 			TankWorlds.turn(w3)
@@ -506,6 +519,45 @@ func _gun() -> void:
 		for i in 3:
 			quiet_shots += (TankWorlds.turn(wf)["events"] as Array).filter(func(e: Dictionary) -> bool: return e["type"] == "fire").size()
 		eq(quiet_shots, 0, "6. 500 m apart (the gun reaches 350 m, 420 with the overshoot): no shots")
+	# THE ARC (ALEX, decision playtest-3: 'Tanks should have like a forward 170 arc. Not shoot directly behind.'): tank a is 200 m or so from tank b,
+	# which faces it. a is turned so that b lies `off` degrees off its nose. Inside 85 degrees a fires on b, past 85 it does not (and b, facing a, always does).
+	var base := (b_at - a_at).angle()
+	var arc_cases := {0: true, 30: true, 60: true, 80: true, 90: false, 135: false, 180: false}
+	var arc_ok := true
+	for off: int in arc_cases:
+		var fired_any := false
+		var b_fired_all := true
+		for seed_v in range(1, 6):
+			var wa := TankWorlds.world("allies", false)
+			wa.rng_seed = seed_v
+			TankWorlds.tank(wa, "a", "allies", "player", a_at, base + deg_to_rad(float(off)), 0.0)
+			TankWorlds.tank(wa, "b", "axis", "player", b_at, (a_at - b_at).angle(), 0.0)
+			var eva: Array = TankWorlds.turn(wa)["events"]
+			if not _fires(eva, "a", "b").is_empty():
+				fired_any = true
+			if _fires(eva, "b", "a").is_empty():
+				b_fired_all = false
+		if fired_any != bool(arc_cases[off]):
+			arc_ok = false
+		check(fired_any == bool(arc_cases[off]), "6. ARC: b %d degrees off a's nose: a %s (in 5 seeds)" % [off, "fires on it" if bool(arc_cases[off]) else "does NOT fire on it"])
+		check(b_fired_all, "6. ARC: ... and b, which faces a, fires on it every time")
+	check(arc_ok, "6. ARC: the gun fires inside 85 degrees of the nose and not past it")
+	# a target dead BEHIND, close in: never fired on, over many turns (a stationary pair, 30 m apart)
+	var behind_shots := 0
+	var behind_hits := 0
+	for seed_v in range(1, 11):
+		var wb := TankWorlds.world("allies", false)
+		wb.rng_seed = seed_v
+		TankWorlds.tank(wb, "a", "allies", "player", a_at, base + PI, 0.0)   # a faces AWAY from b
+		TankWorlds.tank(wb, "b", "axis", "player", a_at + Vector2.from_angle(base) * 30.0, base, 0.0)   # b stands 30 m behind a, nose pointing away from it
+		for i in 3:
+			var evb: Array = TankWorlds.turn(wb)["events"]
+			behind_shots += _fires(evb, "a", "b").size() + _fires(evb, "b", "a").size()
+			for e: Dictionary in evb:
+				if e["type"] == "hit" and e["weapon"] == "turret_gun":
+					behind_hits += 1
+	eq(behind_shots, 0, "6. ARC: two tanks back to back, 30 m apart, 10 seeds x 3 turns: not one shot")
+	eq(behind_hits, 0, "6. ARC: ... and not one hit")
 	# A FRIEND, and a PLANE overhead: not shot at
 	var wm := TankWorlds.world("allies", false)
 	wm.rng_seed = 5

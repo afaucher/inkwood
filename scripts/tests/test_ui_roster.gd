@@ -21,6 +21,7 @@ const UnitUI = preload("res://scripts/ui/unit_ui.gd")
 const Roster = preload("res://scripts/ui/roster.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
+const UiInk = preload("res://scripts/ui/ui_ink.gd")
 
 const PPM := 3.8
 
@@ -133,7 +134,61 @@ func setup(_main) -> void:
 	eq(m1.accent, st.side_color("allies"), "p1's mark is the allies' accent")
 	eq(ui.marker_layer.marker("ai1").accent, st.side_color("axis"), "the AI's mark is the axis accent")
 	check(st.side_color("allies") != st.side_color("axis"), "the two sides' marks differ")
+	await _roster_words(ui, st)
 	finish()
+
+# THE THIRD PLAYTEST (decision playtest-3). Alex: "'no plan (flies on)' and 'plan: 1 of 2 steps' there are completely covered by the plan pips
+# in the roster. Lets remove the text. Make the remaining text a little bigger." What a row says and how big, as the roster really draws it
+# (the lettering log), and the row height that follows the text.
+func _roster_words(ui: UnitUI, st: UiStyle) -> void:
+	for k: String in ["has_plan", "no_plan"]:
+		check(not (st.lookup("roster.text." + k) is String), "R1. roster.text.%s is gone from the data" % k)
+	var name_px := st.num("roster.name_px")
+	var detail_px := st.num("roster.detail_px")
+	check(name_px > st.num("fonts.name_px") and detail_px > st.num("fonts.detail_px"), "R2. the roster's text is bigger than the other cards' (%s / %s px against %s / %s)" % [str(name_px), str(detail_px), str(st.num("fonts.name_px")), str(st.num("fonts.detail_px"))])
+	check(name_px - st.num("fonts.name_px") <= 4.0 and detail_px - st.num("fonts.detail_px") <= 4.0, "R2. 'a little bigger': at most four pixels")
+	# the row's height follows the text: the lines stand a text-height apart and the row holds the last one
+	var lines: Array = st.lookup("roster.line_y_px")
+	check(lines.size() == 3, "R3. three baselines")
+	check(float(lines[1]) - float(lines[0]) >= detail_px + 1.0, "R3. the second line clears the name (%s px apart for %s px text)" % [str(float(lines[1]) - float(lines[0])), str(detail_px)])
+	check(float(lines[0]) >= name_px, "R3. the name's baseline is below the row's top by at least its size")
+	check(st.num("roster.row_px") >= float(lines[2]) + st.num("roster.pip_r_px") + 2.0, "R3. the row (%s px) holds the plan line's pips (baseline %s)" % [str(st.num("roster.row_px")), str(lines[2])])
+	eq(ui.roster.row_rect(0).size.y, st.num("roster.row_px"), "R3. and a row is that high")
+	# what it draws
+	ui.select("p1")   # (p1 has one step planned; p2 none)
+	UiInk.logging = true
+	UiInk.drawn.clear()
+	ui.roster.queue_redraw()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	UiInk.logging = false
+	var entries: Array = (UiInk.drawn as Array).filter(func(e: Dictionary) -> bool: return e["node"] == ui.roster)
+	var texts: Array = entries.map(func(e: Dictionary) -> String: return str(e["text"]))
+	check(texts.size() >= 5, "R4. the roster drew its words (%s)" % str(texts))
+	check(not texts.any(func(t: String) -> bool: return t.contains("flies on") or t.contains("no plan") or t.contains("plan:") or t.contains(" steps")), "R4. and none says 'no plan (flies on)' or 'plan: 1 of 5 steps': %s" % str(texts))
+	var r_rows: Array = ui.roster.rows()
+	eq([r_rows[0]["planned"], r_rows[1]["planned"]], [1, 0], "R4. (the rows still count the steps the pips show: p1 has 1, p2 none)")
+	var seen_name := false
+	var seen_detail := false
+	var seen_header := false
+	for e: Dictionary in entries:
+		var t := str(e["text"])
+		if t == "P1" or t == "P2":
+			seen_name = true
+			eq(float(e["px"]), name_px, "R5. the unit's name '%s' is drawn at the roster's name size" % t)
+		elif t.begins_with("Light fighter"):
+			seen_detail = true
+			check(float(e["px"]) == detail_px or str(e["kind"]) == "fit", "R5. '%s' is drawn at the roster's detail size (%s px) or shrunk to fit its room (%s px)" % [t, str(detail_px), str(e["px"])])
+			check(float(e["px"]) >= st.fit_floor_px(), "R5. and never under the lettering floor")
+		elif t.begins_with("Turn "):
+			seen_header = true
+			eq(float(e["px"]), detail_px, "R5. the header's '%s' is at the detail size too" % t)
+	check(seen_name and seen_detail and seen_header, "R5. the name, the type line and the header were all drawn")
+	# a row's lines fit the roster's width at the bigger size
+	var tf := st.text_font()
+	var rr := ui.roster.row_rect(0)
+	var room := rr.size.x - 2.0 * 10.0 - 2.0 * st.num("roster.mark_r_px") - 10.0   # (the roundel and the margins)
+	check(UiInk.text_width(tf, "Light fighter · 100 m/s · medium", detail_px) <= room, "R6. 'Light fighter · 100 m/s · medium' fits a row at %s px (%.0f of %.0f px)" % [str(detail_px), UiInk.text_width(tf, "Light fighter · 100 m/s · medium", detail_px), room])
 
 # Every role, number and key the UI's code reads, read once: a typo in the data
 # or the code fails here, not in a frame nobody looks at.

@@ -18,6 +18,10 @@ extends "res://scripts/test_support/test_case.gd"
 #   6. the target in words on the card (always for a unit with a special); Drop's disabled reasons in plain words
 #   7. the step strip: one mark per step of the turn, its states, the click rules, and the strip and the map's selection agreeing both ways
 #   8. the special's words come from the unit's DATA (change them and the lettering, the button and the card follow); no new key was added
+#   9. THE CARD'S WORDS after the third playtest (decision playtest-3: 'altituide, step X ... remove the step X part, it is redundant. The step
+#      indicator, make it bigger and remove step 1 of 2 AND the whole text for: click a node to change it, or add step 2'): what the card DRAWS
+#      has no 'step 2 of 3' and no click-a-node hint, the altitude line has no step number, the strip is bigger and on a row of its own; and the
+#      special's STATE and REASON (Alex: 'I tried to use the special but there is no indication that it is engaged or why it won't engage')
 
 const World = preload("res://scripts/sim/world.gd")
 const UnitUI = preload("res://scripts/ui/unit_ui.gd")
@@ -25,6 +29,7 @@ const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const MotionPlanner = preload("res://scripts/ui/motion_planner.gd")
 const BombSource = preload("res://scripts/ui/bomb_source.gd")
 const BombAimArt = preload("res://scripts/ui/bomb_aim_art.gd")
+const UiInk = preload("res://scripts/ui/ui_ink.gd")
 
 const PPM := 0.5
 const ORIGIN := Vector2(1300.0, 1900.0)
@@ -62,6 +67,7 @@ func setup(_main) -> void:
 	eq(_words(), true, "6. the words part ran to its end")
 	eq(_strip(), true, "7. the strip part ran to its end")
 	eq(_data_words(), true, "8. the data-words part ran to its end")
+	eq(await _card_words(), true, "9. the card-words part ran to its end")
 	finish()
 
 # --- helpers -------------------------------------------------------------------------------------------------------------------
@@ -152,12 +158,12 @@ func _clicks() -> bool:
 	_click(_node(1) + Vector2(5.0, 3.0))
 	eq(_pl.focus_step(), 1, "1. a click near step 2's node selects step 2")
 	eq(_w.units["b1"].plan, plan_before, "1. and moved nothing (the press was off the node's centre)")
-	# The card names it.
-	eq(_ui.orders._selected_line("b1", 3, 3), _st.text("orders.text.selected") % [2, 3], "1. the card's header says 'step 2 of 3'")
-	eq(_st.text("orders.text.selected") % [2, 3], "step 2 of 3", "1. in those words")
-	# Alex: a full plan says a step can be selected to change it.
-	check(_st.text("orders.text.hint_full").contains("click a node"), "1. the full plan's hint says a node can be clicked to change a step: '%s'" % _st.text("orders.text.hint_full"))
-	eq(_ui.orders._altitude_caption().begins_with("altitude, step 2:"), true, "1. the altitude line is about step 2 too")
+	# The card names it: by the STRIP, not by words (decision playtest-3: 'step 2 of 3' and the click-a-node hints are gone from the card).
+	var marks1: Array = _ui.orders.step_marks()
+	eq([marks1[0]["selected"], marks1[1]["selected"], marks1[2]["selected"]], [false, true, false], "1. the card's strip marks step 2 as the one it is about")
+	eq(_ui.orders.has_method("_selected_line"), false, "1. and the card has no 'step 2 of 3' header line any more")
+	eq(_ui.orders._altitude_caption().begins_with("altitude:"), true, "1. the altitude line is about step 2 too, without saying 'step 2' (redundant: Alex): '%s'" % _ui.orders._altitude_caption())
+	check(not _ui.orders._altitude_caption().contains("step"), "1. no 'step' in the altitude line")
 	# Dive / Level / Climb act on the selected step.
 	eq(_band_of(1), "high", "1. step 2 starts in the high band")
 	eq(_btn("dive")["enabled"], true, "1. Dive is on offer")
@@ -192,7 +198,9 @@ func _clicks() -> bool:
 	eq(_pl.focus_step(), 2, "1. [fighter] the third step placed is selected")
 	_click(_node(0))
 	eq(_pl.focus_step(), 0, "1. [fighter] a click on its step 1 selects it")
-	eq(_ui.orders._selected_line("p1", 3, 5), _st.text("orders.text.selected") % [1, 5], "1. [fighter] and the card says 'step 1 of 5'")
+	var fmarks: Array = _ui.orders.step_marks()
+	eq(fmarks.size(), 5, "1. [fighter] the card's strip has its five marks")
+	eq([fmarks[0]["selected"], fmarks[1]["selected"], fmarks[2]["selected"]], [true, false, false], "1. [fighter] and marks step 1 as the one the card is about")
 	var band0 := _band_of(0)
 	var res: Dictionary = _pl.change_band(1)
 	check(not res.is_empty() or _band_of(0) == band0, "1. [fighter] Climb acts on step 1 (or is refused there)")
@@ -532,14 +540,14 @@ func _strip() -> bool:
 	eq([marks[0]["selected"], marks[1]["selected"], marks[2]["selected"]], [false, true, false], "7. a click on step 2's NODE moves the strip's selection too")
 	check(_ui.orders.press_button("step_1"), "7. and mark 2 selects step 2 again")
 	eq(_pl.focus_step(), 1, "7. the same step")
-	eq(_ui.orders._selected_line("b1", 2, 3), "step 2 of 3", "7. the header says so")
+	eq(_ui.orders.step_marks()[1]["selected"], true, "7. the strip says so (no header line: playtest 3)")
 	# The NEXT unplanned step: clicking it selects 'the next step to place'.
 	check(_ui.orders.press_button("step_2"), "7. a click on the next step's mark (3)")
 	eq(_pl.focus_step(), -1, "7. no placed step is selected")
 	eq(_pl.is_placing(), true, "7. the next step is the selected one: the fan places it")
 	marks = _ui.orders.step_marks()
 	eq([marks[0]["selected"], marks[1]["selected"], marks[2]["selected"]], [false, false, true], "7. the strip shows step 3 as the current one")
-	eq(_ui.orders._selected_line("b1", 2, 3), "step 3 of 3 next", "7. the header: '%s'" % _ui.orders._selected_line("b1", 2, 3))
+	eq(_ui.orders.step_marks()[2]["state"], "next", "7. mark 3 is the NEXT step (dashed ring), the one the fan places")
 	eq(_pl.next_step_index(), 2, "7. the fan is for step 3, as it always was")
 	eq(_pl.fan_outline_world().size() > 0, true, "7. and is there")
 	eq([_btn("dive")["enabled"], _btn("climb")["enabled"], _btn("level")["enabled"]], [false, false, false], "7. Dive / Level / Climb have no step to act on")
@@ -574,9 +582,10 @@ func _strip() -> bool:
 	_ui.orders._gui_input(_motion(marks[2]["center"]))
 	eq(_ui.orders.hover_button(), "step_2", "7. the strip marks hover like the buttons")
 	_ui.orders._gui_input(_motion(Vector2(5.0, 5.0)))
-	# The strip is an on-screen control only: marks fit the card, and are on the header row.
+	# The strip is an on-screen control only: marks fit the card, on a row of their own under the title's rule.
 	var last: Rect2 = marks[marks.size() - 1]["rect"]
 	check(last.end.x <= _ui.orders.size.x and (marks[0]["rect"] as Rect2).position.x > 0.0, "7. the marks sit inside the card")
+	check((marks[0]["rect"] as Rect2).position.y >= 34.0, "7. and under the title's rule (y 34), not on the title row")
 	# Locked (the end card is up): disabled.
 	_ui.orders.locked = true
 	for m: Dictionary in _ui.orders.step_marks():
@@ -631,5 +640,149 @@ func _data_words() -> bool:
 	(def.specials[0] as Dictionary)["name"] = original_name
 	(def.specials[0] as Dictionary)["action"] = original_action
 	eq(_pl.step_labels()[1].has(LABEL), true, "8. put back, the step says 'Bomb Drop' again")
+	_fresh()
+	return true
+
+# --- 9 -------------------------------------------------------------------------------------------------------------------------
+
+# What the orders card DRAWS (its lettering log, UiInk.logging), as strings, after a redraw.
+func _card_texts() -> Array:
+	UiInk.drawn.clear()
+	UiInk.logging = true
+	_ui.orders.queue_redraw()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	UiInk.logging = false
+	var out: Array = []
+	for e: Dictionary in UiInk.drawn:
+		if e["node"] == _ui.orders:
+			out.append(str(e["text"]))
+	return out
+
+func _any_starts(texts: Array, prefix: String) -> bool:
+	return texts.any(func(t: Variant) -> bool: return str(t).begins_with(prefix))
+
+func _any_has(texts: Array, part: String) -> bool:
+	return texts.any(func(t: Variant) -> bool: return str(t).contains(part))
+
+func _card_words() -> bool:
+	# THE DATA: the three removed texts are gone, the kept and new ones are there.
+	for k: String in ["selected", "hint_more", "hint_full"]:
+		check(not (_st.lookup("orders.text." + k) is String), "9. orders.text.%s is gone from the data (Alex, playtest 3)" % k)
+	for k: String in ["hint_place", "altitude", "altitude_none", "altitude_idle", "no_special"]:
+		check(_st.lookup("orders.text." + k) is String, "9. orders.text.%s is in the data" % k)
+	# THE STRIP IS BIGGER than it was (r 9 px, 27 px apart, numbers at 12): Alex, 'make it bigger'.
+	var r := _st.num("orders.strip.r_px")
+	check(r >= 12.0, "9. the strip's marks are bigger than the 9 px they were (r %s px)" % str(r))
+	check(_st.num("orders.strip.number_px") >= 14.0, "9. and so are the numbers in them (%s px, was 12)" % str(_st.num("orders.strip.number_px")))
+	check(_st.num("orders.strip.step_px") >= 2.0 * (r + _st.num("orders.strip.select_gap_px")), "9. the marks do not touch (%s px apart)" % str(_st.num("orders.strip.step_px")))
+	# Two steps placed, the second selected: what the card says.
+	_fresh()
+	var u = _w.units["b1"]
+	_pl.place_point(Vector2(float(u.x) + 142.0, float(u.y)))
+	_pl.place_point(Vector2(float(u.x) + 284.0, float(u.y)))
+	eq(_pl.focus_step(), 1, "9. step 2 is the selected step")
+	var words: Array = await _card_texts()
+	check(words.size() > 4, "9. the card drew its words (%d strings)" % words.size())
+	var step_of := RegEx.create_from_string("[Ss]tep \\d+ of \\d+")
+	check(not words.any(func(t: Variant) -> bool: return step_of.search(str(t)) != null), "9. no 'step 2 of 3' on the card: %s" % str(words))
+	check(not _any_has(words, "click a node") and not _any_has(words, "add step") and not _any_has(words, "plan full"), "9. and no 'click a node to change it, or add step 3' hint")
+	check(_any_starts(words, "altitude:"), "9. the altitude line is there, as 'altitude:  high  to  high'")
+	check(not _any_has(words, "altitude, step") and not _any_has(words, "views, step"), "9. and neither 'altitude, step X' nor 'views, step X' is anywhere")
+	check(not _any_has(words, _st.text("orders.text.hint_place")), "9. with a placed step selected, not even 'click or drag inside the fan'")
+	# THE STRIP, drawn on a row of its own, left-aligned, in order, clear of the title and of the lines below.
+	var marks: Array = _ui.orders.step_marks()
+	var pad := _st.num("card.pad_px")
+	var cy := _st.num("orders.strip.cy_px")
+	eq(marks.size(), 3, "9. three marks for the bomber")
+	near((marks[0]["center"] as Vector2).x, pad + r + _st.num("orders.strip.select_gap_px"), 1e-6, "9. the first mark stands at the card's left margin")
+	var ok_row := true
+	for i in marks.size():
+		if absf((marks[i]["center"] as Vector2).y - cy) > 1e-6:
+			ok_row = false
+		if i > 0 and (marks[i]["center"] as Vector2).x <= (marks[i - 1]["center"] as Vector2).x + 2.0 * r:
+			ok_row = false
+	check(ok_row, "9. all on the strip's row, in order, not touching")
+	check((marks[0]["rect"] as Rect2).position.y > 34.0, "9. under the title's rule")
+	check((marks[0]["rect"] as Rect2).end.y < _st.num("orders.layout.status_y_px") - _st.num("fonts.detail_px"), "9. and clear of the status line")
+	# A fighter's five marks fit the card at the bigger size.
+	_ui.select("p1")
+	_pl.clear()
+	var fm: Array = _ui.orders.step_marks()
+	eq(fm.size(), 5, "9. a fighter has five marks")
+	check((fm[4]["rect"] as Rect2).end.x <= _ui.orders.size.x - pad + 1e-6, "9. which fit inside the card's margins (the last ends at %.0f of %.0f)" % [(fm[4]["rect"] as Rect2).end.x, _ui.orders.size.x - pad])
+	# NOTHING PLACED: the one hint that is left, how a step is placed.
+	_fresh()
+	words = await _card_texts()
+	check(_any_has(words, _st.text("orders.text.hint_place")), "9. nothing placed: 'click or drag inside the fan' tells how to place a step")
+	check(not words.any(func(t: Variant) -> bool: return step_of.search(str(t)) != null), "9. and still no 'step 1 of 3'")
+	check(_any_starts(words, _st.text("orders.text.altitude_none")), "9. the altitude line says to place a step first")
+	# A FULL PLAN: nothing to add ('plan full: click a node to change a step' is gone).
+	_three()
+	words = await _card_texts()
+	check(not _any_has(words, "plan full") and not _any_has(words, "click a node"), "9. a full plan: no hint at all")
+	# READY: the one state line that stays.
+	_w.commit("ai")
+	check(_ui.orders.press_button("ready"), "9. Ready")
+	words = await _card_texts()
+	check(_any_has(words, "ready: change a plan to take it back"), "9. ready: 'change a plan to take it back'")
+	check(not words.any(func(t: Variant) -> bool: return step_of.search(str(t)) != null), "9. and no 'step 3 of 3' there either")
+	_w.withdraw("ai")
+	_w.withdraw("local")
+
+	# THE SPECIAL'S STATE AND WHY (Alex: 'I tried to use the special but there is no indication that it is engaged or why it won't engage').
+	# 1. A unit with NO special (the fighter; the tank is in test_tank_ui): the dead button says why.
+	_ui.select("p1")
+	_pl.clear()
+	_pl.place_point(Vector2(1600.0, 2000.0))
+	var none: Dictionary = _ui.orders.special_state()
+	eq(none["has"], false, "9. [fighter] has no special")
+	eq(none["engaged"], false, "9. [fighter] so none is engaged")
+	eq(none["reason"], _st.text("orders.text.no_special"), "9. [fighter] and the card's reason is: '%s'" % str(none["reason"]))
+	eq(_st.text("orders.text.no_special"), "no special: weapons fire on their own", "9. in those (PROPOSED) words")
+	eq(_ui.orders.special_caption(), _st.text("orders.text.no_special"), "9. [fighter] the line under the target line says so")
+	eq(_btn("drop")["enabled"], false, "9. [fighter] the Special button is off")
+	words = await _card_texts()
+	check(_any_has(words, _st.text("orders.text.no_special")), "9. [fighter] and the card DRAWS it: %s" % str(words))
+	# 2. The bomber, nothing placed: place a step first.
+	_fresh()
+	var s0: Dictionary = _ui.orders.special_state()
+	eq([s0["has"], s0["kind"], s0["engaged"], s0["available"]], [true, "bomb", false, false], "9. [bomber] has the bomb special, not engaged, not on offer")
+	eq(s0["reason"], _st.text("bombs.text.place_first") % LABEL, "9. [bomber] nothing placed: '%s'" % str(s0["reason"]))
+	# 3. Three steps, step 2 selected, no target: needs a target.
+	_three()
+	_tower_on_ideal(1)
+	_click(_node(1))
+	var s1: Dictionary = _ui.orders.special_state()
+	eq(s1["step"], 1, "9. [bomber] the state is about step 2 (index 1)")
+	eq([s1["engaged"], s1["available"]], [false, false], "9. [bomber] no target: not engaged and not on offer")
+	eq(s1["reason"], "Bomb Drop needs a target", "9. [bomber] and WHY: '%s'" % str(s1["reason"]))
+	# 4. A target outside the step's cone: the sim's own reason.
+	_ui.set_target_point(Vector2(2000.0, 2900.0))
+	var s2: Dictionary = _ui.orders.special_state()
+	eq(s2["reason"], _st.text("bombs.text.target_outside") % 2, "9. [bomber] target outside the cone: '%s'" % str(s2["reason"]))
+	# 5. A target inside it: on offer, nothing to explain; then ENGAGED.
+	_ui.set_target_unit("tower")
+	var s3: Dictionary = _ui.orders.special_state()
+	eq([s3["engaged"], s3["available"], s3["reason"]], [false, true, ""], "9. [bomber] a good target: free to press, nothing to explain")
+	check(_ui.orders.press_button("drop"), "9. Bomb Drop, pressed")
+	var s4: Dictionary = _ui.orders.special_state()
+	eq([s4["engaged"], s4["available"], s4["will_fire"], s4["reason"]], [true, true, true, ""], "9. [bomber] ENGAGED on step 2, and it will go off")
+	check(str(s4["line"]).begins_with("step 2: %s" % LABEL), "9. [bomber] the card says so: '%s'" % str(s4["line"]))
+	eq(_btn("drop")["on"], true, "9. [bomber] and the button is pressed in")
+	eq(_ui.orders.step_marks()[1]["special"], true, "9. [bomber] and step 2's mark in the strip carries the bomb")
+	words = await _card_texts()
+	check(_any_starts(words, "step 2: %s" % LABEL), "9. [bomber] and the card DRAWS that line")
+	# 6. Engaged, then the plan changes so that the step's cone no longer holds the target (both steps dragged hard to the north, as
+	# test_ui_target does): the state says it will not go off as planned, and why.
+	_pl.begin_edit(0, Vector2(1650.0, 2150.0))
+	_pl.end_step()
+	_pl.begin_edit(1, Vector2(1900.0, 2000.0))
+	_pl.end_step()
+	_pl.set_focus_step(1)
+	var s5: Dictionary = _ui.orders.special_state()
+	eq(s5["engaged"], true, "9. [bomber] still engaged after the steps moved the cone off the target")
+	check(str(s5["reason"]).contains("outside the cone"), "9. [bomber] and it says why it will not go as planned: '%s'" % str(s5["reason"]))
+	eq(s5["will_fire"], _pl.bombs.outside_mode() != "hold", "9. [bomber] will_fire follows the sim's switch (outside_cone_mode '%s': a poor shot still goes off, 'hold' does not)" % _pl.bombs.outside_mode())
 	_fresh()
 	return true

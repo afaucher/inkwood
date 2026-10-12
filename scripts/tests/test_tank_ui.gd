@@ -133,12 +133,20 @@ func _screen() -> void:
 	eq(mine.size(), 1, "4. the selected tank shows its one gun cone")
 	if mine.size() == 1:
 		var c: Dictionary = mine[0]
-		check(float(c["half"]) >= PI - 0.01, "4. ... all the way round (half width %.3f rad)" % float(c["half"]))
+		near(float(c["half"]), deg_to_rad(85.0), 1e-3, "4. ... a FORWARD arc: half width 85 degrees (170 across: Alex, decision playtest-3), not all the way round (%.3f rad)" % float(c["half"]))
+		check(float(c["half"]) < PI * 0.5, "4. ... narrower than a half circle on each side of the nose")
 		check(absf(float(c["range_px"]) - 350.0 * PPM) < 0.5, "4. ... 350 m of range (%.1f px)" % float(c["range_px"]))
 		var wedge: PackedVector2Array = preload("res://scripts/ui/cone_overlay.gd").wedge_points(c, float(c["half"]))
-		check(Geometry2D.triangulate_polygon(wedge).size() >= 3, "4. the pie of an all-round cone triangulates (it is drawn as a polygon)")
-		var ring: PackedVector2Array = preload("res://scripts/ui/cone_overlay.gd").annulus(c, -PI, PI, 300.0, 330.0)
+		check(Geometry2D.triangulate_polygon(wedge).size() >= 3, "4. the pie of the forward arc triangulates (it is drawn as a polygon)")
+		var ring: PackedVector2Array = preload("res://scripts/ui/cone_overlay.gd").annulus(c, -float(c["half"]), float(c["half"]), 300.0, 330.0)
 		check(Geometry2D.triangulate_polygon(ring).size() >= 3, "4. so does its ring of falling odds")
+		# nothing of the pie is behind the hull: every point of it lies within 85 degrees of the nose (the cone's phi)
+		var behind_pts := 0
+		for i in range(1, wedge.size()):
+			var ang := absf(wrapf((wedge[i] - (c["apex"] as Vector2)).angle() - float(c["phi"]), -PI, PI))
+			if ang > deg_to_rad(85.0) + 1e-3:
+				behind_pts += 1
+		eq(behind_pts, 0, "4. and no point of the drawn pie lies behind the beam")
 	var before := int(cones.draw_count)
 	cones.queue_redraw()
 	await _frames(3)
@@ -153,6 +161,36 @@ func _screen() -> void:
 	var s1: Dictionary = pl.place_point(Vector2(1545.0, 2400.0))
 	eq(pl.planned_count(), 2, "5. both steps planned")
 	check(pl.next_step_index() < 0, "5. a tank has two steps, so the plan is full")
+	# THE TANK'S CARD (decision playtest-3; Alex: 'I tried to use the special but there is no indication that it is engaged or why it won't
+	# engage'). A tank has NO special (its light gun fires on its own), so the Special button is dead; the card says so, and why, in words.
+	var card = ui.orders
+	var tank_state: Dictionary = card.special_state()
+	eq(tank_state["has"], false, "5. [card] the tank has no special")
+	eq(tank_state["engaged"], false, "5. [card] so none is engaged")
+	eq(tank_state["reason"], _st.text("orders.text.no_special"), "5. [card] and the reason is given: '%s'" % str(tank_state["reason"]))
+	eq(card.buttons()["drop"]["enabled"], false, "5. [card] the Special button is off")
+	eq(card.buttons()["drop"]["on"], false, "5. [card] and not pressed")
+	eq(card.special_caption(), _st.text("orders.text.no_special"), "5. [card] the line under the target line says why")
+	eq(card.target_caption(), "", "5. [card] and there is no target line (no special to aim)")
+	eq(card.step_marks().size(), 2, "5. [card] the strip has the tank's two marks")
+	UiInk.logging = true
+	UiInk.drawn.clear()
+	card.queue_redraw()
+	await _frames(3)
+	UiInk.logging = false
+	var card_texts: Array = (UiInk.drawn as Array).filter(func(e: Dictionary) -> bool: return e["node"] == card).map(func(e: Dictionary) -> String: return str(e["text"]))
+	check(card_texts.has(_st.text("orders.text.no_special")), "5. [card] and the card DRAWS it: %s" % str(card_texts))
+	check(not card_texts.any(func(t: String) -> bool: return t.begins_with("step ") and t.contains(" of ")), "5. [card] with no 'step 2 of 2' header")
+	# THE VIEWS (a card of their own): the tank's cone is a FORWARD arc, so the side picture has a forward slice and none behind.
+	var views: Object = ui.get_meta("side_view", null)
+	if check(views != null, "5. [views] the views card is mounted"):
+		views.call("refresh")
+		check(bool(views.call("is_active")), "5. [views] and showing for the selected tank")
+		var vm: Dictionary = views.call("model")
+		var vcones: Array = vm["cones"]
+		check(vcones.size() >= 1, "5. [views] the side picture has the gun's cone")
+		check(vcones.all(func(c: Dictionary) -> bool: return int(c["facing"]) == 1), "5. [views] and only its FORWARD slice: nothing behind the tank")
+		near(float((vcones[0] as Dictionary)["half"]), deg_to_rad(10.0), 0.01, "5. [views] 10 degrees up and down, as the data has it")
 	UiInk.logging = true
 	UiInk.drawn.clear()
 	ui.roster.queue_redraw()

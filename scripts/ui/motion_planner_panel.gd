@@ -20,6 +20,15 @@ extends Control
 # selected step's bomb cone as a thin outline (hover_changed -> planner.set_drop_hover): hovering
 # the OFF button says where the target has to be. ui.json bombs.text, orders.text.
 #
+# THE THIRD PLAYTEST (decision playtest-3, builder CARD, 2026-10-11). Alex: "altituide, step X & views, step X - remove the step X
+# part, it is redundant. The step indicator, make it bigger and remove step 1 of 2 AND the whole text for: click a node to change it,
+# or add step 2. The intent is to make steps clearer." So the header line "step 2 of 3" and the hint are gone, the altitude line says
+# "altitude: medium to medium", and the step strip is a row of its own, bigger. And: "I tried to use the special but there is no
+# indication that it is engaged or why it won't engage": special_state() says, for the step the card is about, whether the unit's
+# special is set (the button pressed, the line under it) or why it is not -- and a unit with NO special (a tank, a fighter) says
+# so ("no special: weapons fire on their own") instead of a dead button. The views are not on this card any more: they are a card of
+# their own under it (side_view.gd).
+#
 # Buttons are drawn in ink, not Godot Buttons, so they sit in the card's style;
 # input is thin: buttons() lays them out, press_button(name) acts, and
 # _gui_input only finds the button under the pointer.
@@ -95,7 +104,7 @@ func buttons() -> Dictionary:
 	var can: bool = planner != null and planner.can_plan(id)
 	var placed: int = planner.planned_count(id) if planner != null else 0
 	var opts: Dictionary = planner.band_options() if can else {-1: false, 0: false, 1: false}
-	var y := 104.0
+	var y: float = st.num("orders.layout.buttons_y_px")
 	var dw: float = st.num("orders.drop_w_px")   # the special's button is wider: it wears the special's words ("Bomb Drop")
 	var bw := (w - dw - 3.0 * gap) / 3.0
 	var cur := _last_step_band_delta()
@@ -209,7 +218,8 @@ func _gui_input(event: InputEvent) -> void:
 # One record per step of the selected unit's turn (World.steps_per_turn), in order: {index, state ("planned" | "next" | "later"),
 # selected (the step the card is about; with no placed step selected, the next one), special (a planned step with its special on),
 # enabled (a planned step and the next one; not while the card is locked), center, rect (screen px, in this card's space)}.
-# NOTHING for a unit whose plan may not be shown (an enemy's, a down unit's, outside the planning phase).
+# NOTHING for a unit whose plan may not be shown (an enemy's, a down unit's, outside the planning phase). The strip stands on a row of its
+# own under the title (orders.strip.cy_px), left-aligned, big (decision playtest-3).
 func step_marks() -> Array:
 	var out: Array = []
 	var id: String = selection.unit_id if selection != null else ""
@@ -225,7 +235,10 @@ func step_marks() -> Array:
 	var pad: float = style.num("card.pad_px")
 	var pitch: float = style.num("orders.strip.step_px")
 	var cy: float = style.num("orders.strip.cy_px")
-	var x0 := size.x - pad - (float(total - 1) * pitch + 2.0 * (r + gap)) + (r + gap)   # right-aligned on the header row
+	# A row of its own, left-aligned on the card's words; a pitch that would not fit the card's width shrinks (never under the marks' touching).
+	if total > 1:
+		pitch = clampf((size.x - 2.0 * pad - 2.0 * (r + gap)) / float(total - 1), 2.0 * (r + gap) + 2.0, pitch)
+	var x0 := pad + (r + gap)
 	for i in total:
 		var state := "planned" if i < placed else ("next" if i == placed else "later")
 		var c := Vector2(x0 + float(i) * pitch, cy)
@@ -347,27 +360,28 @@ func _draw() -> void:
 			line1 = style.text("roster.text.down")
 			line2 = "a down unit takes no orders"
 		elif world.is_ready(local_player):
-			line1 = _selected_line(id, placed, n)
+			line1 = ""   # (the strip is the header: Alex, playtest 3, took 'step 2 of 3' off the card)
 			line2 = "ready: change a plan to take it back"
 		elif u.controller != World.CONTROLLER_PLAYER:
 			line1 = "not under player orders"
 			line2 = ""
-		elif placed >= n:
-			# Alex (step-selection): "3 of 3 steps planned - I can move them but can I replan them?" -- a full plan says a step can be selected.
-			line1 = _selected_line(id, placed, n)
-			line2 = st.text("orders.text.hint_full")
 		else:
-			line1 = _selected_line(id, placed, n)
-			line2 = "click or drag inside the fan" if (placed == 0 or planner.focus_step(id) < 0) else st.text("orders.text.hint_more") % (placed + 1)
+			# Planning: the strip says which step the card is about and which can be clicked (Alex, step-selection: 'I can move them but
+			# can I replan them?'; playtest 3: 'make it bigger and remove step 1 of 2 AND the whole text for: click a node to change it,
+			# or add step 2'). The one line left is how a step is placed, while one is being placed.
+			line1 = ""
+			line2 = st.text("orders.text.hint_place") if (placed < n and (placed == 0 or planner.focus_step(id) < 0)) else ""
 	UiInk.ink_line(self, PackedVector2Array([Vector2(pad, 34.0), Vector2(size.x - pad, 34.0)]), false, faint, 0.8, 5, 0.4)
-	UiInk.text(self, serif, Vector2(pad, 56.0), line1, st.num("fonts.name_px"), ink)
+	if line1 != "":
+		UiInk.text(self, serif, Vector2(pad, st.num("orders.layout.line1_y_px")), line1, st.num("fonts.name_px"), ink)
 	_draw_strip(ink)
+	var status_y: float = st.num("orders.layout.status_y_px")
 	if planner != null and planner.ready_notice != "" and world.phase == World.PHASE_PLANNING:
 		# Ready was refused (a turn that would leave the map): said in full ink, in place of the hint.
-		_fit_text(italic, Vector2(pad, 74.0), planner.ready_notice, detail, ink)
+		_fit_text(italic, Vector2(pad, status_y), planner.ready_notice, detail, ink)
 	else:
-		_fit_text(italic, Vector2(pad, 74.0), line2, detail, ink)
-	_fit_text(italic, Vector2(pad, 97.0), _altitude_caption(), detail, ink)
+		_fit_text(italic, Vector2(pad, status_y), line2, detail, ink)
+	_fit_text(italic, Vector2(pad, st.num("orders.layout.altitude_y_px")), _altitude_caption(), detail, ink)
 	var b := buttons()
 	for name: String in b:
 		_draw_button(b[name], name == "ready", serif, name == _hover_button)
@@ -379,7 +393,7 @@ func _draw() -> void:
 	if tcap != "":
 		_fit_text(italic, Vector2(pad, line_y), tcap, detail, ink)
 		line_y += detail + 4.0
-	var cap := bomb_caption()
+	var cap := special_caption()
 	if cap != "":
 		_fit_text(italic, Vector2(pad, line_y), cap, detail, ink)
 	# Ready marks: one per participant.
@@ -415,14 +429,6 @@ func _player_label(who: String) -> String:
 func _drop_is_on() -> bool:
 	var id: String = selection.unit_id if selection != null else ""
 	return planner != null and id != "" and planner.can_plan(id) and bool(planner.drop_options()["on"])
-
-# The header line: the SELECTED step named ("step 2 of 3 selected": Alex, step-selection), or, with nothing placed, the step the
-# next click places.
-func _selected_line(id: String, placed: int, n: int) -> String:
-	var k: int = planner.focus_step(id) if planner != null else -1
-	if k < 0:
-		return "step %d of %d next" % [placed + 1, n] if placed < n else "%d of %d steps planned" % [placed, n]
-	return style.text("orders.text.selected") % [k + 1, n]
 
 # Draws a line of the card's lettering, shrunk (never below lettering.fit_floor_px) until it fits the card's width. A line that had
 # to shrink under the size the lettering rule asks for says so in the lettering log (kind "fit"), so a test can list them.
@@ -495,6 +501,61 @@ func bomb_caption() -> String:
 	var carried: Dictionary = planner.bombs.bombs_left(id)
 	return style.text("bombs.text.free") % [k + 1, label, planner.bombs.drops_free(id, k), int(carried["drops_max"])]
 
+# THE SPECIAL'S STATE for the step the card is about (decision playtest-3, builder CARD, 2026-10-11; Alex: "I tried to use the special but
+# there is no indication that it is engaged or why it won't engage."). One record, so the card, the shots and the tests read the same answer:
+#   has        the selected unit has a special at all (bomb drop or a gun salvo; a tank and a fighter have NONE: their guns fire on their own)
+#   kind       "bomb" | "gun" | ""
+#   label      the special's own words ("Bomb Drop", "Main Guns Fire"); "" with none
+#   step       the step the card is about (-1: none placed or selected)
+#   engaged    the special is SET on that step (the button is pressed, the strip's mark carries the glyph)
+#   available  the button can be pressed (to set it, or to take it off)
+#   will_fire  engaged and the sim will carry it out as things stand (false: set, but "will not release / fire": the target left the cone, the guns
+#              are reloading ...); an engaged special that will go off as a POOR shot counts as will_fire
+#   reason     WHY it is not engaged, or why an engaged one will not go off, in the card's words: the sim's own reasons (place a step first, no
+#              drops left, needs a target, target outside the step's cone, reloading, already set on another step, out of range, too close,
+#              inland, not spotted, a friend, already down), or, for a unit with none, "no special: weapons fire on their own"; "" when it is
+#              fine (engaged and will fire, or free to press)
+#   line       the card's line about it (what special_caption() draws)
+# Nothing here decides: it asks the planner (drop_options, drop_info, fire_info), which ask the sim.
+func special_state() -> Dictionary:
+	var out := {"has": false, "kind": "", "label": "", "step": -1, "engaged": false, "available": false, "will_fire": false, "reason": "", "line": ""}
+	var id: String = selection.unit_id if selection != null else ""
+	if planner == null or id == "" or not world.units.has(id) or not planner.can_plan(id):
+		return out
+	var kind: String = planner.special_kind(id)
+	if kind == "":
+		out["reason"] = style.text("orders.text.no_special")
+		out["line"] = out["reason"]
+		return out
+	var opt: Dictionary = planner.drop_options()
+	var k := int(opt["step"])
+	out["has"] = true
+	out["kind"] = kind
+	out["label"] = planner.special_label(id)
+	out["step"] = k
+	out["engaged"] = bool(opt["on"])
+	out["available"] = bool(opt["available"])
+	out["line"] = bomb_caption()
+	if bool(opt["on"]) and k >= 0:
+		var info: Dictionary = planner.fire_info(k) if kind == "gun" else planner.drop_info(k)
+		var blocked: bool = not info.is_empty() and bool(info.get("blocked", false))
+		out["will_fire"] = not blocked
+		if blocked or (not info.is_empty() and bool(info.get("poor_shot", false))):
+			out["reason"] = out["line"]   # "will not release: target outside the cone", "poor shot: target is not spotted"
+	elif not bool(opt["available"]):
+		out["reason"] = str(opt["why"])
+	return out
+
+# The line under the target line: the STATE of the unit's special (bomb_caption: what it does at the selected step, or why it cannot be
+# set) -- and for a unit with no special, the plain "no special: weapons fire on their own" (decision playtest-3), so the dead button is explained.
+func special_caption() -> String:
+	var id: String = selection.unit_id if selection != null else ""
+	if planner == null or id == "" or not world.units.has(id) or not planner.can_plan(id):
+		return ""
+	if planner.special_kind(id) == "":
+		return style.text("orders.text.no_special")
+	return bomb_caption()
+
 # Whether the state line is a reason the special cannot be switched on (said in full ink: it is what the player has to read).
 func _drop_reason_is_plain() -> bool:
 	var id: String = selection.unit_id if selection != null else ""
@@ -503,12 +564,12 @@ func _drop_reason_is_plain() -> bool:
 func _altitude_caption() -> String:
 	var id: String = selection.unit_id if selection != null else ""
 	if planner == null or id == "" or not planner.can_plan(id):
-		return "altitude"
+		return style.text("orders.text.altitude_idle")
 	var k: int = planner.focus_step()
 	if k < 0:
-		return "altitude: place a step first"
+		return style.text("orders.text.altitude_none")
 	var st: Array = planner.states()
-	return "altitude, step %d:  %s  to  %s" % [k + 1, planner.band_before(k), st[k]["altitude_band"]]
+	return style.text("orders.text.altitude") % [planner.band_before(k), st[k]["altitude_band"]]   # (no 'step X': the strip shows it, decision playtest-3)
 
 func _draw_button(b: Dictionary, big: bool, font: Font, hovered: bool = false) -> void:
 	var st := style

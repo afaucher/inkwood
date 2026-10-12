@@ -236,7 +236,7 @@ func _check_arcs_button() -> void:
 	check(g.position.y >= _st.num("roster.header_px") and g.end.y <= ro.list_top(), "6. the roster's bar holds its group-by button alone")
 	eq(g.size.x, _st.num("roster.group.button_w_px"), "6. at its own width")
 	var r: Rect2 = sv.arcs_button_rect()
-	check(r.position.y >= 0.0 and r.end.y <= _st.num("side_view.section.gap_px") + _st.num("side_view.section.head_px") + 1e-6 and r.end.x <= sv.size.x + 1e-6, "6. in the panel's heading row, at the right")
+	check(r.position.y >= 0.0 and r.end.y <= _st.num("side_view.card.rule_y_px") + 1e-6 and r.end.x <= sv.size.x - _st.num("card.pad_px") + 1e-6, "6. in the views card's title row (above its rule), at the right")
 	check(r.size.x >= 60.0 and r.size.y >= 16.0, "6. big enough to hit (%s)" % str(r.size))
 	eq(sv.arcs_label(), "Arcs: off", "6. it reads 'Arcs: off' to start with")
 	eq(_ui.arcs_shown(), false, "6. the arcs are hidden to start with")

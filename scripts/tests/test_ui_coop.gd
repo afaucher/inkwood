@@ -151,9 +151,12 @@ func _check_style_keys(st: UiStyle) -> void:
 	check(modes is Array and (modes as Array).size() >= 2, "ui.json lists the group-by modes")
 	for f: String in ["health.ring_arc.enabled", "planner.speed_labels"]:
 		check(st.lookup(f) is bool, "ui.json has a flag at '%s'" % f)
-	for t: String in ["has_plan", "no_plan", "flying", "down", "fate_exploded", "fate_out_of_control", "fate_crashed",
+	for t: String in ["flying", "down", "fate_exploded", "fate_out_of_control", "fate_crashed",
 			"needs_orders_one", "needs_orders_many", "all_planned"]:
 		check(st.lookup("roster.text." + t) is String, "ui.json has the text roster.text.%s" % t)
+	# Alex, playtest 3: "'no plan (flies on)' and 'plan: 1 of 2 steps' there are completely covered by the plan pips in the roster. Lets remove the text."
+	for t: String in ["has_plan", "no_plan"]:
+		check(not (st.lookup("roster.text." + t) is String), "the roster no longer has the text roster.text.%s (the plan pips say it)" % t)
 	check(st.num("planner.others_line_px") < st.num("planner.path_line_px"), "other units' plans are drawn thinner than the selected unit's")
 	eq(st.errors.size(), 0, "no style lookups failed: %s" % str(st.errors))
 
@@ -165,8 +168,8 @@ func _check_fate_text() -> void:
 	r.style = st
 	for case: Array in [["", "down"], ["exploded", "destroyed"], ["out_of_control", "out of control"], ["crashed", "crashed"], ["not_a_fate", "down"]]:
 		eq(r.status_text({"status": "down", "fate": case[0], "planned": 0, "steps": 5}), case[1], "a down row with fate '%s' reads '%s'" % [case[0], case[1]])
-	eq(r.status_text({"status": "none", "fate": "", "planned": 0, "steps": 5}), "no plan (flies on)", "a live unit with no plan flies on")
-	eq(r.status_text({"status": "plan", "fate": "", "planned": 3, "steps": 5}), "plan: 3 of 5 steps", "a planned unit says how many steps")
+	eq(r.status_text({"status": "none", "fate": "", "planned": 0, "steps": 5}), "", "a live unit with no plan has NO words on its plan line: the glyph and the pips say it (playtest 3)")
+	eq(r.status_text({"status": "plan", "fate": "", "planned": 3, "steps": 5}), "", "a planned unit has no words either: the step pips count the steps")
 	eq(r.status_text({"status": "flying", "fate": "", "planned": 0, "steps": 5}), "flying the turn", "after planning a live unit is flying the turn")
 	r.free()
 	var wf := _WithFate.new()
@@ -250,13 +253,14 @@ func _check_plan_status(w: World, ui: UnitUI) -> void:
 		check(bool(row["needs_orders"]) and not bool(row["has_plan"]), "3. and needs orders")
 	eq(r.needs_orders_count(), 3, "3. three units need orders")
 	check(r.header_status().contains("3 need orders"), "3. the header says so: '%s'" % r.header_status())
-	eq(r.status_text(r.rows()[1]), "no plan (flies on)", "3. the row says no plan (flies on)")
+	eq(r.status_text(r.rows()[1]), "", "3. the row has no plan text ('no plan (flies on)' is gone: the pips and the dashed glyph say it)")
 	# This player plans p1 through the UI...
 	ui.select("p1")
 	ui.planner.place_point(Vector2(1600.0, 2400.0))
 	eq(r.rows()[0]["status"], "plan", "3. p1 has a plan")
 	check(not bool(r.rows()[0]["needs_orders"]), "3. and no longer needs orders")
-	eq(r.status_text(r.rows()[0]), "plan: 1 of 5 steps", "3. the row counts the steps")
+	eq(r.status_text(r.rows()[0]), "", "3. the row has no plan text ('plan: 1 of 5 steps' is gone) -- the one filled pip counts it")
+	eq(r.rows()[0]["planned"], 1, "3. the row still carries the count (planned 1 of %d) for the pips" % int(r.rows()[0]["steps"]))
 	# ... another player plans p2 and p3 over the network: straight through the World.
 	var seen: Array[String] = []
 	w.plan_changed.connect(func(id: String) -> void: seen.append(id))

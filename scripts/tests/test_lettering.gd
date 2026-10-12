@@ -15,8 +15,9 @@ extends "res://scripts/test_support/test_case.gd"
 #                      result card): UiInk.logging records every string, and each is upright, at least lettering.min_px (the listed
 #                      exceptions: a number inside a mark), in ink that reads against what is behind it, and inside its box
 #   5. THE REMOVALS    the loading card's seed line is off by its switch and comes back with it
-#   6. THE LAYOUT      1280x720 with three units in the roster: the cards are on screen, the side view under the orders card still
-#                      shows (its picture at least the data's minimum), and the card sizes are what the data says
+#   6. THE LAYOUT      1280x1000 with three units in the roster: the cards are on screen, the views card under the orders card (a card of
+#                      its own: decision playtest-3) shows (its picture at least the data's minimum), and the card sizes are what the
+#                      data says; at 1280x720 the orders card is whole and the views card is left out for lack of room
 
 const World = preload("res://scripts/sim/world.gd")
 const UnitUI = preload("res://scripts/ui/unit_ui.gd")
@@ -30,7 +31,9 @@ const SandboxLoading = preload("res://scripts/app/sandbox_loading.gd")
 const SandboxObjective = preload("res://scripts/app/sandbox_objective.gd")
 
 const PPM := 1.0
-const SCREEN := Vector2(1280.0, 720.0)
+# 1280x1000 (it was 1280x720): the views are a card of their own under the orders card now (decision playtest-3), and with three units in the
+# roster the column needs about 780 px to hold it. The short window is the end of section 6 (and test_side_view 23).
+const SCREEN := Vector2(1280.0, 1000.0)
 
 # The map host the TARGET ring reads: a Node2D with a scale.
 class _Host extends Node2D:
@@ -295,9 +298,12 @@ func _check_drawn() -> void:
 	var by_text := {}
 	for e: Dictionary in entries:
 		by_text[str(e["text"])] = e
-	for s: String in ["TARGET", "off the map", "outside the cone", "Bomb Drop", "85 m/s", "400 m", "2 turns left", "turn 18 of 20", "views, step 2"]:
+	for s: String in ["TARGET", "off the map", "outside the cone", "Bomb Drop", "85 m/s", "400 m", "2 turns left", "turn 18 of 20", "V I E W S", "altitude:"]:
 		check(by_text.has(s) or _any_text_contains(entries, s), "4. '%s' is on the screen" % s)
-	check(_any_text_contains(entries, "plan: 3 of 3 steps") or _any_text_contains(entries, "no plan (flies on)"), "4. the roster's plan status is on the screen")
+	# Decision playtest-3 (Alex): the words that went. 'views, step 2', 'altitude, step 2', the card's 'step 2 of 3' and its click-a-node hint, and the
+	# roster's 'plan: 3 of 3 steps' / 'no plan (flies on)' (the plan pips say it) are NOT on the screen.
+	for gone: String in ["views, step", "altitude, step", "step 2 of", "click a node", "add step", "plan: ", "no plan", "flies on"]:
+		check(not _any_text_contains(entries, gone), "4. '%s' is no longer on the screen" % gone)
 	check(_any_text_contains(entries, "Bomber · 85 m/s · high"), "4. the roster's second line is on the screen")
 	check(_any_text_contains(entries, "target: radio tower"), "4. the orders card's target line is on the screen")
 	check(_any_text_contains(entries, "you planning") or _any_text_contains(entries, "AI ready"), "4. the ready marks are on the screen")
@@ -328,8 +334,8 @@ func _check_drawn() -> void:
 	var panel = _ui.orders
 	var detail := _st.num("fonts.detail_px")
 	var tf := _st.text_font()
-	var longest: Array[String] = [_st.text("bombs.text.target_none"), _st.text("orders.text.hint_full"), _st.text("orders.text.hint_more") % 3,
-		"altitude, step 3:  medium  to  medium", _st.text("bombs.text.target_unit") % "radio tower" + _st.text("bombs.text.target_accuracy") % 100,
+	var longest: Array[String] = [_st.text("bombs.text.target_none"), _st.text("orders.text.hint_place"), _st.text("orders.text.no_special"),
+		_st.text("orders.text.altitude") % ["medium", "medium"], _st.text("bombs.text.target_unit") % "radio tower" + _st.text("bombs.text.target_accuracy") % 100,
 		_st.text("bombs.text.expected_on") % [2, "Bomb Drop", "radio tower", "5", 8], _st.text("bombs.text.free") % [3, "Bomb Drop", 2, 3],
 		_st.text("bombs.text.wont_release"), _st.text("bombs.text.target_outside") % 2, _st.text("bombs.text.on") % [2, "Bomb Drop", 45]]
 	for s: String in longest:
@@ -446,23 +452,32 @@ func _check_removals_and_layout() -> void:
 		if str(e["text"]).contains("seed"):
 			check(float(e["px"]) >= _st.min_px(), "5. (and then at %s px, not 11)" % str(e["px"]))
 
-	# 1280x720 with three units: the sidebar is on screen and the side view still shows under the orders card.
+	# 1280x1000 with three units: the sidebar is on screen and the views card shows under the orders card.
 	var roster: Control = _ui.roster
 	var orders: Control = _ui.orders
 	eq(roster.size.x, _st.num("roster.width_px"), "6. the roster is the data's width (%s px; it was 286)" % str(_st.num("roster.width_px")))
 	eq(orders.size.x, roster.size.x, "6. and the orders card is as wide")
 	check(roster.position.y + roster.size.y < orders.position.y, "6. the roster is above the orders card")
-	check(orders.position.y + orders.size.y <= SCREEN.y - _st.num("card.margin_px") + 0.5, "6. the orders card is on screen at 720 px (bottom %.0f)" % (orders.position.y + orders.size.y))
+	check(orders.position.y + orders.size.y <= SCREEN.y - _st.num("card.margin_px") + 0.5, "6. the orders card is on screen at %.0f px (bottom %.0f)" % [SCREEN.y, orders.position.y + orders.size.y])
 	check(roster.position.x + roster.size.x <= SCREEN.x - _st.num("card.margin_px") + 0.5, "6. and inside the right edge")
 	var sv: Variant = _ui.get_meta("side_view", null)
-	if check(sv != null, "6. the side view is mounted under the orders card"):
+	if check(sv != null, "6. the views card is mounted under the orders card"):
 		var view: Object = sv
-		check(bool(view.call("is_active")), "6. the side view is showing for the selected bomber")
+		check(bool(view.call("is_active")), "6. the views card is showing for the selected bomber")
+		check((view as Control).position.y >= orders.position.y + orders.size.y and (view as Control).position.y + (view as Control).size.y <= SCREEN.y - _st.num("card.margin_px") + 0.5, "6. under the orders card and on the screen (bottom %.0f)" % ((view as Control).position.y + (view as Control).size.y))
 		var m: Dictionary = view.call("model")
 		var pic: Vector2 = m["size"]
 		check(pic.y >= _st.num("side_view.section.min_picture_h_px"), "6. its picture is %.0f x %.0f px, not under the data's minimum (%s)" % [pic.x, pic.y, str(_st.num("side_view.section.min_picture_h_px"))])
-		print("[test] at 1280x720 with 3 units the roster is %.0f x %.0f, the orders card %.0f x %.0f (base %s), the side view's picture %.0f x %.0f px" % [roster.size.x, roster.size.y, orders.size.x, orders.size.y, str(_st.num("orders.height_px")), pic.x, pic.y])
-	eq(_st.num("orders.height_px"), 276.0, "6. the orders card's own height did not grow (276 px): only the width did")
+		print("[test] at 1280x1000 with 3 units the roster is %.0f x %.0f, the orders card %.0f x %.0f (base %s), the views card %.0f x %.0f, its picture %.0f x %.0f px" % [roster.size.x, roster.size.y, orders.size.x, orders.size.y, str(_st.num("orders.height_px")), (view as Control).size.x, (view as Control).size.y, pic.x, pic.y])
+		# At 1280x720 the roster and the orders card leave it no room: the card is left out and the orders card is whole.
+		_ui.hud.size = Vector2(1280.0, 720.0)
+		_ui.layout()
+		view.call("refresh")
+		check(not bool(view.call("is_active")), "6. at 1280x720 with three units the views card has no room and is left out")
+		check(orders.position.y + orders.size.y <= 720.0 - _st.num("card.margin_px") + 0.5, "6. while the orders card is on screen (bottom %.0f of 720)" % (orders.position.y + orders.size.y))
+		_ui.hud.size = SCREEN
+		_ui.layout()
+	eq(orders.size.y, _st.num("orders.height_px"), "6. the orders card is the data's height (%s px): the views no longer grow it" % str(_st.num("orders.height_px")))
 
 # What a blocking loading card draws, as the log has it.
 func _loading_texts() -> Array:

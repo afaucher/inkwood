@@ -11,13 +11,17 @@ extends Control
 # EVERYTHING ELSE HERE IS PROPOSED, and data/ui/ui.json side_view holds every value.
 #
 # WHAT IT IS. A picture of the selected FRIENDLY unit's weapons in elevation, on one scale for both axes (so
-# every angle is true), with the target at its straight-line position. It sits at the bottom of the orders card
-# (the mock-up's place, tmp/sideview/make.py), and the card grows by its section while it shows:
+# every angle is true), with the target at its straight-line position. IT IS A CARD OF ITS OWN, headed "V I E W S" like "O R D E R S"
+# (decision playtest-3, builder CARD, 2026-10-11; Alex: "In the views section: Should be a distinct section like 'orders'"). It used to be
+# a section at the bottom of the orders card, which grew by it; now it is the third card of the sidebar column, directly under the orders
+# card and as wide as it (PROPOSED place: UnitUI.layout()), in the same card style (shadow, neatlines), with its own title row (the
+# title, "live" while a turn plays, and the Arcs button) and the three folding strips under it. It shows while a friendly unit that takes
+# orders is selected, and the orders card keeps its own size:
 #
 #   var sv := SideView.new()
-#   orders.add_child(sv)
+#   hud.add_child(sv)
 #   sv.setup(world, planner, selection, style)
-#   sv.attach(orders)                  # the card it grows; call it after the card's own setup
+#   sv.attach(orders)                  # the card it sits under (its place and the room below it); call it after that card's own setup
 #   sv.target_source = func() -> Object: return ui.get("target")     # Track T's UnitUI.target, when it exists
 #   sv.unit_visible = ...; sv.shown_pose = marker_layer.pose_of; sv.range_factor = ...; sv.playback = marker_layer
 #
@@ -100,7 +104,7 @@ var world: World = null
 var planner: Object = null            # MotionPlanner (duck-typed: so Track T's edits cannot break this file's compile)
 var selection: RefCounted = null
 var style: UiStyle = null
-var host: Control = null              # the card this section grows (attach())
+var host: Control = null              # the card this one sits directly under (attach()); with none the card has no place and no room limit
 
 # Seams (all optional Callables, all proposed):
 var target_source: Callable = Callable()   # () -> Object: the target selection (Track T's UnitUI.target), or null
@@ -130,7 +134,6 @@ var _pics: Dictionary = {}                # strip id -> its picture canvas
 var _model: Dictionary = {"active": false}
 var _sig: String = ""
 var _rev: int = 0
-var _base_h: float = 0.0
 var _tg_id: int = 0
 
 # The picture's own canvas: it clips to its rect (a wide cone may leave the page).
@@ -168,15 +171,21 @@ func setup(w: World, motion_planner: Object, sel: RefCounted, st: RefCounted = n
 		selection.changed.connect(_on_change)
 	_sig = ""
 
-# The card the section is added to; it grows by the section while the panel shows. Call it after the card
-# has its own size (the base height is read now).
+# The card this one sits directly under (the orders card): its place is below it, its width is the card's, and the room it has is what is
+# left of the window under it. Call it after that card has its own size.
 func attach(card: Control) -> void:
 	host = card
-	_base_h = card.size.y
 	var pc := card.get_parent_control()
 	if pc != null and not pc.resized.is_connected(_on_change):
 		pc.resized.connect(_on_change)
 	_sig = ""
+	place()
+
+# Puts the card under the one above it (UnitUI.layout() calls this whenever the column is laid out again, so the two never disagree).
+func place() -> void:
+	if host == null or style == null:
+		return
+	position = Vector2(host.position.x, host.position.y + host.size.y + style.num("card.gap_px"))
 
 func _on_change(_x: Variant = null) -> void:
 	_rev += 1
@@ -253,7 +262,7 @@ func _signature() -> String:
 	parts.append("a:" + str(arcs_on()))
 	if host != null:
 		var pc := host.get_parent_control()
-		parts.append("%.0f,%.0f,%.0f" % [host.position.y, host.size.x, pc.size.y if pc != null else 0.0])
+		parts.append("%.0f,%.0f,%.0f,%.0f" % [host.position.y, host.size.x, host.size.y, pc.size.y if pc != null else 0.0])
 	return "|".join(parts)
 
 # --- The strips: what is folded, and in what order they keep their room ----------------------------------
@@ -345,13 +354,12 @@ func arcs_on() -> bool:
 func arcs_label() -> String:
 	return style.text("side_view.arcs.label_on" if arcs_on() else "side_view.arcs.label_off")
 
-# The button, in this section's space: in the heading row, at the right.
+# The button, in the card's space: in the title row, at the right.
 func arcs_button_rect() -> Rect2:
-	var gap: float = style.num("side_view.section.gap_px")
-	var head: float = style.num("side_view.section.head_px")
+	var pad: float = style.num("card.pad_px")
 	var w: float = style.num("side_view.arcs.w_px")
 	var h: float = style.num("side_view.arcs.h_px")
-	return Rect2(Vector2(maxf(size.x - w, 0.0), gap + (head - h) * 0.5), Vector2(w, h))
+	return Rect2(Vector2(maxf(size.x - pad - w, 0.0), style.num("side_view.card.title_cy_px") - h * 0.5), Vector2(w, h))
 
 # The button, as a click does it. False when there is none (or no panel on the screen).
 func press_arcs() -> bool:
@@ -388,7 +396,7 @@ func _get_tooltip(at_position: Vector2) -> String:
 func _caption_h() -> float:
 	return style.num("side_view.section.caption_h_px") if style.flag("side_view.text.enabled") else 0.0
 
-# The section's chrome without any strip: the gap, the heading row, the quiet line, the bottom.
+# The card's chrome without any strip: the title row, the gap under it, the quiet line, the bottom.
 func _chrome() -> float:
 	return style.num("side_view.section.gap_px") + style.num("side_view.section.head_px") + _caption_h() + style.num("side_view.section.bottom_px")
 
@@ -413,7 +421,7 @@ func _plan_layout() -> Dictionary:
 	if host != null:
 		var pc := host.get_parent_control()
 		if pc != null and pc.size.y > 1.0:
-			room = pc.size.y - style.num("card.margin_px") - (host.position.y + _base_h)
+			room = pc.size.y - style.num("card.margin_px") - (host.position.y + host.size.y + style.num("card.gap_px"))
 	var shown := {}
 	var heights := pref.duplicate()
 	var mode := "strips"
@@ -458,56 +466,46 @@ func _plan_layout() -> Dictionary:
 # Where everything is, in the section's own space: the plan as rectangles.
 func _rects(plan: Dictionary) -> Dictionary:
 	var w: float = plan["w"]
+	var pad: float = style.num("card.pad_px")
 	var gap: float = style.num("side_view.section.gap_px")
 	var head: float = style.num("side_view.section.head_px")
 	var sh: float = style.num("side_view.strips.head_px")
 	var sgap: float = style.num("side_view.strips.gap_px")
-	var y := gap + head
+	var y := head + gap   # (the title row, then the gap: everything below is in the card's own space, pad in from its edge)
 	var strips: Array = []
 	if str(plan["mode"]) == "strips":
 		for id: String in strip_ids():
-			var row := Rect2(0.0, y, w, sh)
+			var row := Rect2(pad, y, w, sh)
 			y += sh
 			var shown: bool = (plan["shown"] as Dictionary).has(id)
 			var pic := Rect2()
 			if shown:
-				pic = Rect2(0.0, y, w, float((plan["h"] as Dictionary)[id]))
+				pic = Rect2(pad, y, w, float((plan["h"] as Dictionary)[id]))
 				y += pic.size.y + sgap
 			strips.append({"id": id, "name": strip_name(id), "chosen": strip_chosen(id), "shown": shown, "head": row, "pic": pic})
 	else:
-		var side := Rect2(0.0, y, w, float((plan["h"] as Dictionary)["side"]))
+		var side := Rect2(pad, y, w, float((plan["h"] as Dictionary)["side"]))
 		y += side.size.y
 		strips.append({"id": "side", "name": strip_name("side"), "chosen": true, "shown": true, "head": Rect2(), "pic": side})
 	return {"mode": plan["mode"], "w": w, "section_h": plan["section_h"], "strips": strips,
-		"head": Rect2(0.0, gap, w, head), "caption": Rect2(0.0, y, w, _caption_h())}
+		"head": Rect2(0.0, 0.0, w + 2.0 * pad, head), "caption": Rect2(pad, y, w, _caption_h())}
 
-# Sizes the section and grows (or restores) the card.
+# Sizes the card: its width is the card above's, its height the chrome and the strips the room holds; and puts it under that card.
 func _apply_layout() -> void:
 	var on := bool(_model.get("active", false))
-	if on:
-		var lay: Dictionary = _model["layout"]
-		for id: String in _pics:
-			(_pics[id] as Control).visible = false
-		for e: Dictionary in lay["strips"]:
-			if bool(e["shown"]):
-				var pic: Control = _pics[str(e["id"])]
-				pic.visible = true
-				pic.position = (e["pic"] as Rect2).position
-				pic.size = (e["pic"] as Rect2).size
-		size = Vector2(float(lay["w"]), float(lay["section_h"]))
-		if host == null:
-			return
-		position = Vector2(style.num("card.pad_px"), _base_h)
-	else:
-		for id: String in _pics:
-			(_pics[id] as Control).visible = false
-		if host == null:
-			return
-	var want := _base_h + (size.y if on else 0.0)
-	if not is_equal_approx(host.custom_minimum_size.y, want):
-		host.custom_minimum_size = Vector2(host.custom_minimum_size.x, want)
-		host.size = Vector2(host.size.x, want)
-		host.queue_redraw()
+	for id: String in _pics:
+		(_pics[id] as Control).visible = false
+	if not on:
+		return
+	var lay: Dictionary = _model["layout"]
+	for e: Dictionary in lay["strips"]:
+		if bool(e["shown"]):
+			var pic: Control = _pics[str(e["id"])]
+			pic.visible = true
+			pic.position = (e["pic"] as Rect2).position
+			pic.size = (e["pic"] as Rect2).size
+	size = Vector2(float(lay["w"]) + 2.0 * style.num("card.pad_px"), float(lay["section_h"]))
+	place()
 
 # --- Drawing -----------------------------------------------------------------------------------
 
@@ -516,15 +514,23 @@ func _draw() -> void:
 		return
 	var st := style
 	var ink: Color = st.color("ink")
-	var soft: Color = st.color("ink")   # (Track L, readable lettering: the heading and the caption are full ink in the label face, 14 px)
+	var soft: Color = st.color("ink")   # (Track L, readable lettering: the caption is full ink in the label face, 14 px)
 	var faint: Color = st.color("ink_faint")
 	var label_face: Font = st.text_font()
 	var detail: float = st.num("fonts.detail_px")
 	var lay: Dictionary = _model["layout"]
-	var head_r: Rect2 = lay["head"]
-	UiInk.ink_line(self, PackedVector2Array([Vector2(0.0, 1.0), Vector2(size.x, 1.0)]), false, faint, 0.8, 9, 0.4)
-	var head_w := size.x - (st.num("side_view.arcs.w_px") + 8.0 if has_arcs_button() else 0.0)
-	UiInk.text(self, label_face, Vector2(0.0, head_r.end.y - 5.0), str(_model["head"]), detail, soft, HORIZONTAL_ALIGNMENT_LEFT, head_w)
+	var pad: float = st.num("card.pad_px")
+	# The card: the orders card's own (shadow cast away from the sun, the double neatline), then its title row, "V I E W S", a rule under it.
+	var r := Rect2(Vector2.ZERO, size)
+	UiInk.card_shadow(self, r, st.shadow_dir() * st.num("card.lift_px"), st.color("card_shadow"))
+	UiInk.card(self, r, st.color("card_fill"), ink, st.num("card.outer_line_px"), st.num("card.inner_line_px"),
+		st.num("card.inner_inset_px"), st.num("card.wobble_px"), 19)
+	UiInk.text(self, st.font(false), Vector2(pad, 26.0), str(_model["head"]), st.num("fonts.title_px"), ink)
+	var rule_y: float = st.num("side_view.card.rule_y_px")
+	UiInk.ink_line(self, PackedVector2Array([Vector2(pad, rule_y), Vector2(size.x - pad, rule_y)]), false, faint, 0.8, 9, 0.4)
+	var right := size.x - pad - (st.num("side_view.arcs.w_px") + 8.0 if has_arcs_button() else 0.0)
+	if bool(_model.get("live", false)):
+		UiInk.text(self, label_face, Vector2(0.0, 26.0), st.text("side_view.text.live_tag"), detail, soft, HORIZONTAL_ALIGNMENT_RIGHT, right)
 	if has_arcs_button():
 		_draw_arcs_button(ink)
 	for e: Dictionary in lay["strips"]:
@@ -533,7 +539,7 @@ func _draw() -> void:
 	var line := str(_model["line"])
 	if line != "":
 		var cap: Rect2 = lay["caption"]
-		UiInk.text(self, label_face, Vector2(0.0, cap.end.y - 5.0), line, detail, soft, HORIZONTAL_ALIGNMENT_LEFT, size.x)
+		UiInk.text(self, label_face, Vector2(cap.position.x, cap.end.y - 5.0), line, detail, soft, HORIZONTAL_ALIGNMENT_LEFT, cap.size.x)
 	draw_count += 1
 
 # "Arcs: on" filled with ink and lettered in paper (a toggle that is on), or "Arcs: off" raised: the roster button's pair of roles.
@@ -553,7 +559,7 @@ func _draw_strip_head(e: Dictionary, ink: Color) -> void:
 	var st := style
 	var row: Rect2 = e["head"]
 	var q: float = st.num("side_view.strips.box_px")
-	var box := Rect2(Vector2(0.0, row.position.y + (row.size.y - q) * 0.5), Vector2(q, q))
+	var box := Rect2(Vector2(row.position.x, row.position.y + (row.size.y - q) * 0.5), Vector2(q, q))
 	var on: bool = bool(e["shown"])
 	draw_rect(box, st.color("button_on_fill") if on else st.color("button_fill"), true)
 	UiInk.ink_line(self, UiInk.rect_pts(box), true, ink, st.num("side_view.strips.box_line_px"), 21, 0.3)
@@ -566,7 +572,7 @@ func _draw_strip_head(e: Dictionary, ink: Color) -> void:
 		chev = PackedVector2Array([Vector2(c.x - k * 0.5, c.y - k), Vector2(c.x + k * 0.5, c.y), Vector2(c.x - k * 0.5, c.y + k)])
 	draw_polyline(chev, st.color("button_on_text") if on else ink, st.num("side_view.strips.chevron_line_px"), true)
 	var px: float = st.num("side_view.strips.name_px")
-	UiInk.text(self, st.font(false), Vector2(q + st.num("side_view.strips.box_gap_px"), row.end.y - 6.0), str(e["name"]), px, ink)
+	UiInk.text(self, st.font(false), Vector2(row.position.x + q + st.num("side_view.strips.box_gap_px"), row.end.y - 6.0), str(e["name"]), px, ink)
 
 # Called by a picture canvas: the strip of that kind.
 func paint_strip(kind: String, ci: CanvasItem) -> void:
@@ -629,7 +635,7 @@ func _compute() -> Dictionary:
 		m["drop"] = drop
 	if not tgt.is_empty() and not tgt.has("hidden"):
 		m["target"] = _place_target(tgt, m, pic)
-	m["head"] = style.text("side_view.text.head_live") if live else (style.text("side_view.text.head_step") % (k + 1) if k >= 0 else style.text("side_view.text.head_now"))
+	m["head"] = style.text("side_view.text.title")   # (Alex, playtest 3: no 'step X' in the heading: it is redundant)
 	m["line"] = _line(m, tgt)
 	# The other two strips, the unit as the same step leaves it and the same target (their projections: side_view_top.gd, side_view_front.gd).
 	m["top"] = SideViewTop.model(u, id, pose, tgt, Vector2(float(plan["w"]), float((plan["h"] as Dictionary)["top"])), style, range_factor)

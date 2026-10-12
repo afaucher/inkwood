@@ -102,7 +102,12 @@ func _card() -> bool:
 	eq(_btn("drop")["enabled"], false, "2. no step placed: the button is off")
 	eq(_ui.orders.bomb_caption(), _st.text("guns.text.place_first") % LABEL, "2. and the card says to place a step first: '%s'" % _ui.orders.bomb_caption())
 	eq(_ui.orders.target_caption(), _st.text("bombs.text.target_none"), "2. the target line is always there for a unit with a special: '%s'" % _ui.orders.target_caption())
+	# THE SPECIAL'S STATE and WHY (decision playtest-3), one record: the sim's own reasons, in the card's words.
+	var ss: Dictionary = _ui.orders.special_state()
+	eq([ss["has"], ss["kind"], ss["label"], ss["engaged"], ss["available"]], [true, "gun", LABEL, false, false], "2. [state] the cruiser has the Main Guns special, not engaged, not on offer")
+	eq(ss["reason"], _st.text("guns.text.place_first") % LABEL, "2. [state] why: no step placed")
 	_pl.place_point(Vector2(700.0, 2500.0))
+	eq(_ui.orders.special_state()["reason"], _st.text("guns.text.no_target") % LABEL, "2. [state] why: no target")
 	eq(_btn("drop")["enabled"], false, "2. a step placed and NO TARGET: off")
 	eq(_ui.orders.bomb_caption(), _st.text("guns.text.no_target") % LABEL, "2. the card: '%s'" % _ui.orders.bomb_caption())
 	eq(_pl.toggle_drop(), {}, "2. the button does nothing")
@@ -111,10 +116,12 @@ func _card() -> bool:
 	_ui.set_target_unit("aa_far")
 	eq(_btn("drop")["enabled"], false, "2. an enemy no friend sees: off")
 	eq(_ui.orders.bomb_caption(), _st.text("guns.text.unspotted"), "2. 'not spotted': '%s'" % _ui.orders.bomb_caption())
+	eq(_ui.orders.special_state()["reason"], _st.text("guns.text.unspotted"), "2. [state] why: the target is not spotted")
 	_ui.set_target_unit("aa_in")
 	eq(_ui.orders.bomb_caption(), _st.text("guns.text.inland"), "2. 'inland': '%s'" % _ui.orders.bomb_caption())
 	_ui.set_target_unit("aa_edge")
 	check(_ui.orders.bomb_caption().begins_with("target is out of range ("), "2. 'out of range' with the numbers: '%s'" % _ui.orders.bomb_caption())
+	eq(_ui.orders.special_state()["reason"], _ui.orders.bomb_caption(), "2. [state] why: the same words")
 	_ui.target.set_point(Vector2(740.0, 2500.0))
 	eq(_ui.orders.bomb_caption(), _st.text("guns.text.too_close") % 150, "2. 'too close' for a point alongside: '%s'" % _ui.orders.bomb_caption())
 	# A point in the fog on the coast.
@@ -125,6 +132,8 @@ func _card() -> bool:
 	_ui.set_target_unit("aa")
 	eq(_btn("drop")["enabled"], true, "2. a spotted enemy on the coast in range: ON")
 	eq(_ui.orders.bomb_caption(), _st.text("guns.text.free") % [1, LABEL], "2. the card: '%s'" % _ui.orders.bomb_caption())
+	var free: Dictionary = _ui.orders.special_state()
+	eq([free["engaged"], free["available"], free["reason"]], [false, true, ""], "2. [state] a good target: free to press, nothing to explain")
 	eq(_ui.orders.target_caption(), _st.text("bombs.text.target_unit") % "anti-aircraft battery", "2. the target line: '%s'" % _ui.orders.target_caption())
 	# A point near the tower is spotted too.
 	_ui.target.set_point(Vector2(1800.0, 2480.0))
@@ -149,6 +158,8 @@ func _step() -> bool:
 	eq(f["aim"], [1800.0, 2500.0], "3. and the aim it was shown at")
 	eq(_pl.step_target(0), {"unit": "aa", "point": Vector2(1800.0, 2500.0)}, "3. step_target reads it back (the seam the side view reads)")
 	eq(_btn("drop")["on"], true, "3. the button is pressed")
+	var on_state: Dictionary = _ui.orders.special_state()
+	eq([on_state["engaged"], on_state["will_fire"], on_state["step"], on_state["reason"]], [true, true, 0, ""], "3. [state] ENGAGED on step 1, and it will fire")
 	check(_ui.orders.bomb_caption().begins_with("step 1: %s  ·  spread " % LABEL), "3. the card shows the spread and the range: '%s'" % _ui.orders.bomb_caption())
 	eq(_ui.orders.target_caption(), _st.text("bombs.text.target_unit") % "anti-aircraft battery", "3. and the step's own target: '%s'" % _ui.orders.target_caption())
 	# The lettering at the step's node.
@@ -248,6 +259,7 @@ func _reload() -> bool:
 	_pl.set_focus_step(0)
 	eq(_btn("drop")["enabled"], false, "5. the next turn: the guns are reloading, the button is off")
 	eq(_ui.orders.bomb_caption(), _st.text("guns.text.reloading") % [LABEL, 2], "5. the card says for how long: '%s'" % _ui.orders.bomb_caption())
+	eq([_ui.orders.special_state()["engaged"], _ui.orders.special_state()["reason"]], [false, _st.text("guns.text.reloading") % [LABEL, 2]], "5. [state] not engaged, because it is reloading")
 	_pl.clear()
 	GunWorlds.next_turn(_w)
 	_ui.select("")
@@ -311,8 +323,8 @@ func _wire() -> bool:
 func _side_view() -> bool:
 	_rebuild()
 	_fresh()
-	var sv: Object = _ui.orders.get_node("SideView")
-	if not check(sv != null, "9. the card has a side view"):
+	var sv: Object = _ui.get_meta("side_view", null)
+	if not check(sv != null, "9. the sidebar has a views card (a card of its own under the orders card: decision playtest-3)"):
 		return false
 	_pl.place_point(Vector2(632.0, 2500.0))
 	_ui.set_target_unit("aa")

@@ -6,19 +6,22 @@ extends Control
 #
 #   (side roundel)  NAME                              ▮▮▮▯▯   <- health pips
 #                   Type · 100 m/s · medium
-#                   —● plan: 3 of 5 steps             o o o . .   <- step pips
-#                   - -o no plan (flies on)
+#                   —● ● ● ● ○ ○                                  <- plan glyph, step pips
+#                   - -o ○ ○ ○ ○ ○
 #
 # NAME is the unit's callsign (Alex 2026-10-09: callsigns show first), else its
 # id made readable. The health pips are the unit's def.health, filled for what
 # is left (UiHealth: the value shown is the turn's start while a resolve plays
 # back, so a hit is never spoiled). The third line is the PLAN STATUS, for
 # co-op (Alex: last edit wins, with a full preview so every player sees what
-# has plans and what does not): "plan: n of m steps" with a solid path glyph,
-# or "no plan (flies on)" with a dashed one -- the same marks the motion
-# planner draws on the map -- live on World.plan_changed, whoever made the
-# edit (this player, another player over the network). The header counts the
-# units still without a plan while the turn is planned.
+# has plans and what does not), in marks alone: a solid path glyph for a unit
+# with a plan or a dashed one for a unit that flies on, and the step pips right
+# after it (filled for each planned step) -- the same marks the motion planner
+# draws on the map -- live on World.plan_changed, whoever made the edit (this
+# player, another player over the network). The words "plan: 1 of 2 steps" and
+# "no plan (flies on)" are GONE (Alex, playtest 3: "completely covered by the
+# plan pips in the roster. Lets remove the text"). The header counts the units
+# still without a plan while the turn is planned.
 #
 # After the planning phase (the turn resolving, played back) a live unit's third
 # line reads "flying the turn": its plan is consumed, not missing.
@@ -275,7 +278,8 @@ func _bombs_of(id: String, playing: bool) -> Dictionary:
 	var b := bombs.bombs_left(id)
 	return {"drops_left": bombs.shown_drops(id, playing), "drops_max": int(b["drops_max"]), "per_drop": int(b["per_drop"])}
 
-# The plan status line of a row, as its text.
+# The words of a row's third line: the fate of a down unit, "flying the turn" after planning, and NOTHING for a unit being planned
+# (with a plan or without): that is the plan glyph and the step pips (decision playtest-3).
 func status_text(row: Dictionary) -> String:
 	match str(row["status"]):
 		"down":
@@ -285,11 +289,9 @@ func status_text(row: Dictionary) -> String:
 			if fate != "" and style.lookup("roster.text.fate_" + fate) is String:
 				return style.text("roster.text.fate_" + fate)
 			return style.text("roster.text.down")
-		"plan":
-			return style.text("roster.text.has_plan") % [int(row["planned"]), int(row["steps"])]
 		"flying":
 			return style.text("roster.text.flying")
-	return style.text("roster.text.no_plan")
+	return ""   # (a unit with a plan, or without: the glyph and the step pips say it, no words: decision playtest-3)
 
 # A unit's name on the roster: its callsign (Alex 2026-10-09, data/names/
 # callsigns.json) when it has one, else its id made readable.
@@ -562,7 +564,7 @@ func _draw() -> void:
 	var title_px: float = st.num("fonts.title_px")
 	# Header: the roster's title, the turn and who still needs orders.
 	UiInk.text(self, serif, Vector2(pad, 26.0), "R O S T E R", title_px, ink)
-	UiInk.text(self, italic, Vector2(0.0, 26.0), header_status(), st.num("fonts.detail_px"), ink,
+	UiInk.text(self, italic, Vector2(0.0, 26.0), header_status(), st.num("roster.detail_px"), ink,
 		HORIZONTAL_ALIGNMENT_RIGHT, size.x - pad)
 	UiInk.ink_line(self, PackedVector2Array([Vector2(pad, 34.0), Vector2(size.x - pad, 34.0)]), false, faint, 0.8, 3, 0.4)
 	_draw_group_bar(ink, soft, serif, italic)
@@ -577,7 +579,7 @@ func _draw() -> void:
 func _draw_group_bar(ink: Color, soft: Color, _serif: Font, italic: Font) -> void:
 	var st := style
 	var b := group_button_rect()
-	var detail: float = st.num("fonts.detail_px")
+	var detail: float = st.num("roster.detail_px")
 	var label_x: float = st.num("card.pad_px")
 	UiInk.text(self, italic, Vector2(label_x, b.position.y + b.size.y * 0.5 + detail * 0.34), st.text("roster.group.label"), detail, soft)
 	draw_rect(b, st.color("button_fill"), true)
@@ -595,7 +597,7 @@ func _draw_heading(e: Dictionary, soft: Color, faint: Color, italic: Font) -> vo
 	var pad: float = st.num("card.pad_px")
 	var y: float = float(e["y"])
 	var txt := "%s (%d)" % [st.text("roster.group.heading." + str(e["group"])), int(e["count"])]
-	var px: float = st.num("fonts.small_px")
+	var px: float = st.num("roster.detail_px")
 	var base := y + st.num("roster.group.heading_px") - 5.0
 	UiInk.text(self, italic, Vector2(pad, base), txt, px, soft)
 	var x0 := pad + UiInk.text_width(italic, txt, px) + 8.0
@@ -605,7 +607,7 @@ func _draw_heading(e: Dictionary, soft: Color, faint: Color, italic: Font) -> vo
 # lettering (Track SH). Returns the left edge of what it drew.
 func _draw_reload(at: Vector2, g: Dictionary, ink: Color, soft: Color, italic: Font) -> float:
 	var st := style
-	var px: float = st.num("fonts.detail_px")
+	var px: float = st.num("roster.detail_px")
 	var txt := st.text("roster.text.reloading") % int(g["left"])
 	var tw := UiInk.text_width(italic, txt, px)
 	UiInk.text(self, italic, Vector2(at.x - tw, at.y), txt, px, soft)
@@ -622,7 +624,7 @@ func _draw_bombs(at: Vector2, b: Dictionary, ink: Color, soft: Color, italic: Fo
 	var w: float = st.num("roster.bombs.mark_w_px")
 	var h: float = st.num("roster.bombs.mark_h_px")
 	var gap: float = st.num("roster.bombs.mark_gap_px")
-	var px: float = st.num("fonts.detail_px")
+	var px: float = st.num("roster.detail_px")
 	var txt := st.text("roster.bombs.per_drop_text") % int(b["per_drop"])
 	var tw := UiInk.text_width(italic, txt, px)
 	UiInk.text(self, italic, Vector2(at.x - tw, at.y), txt, px, soft)
@@ -670,17 +672,20 @@ func _draw_row(i: int, row: Dictionary, ink_c: Color, soft_c: Color, faint: Colo
 	UiInk.roundel(self, Vector2(mx, my), mark_r, accent, st.color("card_fill"), ink)
 	var tx := mx + mark_r + 10.0
 	var right := rr.end.x - 10.0
-	var y1 := rr.position.y + 20.0
-	var y2 := rr.position.y + 37.0
-	var y3 := rr.position.y + 54.0
+	var lines: Array = st.lookup("roster.line_y_px")
+	var y1 := rr.position.y + float(lines[0])
+	var y2 := rr.position.y + float(lines[1])
+	var y3 := rr.position.y + float(lines[2])
+	var name_px: float = st.num("roster.name_px")
+	var detail_px: float = st.num("roster.detail_px")
 	# Line 1: the name, and the health pips at the right.
 	var pips_left := UiHealth.draw_pips(self, st, right, y1 - 5.0, int(row["health_max"]), int(row["health"]),
 		st.color("row_down") if down else st.color("health_pip"), st.color("row_down") if down else st.color("health_pip_empty"))
 	var name_w := pips_left - st.num("roster.name_clip_gap_px") - tx
 	var name_txt := str(row["name"])
-	UiInk.text(self, serif, Vector2(tx, y1), name_txt, st.num("fonts.name_px"), txt, HORIZONTAL_ALIGNMENT_LEFT, name_w)
+	UiInk.text(self, serif, Vector2(tx, y1), name_txt, name_px, txt, HORIZONTAL_ALIGNMENT_LEFT, name_w)
 	if down:
-		var nw := minf(UiInk.text_width(serif, name_txt, st.num("fonts.name_px")), name_w)
+		var nw := minf(UiInk.text_width(serif, name_txt, name_px), name_w)
 		draw_line(Vector2(tx, y1 - 5.0), Vector2(tx + nw, y1 - 5.0), txt, 1.0, true)
 	# Line 2: type, speed, band (a down unit: the type only).
 	var detail := "%s · %d %s · %s" % [row["type"], roundi(float(row["speed"])), st.text("roster.speed_unit"), row["band"]]
@@ -693,9 +698,10 @@ func _draw_row(i: int, row: Dictionary, ink_c: Color, soft_c: Color, faint: Colo
 	var bomb_row: Dictionary = row.get("bombs", {})
 	if not bomb_row.is_empty() and not down:
 		detail_right = _draw_bombs(Vector2(detail_right, y2), bomb_row, ink, txt, italic) - 8.0
-	UiInk.text(self, italic, Vector2(tx, y2), detail, st.num("fonts.detail_px"), txt, HORIZONTAL_ALIGNMENT_LEFT, detail_right - tx)
-	# Line 3: the plan status; a down unit has the word instead and no step pips.
-	var detail_px: float = st.num("fonts.detail_px")
+	# (a line wider than its room shrinks to the lettering floor rather than being cut off)
+	var detail_fit := UiInk.fit_px(italic, detail, detail_px, detail_right - tx, st.fit_floor_px())
+	UiInk.text(self, italic, Vector2(tx, y2), detail, detail_fit, txt, HORIZONTAL_ALIGNMENT_LEFT, detail_right - tx, "fit" if detail_fit < st.min_px() else "")
+	# Line 3: the plan glyph and the step pips (no words: decision playtest-3); a down unit has the word instead and no step pips.
 	if down or str(row["status"]) == "flying":
 		UiInk.text(self, italic, Vector2(tx, y3), status_text(row), detail_px, txt)
 	else:
@@ -715,15 +721,13 @@ func _draw_row(i: int, row: Dictionary, ink_c: Color, soft_c: Color, faint: Colo
 		var gap: float = st.num("roster.pip_gap_px")
 		var steps := int(row["steps"])
 		var planned := int(row["planned"])
-		var x0 := right - gap * float(steps - 1) - pr
+		var x0 := tx + gl + dot + st.num("roster.pips_gap_px") + pr   # (the pips follow the glyph: nothing stands between them any more)
 		for k in steps:
 			var c := Vector2(x0 + gap * float(k), y3 - 4.0)
 			if k < planned:
 				draw_circle(c, pr, ink, true, -1.0, true)
 			else:
 				draw_circle(c, pr, st.color("pip_empty"), false, 1.0, true)
-		UiInk.text(self, italic, Vector2(tx + gl + dot + 6.0, y3), status_text(row), detail_px, txt,
-			HORIZONTAL_ALIGNMENT_LEFT, x0 - pr - 6.0 - (tx + gl + dot + 6.0))
 	if i < _row_sep.size() and _row_sep[i] and not sel:
 		var y := rr.end.y
 		draw_line(Vector2(tx, y), Vector2(rr.end.x - 8.0, y), faint, 0.6, true)

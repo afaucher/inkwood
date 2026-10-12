@@ -21,7 +21,7 @@ extends "res://scripts/test_support/test_case.gd"
 #                        the target's shown position
 #   8. NEVER AN ENEMY'S PLAN   a recording planner sees no AI unit id; a source scan of the side view's files
 #   9. INDICATORS ONLY   no unit art, no hex literal in the draw code, no lettering on a cone
-#  10. THE CARD          it grows by the section while the panel shows and keeps on screen at 720 px
+#  10. THE CARD          a CARD OF ITS OWN under the orders card, headed V I E W S (decision playtest-3: Alex, "Should be a distinct section like orders"); the orders card does not grow; it keeps on screen
 #  11. THE FRAMES        every sub-draw ran to its end, in the guns view, the arrow, the drop and the playback
 #  12. THE PLAYBACK      live at the shown pose, the target followed through the turn
 #
@@ -38,8 +38,9 @@ extends "res://scripts/test_support/test_case.gd"
 #  21. THE ARCS BUTTON   the panel's own (the roster header's was removed: Alex 2026-10-11 "Yes, remove the extra") flips the one switch,
 #                        UnitUI.toggle_arcs is that switch and the button follows it (mounted)
 #  22. THE MAP'S ARCS    off by default: the overlay collects nothing until the switch is on
-#  23. THE ROOM          the strips stack in a tall window, the room is shared in a shorter one (the card stays on the screen), and
-#                        a window too short for the strips shows the panel as it was
+#  23. THE ROOM          the strips stack in a tall window, the room is shared in a shorter one (the card stays on the screen),
+#                        a window too short for the strips shows the panel as it was, and one too short for that (1280x720 with
+#                        three units, the card being the third of the column) leaves the views card out
 
 const World = preload("res://scripts/sim/world.gd")
 const AiDumb = preload("res://scripts/sim/ai_dumb.gd")
@@ -204,7 +205,7 @@ func _check_data() -> void:
 				"side_view.strips.box_gap_px", "side_view.strips.name_px", "side_view.strips.box_line_px", "side_view.strips.chevron_px",
 				"side_view.strips.chevron_line_px", "side_view.strips.min_picture_h_px", "side_view.strips.picture_h_px.top",
 				"side_view.strips.picture_h_px.front", "side_view.strips.picture_h_px.side", "side_view.arcs.w_px", "side_view.arcs.h_px",
-				"side_view.top.nose_deg", "side_view.front.theta_bins", "side_view.front.pitch_step_deg", "side_view.front.boundary_samples",
+				"side_view.top.nose_deg", "side_view.card.rule_y_px", "side_view.card.title_cy_px", "side_view.front.theta_bins", "side_view.front.pitch_step_deg", "side_view.front.boundary_samples",
 				"side_view.front.densify_step", "side_view.drop.arc_px", "side_view.drop.arc_alpha", "side_view.drop.spread_h_px",
 			"side_view.drop.spread_alpha", "side_view.drop.land_r_px", "side_view.drop.samples", "side_view.drop.top_px",
 			"side_view.drop.bottom_px", "side_view.drop.left_px", "side_view.drop.right_px", "side_view.text.level_within_m"]:
@@ -214,7 +215,11 @@ func _check_data() -> void:
 			"side_view.strips.open.top", "side_view.strips.open.front", "side_view.strips.open.side", "side_view.top.footprint",
 			"side_view.top.pitch_shift", "side_view.front.rear_dashed"]:
 		check(_st.lookup(f) is bool, "1. ui.json has a flag at '%s'" % f)
-	for t: String in ["side_view.cone_mode", "side_view.text.head_step", "side_view.text.head_now", "side_view.text.head_live", "side_view.text.unit_line",
+	# Alex, playtest 3: 'altituide, step X & views, step X - remove the step X part, it is redundant.' The heading is the card's title now.
+	for t: String in ["side_view.text.head_step", "side_view.text.head_now", "side_view.text.head_live"]:
+		check(not (_st.lookup(t) is String), "1. ui.json no longer has the text %s ('views, step X' is gone)" % t)
+	eq(_st.text("side_view.text.title"), "V I E W S", "1. the card is headed 'V I E W S' (like 'O R D E R S')")
+	for t: String in ["side_view.cone_mode", "side_view.text.title", "side_view.text.live_tag", "side_view.text.unit_line",
 			"side_view.text.above", "side_view.text.below", "side_view.text.level", "side_view.text.drop_line", "side_view.text.drop_line_free",
 			"side_view.text.point", "side_view.text.unseen", "side_view.strips.name.top", "side_view.strips.name.front",
 			"side_view.strips.name.side", "side_view.arcs.label_on", "side_view.arcs.label_off", "side_view.arcs.tooltip"]:
@@ -244,7 +249,7 @@ func _check_who() -> void:
 	var m := _sv.model()
 	eq(m["mode"], "guns", "2. with no drop it is the guns view")
 	eq(m["step"], -1, "2. with no step placed it is the unit as it is now")
-	eq(m["head"], _st.text("side_view.text.head_now"), "2. and the heading says so")
+	eq(m["head"], _st.text("side_view.text.title"), "2. and the heading is the card's title, with no 'step X' or 'now' in it")
 	_w.phase = World.PHASE_RESOLVING
 	_sv.refresh()
 	eq(_sv.is_active(), false, "2. no side view while a turn resolves with no playback")
@@ -334,7 +339,8 @@ func _check_angles() -> void:
 	_sv.refresh()
 	var md := _sv.model()
 	eq(md["step"], 0, "3. the card is about step 1")
-	eq(md["head"], _st.text("side_view.text.head_step") % 1, "3. and the heading says which step")
+	eq(md["head"], _st.text("side_view.text.title"), "3. and the heading is still just the title (the step is on the orders card's strip, not repeated here)")
+	check(not str(md["head"]).contains("step"), "3. no 'step' in the heading")
 	var pd: float = (md["pose"] as Dictionary)["pitch"]
 	near(pd, -_w.combat.max_pitch, 1e-9, "3. a one-band dive in one step pitches the airframe the full max_pitch down")
 	near((md["pose"] as Dictionary)["height_m"], _w.band_height("medium"), 1e-9, "3. the unit is at the step's end height")
@@ -1097,15 +1103,16 @@ func _build_ui_world() -> void:
 	_ui.setup(_wb, _xf, "local")
 	AiDumb.new(_wb).attach()
 	_ui.hud.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	_ui.hud.size = Vector2(1280.0, 720.0)
+	_ui.hud.size = Vector2(1280.0, 1400.0)   # (tall: the views are a card of their own under the orders card and need the room; the short windows are the last stages)
 	_ui.layout()
 	var found: Variant = _ui.get_meta("side_view", null)
-	if not check(found != null and _ui.orders.get_node_or_null("SideView") == found, "10. UnitUI mounted the side view in the orders card"):
+	# Alex, playtest 3: 'In the views section: Should be a distinct section like orders' -- a card of its own in the sidebar column, not a part of the orders card.
+	if not check(found != null and (found as Node).get_parent() == _ui.hud and _ui.orders.get_node_or_null("SideView") == null, "10. UnitUI mounted the views as a card of their own (a sibling of the orders card in the HUD), not inside the orders card"):
 		finish()
 		return
 	_sv2 = found as SideView
 	_base_h = _st.num("orders.height_px")
-	near(_ui.orders.size.y, _base_h, 1e-6, "10. with nothing selected the card is its own size")
+	near(_ui.orders.size.y, _base_h, 1e-6, "10. with nothing selected the orders card is its own size")
 	# Track T's target selection is the one the mount follows: UnitUI.target when it is wired, else the planner's own.
 	if _ui.get("target") != null:
 		print("[test] UnitUI.target exists (Track T): the mount reads it")
@@ -1130,11 +1137,18 @@ func _physics_process(_delta: float) -> void:
 			# p1 selected for a few frames: the panel noticed (the process loop, not a refresh by hand).
 			check(_sv2.is_active(), "10. selecting a friendly unit shows the side view (by the panel's own process loop)")
 			var section: float = _sv2.size.y
-			check(_ui.orders.size.y > _base_h + 50.0, "10. the orders card grew by the section (%.0f -> %.0f px)" % [_base_h, _ui.orders.size.y])
-			near(_ui.orders.size.y, _base_h + section, 1e-6, "10. by exactly the section")
-			check(_ui.orders.position.y + _ui.orders.size.y <= 720.0 - _st.num("card.margin_px") + 1e-6, "10. and it is on screen at 720 px (bottom %.0f)" % (_ui.orders.position.y + _ui.orders.size.y))
-			check(_sv2.visible and _sv2.get_parent() == _ui.orders, "10. the section is a child of the card, visible")
-			check(_ui.over_card(_ui.orders.get_global_rect().get_center() + Vector2(0.0, _ui.orders.size.y * 0.45)), "10. its area counts as the card for the pointer")
+			near(_ui.orders.size.y, _base_h, 1e-6, "10. the orders card did NOT grow: the views are not part of it any more")
+			check(_sv2.visible and _sv2.get_parent() == _ui.hud and _sv2.get_parent() == _ui.orders.get_parent(), "10. the views card is visible, a sibling of the orders card")
+			# WHERE IT SITS (PROPOSED): the sidebar column's third card, in the orders card's column, as wide, one card gap below it.
+			near(_sv2.position.x, _ui.orders.position.x, 1e-6, "10. in the orders card's column")
+			near(_sv2.size.x, _ui.orders.size.x, 1e-6, "10. as wide as the orders card (%.0f px)" % _sv2.size.x)
+			near(_sv2.position.y, _ui.orders.position.y + _ui.orders.size.y + _st.num("card.gap_px"), 1e-6, "10. directly under it, one card gap (%s px) below" % str(_st.num("card.gap_px")))
+			check(_sv2.position.y + section <= 1400.0 - _st.num("card.margin_px") + 1e-6, "10. and on the screen (bottom %.0f of 1400)" % (_sv2.position.y + section))
+			check(not _ui.orders.get_global_rect().intersects(_sv2.get_global_rect()), "10. the two cards do not overlap")
+			check(_ui.over_card(_sv2.get_global_rect().get_center()), "10. the views card's area counts as a card for the pointer (a click there is not the map's)")
+			var sbr: Rect2 = _ui.sidebar_rect()
+			check(sbr.end.y >= _sv2.position.y + section, "10. and the sidebar's rect holds it (bottom %.0f)" % sbr.end.y)
+			eq(_sv2.model()["head"], "V I E W S", "10. headed 'V I E W S', as 'O R D E R S' is")
 			check(_sv2.picture_draws > 0 and _sv2.draw_count > 0, "11. the picture and its heading have drawn (%d, %d)" % [_sv2.picture_draws, _sv2.draw_count])
 			eq(_sv2.failed_draws, 0, "11. every sub-draw ran to its end")
 			# A far target: the arrow.
@@ -1151,8 +1165,9 @@ func _physics_process(_delta: float) -> void:
 			_next(2)
 		2:
 			eq(_sv2.is_active(), false, "10. an enemy selected: no side view")
-			near(_ui.orders.size.y, _base_h, 1e-6, "10. and the card gives its room back")
-			check(not _sv2.visible, "10. (hidden)")
+			near(_ui.orders.size.y, _base_h, 1e-6, "10. and the orders card is its own size as ever")
+			check(not _sv2.visible, "10. the views card is hidden")
+			check(not _ui.over_card(Vector2(_ui.orders.position.x + 10.0, _ui.orders.position.y + _ui.orders.size.y + _st.num("card.gap_px") + 20.0)), "10. and its place is the map's again")
 			# The bomber with a drop onto the tower.
 			_ui.select("b1")
 			_ui.planner.place_point(Vector2(1642.0, 3000.0))
@@ -1173,7 +1188,8 @@ func _physics_process(_delta: float) -> void:
 			eq(_sv2.failed_draws, 0, "11. the fall drew to its end")
 			var info: Dictionary = _wb.drop_spread("b1", 1, Vector2(float(_wb.units["tower"].x), float(_wb.units["tower"].y)))
 			near(float((m2["drop"] as Dictionary)["land_m"]), (info["release"] as Vector2).distance_to(info["aim"] as Vector2), 1e-6, "7. on the mounted UI too: it lands where World.drop_spread says")
-			near(_ui.orders.size.y, _base_h + _sv2.size.y, 1e-6, "10. the card holds the section for the drop view too")
+			near(_ui.orders.size.y, _base_h, 1e-6, "10. the orders card is unchanged for the drop view too")
+			near(_sv2.position.y, _ui.orders.position.y + _ui.orders.size.y + _st.num("card.gap_px"), 1e-6, "10. and the views card is under it")
 			# The playback: p1 flies on with a climb; the picture follows its shown pose, and the AI bomber.
 			_ui.planner.clear()
 			_ui.select("p1")
@@ -1190,7 +1206,8 @@ func _physics_process(_delta: float) -> void:
 		4:
 			var m3 := _sv2.model()
 			check(_sv2.is_active() and bool(m3["live"]), "12. during the playback the side view stays up, live")
-			eq(m3["head"], _st.text("side_view.text.head_live"), "12. and says so")
+			eq(m3["head"], _st.text("side_view.text.title"), "12. under the same title")
+			check(bool(m3["live"]), "12. and says it is live (the 'live' tag beside the Arcs button)")
 			var pose: Dictionary = _ui.marker_layer.pose_of("p1")
 			var ref: Dictionary = m3["ref"]
 			near(float(ref["x"]), float(pose["x"]), 1e-6, "12. at the unit's SHOWN pose (x)")
@@ -1264,14 +1281,14 @@ func _stage_arcs() -> void:
 	_click(_sv2, _sv2.arcs_button_rect().get_center())
 	eq(_ui.arcs_shown(), false, "21. a second click turns them off")
 	eq(_sv2.arcs_button_rect().size, Vector2(_st.num("side_view.arcs.w_px"), _st.num("side_view.arcs.h_px")), "21. the button is the data's size")
-	check(_sv2.arcs_button_rect().end.x <= _sv2.size.x + 1e-6 and _sv2.arcs_button_rect().position.y >= 0.0, "21. inside the panel's heading row, at the right")
+	check(_sv2.arcs_button_rect().end.x <= _sv2.size.x - _st.num("card.pad_px") + 1e-6 and _sv2.arcs_button_rect().position.y >= 0.0 and _sv2.arcs_button_rect().end.y <= _st.num("side_view.card.rule_y_px"), "21. inside the card's title row (above its rule), at the right")
 	eq(_sv2.tooltip_text == "" and _sv2._get_tooltip(_sv2.arcs_button_rect().get_center()) == _st.text("side_view.arcs.tooltip"), true, "21. and it says what it does")
 	# A taller window, so the strips have their room.
 	_ui.hud.size = Vector2(1280.0, 1400.0)
 	_ui.layout()
 	_next(6)
 
-# 23. A tall window: the three strips stack and the card grows by them.
+# 23. A tall window: the three strips stack in the views card (the orders card does not change).
 func _stage_strips_tall() -> void:
 	var lay: Dictionary = _sv2.model()["layout"]
 	eq(lay["mode"], "strips", "23. at 1400 px the strips stack")
@@ -1280,16 +1297,16 @@ func _stage_strips_tall() -> void:
 	var chrome := _st.num("side_view.section.gap_px") + _st.num("side_view.section.head_px") + _st.num("side_view.section.caption_h_px") + _st.num("side_view.section.bottom_px")
 	var want := chrome + 3.0 * _st.num("side_view.strips.head_px") + _pic_h("top") + _pic_h("front") + _pic_h("side") + 3.0 * _st.num("side_view.strips.gap_px")
 	near(_sv2.size.y, want, 1e-6, "23. the section is the data's rows and pictures (%.0f px)" % want)
-	near(_ui.orders.size.y, _base_h + _sv2.size.y, 1e-6, "23. the card grew by exactly it (%.0f px tall)" % _ui.orders.size.y)
-	check(_ui.orders.position.y + _ui.orders.size.y <= 1400.0 - _st.num("card.margin_px") + 1e-6, "23. and it is on the screen")
-	print("[test] at 1280x1400 with 3 units the card is %.0f px tall (the section %.0f)" % [_ui.orders.size.y, _sv2.size.y])
+	near(_ui.orders.size.y, _base_h, 1e-6, "23. the orders card is its own size (%.0f px)" % _ui.orders.size.y)
+	check(_sv2.position.y + _sv2.size.y <= 1400.0 - _st.num("card.margin_px") + 1e-6, "23. and the views card is on the screen (bottom %.0f)" % (_sv2.position.y + _sv2.size.y))
+	print("[test] at 1280x1400 with 3 units the orders card is %.0f px tall and the views card %.0f" % [_ui.orders.size.y, _sv2.size.y])
 	for id: String in STRIP_IDS:
 		check((_sv2._pics[id] as Control).visible and ((_sv2._pics[id] as Control).size.y == _pic_h(id)), "23. the %s picture is on the card at its height" % id)
 	eq(_sv2.failed_draws, 0, "23. every sub-draw of the three strips ran to its end")
 	# A click on a header folds that strip and the card gives its room back; the others stay.
 	_click(_sv2, (rows["front"]["head"] as Rect2).get_center())
 	check(not _sv2.strip_shown("front") and _sv2.strip_shown("top") and _sv2.strip_shown("side"), "23. a click on Front's header folds only Front")
-	near(_ui.orders.size.y, _base_h + want - _pic_h("front") - _st.num("side_view.strips.gap_px"), 1e-6, "23. and the card is that much shorter")
+	near(_sv2.size.y, want - _pic_h("front") - _st.num("side_view.strips.gap_px"), 1e-6, "23. and the views card is that much shorter")
 	_ui.select("p1")
 	_next(7)
 
@@ -1304,7 +1321,7 @@ func _stage_strips_kept() -> void:
 	# A shorter window: the room is shared (each picture no smaller than the data's floor) and the card stays on screen. (The session's
 	# order of opening starts afresh, so the data's priority rules.)
 	SideView.reset_view_setting()
-	var h := 800.0
+	var h := 900.0
 	_ui.hud.size = Vector2(1280.0, h)
 	_ui.layout()
 	_next(8)
@@ -1312,18 +1329,19 @@ func _stage_strips_kept() -> void:
 # 23. A shorter window: the open strips share the room, the ones that do not fit are held folded, the card stays on the screen.
 func _stage_room_short() -> void:
 	var lay: Dictionary = _sv2.model()["layout"]
-	var h := 800.0
-	eq(lay["mode"], "strips", "23. at 800 px there is still room for a strip")
+	var h := 900.0
+	eq(lay["mode"], "strips", "23. at 900 px there is still room for a strip (the views card sits under the roster and the orders card)")
 	var shown: Array = []
 	for e: Dictionary in lay["strips"]:
 		if bool(e["shown"]):
 			shown.append(str(e["id"]))
 			check((e["pic"] as Rect2).size.y >= _st.num("side_view.strips.min_picture_h_px") - 1e-6, "23. the %s picture is not under the data's floor (%.0f px)" % [str(e["id"]), (e["pic"] as Rect2).size.y])
 	check(shown.size() >= 1 and shown.size() < 3, "23. the room holds some of the open strips, not all (%s)" % str(shown))
-	check(_ui.orders.position.y + _ui.orders.size.y <= h - _st.num("card.margin_px") + 1e-6, "23. and the card stays on the screen (bottom %.0f of %.0f)" % [_ui.orders.position.y + _ui.orders.size.y, h])
+	check(_sv2.position.y + _sv2.size.y <= h - _st.num("card.margin_px") + 1e-6, "23. and the views card stays on the screen (bottom %.0f of %.0f)" % [_sv2.position.y + _sv2.size.y, h])
 	for id: String in STRIP_IDS:
 		check(_sv2.strip_chosen(id), "23. what the player chose is kept: %s is still open" % id)
-	eq(shown[0], "side", "23. the Side strip, the picture the panel has always had, keeps its place first (the data's priority)")
+	check(shown.has("side"), "23. the Side strip, the picture the panel has always had, keeps its place first (the data's priority)")
+	check(shown.size() < 2 or (shown.has("top") and not shown.has("front")), "23. then Top, then Front (the data's priority: side, top, front): %s" % str(shown))
 	# A strip held folded comes forward on a click, and the one with the least claim gives its place up.
 	var held := ""
 	for id: String in STRIP_IDS:
@@ -1333,22 +1351,32 @@ func _stage_room_short() -> void:
 	check(not _sv2.strip_shown("side") or shown.size() >= 2, "23. the strip opened last has the first claim: Side gives its place up when only one fits")
 	for id: String in STRIP_IDS:
 		check(_sv2.strip_chosen(id), "23. what the player chose is still kept: %s is open" % id)
-	check(_ui.orders.position.y + _ui.orders.size.y <= h - _st.num("card.margin_px") + 1e-6, "23. the card is still on the screen")
-	_ui.hud.size = Vector2(1280.0, 720.0)
+	check(_sv2.position.y + _sv2.size.y <= h - _st.num("card.margin_px") + 1e-6, "23. the card is still on the screen")
+	_ui.hud.size = Vector2(1280.0, 790.0)
 	_ui.layout()
 	_next(9)
 
-# 23. 1280x720 with three units, as before the strips: the heading row with its Arcs button, the Side picture, the quiet line.
+# 23. A window with room for the views card but not for the strips (790 px high, three units): the title row with its Arcs button, the Side picture, the quiet line.
 func _stage_room_compact() -> void:
 	_next(10)   # (this stage waits for frames: no other physics frame may enter it)
 	var lay: Dictionary = _sv2.model()["layout"]
-	eq(lay["mode"], "compact", "23. at 720 px there is room for the panel as it was (the Side picture alone)")
+	eq(lay["mode"], "compact", "23. at 790 px there is room for the card as it was before the strips (the Side picture alone)")
 	check(_sv2.is_active() and _sv2.has_arcs_button(), "23. still up, still with its Arcs button")
 	check((_sv2.model()["size"] as Vector2).y >= _st.num("side_view.section.min_picture_h_px"), "23. its picture is not under the data's floor (%.0f px)" % (_sv2.model()["size"] as Vector2).y)
 	eq(_sv2.press_strip("top"), false, "23. no strips to press")
-	check(_ui.orders.position.y + _ui.orders.size.y <= 720.0 - _st.num("card.margin_px") + 1e-6, "23. the card is on the screen (bottom %.0f)" % (_ui.orders.position.y + _ui.orders.size.y))
-	print("[test] at 1280x720 with 3 units the panel is %s, the section %.0f px, the card %.0f px" % [str(lay["mode"]), _sv2.size.y, _ui.orders.size.y])
-	# Too short even for that: nothing, and the card is its own size again.
+	check(_sv2.position.y + _sv2.size.y <= 790.0 - _st.num("card.margin_px") + 1e-6, "23. the card is on the screen (bottom %.0f)" % (_sv2.position.y + _sv2.size.y))
+	print("[test] at 1280x790 with 3 units the views card is %s, %.0f px high; the orders card %.0f px" % [str(lay["mode"]), _sv2.size.y, _ui.orders.size.y])
+	# 1280x720 with three units: the roster and the orders card leave the views card no room (it is a card of its own now, so it needs its title
+	# row and its own margins on top of the picture): it is left out, and the orders card is whole. A taller window shows it.
+	_ui.hud.size = Vector2(1280.0, 720.0)
+	_ui.layout()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+	eq(_sv2.is_active(), false, "23. at 1280x720 with three units there is no room for the views card under the orders card: it is left out")
+	check(not _sv2.visible, "23. (hidden)")
+	near(_ui.orders.size.y, _base_h, 1e-6, "23. and the orders card is whole")
+	# Too short even for that: nothing, as well.
 	_ui.hud.size = Vector2(1280.0, 560.0)
 	_ui.layout()
 	await get_tree().process_frame
@@ -1356,7 +1384,7 @@ func _stage_room_compact() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	eq(_sv2.is_active(), false, "23. a window too short for the Side picture shows no panel")
-	near(_ui.orders.size.y, _base_h, 1e-6, "23. and the card gives its room back")
+	near(_ui.orders.size.y, _base_h, 1e-6, "23. and the orders card is its own size")
 	await _smoke_all_units()
 	check(_smoke_done, "18. the smoke check of every kind of unit ran to its end (a runtime error would have ended it early)")
 	eq(_sv2.failed_draws, 0, "no sub-draw failed anywhere in the run")

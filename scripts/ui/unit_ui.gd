@@ -17,6 +17,8 @@ extends Node
 #                  ring's health arc (health_arc.gd) is its first child
 #   roster         roster.gd              the right-hand sidebar (HUD)
 #   orders         motion_planner_panel.gd  the orders card under it: altitude, undo, clear, Ready
+#   (the views)    side_view.gd           the VIEWS card under that (meta "side_view"): top, front and side
+#                                         pictures of the selected unit's cones (decision playtest-3)
 #
 # map_parent / hud_parent default to two CanvasLayers of its own (1 and 2). The
 # map layers must sit in SCREEN space (identity canvas transform): the mapping
@@ -34,7 +36,8 @@ extends Node
 #
 # CO-OP (Alex 2026-10-09: last edit wins, a full preview, no unit belongs to a
 # player; Track U2): every player unit's plan is drawn thin on the map and the
-# roster marks each unit "plan: n of m steps" or "no plan (flies on)", both
+# roster marks each unit's plan with a glyph and step pips (the words "plan: n of m
+# steps" and "no plan (flies on)" are gone: decision playtest-3), both
 # live on World.plan_changed whoever edited (this player, or another over the
 # network). An AI unit's plan is NEVER drawn (motion_planner.gd plan_shown).
 # A down unit's roster row is greyed and the unit cannot be selected
@@ -370,14 +373,15 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	orders.hover_changed.connect(func(button: String) -> void: planner.set_drop_hover(button == "drop"))
 	orders.player_name = func(id: String) -> String: return str(player_name.call(id))
 	# --- side view (Track V) ---
-	# The side view (scripts/ui/side_view.gd): a section at the bottom of the orders card for the selected
-	# friendly unit -- its weapon cones in elevation and the target's straight-line position -- and the card
-	# grows by it while it shows. Reach it as orders.get_node("SideView") or get_meta("side_view"). Track T's
-	# target selection (UnitUI.target) is taken through target_source whenever it exists.
+	# The side view (scripts/ui/side_view.gd): the VIEWS card, the third card of the column under the orders card, for the
+	# selected friendly unit -- its weapon cones from above, in front and from the side, and the target's straight-line
+	# position (decision playtest-3: a distinct section like 'orders'; it used to be a section that grew the orders card).
+	# Reach it as get_meta("side_view") or hud.get_node("SideView"). Track T's target selection (UnitUI.target) is taken
+	# through target_source whenever it exists.
 	var side_view_script: GDScript = load("res://scripts/ui/side_view.gd")
 	if side_view_script != null and side_view_script.can_instantiate():
 		var side_view = side_view_script.new()
-		orders.add_child(side_view)
+		hud.add_child(side_view)
 		side_view.setup(world, planner, selection, style)
 		side_view.attach(orders)
 		# (UnitUI.target when Track T has wired it, else the planner's own selection -- the same object once shared.)
@@ -491,7 +495,7 @@ func set_mapping(host_mapping: Variant) -> void:
 	trails.set_mapping(host_mapping)
 	fx.set_mapping(host_mapping)
 
-# The sidebar column: roster at the top right, orders under it.
+# The sidebar column: roster at the top right, orders under it, the views under that.
 func layout() -> void:
 	if hud == null:
 		return
@@ -500,6 +504,10 @@ func layout() -> void:
 	var x := hud.size.x - m - w
 	roster.position = Vector2(x, m)
 	orders.position = Vector2(x, m + roster.size.y + style.num("card.gap_px"))
+	var views: Variant = get_meta("side_view", null)
+	if views != null and views.has_method("place"):
+		views.place()   # (the views card sits under the orders card: it asks for the room that is left, so it follows at once)
+		views.refresh()
 
 func select(id: String) -> void:
 	selection.select(id)
@@ -519,6 +527,9 @@ func hud_insets() -> Dictionary:
 func sidebar_rect() -> Rect2:
 	var m: float = style.num("card.margin_px")
 	var bottom := orders.position.y + orders.size.y + m
+	var views: Variant = get_meta("side_view", null)
+	if views != null and (views as Control).visible:
+		bottom = (views as Control).position.y + (views as Control).size.y + m
 	return Rect2(roster.position.x - m, 0.0, sidebar_width_px(), bottom)
 
 # --- The turn ----------------------------------------------------------------------
@@ -905,8 +916,12 @@ func _input(event: InputEvent) -> void:
 
 # Whether a viewport point is on the roster or the orders card.
 func over_card(viewport_pt: Vector2) -> bool:
-	for c: Control in [roster, orders]:
-		if c != null and c.is_visible_in_tree() and c.get_global_rect().has_point(viewport_pt):
+	var cards: Array = [roster, orders]
+	var views: Variant = get_meta("side_view", null)
+	if views != null:
+		cards.append(views)   # (the views card: a click on it is the card's, not the map's)
+	for c: Variant in cards:
+		if c != null and (c as Control).is_visible_in_tree() and (c as Control).get_global_rect().has_point(viewport_pt):
 			return true
 	return false
 

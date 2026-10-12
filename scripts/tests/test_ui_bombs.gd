@@ -108,7 +108,7 @@ func _check_data(st: UiStyle) -> void:
 			"bombs.pin.unselected_alpha", "bombs.pin.crosshair_k", "bombs.pin.tag.r_px", "bombs.pin.tag.px", "bombs.pin.tag.line_px", "bombs.pin.cone.line_px"]:
 		check(st.lookup(n) is float or st.lookup(n) is int, "ui.json has a number at '%s'" % n)
 	for n: String in ["bombs.text.label", "bombs.text.place_first", "bombs.text.none_left", "bombs.text.free", "bombs.text.on", "bombs.text.target_none",
-			"bombs.text.target_unit", "bombs.text.target_point", "bombs.text.target_accuracy", "orders.text.selected", "orders.text.hint_more", "orders.text.hint_full",
+			"bombs.text.target_unit", "bombs.text.target_point", "bombs.text.target_accuracy", "orders.text.hint_place", "orders.text.altitude", "orders.text.no_special",
 			"roster.bombs.per_drop_text", "bombs.aim.mode", "keys.drop", "planner.hover.cursor.aim"]:
 		check(st.lookup(n) is String, "ui.json has a string at '%s'" % n)
 	check(st.lookup("bombs.text.no_bombs") is String, "bombs.text.no_bombs exists (it may be empty)")
