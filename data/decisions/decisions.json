@@ -2190,7 +2190,8 @@
         "weapon_ids": "PROPOSED names: quad_mg (the mobile AA), deck_mg (the cutter) and ship_flak (the cruiser), for the one shared id aa_guns; the tracer list in data/fx/fx.json holds quad_mg and deck_mg, ship_flak draws the battery's bursts (F2)",
         "machine_gun_cone": "PROPOSED numbers: all around, from the horizon (0 degrees) to 50 degrees up (elevation_deg 25, half_height_deg 25); the lower edge is the horizon, not below it, so a machine gun still cannot hit what is on the ground (a lower edge below the horizon would let them, a rule nobody has decided). A plane straight over a mount is out of the cone: a blind disc of 197 m under a low plane, 667 m under a medium one",
         "machine_gun_odds": "PROPOSED: the range, base odds, rolls a second and tracking of the former aa_guns, unchanged (quad_mg 600 m, deck_mg 320 m, 0.07 a roll, 2 rolls a second a mount, 60 deg/s), so the cone is the only change",
-        "flak_cone": "ship_flak keeps the former cone, 2 degrees to straight up, flat odds; 'best directly overhead' is coverage (the only AA weapon on the water that covers it), not a higher chance there"
+        "flak_cone": "ship_flak keeps the former cone, 2 degrees to straight up, flat odds; 'best directly overhead' is coverage (the only AA weapon on the water that covers it), not a higher chance there",
+        "measured_2026_10_11": "builder AA, tmp/aa/aa_probe.gd, expected pips per pass of a bomber at cruise, straight over / 300 m aside, before -> after: mobile AA low 2.03 / 1.85 -> 1.82 / 1.85, medium 1.70 / 1.40 -> 0.61 / 0.92; cutter low 1.96 / 0.85 -> 1.49 / 0.85, medium 0; cruiser low 3.94 / 1.74 unchanged, medium 0. Suppress's scripted bombing run (40 spread seeds, tmp/aa/suppress_probe.gd), players at medium: the guns' expected pips a game 9.7 -> 9.1, units downed by guns 1.45 -> 1.02, won 15 -> 23 of 40; at low: 4.4 -> 4.5, won 40 of 40 both"
       },
       "applied_to": [
         "data/units/mobile_aa.json (weapon quad_mg)",
@@ -2342,10 +2343,13 @@
         "to_discuss": "(b)",
         "trees": "thin: a chance per canopy to stop a round (Alex)",
         "hull_down": "yes: two layers, hull and turret (Alex)",
-        "houses_walls_damage": "later (Alex)"
+        "houses_walls_damage": "later (Alex)",
+        "method": "2.5D: straight lines walked across a height grid built once from the map (ground levels, houses, walls, sandbags, the bridge deck); trees as thin canopies; units as two boxes, hull and turret; sample lines per box give the visible share",
+        "fully_hidden": "hold: a gun does not fire at a target it cannot see any part of (Alex)",
+        "air_ground": "the same line check between planes and the ground: hills can block the low band (Alex)"
       },
       "status": "open (to discuss)",
-      "notes": "Alex: '9 I want to discuss b'. And on tank accuracy falling with range and rising with target size: '11, yes but directly impacts 9'. On the questions: '3 let's discuss this model in more detail? Are we doing ray casting? How do we do the height calculation?' / '4 thin' / '5 yes, two layers, hull and turret.' / '6 Later' / '7 what line rule?'"
+      "notes": "Alex: '9 I want to discuss b'. And on tank accuracy falling with range and rising with target size: '11, yes but directly impacts 9'. On the questions: '3 let's discuss this model in more detail? Are we doing ray casting? How do we do the height calculation?' / '4 thin' / '5 yes, two layers, hull and turret.' / '6 Later' / '7 what line rule?' On the line-of-fire explanation: '1. Hold, otherwise we would just mow down anything in between on purpose.' / '2. Yes' / '3. What could you actually show here?'"
     },
     {
       "date": "2026-10-11",
