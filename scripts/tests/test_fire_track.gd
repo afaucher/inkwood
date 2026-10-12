@@ -119,7 +119,10 @@ func _still_seen() -> bool:
 	check(wp.spotted_now("axis", {"unit": "tank"}), "1. (spotting) an enemy plane over the smoke is spotted as ever")
 	# the woods radius is the woods' and smoke does not add to it: a tank in a grove AND in smoke is seen at 190 m and not at 250 m, with the smoke or without
 	var water: RefCounted = WaterGen.shared(SEED)
-	var gm: RefCounted = GroundMap.shared(SEED, water)
+	# A GroundMap of the test's own, not GroundMap.shared: with the shared one, the village its terrain builds for the trees stayed in the
+	# static cache and this test crashed at EXIT (0xC0000005 after its pass marker, every run; 2026-10-11, found when build.ps1's gate
+	# failed). Freed with the function, it leaves nothing for the engine's shutdown to tear down.
+	var gm: RefCounted = GroundMap.new(SEED, water)
 	var src := FireTrees.new(gm.terrain)
 	var site: Vector2 = WorldLayout.shared(SEED).sites()["radio_tower"]
 	var grove := FireFakes.grove_point(gm, src, site)
