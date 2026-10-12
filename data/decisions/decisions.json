@@ -2293,10 +2293,11 @@
         "rule": "not identical unless there is no reason to be different",
         "layer": "PROPOSED: smoke over the surface units and their shadows, under the aircraft; its own ground shadow stays under the units (data/fx/fx.json smoke_model.layer)",
         "rise": "PROPOSED: ground and sea damage smoke 4.0 m/s (= the ruin's and the wreck's smolder), a plane's trail 0 with its reason in the data",
-        "open": "docs/proposals/smoke-audit.md section 5: planes' rise, the heavy and the bomber's smaller trail, old puffs in fog"
+        "open": "docs/proposals/smoke-audit.md section 5: planes' rise, the heavy and the bomber's smaller trail, old puffs in fog",
+        "plane_trails": "planes' smoke trails climb like ground smoke (Alex); the heavy fighter's and the bomber's trails keep the smaller, light fighter's source size (Alex)"
       },
       "status": "chosen by Alex",
-      "notes": "Alex: '2 - yes, audit everything for smoke consistency. Not identical unless there is no reason to be different.'"
+      "notes": "Alex: '2 - yes, audit everything for smoke consistency. Not identical unless there is no reason to be different.' Asked whether planes' trails should rise like ground smoke and whether the heavy fighter's and bomber's trails stay at their new, smaller size: 'Yes to both'."
     },
     {
       "date": "2026-10-11",
