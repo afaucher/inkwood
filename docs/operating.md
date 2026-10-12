@@ -89,7 +89,10 @@ agent starting on Inkwood reads both, then `docs/status.md` for what is in fligh
 
 - **The gate**: every test in `scripts/tests/`, each through `test_runner.ps1`; read
   `test_logs/<name>.log` for `>>> [TEST PASSED] <name> <<<`, never the runner's
-  stdout. A parallel loop of runners (5 to 6 at a time) runs the whole gate in a
+  stdout, AND check the runner's exit code is 0: a crash while quitting leaves the
+  marker in the log and fails build.ps1 (test_fire_track, 2026-10-11: it passed every
+  marker-only gate and failed the build twice). `Start-Process -PassThru` does not report
+  the exit code dependably; have each run write `$LASTEXITCODE` to a file. A parallel loop of runners (5 to 6 at a time) runs the whole gate in a
   few minutes; networked tests own fixed ports (CLAUDE.md), so one run at a time.
 - **build.ps1 stops any running copy of the game by name** (`Stop-Process -Name
   Inkwood`) before exporting. Alex may be playtesting: ask before running it. Do
