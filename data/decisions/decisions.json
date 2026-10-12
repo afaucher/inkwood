@@ -2185,11 +2185,12 @@
       "parameters": {
         "flak": "exploding shells, an upward cone, best directly overhead, drawn as bursts",
         "machine_gun": "bullets, around and lower, drawn as tracers",
-        "mapping_proposed": "PROPOSED, awaiting Alex: the mobile AA's quad mount and the cutter's guns are machine guns; the cruiser's AA is flak"
+        "mapping_proposed": "PROPOSED, awaiting Alex: the mobile AA's quad mount and the cutter's guns are machine guns; the cruiser's AA is flak",
+        "mapping": "the mobile AA's quad mount and the cutter's guns are machine guns (tracers, around and lower); the cruiser's AA is flak (bursts, up) (Alex: 'good')"
       },
       "applied_to": [],
-      "status": "chosen by Alex (the rule); the mapping proposed",
-      "notes": "Alex: 'So, I think the question is what is the weapon. Flak would be shells shot that then explode. Machine guns would be bullets which don't. But Flak is pointed up and machine guns are around and less up. So flak guns have better coverage in the area directly above them.' Today all three (cruiser, mobile AA, patrol boat) share one 'aa_guns' weapon with the flak's upward cone, and it draws tracers."
+      "status": "chosen by Alex",
+      "notes": "Alex: 'So, I think the question is what is the weapon. Flak would be shells shot that then explode. Machine guns would be bullets which don't. But Flak is pointed up and machine guns are around and less up. So flak guns have better coverage in the area directly above them.' Today all three (cruiser, mobile AA, patrol boat) share one 'aa_guns' weapon with the flak's upward cone, and it draws tracers. Then, on the proposed mapping: '5 good'. On a 'fires' field for every weapon: '6 good but we need more here. Let's discuss.'"
     },
     {
       "id": "cruiser-fan",
@@ -2246,6 +2247,131 @@
       ],
       "status": "chosen by Alex; to be built",
       "notes": "Alex: 'Playtest feedback. In the views section: * Should be a distinct section like 'orders' * altituide, step X & views, step X - remove the step X part, it is redundant. * The step indicator, make it bigger and remove step 1 of 2 AND the whole text for: \"click a node to change it, or add step 2\"  The intent is to make steps clearer. Tanks * You need to be able to zoom in further, they are too small * Their shadows render on the smoke below the bridge, but they are on the ground?  what is that smoke, it looks broken!?  it was there when we started. * I tried to use the 'special' but there is no indication that it is engaged or why it won't engage. * Tanks should have like a forward 170 arc.  Not shoot directly behind. Roster \"no plan (files on)\" and \"plan: 1 of 2 steps\"  there are completely covered by the plan pips in the roster.  Lets remove the text.  Make the remaining text a little bigger.' Then: 'Let's make a quick chart of the different heights involved as well so we can make sure that all of our new units make sense with the rest of the world' and 'Before we solve the rest of them, let's document the feedback. Let's solve the smoke and height mystery here.' Later: 'The other play test feedback to add to that note is: There is definitely a judder when zooming in or out. Like there's two systems fighting each other for deciding The view. We need to look at all the different visual feedback items in the game: tracers, flak explosions. Everything where something is happening. Ex: Missed shots should show where they hit. Fired shots should have smoke for large rounds (tanks, artillery and ship cannons). Landed shots should have an impact even if they don't destroy you. Let's enumerate all these visual feedback spots and which do and don't have coverage. Let's look at our height model. How do cannon rounds cross over sandbags but hit tanks, or houses, or maybe even trees? What is our accuracy for tanks?' Then: 'Actually, pause those. I'm going to have another agent work on it.' Then, of the smoke questions and the heights chart: 'Let's actually add that to the handoff notes. And give me an actual prompt for the other agent.'"
+    },
+    {
+      "date": "2026-10-11",
+      "board": "none (said in chat)",
+      "options": [],
+      "applied_to": [],
+      "id": "damage-looks",
+      "area": "Effects, Units",
+      "question": "How does every unit, prop and structure show its damage, and how do we make sure each gets one decided?",
+      "chosen": null,
+      "parameters": {
+        "bridge_now": "no damage indicator for now (Alex: fine)"
+      },
+      "status": "open (to discuss)",
+      "notes": "On the bridge's smoke question: 'A damaged bridge. Let's think more generally. How does each unit/prop/structure manage its damage indicators? Right now bridges don't have anything, that is fine. But let's figure out what might be appropriate defaults and how we can make sure everything gets something decided? The latter could be in code or docs or skills, etc.'"
+    },
+    {
+      "date": "2026-10-11",
+      "board": "none (said in chat)",
+      "options": [],
+      "applied_to": [],
+      "id": "smoke-consistency",
+      "area": "Effects",
+      "question": "Is every smoke drawn the same way (layer, rise, wind, size)?",
+      "chosen": "audit every smoke for consistency; a ground unit's damage smoke above the unit and its shadow, rising and leaning downwind; alike unless there is a reason to differ",
+      "parameters": {
+        "rule": "not identical unless there is no reason to be different"
+      },
+      "status": "chosen by Alex",
+      "notes": "Alex: '2 - yes, audit everything for smoke consistency. Not identical unless there is no reason to be different.'"
+    },
+    {
+      "date": "2026-10-11",
+      "board": "none (said in chat)",
+      "options": [],
+      "applied_to": [],
+      "id": "impact-by-round-and-target",
+      "area": "Effects, Combat",
+      "question": "What decides the size and the look of a puff or an impact?",
+      "chosen": "a property of the round, the thing hit, or both: a round hitting water splashes rather than exploding with smoke; puffs are not sized by the unit's length",
+      "parameters": {},
+      "status": "chosen by Alex (the direction)",
+      "notes": "Alex, on 'puffs sized by a small source, not the unit's length': '3 - yes, this should probably be a property of either the round or the thing being hit or both. Ex a round hitting water would splash, not explode with smoke. Right?'"
+    },
+    {
+      "date": "2026-10-11",
+      "board": "none (said in chat)",
+      "options": [],
+      "applied_to": [],
+      "id": "round-model",
+      "area": "Combat, Effects",
+      "question": "What does a weapon fire, and which of the round's properties matter (a 'fires' field: machine gun, cannon, flak, shell)?",
+      "chosen": null,
+      "parameters": {
+        "direction": "a 'fires' field on every weapon: good (Alex)"
+      },
+      "status": "open (to discuss)",
+      "notes": "Alex: '6 good but we need more here. Let's discuss.'"
+    },
+    {
+      "date": "2026-10-11",
+      "board": "variants/gunfire/ (being made)",
+      "options": [],
+      "applied_to": [],
+      "id": "gunfire-looks",
+      "area": "Effects",
+      "question": "How do big guns' muzzle smoke and a hit that does not kill look?",
+      "chosen": null,
+      "parameters": {},
+      "status": "open (options being made)",
+      "notes": "Alex: '8 yes, give options'."
+    },
+    {
+      "date": "2026-10-11",
+      "board": "none (said in chat)",
+      "options": [],
+      "applied_to": [],
+      "id": "line-of-fire",
+      "area": "Combat",
+      "question": "Does cover block shots: (a) a cover factor, (b) real lines of fire against every blocker's height, (c) the fog's line of sight?",
+      "chosen": null,
+      "parameters": {
+        "to_discuss": "(b)"
+      },
+      "status": "open (to discuss)",
+      "notes": "Alex: '9 I want to discuss b'. And on tank accuracy falling with range and rising with target size: '11, yes but directly impacts 9'."
+    },
+    {
+      "date": "2026-10-11",
+      "board": "none (said in chat)",
+      "options": [],
+      "applied_to": [],
+      "id": "air-to-ground-low",
+      "area": "Combat",
+      "question": "Low-band planes' turrets can hit ground units (never designed): block it until strafing is designed?",
+      "chosen": "leave it as it is",
+      "parameters": {},
+      "status": "chosen by Alex",
+      "notes": "Alex: '10, leave it'."
+    },
+    {
+      "date": "2026-10-11",
+      "board": "none (said in chat)",
+      "options": [],
+      "applied_to": [],
+      "id": "tank-accuracy",
+      "area": "Combat",
+      "question": "Should a tank's accuracy fall with range and rise with the target's size?",
+      "chosen": "yes; it goes with the line-of-fire model",
+      "parameters": {},
+      "status": "chosen by Alex; waits on line-of-fire",
+      "notes": "Alex: '11, yes but directly impacts 9'."
+    },
+    {
+      "date": "2026-10-11",
+      "board": "variants/scenery-heights/ (being made)",
+      "options": [],
+      "applied_to": [],
+      "id": "scenery-heights",
+      "area": "World, Style",
+      "question": "Real-world heights for trees, houses and walls (prototype px today: walls 5-7 m, houses to 14.5 m, trees to 29 m)?",
+      "chosen": null,
+      "parameters": {},
+      "status": "open (options being made)",
+      "notes": "Alex: '12 yes, but show me'."
     }
   ]
 }

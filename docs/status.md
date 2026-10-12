@@ -9,7 +9,11 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| Third playtest: the bridge's smoke (playtest-3 bridge_smoke) | lead session | waiting on Alex's three answers | 2026-10-11 |
+| Smoke consistency (smoke-consistency, impact-by-round-and-target): audit every smoke, then make it consistent | lead session (builder SMOKE) | scripts/fx/ smoke and puffs, data/fx/fx.json smoke keys, scripts/ui/combat_feed.gd damage smoke, the effects' layer order in scripts/ui/unit_ui.gd, units' smoke fields; docs/proposals/smoke-audit.md | 2026-10-11 |
+| The AA weapons by what they fire (weapon-kinds) | lead session (builder AA) | data/units/mobile_aa.json, patrol_boat.json, cruiser.json, data/fx/fx.json tracers.weapons, their tests | 2026-10-11 |
+| Board: muzzle smoke and impacts by what is hit (gunfire-looks) | lead session (builder GF) | variants/gunfire/, a new board script under scripts/fx/ | 2026-10-11 |
+| Board: scenery heights (scenery-heights) | lead session (builder SH) | variants/scenery-heights/, a new board script | 2026-10-11 |
+| Proposals to discuss: damage looks, the round model, lines of fire (damage-looks, round-model, line-of-fire) | lead session | docs/proposals/ | 2026-10-11 |
 
 ## Next, free to take
 
