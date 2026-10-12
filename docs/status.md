@@ -9,7 +9,6 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| The bridge's smoke and a chart of the world's heights (decision playtest-3) | fire session (nice-dewdney worktree) | investigation first, in tmp/; the files a fix touches are named here before it is made | 2026-10-11 |
 
 ## Next, free to take
 
@@ -22,9 +21,10 @@ Decisions and open questions live in the Decision Ledger
    its look and cone); the zoom judders in and out ('like there's two systems fighting each other for deciding the
    view'). Two studies Alex is giving to another agent: every visual feedback moment and which are drawn (missed shots
    show where they land, big guns make muzzle smoke, a hit that does not kill still shows an impact), and the shot height
-   model (rounds over sandbags but into tanks, houses, trees; a tank's accuracy). The bridge's smoke is FOUND (decision
-   playtest-3 bridge_smoke: plane damage smoke on a 40 m bridge, drawn under the markers) and a chart of the world's
-   heights is with the forest fire session.
+   model (rounds over sandbags but into tanks, houses, trees; a tank's accuracy). And a chart of every height in the
+   world with the draw order by height. The bridge's smoke is FOUND, not yet fixed (playtest-3 bridge_smoke: plane damage
+   smoke on a 40 m bridge, puffs sized by the unit and drawn under the markers); Alex has three questions to answer.
+   All of this item is handed to one agent (Alex, 2026-10-11).
 2. **A playtest build** with Strike, Suppress and Hold the bridge.
    build.ps1 closes a running game: ask Alex first.
 3. **Terrain variety board** (decision water-layer): beaches, coastal cliffs, marsh,
