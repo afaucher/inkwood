@@ -9,14 +9,22 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
+| The bridge's smoke and a chart of the world's heights (decision playtest-3) | fire session (nice-dewdney worktree) | investigation first, in tmp/; the files a fix touches are named here before it is made | 2026-10-11 |
 
 ## Next, free to take
 
-1. **A playtest build** with Strike, Suppress and Hold the bridge.
+1. **The third playtest's interface and tank asks** (decision playtest-3, Alex's words in its notes): the views
+   (top, front, side) a section of their own in the card like 'orders'; 'altitude, step X' and 'views, step X' lose
+   'step X'; the step indicator bigger, without 'step 1 of 2' and without 'click a node to change it, or add step 2';
+   the roster without 'no plan (flies on)' and 'plan: 1 of 2 steps' (the pips cover them), its other text a little
+   bigger; the camera zooms in further (tanks too small); a tank's special says when it is engaged and why it will not
+   engage; tanks fire on a forward arc of about 170 degrees, not behind (see also decision what a weapon fires decides
+   its look and cone). The bridge's smoke and a chart of the world's heights are with the forest fire session.
+2. **A playtest build** with Strike, Suppress and Hold the bridge.
    build.ps1 closes a running game: ask Alex first.
-2. **Terrain variety board** (decision water-layer): beaches, coastal cliffs, marsh,
+3. **Terrain variety board** (decision water-layer): beaches, coastal cliffs, marsh,
    rock, orchards, wood density.
-3. **Wreck litter board** (decision wreck-litter, open): sunken boats and planes in the
+4. **Wreck litter board** (decision wreck-litter, open): sunken boats and planes in the
    water as environment, for character. After sinking lands: reuse the sunk-hull art,
    placed by seed; the board picks how many, where and which kinds.
 
