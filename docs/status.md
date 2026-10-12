@@ -10,7 +10,6 @@ Decisions and open questions live in the Decision Ledger
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
 | Lines of fire, stage 1 (decision line-of-fire): the height grid and the line check, not used by combat yet; proofs: the heights over the map, side views of real shots | lead session (builder LOF1) | new scripts/sim/line_of_fire*.gd and height_grid*.gd, new data/sim/line_of_fire.json, the blockers' sim shapes (structures and the battery's sandbags as data), a debug overlay and shot scripts, scripts/tests/test_line_of_fire*.gd | 2026-10-11 |
-| Board: muzzle smoke and impacts by what is hit (gunfire-looks) | lead session (builder GF) | variants/gunfire/, a new board script under scripts/fx/ | 2026-10-11 |
 
 ## Next, free to take
 

@@ -1,0 +1,2570 @@
+{
+  "id": "gunfire",
+  "options": [
+    {
+      "option": "G0",
+      "label": "G0  As built today (reference, not an option)",
+      "note": "What the game draws now, for comparison: no muzzle flash or smoke, no impact for a tank or cannon round, the cruiser's shell a B3 bomb burst on every surface (water included). Tracers T5, flak F2 and the damage smoke W1 are the decided looks and are drawn the same in every column.",
+      "rows": [
+        {
+          "title": "a. THE DUEL AT THE PLANNING ZOOM (0.35): two player tanks south of the bridge, two wave tanks 120 m north of it, all firing on their own (turn 1 at 1 to 5 s, turn 2 from 6 s)",
+          "key": "duel_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_duel_plan_0.png",
+              "caption": "1.10 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_duel_plan_1.png",
+              "caption": "2.20 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_duel_plan_2.png",
+              "caption": "3.50 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_duel_plan_3.png",
+              "caption": "5.50 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_duel_plan_4.png",
+              "caption": "8.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_duel_plan_5.png",
+              "caption": "10.00 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "b. THE DUEL, ZOOM 1.0: the tanks fire north across the bridge, the wave tanks at the bridge and at them; hits and misses as the sim rolled them",
+          "key": "duel_1",
+          "size_px": [
+            440,
+            620
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_duel_1_0.png",
+              "caption": "1.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_duel_1_1.png",
+              "caption": "1.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_duel_1_2.png",
+              "caption": "2.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_duel_1_3.png",
+              "caption": "3.30 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_duel_1_4.png",
+              "caption": "5.00 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_duel_1_5.png",
+              "caption": "8.00 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. A TANK FIRES, CLOSEST ZOOM (3.0): the muzzle flash and smoke of the player's tank, drifting with the wind (the first volley is at 1.0 s)",
+          "key": "muzzle_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_muzzle_3_0.png",
+              "caption": "1.06 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_muzzle_3_1.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_muzzle_3_2.png",
+              "caption": "1.70 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_muzzle_3_3.png",
+              "caption": "2.60 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_muzzle_3_4.png",
+              "caption": "4.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_muzzle_3_5.png",
+              "caption": "7.00 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "d. LANDINGS AT THE BRIDGE, ZOOM 3.0: the wave tanks' rounds on the stone deck, and the ones that miss on the river, the road and the trees",
+          "key": "bridge_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_bridge_3_0.png",
+              "caption": "2.10 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_bridge_3_1.png",
+              "caption": "2.40 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_bridge_3_2.png",
+              "caption": "3.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_bridge_3_3.png",
+              "caption": "4.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_bridge_3_4.png",
+              "caption": "6.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_bridge_3_5.png",
+              "caption": "9.00 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "e. THE CRUISER'S SALVO, ZOOM 1.0: six shells leave the forward turrets 0.2 s apart; the flash, the smoke drifting with the wind",
+          "key": "ship_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_ship_1_0.png",
+              "caption": "1.33 s  +0.1 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_ship_1_1.png",
+              "caption": "1.55 s  +0.3 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_ship_1_2.png",
+              "caption": "2.15 s  +0.9 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_ship_1_3.png",
+              "caption": "3.75 s  +2.5 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_ship_1_4.png",
+              "caption": "7.25 s  +6.0 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_ship_1_5.png",
+              "caption": "13.25 s  +12.0 s after the first shell leaves  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "f. THE SAME AT THE PLANNING ZOOM (0.35): the cruiser is 120 m long, its muzzle a few pixels",
+          "key": "ship_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_ship_plan_0.png",
+              "caption": "1.33 s  +0.1 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_ship_plan_1.png",
+              "caption": "1.75 s  +0.5 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_ship_plan_2.png",
+              "caption": "2.75 s  +1.5 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_ship_plan_3.png",
+              "caption": "5.25 s  +4.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_ship_plan_4.png",
+              "caption": "10.25 s  +9.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_ship_plan_5.png",
+              "caption": "17.25 s  +16.0 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "g. THE SALVO LANDS, ZOOM 1.0: six shells on five surfaces (ground, stone, water, a tree, a tank), one every 0.2 s",
+          "key": "salvo_1",
+          "size_px": [
+            440,
+            620
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_salvo_1_0.png",
+              "caption": "12.27 s  +0.1 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_salvo_1_1.png",
+              "caption": "12.67 s  +0.5 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_salvo_1_2.png",
+              "caption": "13.32 s  +1.1 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_salvo_1_3.png",
+              "caption": "14.62 s  +2.4 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_salvo_1_4.png",
+              "caption": "18.22 s  +6.0 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_salvo_1_5.png",
+              "caption": "26.22 s  +14.0 s after the first shell lands  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "h. THE SAME AT THE PLANNING ZOOM (0.35)",
+          "key": "salvo_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_salvo_plan_0.png",
+              "caption": "12.52 s  +0.3 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_salvo_plan_1.png",
+              "caption": "13.42 s  +1.2 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_salvo_plan_2.png",
+              "caption": "15.22 s  +3.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_salvo_plan_3.png",
+              "caption": "20.22 s  +8.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_salvo_plan_4.png",
+              "caption": "28.22 s  +16.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_salvo_plan_5.png",
+              "caption": "42.22 s  +30.0 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "i. A SHELL IN THE RIVER, ZOOM 3.0: a splash and rings on the water, no smoke",
+          "key": "river_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_river_3_0.png",
+              "caption": "12.66 s  +0.04 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_river_3_1.png",
+              "caption": "12.87 s  +0.25 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_river_3_2.png",
+              "caption": "13.32 s  +0.70 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_river_3_3.png",
+              "caption": "14.22 s  +1.60 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_river_3_4.png",
+              "caption": "16.12 s  +3.50 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_river_3_5.png",
+              "caption": "20.62 s  +8.00 s after it lands  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "j. THE STRIKE AT THE PLANNING ZOOM (0.35): the village battery fires flak at the bomber (F2 bursts), the heavy fighter's cannon from behind, the bomber's tail guns (T5)",
+          "key": "flak_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_flak_plan_0.png",
+              "caption": "1.10 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_flak_plan_1.png",
+              "caption": "2.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_flak_plan_2.png",
+              "caption": "3.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_flak_plan_3.png",
+              "caption": "4.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G0_flak_plan_4.png",
+              "caption": "5.00 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "k. THE BATTERY FIRES, ZOOM 1.0: the guns' muzzle puffs and the F2 burst the sim's rolls make at the bomber crossing overhead",
+          "key": "flak_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_flak_1_0.png",
+              "caption": "1.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_flak_1_1.png",
+              "caption": "1.80 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_flak_1_2.png",
+              "caption": "2.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_flak_1_3.png",
+              "caption": "3.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_flak_1_4.png",
+              "caption": "3.90 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_flak_1_5.png",
+              "caption": "5.00 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "k2. THE BATTERY'S GUNS, CLOSEST ZOOM (3.0): the flak gun (medium) and the light flak gun (small) fire at the bomber approaching from the west",
+          "key": "flak_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_flak_3_0.png",
+              "caption": "1.02 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_flak_3_1.png",
+              "caption": "1.15 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_flak_3_2.png",
+              "caption": "1.50 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_flak_3_3.png",
+              "caption": "2.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_flak_3_4.png",
+              "caption": "2.60 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_flak_3_5.png",
+              "caption": "3.60 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "l. THE HEAVY FIGHTER'S NOSE CANNON, ZOOM 1.0: muzzle puffs left along its path, hits on the bomber (metal), the bomber's damage smoke W1 and its tail guns' T5 tracers",
+          "key": "nose_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_nose_1_0.png",
+              "caption": "1.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_nose_1_1.png",
+              "caption": "1.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_nose_1_2.png",
+              "caption": "2.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_nose_1_3.png",
+              "caption": "3.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_nose_1_4.png",
+              "caption": "3.50 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G0_nose_1_5.png",
+              "caption": "5.10 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "m. THE CANNON'S HITS, CLOSEST ZOOM (3.0): rounds landing on the bomber's tail (metal); the hits are at 1.15 s, 3.15 s and 5.15 s",
+          "key": "nose_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_nose_3_0.png",
+              "caption": "1.04 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_nose_3_1.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_nose_3_2.png",
+              "caption": "1.70 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_nose_3_3.png",
+              "caption": "3.04 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_nose_3_4.png",
+              "caption": "3.22 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_nose_3_5.png",
+              "caption": "3.90 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "n. THE NOSE CANNON'S MUZZLE, CLOSEST ZOOM (3.0): the camera follows the heavy fighter; the puff is left in the air at 400 m and drifts with the faster wind up there",
+          "key": "nose_muz",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G0_nose_muz_0.png",
+              "caption": "1.02 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_nose_muz_1.png",
+              "caption": "1.07 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_nose_muz_2.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_nose_muz_3.png",
+              "caption": "1.40 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_nose_muz_4.png",
+              "caption": "1.80 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G0_nose_muz_5.png",
+              "caption": "2.40 s  (zoom 3.00)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "G1",
+      "label": "G1  Ink marks",
+      "note": "Ink only: ticks, rings, strokes and stipple, no fills and no washes. The muzzle is a fan of ink ticks and a thin ring with a stipple cloud that drifts and thins; an impact is ticks, a ring and stipple by material (rings alone on water, spark ticks on metal, chips and leaf marks on stone and wood). The quietest in ink and the closest to the map's own linework; the cost is that a puff is made of dots, so it reads as smoke only when it is big.",
+      "rows": [
+        {
+          "title": "a. THE DUEL AT THE PLANNING ZOOM (0.35): two player tanks south of the bridge, two wave tanks 120 m north of it, all firing on their own (turn 1 at 1 to 5 s, turn 2 from 6 s)",
+          "key": "duel_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_duel_plan_0.png",
+              "caption": "1.10 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_duel_plan_1.png",
+              "caption": "2.20 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_duel_plan_2.png",
+              "caption": "3.50 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_duel_plan_3.png",
+              "caption": "5.50 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_duel_plan_4.png",
+              "caption": "8.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_duel_plan_5.png",
+              "caption": "10.00 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "b. THE DUEL, ZOOM 1.0: the tanks fire north across the bridge, the wave tanks at the bridge and at them; hits and misses as the sim rolled them",
+          "key": "duel_1",
+          "size_px": [
+            440,
+            620
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_duel_1_0.png",
+              "caption": "1.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_duel_1_1.png",
+              "caption": "1.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_duel_1_2.png",
+              "caption": "2.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_duel_1_3.png",
+              "caption": "3.30 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_duel_1_4.png",
+              "caption": "5.00 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_duel_1_5.png",
+              "caption": "8.00 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. A TANK FIRES, CLOSEST ZOOM (3.0): the muzzle flash and smoke of the player's tank, drifting with the wind (the first volley is at 1.0 s)",
+          "key": "muzzle_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_muzzle_3_0.png",
+              "caption": "1.06 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_muzzle_3_1.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_muzzle_3_2.png",
+              "caption": "1.70 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_muzzle_3_3.png",
+              "caption": "2.60 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_muzzle_3_4.png",
+              "caption": "4.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_muzzle_3_5.png",
+              "caption": "7.00 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "d. LANDINGS AT THE BRIDGE, ZOOM 3.0: the wave tanks' rounds on the stone deck, and the ones that miss on the river, the road and the trees",
+          "key": "bridge_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_bridge_3_0.png",
+              "caption": "2.10 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_bridge_3_1.png",
+              "caption": "2.40 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_bridge_3_2.png",
+              "caption": "3.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_bridge_3_3.png",
+              "caption": "4.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_bridge_3_4.png",
+              "caption": "6.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_bridge_3_5.png",
+              "caption": "9.00 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "e. THE CRUISER'S SALVO, ZOOM 1.0: six shells leave the forward turrets 0.2 s apart; the flash, the smoke drifting with the wind",
+          "key": "ship_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_ship_1_0.png",
+              "caption": "1.33 s  +0.1 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_ship_1_1.png",
+              "caption": "1.55 s  +0.3 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_ship_1_2.png",
+              "caption": "2.15 s  +0.9 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_ship_1_3.png",
+              "caption": "3.75 s  +2.5 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_ship_1_4.png",
+              "caption": "7.25 s  +6.0 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_ship_1_5.png",
+              "caption": "13.25 s  +12.0 s after the first shell leaves  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "f. THE SAME AT THE PLANNING ZOOM (0.35): the cruiser is 120 m long, its muzzle a few pixels",
+          "key": "ship_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_ship_plan_0.png",
+              "caption": "1.33 s  +0.1 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_ship_plan_1.png",
+              "caption": "1.75 s  +0.5 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_ship_plan_2.png",
+              "caption": "2.75 s  +1.5 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_ship_plan_3.png",
+              "caption": "5.25 s  +4.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_ship_plan_4.png",
+              "caption": "10.25 s  +9.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_ship_plan_5.png",
+              "caption": "17.25 s  +16.0 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "g. THE SALVO LANDS, ZOOM 1.0: six shells on five surfaces (ground, stone, water, a tree, a tank), one every 0.2 s",
+          "key": "salvo_1",
+          "size_px": [
+            440,
+            620
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_salvo_1_0.png",
+              "caption": "12.27 s  +0.1 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_salvo_1_1.png",
+              "caption": "12.67 s  +0.5 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_salvo_1_2.png",
+              "caption": "13.32 s  +1.1 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_salvo_1_3.png",
+              "caption": "14.62 s  +2.4 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_salvo_1_4.png",
+              "caption": "18.22 s  +6.0 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_salvo_1_5.png",
+              "caption": "26.22 s  +14.0 s after the first shell lands  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "h. THE SAME AT THE PLANNING ZOOM (0.35)",
+          "key": "salvo_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_salvo_plan_0.png",
+              "caption": "12.52 s  +0.3 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_salvo_plan_1.png",
+              "caption": "13.42 s  +1.2 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_salvo_plan_2.png",
+              "caption": "15.22 s  +3.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_salvo_plan_3.png",
+              "caption": "20.22 s  +8.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_salvo_plan_4.png",
+              "caption": "28.22 s  +16.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_salvo_plan_5.png",
+              "caption": "42.22 s  +30.0 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "i. A SHELL IN THE RIVER, ZOOM 3.0: a splash and rings on the water, no smoke",
+          "key": "river_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_river_3_0.png",
+              "caption": "12.66 s  +0.04 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_river_3_1.png",
+              "caption": "12.87 s  +0.25 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_river_3_2.png",
+              "caption": "13.32 s  +0.70 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_river_3_3.png",
+              "caption": "14.22 s  +1.60 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_river_3_4.png",
+              "caption": "16.12 s  +3.50 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_river_3_5.png",
+              "caption": "20.62 s  +8.00 s after it lands  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "j. THE STRIKE AT THE PLANNING ZOOM (0.35): the village battery fires flak at the bomber (F2 bursts), the heavy fighter's cannon from behind, the bomber's tail guns (T5)",
+          "key": "flak_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_flak_plan_0.png",
+              "caption": "1.10 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_flak_plan_1.png",
+              "caption": "2.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_flak_plan_2.png",
+              "caption": "3.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_flak_plan_3.png",
+              "caption": "4.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G1_flak_plan_4.png",
+              "caption": "5.00 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "k. THE BATTERY FIRES, ZOOM 1.0: the guns' muzzle puffs and the F2 burst the sim's rolls make at the bomber crossing overhead",
+          "key": "flak_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_flak_1_0.png",
+              "caption": "1.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_flak_1_1.png",
+              "caption": "1.80 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_flak_1_2.png",
+              "caption": "2.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_flak_1_3.png",
+              "caption": "3.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_flak_1_4.png",
+              "caption": "3.90 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_flak_1_5.png",
+              "caption": "5.00 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "k2. THE BATTERY'S GUNS, CLOSEST ZOOM (3.0): the flak gun (medium) and the light flak gun (small) fire at the bomber approaching from the west",
+          "key": "flak_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_flak_3_0.png",
+              "caption": "1.02 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_flak_3_1.png",
+              "caption": "1.15 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_flak_3_2.png",
+              "caption": "1.50 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_flak_3_3.png",
+              "caption": "2.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_flak_3_4.png",
+              "caption": "2.60 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_flak_3_5.png",
+              "caption": "3.60 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "l. THE HEAVY FIGHTER'S NOSE CANNON, ZOOM 1.0: muzzle puffs left along its path, hits on the bomber (metal), the bomber's damage smoke W1 and its tail guns' T5 tracers",
+          "key": "nose_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_nose_1_0.png",
+              "caption": "1.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_nose_1_1.png",
+              "caption": "1.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_nose_1_2.png",
+              "caption": "2.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_nose_1_3.png",
+              "caption": "3.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_nose_1_4.png",
+              "caption": "3.50 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G1_nose_1_5.png",
+              "caption": "5.10 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "m. THE CANNON'S HITS, CLOSEST ZOOM (3.0): rounds landing on the bomber's tail (metal); the hits are at 1.15 s, 3.15 s and 5.15 s",
+          "key": "nose_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_nose_3_0.png",
+              "caption": "1.04 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_nose_3_1.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_nose_3_2.png",
+              "caption": "1.70 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_nose_3_3.png",
+              "caption": "3.04 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_nose_3_4.png",
+              "caption": "3.22 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_nose_3_5.png",
+              "caption": "3.90 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "n. THE NOSE CANNON'S MUZZLE, CLOSEST ZOOM (3.0): the camera follows the heavy fighter; the puff is left in the air at 400 m and drifts with the faster wind up there",
+          "key": "nose_muz",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G1_nose_muz_0.png",
+              "caption": "1.02 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_nose_muz_1.png",
+              "caption": "1.07 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_nose_muz_2.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_nose_muz_3.png",
+              "caption": "1.40 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_nose_muz_4.png",
+              "caption": "1.80 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G1_nose_muz_5.png",
+              "caption": "2.40 s  (zoom 3.00)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "G2",
+      "label": "G2  Paper puffs, ink edge",
+      "note": "Paper-light and edged, the way F2 and B3 are built: a pale knock-out flash with an ink edge and hatch ticks, then ragged paper-light puffs with an ink outline and shade-side hatching (cream for smoke, tan for dust, grey for a dark puff); water gets a pale splash crown with an ink edge and ripple rings, no puffs. The most drawn and the most legible against the cream map; the cost is that a crowd of edged puffs gets busy when many guns fire.",
+      "rows": [
+        {
+          "title": "a. THE DUEL AT THE PLANNING ZOOM (0.35): two player tanks south of the bridge, two wave tanks 120 m north of it, all firing on their own (turn 1 at 1 to 5 s, turn 2 from 6 s)",
+          "key": "duel_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_duel_plan_0.png",
+              "caption": "1.10 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_duel_plan_1.png",
+              "caption": "2.20 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_duel_plan_2.png",
+              "caption": "3.50 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_duel_plan_3.png",
+              "caption": "5.50 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_duel_plan_4.png",
+              "caption": "8.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_duel_plan_5.png",
+              "caption": "10.00 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "b. THE DUEL, ZOOM 1.0: the tanks fire north across the bridge, the wave tanks at the bridge and at them; hits and misses as the sim rolled them",
+          "key": "duel_1",
+          "size_px": [
+            440,
+            620
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_duel_1_0.png",
+              "caption": "1.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_duel_1_1.png",
+              "caption": "1.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_duel_1_2.png",
+              "caption": "2.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_duel_1_3.png",
+              "caption": "3.30 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_duel_1_4.png",
+              "caption": "5.00 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_duel_1_5.png",
+              "caption": "8.00 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. A TANK FIRES, CLOSEST ZOOM (3.0): the muzzle flash and smoke of the player's tank, drifting with the wind (the first volley is at 1.0 s)",
+          "key": "muzzle_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_muzzle_3_0.png",
+              "caption": "1.06 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_muzzle_3_1.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_muzzle_3_2.png",
+              "caption": "1.70 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_muzzle_3_3.png",
+              "caption": "2.60 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_muzzle_3_4.png",
+              "caption": "4.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_muzzle_3_5.png",
+              "caption": "7.00 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "d. LANDINGS AT THE BRIDGE, ZOOM 3.0: the wave tanks' rounds on the stone deck, and the ones that miss on the river, the road and the trees",
+          "key": "bridge_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_bridge_3_0.png",
+              "caption": "2.10 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_bridge_3_1.png",
+              "caption": "2.40 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_bridge_3_2.png",
+              "caption": "3.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_bridge_3_3.png",
+              "caption": "4.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_bridge_3_4.png",
+              "caption": "6.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_bridge_3_5.png",
+              "caption": "9.00 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "e. THE CRUISER'S SALVO, ZOOM 1.0: six shells leave the forward turrets 0.2 s apart; the flash, the smoke drifting with the wind",
+          "key": "ship_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_ship_1_0.png",
+              "caption": "1.33 s  +0.1 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_ship_1_1.png",
+              "caption": "1.55 s  +0.3 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_ship_1_2.png",
+              "caption": "2.15 s  +0.9 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_ship_1_3.png",
+              "caption": "3.75 s  +2.5 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_ship_1_4.png",
+              "caption": "7.25 s  +6.0 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_ship_1_5.png",
+              "caption": "13.25 s  +12.0 s after the first shell leaves  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "f. THE SAME AT THE PLANNING ZOOM (0.35): the cruiser is 120 m long, its muzzle a few pixels",
+          "key": "ship_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_ship_plan_0.png",
+              "caption": "1.33 s  +0.1 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_ship_plan_1.png",
+              "caption": "1.75 s  +0.5 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_ship_plan_2.png",
+              "caption": "2.75 s  +1.5 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_ship_plan_3.png",
+              "caption": "5.25 s  +4.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_ship_plan_4.png",
+              "caption": "10.25 s  +9.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_ship_plan_5.png",
+              "caption": "17.25 s  +16.0 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "g. THE SALVO LANDS, ZOOM 1.0: six shells on five surfaces (ground, stone, water, a tree, a tank), one every 0.2 s",
+          "key": "salvo_1",
+          "size_px": [
+            440,
+            620
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_salvo_1_0.png",
+              "caption": "12.27 s  +0.1 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_salvo_1_1.png",
+              "caption": "12.67 s  +0.5 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_salvo_1_2.png",
+              "caption": "13.32 s  +1.1 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_salvo_1_3.png",
+              "caption": "14.62 s  +2.4 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_salvo_1_4.png",
+              "caption": "18.22 s  +6.0 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_salvo_1_5.png",
+              "caption": "26.22 s  +14.0 s after the first shell lands  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "h. THE SAME AT THE PLANNING ZOOM (0.35)",
+          "key": "salvo_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_salvo_plan_0.png",
+              "caption": "12.52 s  +0.3 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_salvo_plan_1.png",
+              "caption": "13.42 s  +1.2 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_salvo_plan_2.png",
+              "caption": "15.22 s  +3.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_salvo_plan_3.png",
+              "caption": "20.22 s  +8.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_salvo_plan_4.png",
+              "caption": "28.22 s  +16.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_salvo_plan_5.png",
+              "caption": "42.22 s  +30.0 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "i. A SHELL IN THE RIVER, ZOOM 3.0: a splash and rings on the water, no smoke",
+          "key": "river_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_river_3_0.png",
+              "caption": "12.66 s  +0.04 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_river_3_1.png",
+              "caption": "12.87 s  +0.25 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_river_3_2.png",
+              "caption": "13.32 s  +0.70 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_river_3_3.png",
+              "caption": "14.22 s  +1.60 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_river_3_4.png",
+              "caption": "16.12 s  +3.50 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_river_3_5.png",
+              "caption": "20.62 s  +8.00 s after it lands  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "j. THE STRIKE AT THE PLANNING ZOOM (0.35): the village battery fires flak at the bomber (F2 bursts), the heavy fighter's cannon from behind, the bomber's tail guns (T5)",
+          "key": "flak_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_flak_plan_0.png",
+              "caption": "1.10 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_flak_plan_1.png",
+              "caption": "2.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_flak_plan_2.png",
+              "caption": "3.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_flak_plan_3.png",
+              "caption": "4.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G2_flak_plan_4.png",
+              "caption": "5.00 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "k. THE BATTERY FIRES, ZOOM 1.0: the guns' muzzle puffs and the F2 burst the sim's rolls make at the bomber crossing overhead",
+          "key": "flak_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_flak_1_0.png",
+              "caption": "1.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_flak_1_1.png",
+              "caption": "1.80 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_flak_1_2.png",
+              "caption": "2.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_flak_1_3.png",
+              "caption": "3.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_flak_1_4.png",
+              "caption": "3.90 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_flak_1_5.png",
+              "caption": "5.00 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "k2. THE BATTERY'S GUNS, CLOSEST ZOOM (3.0): the flak gun (medium) and the light flak gun (small) fire at the bomber approaching from the west",
+          "key": "flak_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_flak_3_0.png",
+              "caption": "1.02 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_flak_3_1.png",
+              "caption": "1.15 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_flak_3_2.png",
+              "caption": "1.50 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_flak_3_3.png",
+              "caption": "2.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_flak_3_4.png",
+              "caption": "2.60 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_flak_3_5.png",
+              "caption": "3.60 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "l. THE HEAVY FIGHTER'S NOSE CANNON, ZOOM 1.0: muzzle puffs left along its path, hits on the bomber (metal), the bomber's damage smoke W1 and its tail guns' T5 tracers",
+          "key": "nose_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_nose_1_0.png",
+              "caption": "1.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_nose_1_1.png",
+              "caption": "1.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_nose_1_2.png",
+              "caption": "2.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_nose_1_3.png",
+              "caption": "3.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_nose_1_4.png",
+              "caption": "3.50 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G2_nose_1_5.png",
+              "caption": "5.10 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "m. THE CANNON'S HITS, CLOSEST ZOOM (3.0): rounds landing on the bomber's tail (metal); the hits are at 1.15 s, 3.15 s and 5.15 s",
+          "key": "nose_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_nose_3_0.png",
+              "caption": "1.04 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_nose_3_1.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_nose_3_2.png",
+              "caption": "1.70 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_nose_3_3.png",
+              "caption": "3.04 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_nose_3_4.png",
+              "caption": "3.22 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_nose_3_5.png",
+              "caption": "3.90 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "n. THE NOSE CANNON'S MUZZLE, CLOSEST ZOOM (3.0): the camera follows the heavy fighter; the puff is left in the air at 400 m and drifts with the faster wind up there",
+          "key": "nose_muz",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G2_nose_muz_0.png",
+              "caption": "1.02 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_nose_muz_1.png",
+              "caption": "1.07 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_nose_muz_2.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_nose_muz_3.png",
+              "caption": "1.40 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_nose_muz_4.png",
+              "caption": "1.80 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G2_nose_muz_5.png",
+              "caption": "2.40 s  (zoom 3.00)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "G3",
+      "label": "G3  W1 soft puffs",
+      "note": "The damage smoke's own grammar (W1) at a small scale: translucent stepped washes with no outline, fresh puffs white and aging to grey, drifting with the wind; a soft white flash. Dust is the same wash in the dirt tone, stone dust paler, a metal hit a dark wash; water is a pale soft ring and an ink ripple, no puff; ink appears only as chips and spark ticks. The most like the smoke Alex chose and the calmest; the cost is that thin washes on the cream paper read faintly at the planning zoom.",
+      "rows": [
+        {
+          "title": "a. THE DUEL AT THE PLANNING ZOOM (0.35): two player tanks south of the bridge, two wave tanks 120 m north of it, all firing on their own (turn 1 at 1 to 5 s, turn 2 from 6 s)",
+          "key": "duel_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_duel_plan_0.png",
+              "caption": "1.10 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_duel_plan_1.png",
+              "caption": "2.20 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_duel_plan_2.png",
+              "caption": "3.50 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_duel_plan_3.png",
+              "caption": "5.50 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_duel_plan_4.png",
+              "caption": "8.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_duel_plan_5.png",
+              "caption": "10.00 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "b. THE DUEL, ZOOM 1.0: the tanks fire north across the bridge, the wave tanks at the bridge and at them; hits and misses as the sim rolled them",
+          "key": "duel_1",
+          "size_px": [
+            440,
+            620
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_duel_1_0.png",
+              "caption": "1.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_duel_1_1.png",
+              "caption": "1.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_duel_1_2.png",
+              "caption": "2.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_duel_1_3.png",
+              "caption": "3.30 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_duel_1_4.png",
+              "caption": "5.00 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_duel_1_5.png",
+              "caption": "8.00 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. A TANK FIRES, CLOSEST ZOOM (3.0): the muzzle flash and smoke of the player's tank, drifting with the wind (the first volley is at 1.0 s)",
+          "key": "muzzle_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_muzzle_3_0.png",
+              "caption": "1.06 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_muzzle_3_1.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_muzzle_3_2.png",
+              "caption": "1.70 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_muzzle_3_3.png",
+              "caption": "2.60 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_muzzle_3_4.png",
+              "caption": "4.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_muzzle_3_5.png",
+              "caption": "7.00 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "d. LANDINGS AT THE BRIDGE, ZOOM 3.0: the wave tanks' rounds on the stone deck, and the ones that miss on the river, the road and the trees",
+          "key": "bridge_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_bridge_3_0.png",
+              "caption": "2.10 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_bridge_3_1.png",
+              "caption": "2.40 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_bridge_3_2.png",
+              "caption": "3.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_bridge_3_3.png",
+              "caption": "4.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_bridge_3_4.png",
+              "caption": "6.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_bridge_3_5.png",
+              "caption": "9.00 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "e. THE CRUISER'S SALVO, ZOOM 1.0: six shells leave the forward turrets 0.2 s apart; the flash, the smoke drifting with the wind",
+          "key": "ship_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_ship_1_0.png",
+              "caption": "1.33 s  +0.1 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_ship_1_1.png",
+              "caption": "1.55 s  +0.3 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_ship_1_2.png",
+              "caption": "2.15 s  +0.9 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_ship_1_3.png",
+              "caption": "3.75 s  +2.5 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_ship_1_4.png",
+              "caption": "7.25 s  +6.0 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_ship_1_5.png",
+              "caption": "13.25 s  +12.0 s after the first shell leaves  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "f. THE SAME AT THE PLANNING ZOOM (0.35): the cruiser is 120 m long, its muzzle a few pixels",
+          "key": "ship_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_ship_plan_0.png",
+              "caption": "1.33 s  +0.1 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_ship_plan_1.png",
+              "caption": "1.75 s  +0.5 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_ship_plan_2.png",
+              "caption": "2.75 s  +1.5 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_ship_plan_3.png",
+              "caption": "5.25 s  +4.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_ship_plan_4.png",
+              "caption": "10.25 s  +9.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_ship_plan_5.png",
+              "caption": "17.25 s  +16.0 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "g. THE SALVO LANDS, ZOOM 1.0: six shells on five surfaces (ground, stone, water, a tree, a tank), one every 0.2 s",
+          "key": "salvo_1",
+          "size_px": [
+            440,
+            620
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_salvo_1_0.png",
+              "caption": "12.27 s  +0.1 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_salvo_1_1.png",
+              "caption": "12.67 s  +0.5 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_salvo_1_2.png",
+              "caption": "13.32 s  +1.1 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_salvo_1_3.png",
+              "caption": "14.62 s  +2.4 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_salvo_1_4.png",
+              "caption": "18.22 s  +6.0 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_salvo_1_5.png",
+              "caption": "26.22 s  +14.0 s after the first shell lands  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "h. THE SAME AT THE PLANNING ZOOM (0.35)",
+          "key": "salvo_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_salvo_plan_0.png",
+              "caption": "12.52 s  +0.3 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_salvo_plan_1.png",
+              "caption": "13.42 s  +1.2 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_salvo_plan_2.png",
+              "caption": "15.22 s  +3.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_salvo_plan_3.png",
+              "caption": "20.22 s  +8.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_salvo_plan_4.png",
+              "caption": "28.22 s  +16.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_salvo_plan_5.png",
+              "caption": "42.22 s  +30.0 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "i. A SHELL IN THE RIVER, ZOOM 3.0: a splash and rings on the water, no smoke",
+          "key": "river_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_river_3_0.png",
+              "caption": "12.66 s  +0.04 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_river_3_1.png",
+              "caption": "12.87 s  +0.25 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_river_3_2.png",
+              "caption": "13.32 s  +0.70 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_river_3_3.png",
+              "caption": "14.22 s  +1.60 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_river_3_4.png",
+              "caption": "16.12 s  +3.50 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_river_3_5.png",
+              "caption": "20.62 s  +8.00 s after it lands  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "j. THE STRIKE AT THE PLANNING ZOOM (0.35): the village battery fires flak at the bomber (F2 bursts), the heavy fighter's cannon from behind, the bomber's tail guns (T5)",
+          "key": "flak_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_flak_plan_0.png",
+              "caption": "1.10 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_flak_plan_1.png",
+              "caption": "2.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_flak_plan_2.png",
+              "caption": "3.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_flak_plan_3.png",
+              "caption": "4.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G3_flak_plan_4.png",
+              "caption": "5.00 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "k. THE BATTERY FIRES, ZOOM 1.0: the guns' muzzle puffs and the F2 burst the sim's rolls make at the bomber crossing overhead",
+          "key": "flak_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_flak_1_0.png",
+              "caption": "1.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_flak_1_1.png",
+              "caption": "1.80 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_flak_1_2.png",
+              "caption": "2.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_flak_1_3.png",
+              "caption": "3.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_flak_1_4.png",
+              "caption": "3.90 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_flak_1_5.png",
+              "caption": "5.00 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "k2. THE BATTERY'S GUNS, CLOSEST ZOOM (3.0): the flak gun (medium) and the light flak gun (small) fire at the bomber approaching from the west",
+          "key": "flak_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_flak_3_0.png",
+              "caption": "1.02 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_flak_3_1.png",
+              "caption": "1.15 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_flak_3_2.png",
+              "caption": "1.50 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_flak_3_3.png",
+              "caption": "2.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_flak_3_4.png",
+              "caption": "2.60 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_flak_3_5.png",
+              "caption": "3.60 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "l. THE HEAVY FIGHTER'S NOSE CANNON, ZOOM 1.0: muzzle puffs left along its path, hits on the bomber (metal), the bomber's damage smoke W1 and its tail guns' T5 tracers",
+          "key": "nose_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_nose_1_0.png",
+              "caption": "1.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_nose_1_1.png",
+              "caption": "1.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_nose_1_2.png",
+              "caption": "2.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_nose_1_3.png",
+              "caption": "3.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_nose_1_4.png",
+              "caption": "3.50 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G3_nose_1_5.png",
+              "caption": "5.10 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "m. THE CANNON'S HITS, CLOSEST ZOOM (3.0): rounds landing on the bomber's tail (metal); the hits are at 1.15 s, 3.15 s and 5.15 s",
+          "key": "nose_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_nose_3_0.png",
+              "caption": "1.04 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_nose_3_1.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_nose_3_2.png",
+              "caption": "1.70 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_nose_3_3.png",
+              "caption": "3.04 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_nose_3_4.png",
+              "caption": "3.22 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_nose_3_5.png",
+              "caption": "3.90 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "n. THE NOSE CANNON'S MUZZLE, CLOSEST ZOOM (3.0): the camera follows the heavy fighter; the puff is left in the air at 400 m and drifts with the faster wind up there",
+          "key": "nose_muz",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G3_nose_muz_0.png",
+              "caption": "1.02 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_nose_muz_1.png",
+              "caption": "1.07 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_nose_muz_2.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_nose_muz_3.png",
+              "caption": "1.40 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_nose_muz_4.png",
+              "caption": "1.80 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G3_nose_muz_5.png",
+              "caption": "2.40 s  (zoom 3.00)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "option": "G4",
+      "label": "G4  Flash and one ring",
+      "note": "The minimal family: a muzzle is a small knock-out flash, one ink ring and ONE soft white puff that drifts (so a big gun still smokes, once); an impact is a flash and one ring, coloured by material in ink and pale only (a pale ring on water, spark ticks on metal, three chips on stone). The calmest on a crowded turn (a tank fires every second), the cheapest to draw; the cost is that materials are told apart by little more than the ring and the flash.",
+      "rows": [
+        {
+          "title": "a. THE DUEL AT THE PLANNING ZOOM (0.35): two player tanks south of the bridge, two wave tanks 120 m north of it, all firing on their own (turn 1 at 1 to 5 s, turn 2 from 6 s)",
+          "key": "duel_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_duel_plan_0.png",
+              "caption": "1.10 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_duel_plan_1.png",
+              "caption": "2.20 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_duel_plan_2.png",
+              "caption": "3.50 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_duel_plan_3.png",
+              "caption": "5.50 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_duel_plan_4.png",
+              "caption": "8.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_duel_plan_5.png",
+              "caption": "10.00 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "b. THE DUEL, ZOOM 1.0: the tanks fire north across the bridge, the wave tanks at the bridge and at them; hits and misses as the sim rolled them",
+          "key": "duel_1",
+          "size_px": [
+            440,
+            620
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_duel_1_0.png",
+              "caption": "1.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_duel_1_1.png",
+              "caption": "1.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_duel_1_2.png",
+              "caption": "2.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_duel_1_3.png",
+              "caption": "3.30 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_duel_1_4.png",
+              "caption": "5.00 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_duel_1_5.png",
+              "caption": "8.00 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "c. A TANK FIRES, CLOSEST ZOOM (3.0): the muzzle flash and smoke of the player's tank, drifting with the wind (the first volley is at 1.0 s)",
+          "key": "muzzle_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_muzzle_3_0.png",
+              "caption": "1.06 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_muzzle_3_1.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_muzzle_3_2.png",
+              "caption": "1.70 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_muzzle_3_3.png",
+              "caption": "2.60 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_muzzle_3_4.png",
+              "caption": "4.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_muzzle_3_5.png",
+              "caption": "7.00 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "d. LANDINGS AT THE BRIDGE, ZOOM 3.0: the wave tanks' rounds on the stone deck, and the ones that miss on the river, the road and the trees",
+          "key": "bridge_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_bridge_3_0.png",
+              "caption": "2.10 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_bridge_3_1.png",
+              "caption": "2.40 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_bridge_3_2.png",
+              "caption": "3.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_bridge_3_3.png",
+              "caption": "4.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_bridge_3_4.png",
+              "caption": "6.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_bridge_3_5.png",
+              "caption": "9.00 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "e. THE CRUISER'S SALVO, ZOOM 1.0: six shells leave the forward turrets 0.2 s apart; the flash, the smoke drifting with the wind",
+          "key": "ship_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_ship_1_0.png",
+              "caption": "1.33 s  +0.1 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_ship_1_1.png",
+              "caption": "1.55 s  +0.3 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_ship_1_2.png",
+              "caption": "2.15 s  +0.9 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_ship_1_3.png",
+              "caption": "3.75 s  +2.5 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_ship_1_4.png",
+              "caption": "7.25 s  +6.0 s after the first shell leaves  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_ship_1_5.png",
+              "caption": "13.25 s  +12.0 s after the first shell leaves  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "f. THE SAME AT THE PLANNING ZOOM (0.35): the cruiser is 120 m long, its muzzle a few pixels",
+          "key": "ship_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_ship_plan_0.png",
+              "caption": "1.33 s  +0.1 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_ship_plan_1.png",
+              "caption": "1.75 s  +0.5 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_ship_plan_2.png",
+              "caption": "2.75 s  +1.5 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_ship_plan_3.png",
+              "caption": "5.25 s  +4.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_ship_plan_4.png",
+              "caption": "10.25 s  +9.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_ship_plan_5.png",
+              "caption": "17.25 s  +16.0 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "g. THE SALVO LANDS, ZOOM 1.0: six shells on five surfaces (ground, stone, water, a tree, a tank), one every 0.2 s",
+          "key": "salvo_1",
+          "size_px": [
+            440,
+            620
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_salvo_1_0.png",
+              "caption": "12.27 s  +0.1 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_salvo_1_1.png",
+              "caption": "12.67 s  +0.5 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_salvo_1_2.png",
+              "caption": "13.32 s  +1.1 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_salvo_1_3.png",
+              "caption": "14.62 s  +2.4 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_salvo_1_4.png",
+              "caption": "18.22 s  +6.0 s after the first shell lands  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_salvo_1_5.png",
+              "caption": "26.22 s  +14.0 s after the first shell lands  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "h. THE SAME AT THE PLANNING ZOOM (0.35)",
+          "key": "salvo_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_salvo_plan_0.png",
+              "caption": "12.52 s  +0.3 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_salvo_plan_1.png",
+              "caption": "13.42 s  +1.2 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_salvo_plan_2.png",
+              "caption": "15.22 s  +3.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_salvo_plan_3.png",
+              "caption": "20.22 s  +8.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_salvo_plan_4.png",
+              "caption": "28.22 s  +16.0 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_salvo_plan_5.png",
+              "caption": "42.22 s  +30.0 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "i. A SHELL IN THE RIVER, ZOOM 3.0: a splash and rings on the water, no smoke",
+          "key": "river_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_river_3_0.png",
+              "caption": "12.66 s  +0.04 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_river_3_1.png",
+              "caption": "12.87 s  +0.25 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_river_3_2.png",
+              "caption": "13.32 s  +0.70 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_river_3_3.png",
+              "caption": "14.22 s  +1.60 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_river_3_4.png",
+              "caption": "16.12 s  +3.50 s after it lands  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_river_3_5.png",
+              "caption": "20.62 s  +8.00 s after it lands  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "j. THE STRIKE AT THE PLANNING ZOOM (0.35): the village battery fires flak at the bomber (F2 bursts), the heavy fighter's cannon from behind, the bomber's tail guns (T5)",
+          "key": "flak_plan",
+          "size_px": [
+            900,
+            520
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_flak_plan_0.png",
+              "caption": "1.10 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_flak_plan_1.png",
+              "caption": "2.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_flak_plan_2.png",
+              "caption": "3.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_flak_plan_3.png",
+              "caption": "4.00 s  (zoom 0.35)"
+            },
+            {
+              "file": "frames/G4_flak_plan_4.png",
+              "caption": "5.00 s  (zoom 0.35)"
+            }
+          ]
+        },
+        {
+          "title": "k. THE BATTERY FIRES, ZOOM 1.0: the guns' muzzle puffs and the F2 burst the sim's rolls make at the bomber crossing overhead",
+          "key": "flak_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_flak_1_0.png",
+              "caption": "1.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_flak_1_1.png",
+              "caption": "1.80 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_flak_1_2.png",
+              "caption": "2.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_flak_1_3.png",
+              "caption": "3.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_flak_1_4.png",
+              "caption": "3.90 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_flak_1_5.png",
+              "caption": "5.00 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "k2. THE BATTERY'S GUNS, CLOSEST ZOOM (3.0): the flak gun (medium) and the light flak gun (small) fire at the bomber approaching from the west",
+          "key": "flak_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_flak_3_0.png",
+              "caption": "1.02 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_flak_3_1.png",
+              "caption": "1.15 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_flak_3_2.png",
+              "caption": "1.50 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_flak_3_3.png",
+              "caption": "2.00 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_flak_3_4.png",
+              "caption": "2.60 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_flak_3_5.png",
+              "caption": "3.60 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "l. THE HEAVY FIGHTER'S NOSE CANNON, ZOOM 1.0: muzzle puffs left along its path, hits on the bomber (metal), the bomber's damage smoke W1 and its tail guns' T5 tracers",
+          "key": "nose_1",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_nose_1_0.png",
+              "caption": "1.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_nose_1_1.png",
+              "caption": "1.40 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_nose_1_2.png",
+              "caption": "2.20 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_nose_1_3.png",
+              "caption": "3.10 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_nose_1_4.png",
+              "caption": "3.50 s  (zoom 1.00)"
+            },
+            {
+              "file": "frames/G4_nose_1_5.png",
+              "caption": "5.10 s  (zoom 1.00)"
+            }
+          ]
+        },
+        {
+          "title": "m. THE CANNON'S HITS, CLOSEST ZOOM (3.0): rounds landing on the bomber's tail (metal); the hits are at 1.15 s, 3.15 s and 5.15 s",
+          "key": "nose_3",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_nose_3_0.png",
+              "caption": "1.04 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_nose_3_1.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_nose_3_2.png",
+              "caption": "1.70 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_nose_3_3.png",
+              "caption": "3.04 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_nose_3_4.png",
+              "caption": "3.22 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_nose_3_5.png",
+              "caption": "3.90 s  (zoom 3.00)"
+            }
+          ]
+        },
+        {
+          "title": "n. THE NOSE CANNON'S MUZZLE, CLOSEST ZOOM (3.0): the camera follows the heavy fighter; the puff is left in the air at 400 m and drifts with the faster wind up there",
+          "key": "nose_muz",
+          "size_px": [
+            600,
+            440
+          ],
+          "frames": [
+            {
+              "file": "frames/G4_nose_muz_0.png",
+              "caption": "1.02 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_nose_muz_1.png",
+              "caption": "1.07 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_nose_muz_2.png",
+              "caption": "1.20 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_nose_muz_3.png",
+              "caption": "1.40 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_nose_muz_4.png",
+              "caption": "1.80 s  (zoom 3.00)"
+            },
+            {
+              "file": "frames/G4_nose_muz_5.png",
+              "caption": "2.40 s  (zoom 3.00)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

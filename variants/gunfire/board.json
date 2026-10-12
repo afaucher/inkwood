@@ -1,0 +1,1974 @@
+{
+  "id": "gunfire",
+  "date": "2026-10-11",
+  "area": "Effects",
+  "decision": "gunfire-looks (with impact-by-round-and-target)",
+  "question": "How do big guns' muzzle flash and smoke look, and how does a round that lands without destroying look, by the round and by what it hits? (Alex 2026-10-11, third playtest: 'Fired shots should have smoke for large rounds (tanks, artillery and ship cannons). Landed shots should have an impact even if they don't destroy you.'; asked for options: '8 yes, give options'; and: 'this should probably be a property of either the round or the thing being hit or both. Ex a round hitting water would splash, not explode with smoke. Right?')",
+  "source": "scripts/fx/fx_board_gunfire.gd over the real map (seed 55 with its water for Hold the bridge, seed 20261009 for the Strike); the effects are scripts/fx/fx_gunfire.gd reading variants/gunfire/families.json; the scenes are the real sim's events (the combat seeds below)",
+  "seed": 20261009,
+  "seeds": {
+    "hold_the_bridge_map": 55,
+    "strike_map": 20261009
+  },
+  "scenes": [
+    {
+      "scene": "duel",
+      "seed": 55,
+      "combat_seed": 242,
+      "events": 49
+    },
+    {
+      "scene": "salvo",
+      "seed": 55,
+      "combat_seed": 252,
+      "events": 75
+    },
+    {
+      "scene": "strike",
+      "seed": 20261009,
+      "combat_seed": 84,
+      "events": 30
+    }
+  ],
+  "parameter": "variants/gunfire/families.json (every value PROPOSED); on a pick it moves to data/fx/fx.json as value records, and a `fires` field per weapon (decision round-model) names the gun and round class",
+  "held_constant": {
+    "scenes": "HOLD THE BRIDGE: two player tanks south of the bridge and two wave tanks brought to 120 m north of it for the DUEL (combat seed 242, two turns); the SALVO (combat seed 252, three turns) at a wave tank 68 m north of the bridge. THE STRIKE: a bomber and a heavy fighter 150 m behind it over the first battery (combat seed 84, one turn)",
+    "events": "every fire / shell_fire / shell_impact of the real sim; PROPOSED and visual only: where a missed tank round lands (seeded 4 to 16 m aside, -10 to +30 m along the line), a tank round's flight (700 m/s), the material under a landing (the table below)",
+    "light": "sun azimuth 315, elevation 46; shadow strength 0.44 (the live sun)",
+    "wind": "the coastal wind of data/sim/wind.json at hour 15 (the sea breeze), the same for every column; puffs drift with it by height (decision wind-with-height)",
+    "scale": "the planes' own scale: a tank 24 px at zoom 1 in Hold the bridge, a light fighter 36 px in the Strike; zooms 0.35 (planning), 1.0 and the new closest 3.0",
+    "decided_looks_beside": "tracers T5, flak F2, the bomb B3's crater and W1 damage smoke are drawn by the game's own code in every column; the unit art is the game's",
+    "fire": "none",
+    "fog": "all units seen"
+  },
+  "options": [
+    {
+      "name": "G0",
+      "label": "G0  As built today (reference, not an option)",
+      "note": "What the game draws now, for comparison: no muzzle flash or smoke, no impact for a tank or cannon round, the cruiser's shell a B3 bomb burst on every surface (water included). Tracers T5, flak F2 and the damage smoke W1 are the decided looks and are drawn the same in every column.",
+      "files": [
+        "option_G0_bridge.png",
+        "option_G0_strike.png"
+      ],
+      "parameters": {}
+    },
+    {
+      "name": "G1",
+      "label": "G1  Ink marks",
+      "note": "Ink only: ticks, rings, strokes and stipple, no fills and no washes. The muzzle is a fan of ink ticks and a thin ring with a stipple cloud that drifts and thins; an impact is ticks, a ring and stipple by material (rings alone on water, spark ticks on metal, chips and leaf marks on stone and wood). The quietest in ink and the closest to the map's own linework; the cost is that a puff is made of dots, so it reads as smoke only when it is big.",
+      "files": [
+        "option_G1_bridge.png",
+        "option_G1_strike.png"
+      ],
+      "parameters": {
+        "label": "G1  Ink marks",
+        "note": "Ink only: ticks, rings, strokes and stipple, no fills and no washes. The muzzle is a fan of ink ticks and a thin ring with a stipple cloud that drifts and thins; an impact is ticks, a ring and stipple by material (rings alone on water, spark ticks on metal, chips and leaf marks on stone and wood). The quietest in ink and the closest to the map's own linework; the cost is that a puff is made of dots, so it reads as smoke only when it is big.",
+        "palette": {
+          "roles": [
+            "ink",
+            "ink.ring",
+            "ink.dot",
+            "ink.hatch",
+            "scar.dot",
+            "gf.scorch.soft"
+          ],
+          "how_one_palette": "Ink only, at the palette's own alpha steps (0.12 to 1.0): no fill, no wash, no hue. Water is told by rings and ticks in ink on the water's own wash; metal by long spark ticks; stone by outline chips. Lightness is the paper's alone, material is linework."
+        },
+        "_proposed": true,
+        "muzzle": [
+          {
+            "type": "strokes",
+            "n": {
+              "small": 4.0,
+              "medium": 6.0,
+              "large": 10.0
+            },
+            "spread_deg": 36.0,
+            "r0": 0.3,
+            "r1": [
+              1.4,
+              2.6
+            ],
+            "w_px": 1.3,
+            "role": "ink",
+            "life_s": 0.22
+          },
+          {
+            "type": "rings",
+            "classes": [
+              "medium",
+              "large"
+            ],
+            "n": 1.0,
+            "r0": 0.4,
+            "r1": 2.3,
+            "w_px": 1.0,
+            "role": "ink.ring",
+            "life_s": 0.42,
+            "fwd": 0.5
+          },
+          {
+            "type": "stipple",
+            "n": {
+              "small": 36.0,
+              "medium": 80.0,
+              "large": 210.0
+            },
+            "r1": 3.0,
+            "dot_px": 1.25,
+            "role": "ink.dot",
+            "life_s": {
+              "small": 3.5,
+              "medium": 5.5,
+              "large": 11.0
+            },
+            "cone_deg": 85.0,
+            "throw": [
+              1.2,
+              3.6
+            ],
+            "tau_s": 0.45,
+            "fwd": 0.3,
+            "wind": 1.0,
+            "rise_mps": 0.5
+          }
+        ],
+        "impact": {
+          "ground": [
+            {
+              "type": "strokes",
+              "n": {
+                "bullet": 3.0,
+                "small": 5.0,
+                "medium": 8.0,
+                "large": 14.0
+              },
+              "spread_deg": 360.0,
+              "r0": 0.25,
+              "r1": [
+                1.1,
+                2.1
+              ],
+              "w_px": 1.2,
+              "role": "ink",
+              "life_s": 0.3
+            },
+            {
+              "type": "rings",
+              "classes": [
+                "small",
+                "medium",
+                "large"
+              ],
+              "n": 1.0,
+              "r0": 0.3,
+              "r1": 2.1,
+              "w_px": 1.0,
+              "role": "ink.ring",
+              "life_s": 0.45
+            },
+            {
+              "type": "stipple",
+              "n": {
+                "bullet": 8.0,
+                "small": 16.0,
+                "medium": 34.0,
+                "large": 90.0
+              },
+              "r1": 2.2,
+              "dot_px": 1.1,
+              "role": "ink.dot",
+              "life_s": {
+                "bullet": 1.5,
+                "small": 2.5,
+                "medium": 3.5,
+                "large": 8.0
+              },
+              "cone_deg": 360.0,
+              "throw": [
+                0.8,
+                2.4
+              ],
+              "tau_s": 0.35,
+              "wind": 1.0,
+              "rise_mps": 0.4
+            },
+            {
+              "type": "scorch",
+              "layer": "ground",
+              "classes": [
+                "small",
+                "medium"
+              ],
+              "r": 0.8,
+              "wash_role": "gf.scorch.soft",
+              "dots": 18.0,
+              "dot_role": "scar.dot",
+              "hatch": 3.0,
+              "hatch_role": "ink.hatch",
+              "fade_in_s": 0.4,
+              "life_s": 90.0
+            }
+          ],
+          "water": [
+            {
+              "type": "rings",
+              "layer": "ground",
+              "n": {
+                "bullet": 1.0,
+                "small": 2.0,
+                "medium": 3.0,
+                "large": 4.0
+              },
+              "r0": 0.3,
+              "r1": 2.8,
+              "w_px": 1.0,
+              "role": "ink.ring",
+              "life_s": 1.8,
+              "stagger_s": 0.14
+            },
+            {
+              "type": "strokes",
+              "n": {
+                "bullet": 3.0,
+                "small": 5.0,
+                "medium": 7.0,
+                "large": 11.0
+              },
+              "spread_deg": 360.0,
+              "r0": 0.3,
+              "r1": [
+                0.9,
+                1.5
+              ],
+              "w_px": 1.1,
+              "role": "ink",
+              "life_s": 0.4
+            }
+          ],
+          "stone": [
+            {
+              "type": "chips",
+              "n": {
+                "bullet": 3.0,
+                "small": 5.0,
+                "medium": 8.0,
+                "large": 14.0
+              },
+              "len": 0.34,
+              "r1": 2.2,
+              "role": "gf.chip",
+              "edge": "ink",
+              "life_s": 0.8,
+              "fill": false
+            },
+            {
+              "type": "rings",
+              "classes": [
+                "small",
+                "medium",
+                "large"
+              ],
+              "n": 1.0,
+              "r0": 0.3,
+              "r1": 1.9,
+              "w_px": 1.0,
+              "role": "ink.ring",
+              "life_s": 0.4
+            },
+            {
+              "type": "stipple",
+              "n": {
+                "bullet": 8.0,
+                "small": 18.0,
+                "medium": 38.0,
+                "large": 96.0
+              },
+              "r1": 2.4,
+              "dot_px": 1.1,
+              "role": "ink.dot",
+              "life_s": {
+                "bullet": 1.5,
+                "small": 3.0,
+                "medium": 4.5,
+                "large": 9.0
+              },
+              "cone_deg": 360.0,
+              "throw": [
+                0.8,
+                2.4
+              ],
+              "tau_s": 0.35,
+              "wind": 1.0,
+              "rise_mps": 0.4
+            },
+            {
+              "type": "scorch",
+              "layer": "ground",
+              "classes": [
+                "small",
+                "medium"
+              ],
+              "r": 0.7,
+              "wash_role": "gf.scorch.soft",
+              "dots": 10.0,
+              "dot_role": "scar.dot.soft",
+              "hatch": 4.0,
+              "hatch_role": "ink.hatch",
+              "fade_in_s": 0.3,
+              "life_s": 90.0
+            }
+          ],
+          "metal": [
+            {
+              "type": "strokes",
+              "n": {
+                "bullet": 5.0,
+                "small": 8.0,
+                "medium": 11.0,
+                "large": 18.0
+              },
+              "spread_deg": 360.0,
+              "r0": 0.3,
+              "r1": [
+                1.5,
+                2.8
+              ],
+              "w_px": 1.0,
+              "role": "ink",
+              "life_s": 0.2
+            },
+            {
+              "type": "stipple",
+              "n": {
+                "bullet": 8.0,
+                "small": 20.0,
+                "medium": 40.0,
+                "large": 110.0
+              },
+              "r1": 2.0,
+              "dot_px": 1.2,
+              "role": "ink.dot",
+              "life_s": {
+                "bullet": 1.5,
+                "small": 2.5,
+                "medium": 4.0,
+                "large": 8.0
+              },
+              "cone_deg": 360.0,
+              "throw": [
+                0.5,
+                1.8
+              ],
+              "tau_s": 0.4,
+              "wind": 1.0,
+              "rise_mps": 0.6,
+              "dense": true
+            }
+          ],
+          "wood": [
+            {
+              "type": "strokes",
+              "n": {
+                "bullet": 3.0,
+                "small": 5.0,
+                "medium": 9.0,
+                "large": 15.0
+              },
+              "spread_deg": 360.0,
+              "r0": 0.3,
+              "r1": [
+                0.9,
+                1.7
+              ],
+              "w_px": 1.1,
+              "role": "ink",
+              "life_s": 0.35,
+              "zig": true
+            },
+            {
+              "type": "leaves",
+              "n": {
+                "bullet": 3.0,
+                "small": 6.0,
+                "medium": 11.0,
+                "large": 20.0
+              },
+              "size": 0.2,
+              "r1": 2.4,
+              "fill": "gf.leaf",
+              "edge": "ink",
+              "life_s": 2.2,
+              "drift": 1.0,
+              "ink_only": true
+            },
+            {
+              "type": "stipple",
+              "n": {
+                "bullet": 6.0,
+                "small": 12.0,
+                "medium": 24.0,
+                "large": 60.0
+              },
+              "r1": 1.8,
+              "dot_px": 1.1,
+              "role": "ink.dot",
+              "life_s": {
+                "bullet": 1.2,
+                "small": 2.0,
+                "medium": 3.0,
+                "large": 6.0
+              },
+              "cone_deg": 360.0,
+              "throw": [
+                0.6,
+                1.8
+              ],
+              "tau_s": 0.35,
+              "wind": 1.0,
+              "rise_mps": 0.4
+            }
+          ]
+        },
+        "cost_ops": {
+          "muzzle": {
+            "small": 40,
+            "medium": 87,
+            "large": 221
+          },
+          "impact_medium": {
+            "ground": 78,
+            "water": 10,
+            "stone": 83,
+            "metal": 51,
+            "wood": 55
+          },
+          "impact_large": {
+            "ground": 105,
+            "water": 15,
+            "stone": 125,
+            "metal": 128,
+            "wood": 115
+          }
+        }
+      }
+    },
+    {
+      "name": "G2",
+      "label": "G2  Paper puffs, ink edge",
+      "note": "Paper-light and edged, the way F2 and B3 are built: a pale knock-out flash with an ink edge and hatch ticks, then ragged paper-light puffs with an ink outline and shade-side hatching (cream for smoke, tan for dust, grey for a dark puff); water gets a pale splash crown with an ink edge and ripple rings, no puffs. The most drawn and the most legible against the cream map; the cost is that a crowd of edged puffs gets busy when many guns fire.",
+      "files": [
+        "option_G2_bridge.png",
+        "option_G2_strike.png"
+      ],
+      "parameters": {
+        "label": "G2  Paper puffs, ink edge",
+        "note": "Paper-light and edged, the way F2 and B3 are built: a pale knock-out flash with an ink edge and hatch ticks, then ragged paper-light puffs with an ink outline and shade-side hatching (cream for smoke, tan for dust, grey for a dark puff); water gets a pale splash crown with an ink edge and ripple rings, no puffs. The most drawn and the most legible against the cream map; the cost is that a crowd of edged puffs gets busy when many guns fire.",
+        "palette": {
+          "roles": [
+            "burst.core",
+            "gf.paper",
+            "gf.paper_dust",
+            "gf.paper_stone",
+            "gf.paper_dark",
+            "gf.splash",
+            "ink",
+            "gf.ink.edge",
+            "ink.hatch",
+            "gf.leaf",
+            "gf.chip"
+          ],
+          "how_one_palette": "Every fill is a lightness step off the paper: the knock-out flash, the object fill, the dirt ink eased 22% toward it for dust, the ink eased toward the object fill for a dark puff; one ink edge round each. No new hue; the splash is the flash step over the water's own blue."
+        },
+        "_proposed": true,
+        "muzzle": [
+          {
+            "type": "flash",
+            "form": "cone",
+            "r": 1.15,
+            "life_s": 0.11,
+            "spikes": 7.0,
+            "inner": 0.5,
+            "var": 0.35,
+            "cone_deg": 48.0,
+            "fill": "burst.core",
+            "edge": "ink",
+            "edge_w": 1.0,
+            "fwd": 0.3
+          },
+          {
+            "type": "strokes",
+            "n": {
+              "small": 3.0,
+              "medium": 5.0,
+              "large": 8.0
+            },
+            "spread_deg": 40.0,
+            "r0": 0.6,
+            "r1": [
+              1.5,
+              2.3
+            ],
+            "w_px": 1.0,
+            "role": "ink.hatch",
+            "life_s": 0.26,
+            "fwd": 0.2
+          },
+          {
+            "type": "puffs",
+            "set": "edged_white",
+            "n": {
+              "small": 1.0,
+              "medium": 2.0,
+              "large": 4.0
+            },
+            "r": 0.62,
+            "life_s": {
+              "small": 4.0,
+              "medium": 6.0,
+              "large": 11.0
+            },
+            "grow": [
+              0.85,
+              1.7
+            ],
+            "grow_tau": 0.22,
+            "hold": 0.18,
+            "fade_power": 1.5,
+            "tone": 2.0,
+            "throw": 3.2,
+            "throw_tau": 0.5,
+            "interval_s": 0.05,
+            "fwd": 0.9,
+            "side": 0.5,
+            "rise_mps": 0.6,
+            "wind": 1.0,
+            "shadow": true
+          }
+        ],
+        "impact": {
+          "ground": [
+            {
+              "type": "flash",
+              "form": "disc",
+              "r": 0.9,
+              "life_s": 0.09,
+              "fill": "burst.core",
+              "edge": "ink",
+              "edge_w": 1.0,
+              "grow": [
+                0.5,
+                1.0
+              ],
+              "classes": [
+                "small",
+                "medium",
+                "large"
+              ]
+            },
+            {
+              "type": "puffs",
+              "set": "edged_dust",
+              "n": {
+                "bullet": 1.0,
+                "small": 1.0,
+                "medium": 2.0,
+                "large": 4.0
+              },
+              "r": 0.8,
+              "life_s": {
+                "bullet": 1.5,
+                "small": 3.0,
+                "medium": 4.5,
+                "large": 9.0
+              },
+              "grow": [
+                0.7,
+                1.7
+              ],
+              "grow_tau": 0.18,
+              "hold": 0.2,
+              "fade_power": 1.5,
+              "tone": 1.0,
+              "throw": 1.8,
+              "throw_tau": 0.35,
+              "interval_s": 0.04,
+              "rise_mps": 0.7,
+              "wind": 1.0,
+              "spread": 0.7
+            },
+            {
+              "type": "scorch",
+              "layer": "ground",
+              "classes": [
+                "small",
+                "medium"
+              ],
+              "r": 0.8,
+              "wash_role": "gf.scorch",
+              "dots": 22.0,
+              "dot_role": "scar.dot",
+              "hatch": 4.0,
+              "hatch_role": "ink.hatch",
+              "fade_in_s": 0.4,
+              "life_s": 90.0
+            }
+          ],
+          "water": [
+            {
+              "type": "flash",
+              "layer": "ground",
+              "form": "star",
+              "r": 1.0,
+              "life_s": 0.5,
+              "spikes": 9.0,
+              "inner": 0.55,
+              "var": 0.4,
+              "fill": "gf.splash",
+              "edge": "gf.ink.edge",
+              "edge_w": 1.0,
+              "grow": [
+                0.35,
+                1.0
+              ]
+            },
+            {
+              "type": "rings",
+              "layer": "ground",
+              "n": {
+                "bullet": 1.0,
+                "small": 2.0,
+                "medium": 3.0,
+                "large": 4.0
+              },
+              "r0": 0.3,
+              "r1": 2.8,
+              "w_px": 1.0,
+              "role": "ink.ring",
+              "life_s": 1.8,
+              "stagger_s": 0.15
+            }
+          ],
+          "stone": [
+            {
+              "type": "flash",
+              "form": "disc",
+              "r": 0.8,
+              "life_s": 0.09,
+              "fill": "burst.core",
+              "edge": "ink",
+              "edge_w": 1.0,
+              "grow": [
+                0.5,
+                1.0
+              ],
+              "classes": [
+                "small",
+                "medium",
+                "large"
+              ]
+            },
+            {
+              "type": "chips",
+              "n": {
+                "bullet": 3.0,
+                "small": 5.0,
+                "medium": 8.0,
+                "large": 14.0
+              },
+              "len": 0.36,
+              "r1": 2.3,
+              "role": "gf.chip",
+              "edge": "ink",
+              "life_s": 0.9,
+              "fill": true
+            },
+            {
+              "type": "puffs",
+              "set": "edged_stone",
+              "n": {
+                "bullet": 1.0,
+                "small": 1.0,
+                "medium": 2.0,
+                "large": 4.0
+              },
+              "r": 0.8,
+              "life_s": {
+                "bullet": 1.5,
+                "small": 3.0,
+                "medium": 4.5,
+                "large": 9.0
+              },
+              "grow": [
+                0.7,
+                1.7
+              ],
+              "grow_tau": 0.18,
+              "hold": 0.2,
+              "fade_power": 1.5,
+              "tone": 1.0,
+              "throw": 1.8,
+              "throw_tau": 0.35,
+              "interval_s": 0.04,
+              "rise_mps": 0.7,
+              "wind": 1.0,
+              "spread": 0.7
+            },
+            {
+              "type": "scorch",
+              "layer": "ground",
+              "classes": [
+                "small",
+                "medium"
+              ],
+              "r": 0.7,
+              "wash_role": "gf.scuff",
+              "dots": 8.0,
+              "dot_role": "scar.dot.soft",
+              "hatch": 5.0,
+              "hatch_role": "ink.hatch",
+              "fade_in_s": 0.3,
+              "life_s": 90.0
+            }
+          ],
+          "metal": [
+            {
+              "type": "flash",
+              "form": "star",
+              "r": 1.15,
+              "life_s": 0.12,
+              "spikes": 8.0,
+              "inner": 0.42,
+              "var": 0.4,
+              "fill": "burst.core",
+              "edge": "ink",
+              "edge_w": 1.0,
+              "grow": [
+                0.5,
+                1.0
+              ]
+            },
+            {
+              "type": "strokes",
+              "n": {
+                "bullet": 5.0,
+                "small": 8.0,
+                "medium": 11.0,
+                "large": 18.0
+              },
+              "spread_deg": 360.0,
+              "r0": 0.5,
+              "r1": [
+                1.6,
+                2.8
+              ],
+              "w_px": 1.0,
+              "role": "ink",
+              "life_s": 0.2
+            },
+            {
+              "type": "puffs",
+              "set": "edged_dark",
+              "n": {
+                "bullet": 1.0,
+                "small": 1.0,
+                "medium": 1.0,
+                "large": 3.0
+              },
+              "r": 0.8,
+              "life_s": {
+                "bullet": 1.5,
+                "small": 3.0,
+                "medium": 4.5,
+                "large": 9.0
+              },
+              "grow": [
+                0.7,
+                1.6
+              ],
+              "grow_tau": 0.18,
+              "hold": 0.2,
+              "fade_power": 1.5,
+              "tone": 2.0,
+              "throw": 1.4,
+              "throw_tau": 0.35,
+              "interval_s": 0.05,
+              "rise_mps": 0.8,
+              "wind": 1.0,
+              "spread": 0.5
+            }
+          ],
+          "wood": [
+            {
+              "type": "chips",
+              "n": {
+                "bullet": 3.0,
+                "small": 5.0,
+                "medium": 8.0,
+                "large": 14.0
+              },
+              "len": 0.4,
+              "r1": 2.2,
+              "role": "gf.leaf",
+              "edge": "ink",
+              "life_s": 0.9,
+              "fill": true,
+              "thin": true
+            },
+            {
+              "type": "leaves",
+              "n": {
+                "bullet": 3.0,
+                "small": 6.0,
+                "medium": 11.0,
+                "large": 20.0
+              },
+              "size": 0.2,
+              "r1": 2.4,
+              "fill": "gf.leaf",
+              "edge": "ink",
+              "life_s": 2.2,
+              "drift": 1.0
+            },
+            {
+              "type": "puffs",
+              "set": "edged_dust",
+              "n": {
+                "bullet": 1.0,
+                "small": 1.0,
+                "medium": 1.0,
+                "large": 3.0
+              },
+              "r": 0.65,
+              "life_s": {
+                "bullet": 1.2,
+                "small": 2.5,
+                "medium": 3.5,
+                "large": 7.0
+              },
+              "grow": [
+                0.7,
+                1.6
+              ],
+              "grow_tau": 0.18,
+              "hold": 0.2,
+              "fade_power": 1.5,
+              "tone": 0.0,
+              "throw": 1.2,
+              "throw_tau": 0.35,
+              "interval_s": 0.05,
+              "rise_mps": 0.7,
+              "wind": 1.0,
+              "spread": 0.6
+            }
+          ]
+        },
+        "cost_ops": {
+          "muzzle": {
+            "small": 20,
+            "medium": 23,
+            "large": 28
+          },
+          "impact_medium": {
+            "ground": 59,
+            "water": 23,
+            "stone": 62,
+            "metal": 30,
+            "wood": 39
+          },
+          "impact_large": {
+            "ground": 21,
+            "water": 24,
+            "stone": 49,
+            "metal": 39,
+            "wood": 71
+          }
+        }
+      }
+    },
+    {
+      "name": "G3",
+      "label": "G3  W1 soft puffs",
+      "note": "The damage smoke's own grammar (W1) at a small scale: translucent stepped washes with no outline, fresh puffs white and aging to grey, drifting with the wind; a soft white flash. Dust is the same wash in the dirt tone, stone dust paler, a metal hit a dark wash; water is a pale soft ring and an ink ripple, no puff; ink appears only as chips and spark ticks. The most like the smoke Alex chose and the calmest; the cost is that thin washes on the cream paper read faintly at the planning zoom.",
+      "files": [
+        "option_G3_bridge.png",
+        "option_G3_strike.png"
+      ],
+      "parameters": {
+        "label": "G3  W1 soft puffs",
+        "note": "The damage smoke's own grammar (W1) at a small scale: translucent stepped washes with no outline, fresh puffs white and aging to grey, drifting with the wind; a soft white flash. Dust is the same wash in the dirt tone, stone dust paler, a metal hit a dark wash; water is a pale soft ring and an ink ripple, no puff; ink appears only as chips and spark ticks. The most like the smoke Alex chose and the calmest; the cost is that thin washes on the cream paper read faintly at the planning zoom.",
+        "palette": {
+          "roles": [
+            "smoke.w.white.*",
+            "smoke.w.lgrey.*",
+            "smoke.w.grey.*",
+            "gf.dust",
+            "gf.stone",
+            "gf.dark",
+            "gf.splash.soft",
+            "burst.core",
+            "ink.ring",
+            "gf.scorch",
+            "gf.chip"
+          ],
+          "how_one_palette": "Washes with no outline, as W1: white smoke is W1's own roles; dust is the dirt ink lightened toward the paper, stone dust the knock-out step eased toward dirt, a dark puff the ink eased toward dirt. All on the paper-ink axis; ink appears only as chips, spark ticks and the ripple."
+        },
+        "_proposed": true,
+        "muzzle": [
+          {
+            "type": "flash",
+            "form": "cone",
+            "r": 1.1,
+            "life_s": 0.1,
+            "spikes": 5.0,
+            "inner": 0.7,
+            "var": 0.2,
+            "cone_deg": 42.0,
+            "fill": "burst.core",
+            "edge": "",
+            "fwd": 0.3
+          },
+          {
+            "type": "puffs",
+            "set": "w1_white",
+            "n": {
+              "small": 2.0,
+              "medium": 3.0,
+              "large": 5.0
+            },
+            "r": 0.6,
+            "life_s": {
+              "small": 5.0,
+              "medium": 8.0,
+              "large": 14.0
+            },
+            "grow": [
+              0.85,
+              1.9
+            ],
+            "grow_tau": 0.2,
+            "hold": 0.15,
+            "fade_power": 1.6,
+            "tone": 2.0,
+            "throw": 3.0,
+            "throw_tau": 0.5,
+            "interval_s": 0.06,
+            "fwd": 0.9,
+            "side": 0.55,
+            "rise_mps": 0.6,
+            "wind": 1.0,
+            "shadow": true
+          }
+        ],
+        "impact": {
+          "ground": [
+            {
+              "type": "flash",
+              "form": "disc",
+              "r": 0.8,
+              "life_s": 0.08,
+              "fill": "burst.core",
+              "edge": "",
+              "grow": [
+                0.5,
+                1.0
+              ],
+              "classes": [
+                "small",
+                "medium",
+                "large"
+              ]
+            },
+            {
+              "type": "puffs",
+              "set": "w1_dust",
+              "n": {
+                "bullet": 1.0,
+                "small": 2.0,
+                "medium": 3.0,
+                "large": 5.0
+              },
+              "r": 0.8,
+              "life_s": {
+                "bullet": 1.5,
+                "small": 3.5,
+                "medium": 5.5,
+                "large": 10.0
+              },
+              "grow": [
+                0.7,
+                1.9
+              ],
+              "grow_tau": 0.18,
+              "hold": 0.2,
+              "fade_power": 1.5,
+              "tone": 1.0,
+              "throw": 1.9,
+              "throw_tau": 0.35,
+              "interval_s": 0.04,
+              "rise_mps": 0.7,
+              "wind": 1.0,
+              "spread": 0.8,
+              "shadow": true
+            },
+            {
+              "type": "scorch",
+              "layer": "ground",
+              "classes": [
+                "small",
+                "medium"
+              ],
+              "r": 0.8,
+              "wash_role": "gf.scorch",
+              "dots": 0.0,
+              "hatch": 0.0,
+              "fade_in_s": 0.5,
+              "life_s": 90.0
+            }
+          ],
+          "water": [
+            {
+              "type": "disc",
+              "layer": "ground",
+              "r0": 0.2,
+              "r1": 1.5,
+              "fill": "gf.splash.soft",
+              "edge": "",
+              "life_s": 0.7,
+              "ring_only": false
+            },
+            {
+              "type": "rings",
+              "layer": "ground",
+              "n": {
+                "bullet": 1.0,
+                "small": 2.0,
+                "medium": 3.0,
+                "large": 4.0
+              },
+              "r0": 0.3,
+              "r1": 2.8,
+              "w_px": 1.0,
+              "role": "ink.ring",
+              "life_s": 1.8,
+              "stagger_s": 0.15
+            },
+            {
+              "type": "rings",
+              "layer": "ground",
+              "n": 1.0,
+              "r0": 0.4,
+              "r1": 2.2,
+              "w_px": 2.6,
+              "role": "gf.splash.soft",
+              "life_s": 0.9
+            }
+          ],
+          "stone": [
+            {
+              "type": "flash",
+              "form": "disc",
+              "r": 0.8,
+              "life_s": 0.08,
+              "fill": "burst.core",
+              "edge": "",
+              "grow": [
+                0.5,
+                1.0
+              ],
+              "classes": [
+                "small",
+                "medium",
+                "large"
+              ]
+            },
+            {
+              "type": "puffs",
+              "set": "w1_stone",
+              "n": {
+                "bullet": 1.0,
+                "small": 2.0,
+                "medium": 3.0,
+                "large": 5.0
+              },
+              "r": 0.8,
+              "life_s": {
+                "bullet": 1.5,
+                "small": 3.5,
+                "medium": 5.5,
+                "large": 10.0
+              },
+              "grow": [
+                0.7,
+                1.9
+              ],
+              "grow_tau": 0.18,
+              "hold": 0.2,
+              "fade_power": 1.5,
+              "tone": 1.0,
+              "throw": 1.9,
+              "throw_tau": 0.35,
+              "interval_s": 0.04,
+              "rise_mps": 0.7,
+              "wind": 1.0,
+              "spread": 0.8,
+              "shadow": true
+            },
+            {
+              "type": "chips",
+              "n": {
+                "bullet": 2.0,
+                "small": 4.0,
+                "medium": 6.0,
+                "large": 11.0
+              },
+              "len": 0.32,
+              "r1": 2.2,
+              "role": "gf.chip",
+              "edge": "ink",
+              "life_s": 0.8,
+              "fill": true
+            },
+            {
+              "type": "scorch",
+              "layer": "ground",
+              "classes": [
+                "small",
+                "medium"
+              ],
+              "r": 0.7,
+              "wash_role": "gf.scuff",
+              "dots": 0.0,
+              "hatch": 0.0,
+              "fade_in_s": 0.3,
+              "life_s": 90.0
+            }
+          ],
+          "metal": [
+            {
+              "type": "flash",
+              "form": "disc",
+              "r": 0.8,
+              "life_s": 0.09,
+              "fill": "burst.core",
+              "edge": "",
+              "grow": [
+                0.5,
+                1.0
+              ]
+            },
+            {
+              "type": "strokes",
+              "n": {
+                "bullet": 4.0,
+                "small": 7.0,
+                "medium": 10.0,
+                "large": 16.0
+              },
+              "spread_deg": 360.0,
+              "r0": 0.5,
+              "r1": [
+                1.5,
+                2.6
+              ],
+              "w_px": 1.0,
+              "role": "ink",
+              "life_s": 0.2
+            },
+            {
+              "type": "puffs",
+              "set": "w1_dark",
+              "n": {
+                "bullet": 1.0,
+                "small": 1.0,
+                "medium": 2.0,
+                "large": 4.0
+              },
+              "r": 0.75,
+              "life_s": {
+                "bullet": 1.5,
+                "small": 3.5,
+                "medium": 5.5,
+                "large": 10.0
+              },
+              "grow": [
+                0.7,
+                1.8
+              ],
+              "grow_tau": 0.18,
+              "hold": 0.2,
+              "fade_power": 1.5,
+              "tone": 2.0,
+              "throw": 1.4,
+              "throw_tau": 0.35,
+              "interval_s": 0.05,
+              "rise_mps": 0.8,
+              "wind": 1.0,
+              "spread": 0.6,
+              "shadow": true
+            }
+          ],
+          "wood": [
+            {
+              "type": "puffs",
+              "set": "w1_dust",
+              "n": {
+                "bullet": 1.0,
+                "small": 1.0,
+                "medium": 2.0,
+                "large": 4.0
+              },
+              "r": 0.65,
+              "life_s": {
+                "bullet": 1.2,
+                "small": 2.5,
+                "medium": 4.0,
+                "large": 8.0
+              },
+              "grow": [
+                0.7,
+                1.8
+              ],
+              "grow_tau": 0.18,
+              "hold": 0.2,
+              "fade_power": 1.5,
+              "tone": 0.0,
+              "throw": 1.2,
+              "throw_tau": 0.35,
+              "interval_s": 0.05,
+              "rise_mps": 0.7,
+              "wind": 1.0,
+              "spread": 0.6
+            },
+            {
+              "type": "chips",
+              "n": {
+                "bullet": 2.0,
+                "small": 4.0,
+                "medium": 7.0,
+                "large": 12.0
+              },
+              "len": 0.4,
+              "r1": 2.2,
+              "role": "gf.leaf",
+              "edge": "ink",
+              "life_s": 0.9,
+              "fill": true,
+              "thin": true
+            },
+            {
+              "type": "leaves",
+              "n": {
+                "bullet": 3.0,
+                "small": 6.0,
+                "medium": 10.0,
+                "large": 18.0
+              },
+              "size": 0.2,
+              "r1": 2.4,
+              "fill": "gf.leaf",
+              "edge": "ink",
+              "life_s": 2.2,
+              "drift": 1.0
+            }
+          ]
+        },
+        "cost_ops": {
+          "muzzle": {
+            "small": 14,
+            "medium": 15,
+            "large": 17
+          },
+          "impact_medium": {
+            "ground": 34,
+            "water": 33,
+            "stone": 46,
+            "metal": 29,
+            "wood": 36
+          },
+          "impact_large": {
+            "ground": 22,
+            "water": 34,
+            "stone": 44,
+            "metal": 37,
+            "wood": 64
+          }
+        }
+      }
+    },
+    {
+      "name": "G4",
+      "label": "G4  Flash and one ring",
+      "note": "The minimal family: a muzzle is a small knock-out flash, one ink ring and ONE soft white puff that drifts (so a big gun still smokes, once); an impact is a flash and one ring, coloured by material in ink and pale only (a pale ring on water, spark ticks on metal, three chips on stone). The calmest on a crowded turn (a tank fires every second), the cheapest to draw; the cost is that materials are told apart by little more than the ring and the flash.",
+      "files": [
+        "option_G4_bridge.png",
+        "option_G4_strike.png"
+      ],
+      "parameters": {
+        "label": "G4  Flash and one ring",
+        "note": "The minimal family: a muzzle is a small knock-out flash, one ink ring and ONE soft white puff that drifts (so a big gun still smokes, once); an impact is a flash and one ring, coloured by material in ink and pale only (a pale ring on water, spark ticks on metal, three chips on stone). The calmest on a crowded turn (a tank fires every second), the cheapest to draw; the cost is that materials are told apart by little more than the ring and the flash.",
+        "palette": {
+          "roles": [
+            "burst.core",
+            "ink",
+            "ink.ring",
+            "gf.splash",
+            "smoke.w.white.*",
+            "gf.scorch",
+            "gf.chip",
+            "gf.leaf"
+          ],
+          "how_one_palette": "The least of it: the knock-out flash step, ink for the ring and a few marks, W1's white for the one puff, a pale ring on water. No fills beyond those."
+        },
+        "_proposed": true,
+        "muzzle": [
+          {
+            "type": "flash",
+            "form": "cone",
+            "r": 1.0,
+            "life_s": 0.08,
+            "spikes": 5.0,
+            "inner": 0.6,
+            "var": 0.25,
+            "cone_deg": 40.0,
+            "fill": "burst.core",
+            "edge": "ink",
+            "edge_w": 1.0,
+            "fwd": 0.3
+          },
+          {
+            "type": "rings",
+            "n": 1.0,
+            "r0": 0.4,
+            "r1": 2.0,
+            "w_px": 1.0,
+            "role": "ink.ring",
+            "life_s": 0.38,
+            "fwd": 0.5
+          },
+          {
+            "type": "puffs",
+            "set": "w1_white",
+            "n": 1.0,
+            "r": 0.62,
+            "life_s": {
+              "small": 4.0,
+              "medium": 6.0,
+              "large": 12.0
+            },
+            "grow": [
+              0.85,
+              1.9
+            ],
+            "grow_tau": 0.2,
+            "hold": 0.15,
+            "fade_power": 1.6,
+            "tone": 2.0,
+            "throw": 2.6,
+            "throw_tau": 0.5,
+            "fwd": 0.9,
+            "rise_mps": 0.6,
+            "wind": 1.0,
+            "shadow": true
+          }
+        ],
+        "impact": {
+          "ground": [
+            {
+              "type": "flash",
+              "form": "disc",
+              "r": 0.8,
+              "life_s": 0.08,
+              "fill": "burst.core",
+              "edge": "ink",
+              "edge_w": 1.0,
+              "grow": [
+                0.5,
+                1.0
+              ]
+            },
+            {
+              "type": "rings",
+              "n": 1.0,
+              "r0": 0.3,
+              "r1": 2.0,
+              "w_px": 1.0,
+              "role": "ink.ring",
+              "life_s": 0.45
+            },
+            {
+              "type": "scorch",
+              "layer": "ground",
+              "classes": [
+                "small",
+                "medium"
+              ],
+              "r": 0.6,
+              "wash_role": "gf.scorch",
+              "dots": 0.0,
+              "hatch": 0.0,
+              "fade_in_s": 0.4,
+              "life_s": 90.0
+            }
+          ],
+          "water": [
+            {
+              "type": "rings",
+              "layer": "ground",
+              "n": 1.0,
+              "r0": 0.3,
+              "r1": 2.8,
+              "w_px": 2.4,
+              "role": "gf.splash",
+              "life_s": 1.0
+            },
+            {
+              "type": "rings",
+              "layer": "ground",
+              "n": 1.0,
+              "r0": 0.3,
+              "r1": 2.8,
+              "w_px": 1.0,
+              "role": "ink.ring",
+              "life_s": 1.0,
+              "delay_s": 0.02
+            }
+          ],
+          "stone": [
+            {
+              "type": "flash",
+              "form": "disc",
+              "r": 0.8,
+              "life_s": 0.08,
+              "fill": "burst.core",
+              "edge": "ink",
+              "edge_w": 1.0,
+              "grow": [
+                0.5,
+                1.0
+              ]
+            },
+            {
+              "type": "rings",
+              "n": 1.0,
+              "r0": 0.3,
+              "r1": 2.0,
+              "w_px": 1.0,
+              "role": "ink.ring",
+              "life_s": 0.45
+            },
+            {
+              "type": "chips",
+              "n": 3.0,
+              "len": 0.32,
+              "r1": 2.0,
+              "role": "gf.chip",
+              "edge": "ink",
+              "life_s": 0.7,
+              "fill": true
+            }
+          ],
+          "metal": [
+            {
+              "type": "flash",
+              "form": "star",
+              "r": 1.1,
+              "life_s": 0.1,
+              "spikes": 7.0,
+              "inner": 0.45,
+              "var": 0.35,
+              "fill": "burst.core",
+              "edge": "ink",
+              "edge_w": 1.0,
+              "grow": [
+                0.5,
+                1.0
+              ]
+            },
+            {
+              "type": "strokes",
+              "n": {
+                "bullet": 3.0,
+                "small": 5.0,
+                "medium": 7.0,
+                "large": 11.0
+              },
+              "spread_deg": 360.0,
+              "r0": 0.5,
+              "r1": [
+                1.4,
+                2.4
+              ],
+              "w_px": 1.0,
+              "role": "ink",
+              "life_s": 0.18
+            },
+            {
+              "type": "rings",
+              "n": 1.0,
+              "r0": 0.3,
+              "r1": 1.8,
+              "w_px": 1.0,
+              "role": "ink.ring",
+              "life_s": 0.4
+            }
+          ],
+          "wood": [
+            {
+              "type": "rings",
+              "n": 1.0,
+              "r0": 0.3,
+              "r1": 1.8,
+              "w_px": 1.0,
+              "role": "ink.ring",
+              "life_s": 0.4
+            },
+            {
+              "type": "leaves",
+              "n": {
+                "bullet": 2.0,
+                "small": 4.0,
+                "medium": 6.0,
+                "large": 10.0
+              },
+              "size": 0.2,
+              "r1": 2.0,
+              "fill": "gf.leaf",
+              "edge": "ink",
+              "life_s": 1.8,
+              "drift": 1.0
+            }
+          ]
+        },
+        "cost_ops": {
+          "muzzle": {
+            "small": 14,
+            "medium": 14,
+            "large": 14
+          },
+          "impact_medium": {
+            "ground": 32,
+            "water": 2,
+            "stone": 24,
+            "metal": 24,
+            "wood": 13
+          },
+          "impact_large": {
+            "ground": 18,
+            "water": 2,
+            "stone": 24,
+            "metal": 28,
+            "wood": 21
+          }
+        }
+      }
+    }
+  ],
+  "shared": {
+    "classes": {
+      "gun": {
+        "_about": "PROPOSED. The muzzle's size by the GUN, not by the unit (Alex: puffs 'sized by a small source, not the unit's length'). r_m is the flash radius in drawn metres; the smoke starts a little smaller than that and grows. A tank is 6 m long, so a medium muzzle flash is about a quarter of the hull. min_px keeps it visible at the planning zoom (a tank is about 8 px there). life multiplies the life of a part whose life_s is a plain number.",
+        "small": {
+          "r_m": 1.7,
+          "min_px": 5.0,
+          "life": 0.7
+        },
+        "medium": {
+          "r_m": 2.4,
+          "min_px": 6.5,
+          "life": 1.0
+        },
+        "large": {
+          "r_m": 6.5,
+          "min_px": 13.0,
+          "life": 1.5
+        }
+      },
+      "round": {
+        "_about": "PROPOSED. The impact's size by the ROUND (a tank shell against a cruiser shell). r_m is the drawn radius of the mark: the visible part, not the damage radius (the cruiser's shell blast is 6 / 12 / 20 m in the sim; B3 draws a 20 m bomb with a 4.4 m flash and a 2.2 m crater, so 5.5 m here is of that order).",
+        "bullet": {
+          "r_m": 0.7,
+          "min_px": 3.0,
+          "life": 0.6
+        },
+        "small": {
+          "r_m": 1.7,
+          "min_px": 5.0,
+          "life": 0.8
+        },
+        "medium": {
+          "r_m": 2.8,
+          "min_px": 7.0,
+          "life": 1.0
+        },
+        "large": {
+          "r_m": 6.5,
+          "min_px": 13.0,
+          "life": 1.5
+        }
+      }
+    },
+    "rounds": {
+      "_about": "PROPOSED mapping, which the round-model proposal would put in data/sim/rounds.json: what each weapon fires and the class of its muzzle and its landing.",
+      "machine_gun": {
+        "round": "bullet",
+        "gun": null,
+        "note": "tracers (T5) are its look; a bullet that lands makes the small mark of the bullet class"
+      },
+      "nose_cannon": {
+        "round": "small",
+        "gun": "small",
+        "fires": "cannon round"
+      },
+      "turret_gun": {
+        "round": "medium",
+        "gun": "medium",
+        "fires": "cannon round (the tank's light gun)"
+      },
+      "flak": {
+        "round": "medium",
+        "gun": "medium",
+        "fires": "flak shell (bursts in the air: F2)"
+      },
+      "light_flak": {
+        "round": "small",
+        "gun": "small",
+        "fires": "flak shell (bursts in the air: F2)"
+      },
+      "main_guns": {
+        "round": "large",
+        "gun": "large",
+        "fires": "shell (an arc; the blast is B3's size class)"
+      }
+    },
+    "roles": {
+      "_about": "PROPOSED colour roles, resolved like fx.json roles (base palette colour, mixed toward another, with an alpha); a ramp gives stage rows (fresh, middle, old) of tone columns (thin, medium, thick), as the W1 smoke's roles do. Every one is a lightness step off the paper or the ink: dust is the dirt ink lightened toward paper, pale dust the knock-out step eased toward dirt, a dark puff the ink eased toward dirt. No new hue.",
+      "ramps": {
+        "gf.dust": {
+          "base": "dirt",
+          "toward": "paper",
+          "t": 0.45,
+          "alpha": [
+            [
+              0.3,
+              0.42,
+              0.54
+            ],
+            [
+              0.24,
+              0.34,
+              0.44
+            ],
+            [
+              0.16,
+              0.24,
+              0.32
+            ]
+          ]
+        },
+        "gf.stone": {
+          "base": "flash",
+          "toward": "dirt",
+          "t": 0.15,
+          "alpha": [
+            [
+              0.34,
+              0.48,
+              0.62
+            ],
+            [
+              0.28,
+              0.4,
+              0.5
+            ],
+            [
+              0.18,
+              0.26,
+              0.34
+            ]
+          ]
+        },
+        "gf.dark": {
+          "base": "ink",
+          "toward": "dirt",
+          "t": 0.35,
+          "alpha": [
+            [
+              0.34,
+              0.48,
+              0.62
+            ],
+            [
+              0.3,
+              0.42,
+              0.52
+            ],
+            [
+              0.2,
+              0.28,
+              0.36
+            ]
+          ]
+        },
+        "gf.paper": {
+          "base": "flash",
+          "alpha": [
+            [
+              0.7,
+              0.78,
+              0.86
+            ],
+            [
+              0.56,
+              0.64,
+              0.72
+            ],
+            [
+              0.36,
+              0.42,
+              0.48
+            ]
+          ]
+        },
+        "gf.paper_dust": {
+          "base": "object_fill",
+          "toward": "dirt",
+          "t": 0.22,
+          "alpha": [
+            [
+              0.62,
+              0.7,
+              0.78
+            ],
+            [
+              0.5,
+              0.58,
+              0.66
+            ],
+            [
+              0.32,
+              0.38,
+              0.44
+            ]
+          ]
+        },
+        "gf.paper_stone": {
+          "base": "object_fill",
+          "alpha": [
+            [
+              0.66,
+              0.74,
+              0.82
+            ],
+            [
+              0.52,
+              0.6,
+              0.68
+            ],
+            [
+              0.34,
+              0.4,
+              0.46
+            ]
+          ]
+        },
+        "gf.paper_dark": {
+          "base": "object_fill",
+          "toward": "ink",
+          "t": 0.42,
+          "alpha": [
+            [
+              0.7,
+              0.78,
+              0.86
+            ],
+            [
+              0.58,
+              0.66,
+              0.74
+            ],
+            [
+              0.38,
+              0.44,
+              0.5
+            ]
+          ]
+        }
+      },
+      "single": {
+        "gf.splash": {
+          "base": "flash",
+          "alpha": 0.92
+        },
+        "gf.splash.soft": {
+          "base": "flash",
+          "alpha": 0.55
+        },
+        "gf.leaf": {
+          "base": "object_fill",
+          "alpha": 0.96
+        },
+        "gf.chip": {
+          "base": "rock_fill"
+        },
+        "gf.scorch": {
+          "base": "ink",
+          "alpha": 0.2
+        },
+        "gf.scorch.soft": {
+          "base": "ink",
+          "alpha": 0.12
+        },
+        "gf.scuff": {
+          "base": "flash",
+          "alpha": 0.5
+        },
+        "gf.ink.edge": {
+          "base": "ink",
+          "alpha": 0.85
+        },
+        "gf.ink.thin": {
+          "base": "ink",
+          "alpha": 0.6
+        }
+      }
+    },
+    "puffs": {
+      "_about": "PROPOSED baked puff sets. form 'soft' is the W1 grammar (translucent stepped washes, no outline: scripts/fx/fx_puff.gd, base W1 with its roles swapped); form 'edged' is a ragged paper-light puff with an ink edge and a few hatch strokes on the shade side (scripts/fx/fx_gunfire.gd). `roles` is the ramp of fx roles by stage and tone (index stage x 3 + tone, as W1's). radius is always the part's, so the baked radius_frac is 1.",
+      "w1_white": {
+        "form": "soft",
+        "base": "W1",
+        "roles": [
+          "smoke.w.white.0",
+          "smoke.w.white.1",
+          "smoke.w.white.2",
+          "smoke.w.lgrey.0",
+          "smoke.w.lgrey.1",
+          "smoke.w.lgrey.2",
+          "smoke.w.grey.0",
+          "smoke.w.grey.1",
+          "smoke.w.grey.2"
+        ]
+      },
+      "w1_dust": {
+        "form": "soft",
+        "base": "W1",
+        "ramp": "gf.dust"
+      },
+      "w1_stone": {
+        "form": "soft",
+        "base": "W1",
+        "ramp": "gf.stone"
+      },
+      "w1_dark": {
+        "form": "soft",
+        "base": "W1",
+        "ramp": "gf.dark"
+      },
+      "edged_white": {
+        "form": "edged",
+        "ramp": "gf.paper",
+        "edge": "gf.ink.edge",
+        "hatch": 3.0
+      },
+      "edged_dust": {
+        "form": "edged",
+        "ramp": "gf.paper_dust",
+        "edge": "gf.ink.edge",
+        "hatch": 3.0
+      },
+      "edged_stone": {
+        "form": "edged",
+        "ramp": "gf.paper_stone",
+        "edge": "gf.ink.edge",
+        "hatch": 2.0
+      },
+      "edged_dark": {
+        "form": "edged",
+        "ramp": "gf.paper_dark",
+        "edge": "gf.ink.edge",
+        "hatch": 4.0
+      }
+    },
+    "materials": {
+      "_about": "PROPOSED. How each surface answers a round. look names the impact recipe; size_mult scales the round's radius (a splash column is bigger than a dust puff from the same shell). Whatever a miss lands on is looked up in this table by what is under it (a unit's footprint, the bridge, the water, a tree's canopy, else the ground).",
+      "ground": {
+        "size_mult": 1.0,
+        "look": "ground",
+        "note": "dry land, roads, fields, sandbags and earthworks: dust and a small scorch"
+      },
+      "water": {
+        "size_mult": 1.35,
+        "look": "water",
+        "note": "any depth: a splash, rings on the water, NO smoke"
+      },
+      "stone": {
+        "size_mult": 1.0,
+        "look": "stone",
+        "note": "the bridge, walls, rubble, compound buildings: dust and chips"
+      },
+      "metal": {
+        "size_mult": 0.85,
+        "look": "metal",
+        "note": "armour and hulls (tank, mobile AA, ships), aircraft, the tower's lattice: sparks and a dark puff"
+      },
+      "wood": {
+        "size_mult": 0.9,
+        "look": "wood",
+        "note": "trees (splinters and leaves), houses and the barge (splinters and dust, no leaves)"
+      }
+    }
+  },
+  "material_table": {
+    "_about": "PROPOSED default material of every unit type and every kind of scenery (feeds decision damage-looks, which is about to ask for a material on everything). The material decides the impact look here and the hit, wear and end looks there. Strong simplifications are marked.",
+    "units": {
+      "light_fighter": "metal",
+      "heavy_fighter": "metal",
+      "bomber": "metal",
+      "tank": "metal",
+      "mobile_aa": "metal",
+      "anti_aircraft_battery": "ground",
+      "radio_tower": "metal",
+      "military_complex": "stone",
+      "bridge": "stone",
+      "cruiser": "metal",
+      "patrol_boat": "metal",
+      "supply_boat": "wood"
+    },
+    "scenery": {
+      "ground (dry land, roads, fields)": "ground",
+      "sandbags and earthworks": "ground",
+      "water, every depth (sea, river, shallows)": "water",
+      "houses": "wood",
+      "walls": "stone",
+      "the bridge (deck, piers, wing walls)": "stone",
+      "rubble and ruins": "stone",
+      "rock and cliff steps": "stone",
+      "trees": "wood",
+      "wrecks (a downed plane, a burnt-out tank)": "metal"
+    },
+    "notes": [
+      "A unit's footprint decides first (a round that lands inside a tank's hull hits metal), then the bridge, then what is under the point: water, a tree's canopy, else ground.",
+      "The battery is ground because its visible mass is its sandbag ring; the gun inside it is metal and could be told apart later.",
+      "Houses and trees share wood: a house leaves splinters and dust, a tree adds leaves (the `leaves` part). Not yet in the sim: houses, walls and trees are baked scenery, so for now a landing there is the material under a MISS only."
+    ]
+  },
+  "sheet": "compare.png (the options side by side, one key frame per row), option_<X>_bridge.png and option_<X>_strike.png (each family at full size, with the specimen and the palette strip); every frame at native size in frames/, listed in frames.json",
+  "recommendation": {
+    "option": "G3",
+    "_proposed": true,
+    "_reason": "PROPOSED by builder GF, not Alex's call. G3 draws a muzzle puff, a dust puff and a damage plume in ONE grammar (W1, which Alex chose), so the map has one kind of smoke; it is the calmest to read when two to eight tanks each fire a shell a second; it tells materials by lightness alone (dust is the dirt ink lightened toward paper, stone dust paler, a metal hit a dark wash), which is the style guide's rule, and a round in water is a pale ring and an ink ripple with no puff. Its cost: thin washes on cream paper read faintly at the planning zoom (the class table's min_px floors help; a larger floor is a number to tune). G2 is the pick if Alex wants every impact to read at zoom 1 to 3 as a drawn thing (edged puffs, a splash crown) and accepts a busier map; G4 if a crowded turn matters more than telling the materials apart; G1 reads best at the planning zoom (dark dots) but its smoke is made of dots and looks like soot."
+  },
+  "findings": [
+    "The sizes and the material table are the same in every family: they can be decided apart from the look. Sizes: small 1.7 m, medium 2.4 m, large 6.5 m for a gun's flash; 1.7, 2.8 and 6.5 m (bullet 0.7 m) for an impact (all PROPOSED, drawn at the planes' scale with a floor in px).",
+    "At the planning zoom (0.35) a tank is about 8 px and its muzzle puff sits at its 6.5 px floor: only the cruiser's salvo, the flak and G1's dark dots read there. Zoom 1 and 3 read in every family.",
+    "A round that lands on stone makes dust and chips, not continuous smoke: this is also the answer to the bridge's smoke question (decision playtest-3, bridge_smoke, question 1): a hit on the bridge is a puff of dust and a few chips on the deck.",
+    "A shell in water splashes in every family (a splash crown or a pale ring, ripples, no puff); today's game draws it as a B3 bomb burst with white smoke on the river (column G0).",
+    "The sim gives a missed shot no landing point. Here a miss lands a seeded 4 to 16 m beside the target and -10 to +30 m along the line (visual only); the material under it is looked up from the map (a unit's footprint, the bridge deck, water, a tree's canopy, else ground). A real miss point is the line-of-fire proposal.",
+    "Trees, houses and walls are baked scenery with no presence in the sim, so a round can show a tree or wall impact today only as the material under a MISS point; the table is ready for when they have one.",
+    "The cost of a shot in canvas operations is in each family's parameters (cost_ops): G1 is the most (a stipple cloud of 80 to 210 dots a muzzle), G2 and G3 a handful of sprites, G4 the least."
+  ],
+  "integration": "scripts/fx/fx_gunfire.gd is the effect code (a Book of muzzle and impact records, a Painter), written to become the game's, as fx_tracer.gd is. To build a pick: move the chosen family, the class tables and the material table into data/fx/fx.json as value records; give every weapon a `fires` round and gun class (decision round-model); call add_muzzle from CombatFeed on a cannon's `fire` event, a flak gun's and a Main Guns `shell_fire`/shell_impact release; call add_impact on a hit (the target's material), on a shell_impact (the material under it) and, once the sim carries a landing point, on a miss; mount a ground pass and a shadow pass under the unit markers and the air pass over them (as the board's GfRig does) with the effects layer's wind. A shell in water would no longer call bomb_impact.",
+  "chosen": null,
+  "chosen_by": null
+}
