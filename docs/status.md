@@ -9,7 +9,6 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| Forest fire (decision forest-fire): the mechanic has landed (below); now the coastal wind (decision coastal-wind: smoke drift, spread downwind); then the look board for a burning grove and a burnt-out trunk | fire session (nice-dewdney worktree) | new data/sim/fire.json, scripts/sim/fire*.gd, scripts/tests/test_fire*.gd; the fire step and its net state in scripts/sim/world.gd (and the snapshot in scripts/net/world_sync.gd); burnt cover in scripts/sim/concealment.gd, data/sim/concealment.json; smoke denies tracking in scripts/sim/spotting.gd, bombs.gd (followed aim), scripts/ui/ui_target.gd and the enemy-click lines of scripts/ui/unit_ui.gd; new scripts/fx/fx_fire*.gd and its hook in fx_field.gd/fx_layer.gd; per-chunk rebake in scripts/render/map_view.gd, chunk_terrain_provider.gd; data/scenarios/suppress.json (fire on); a fire knob in scripts/debug/debug_settings.gd; the wind: new data/sim/wind.json, scripts/sim/wind.gd, test_wind, and the smoke drift in scripts/fx/fx_field.gd (_wind) and fx_fire.gd | 2026-10-11 |
 
 ## Next, free to take
 
@@ -23,6 +22,9 @@ Decisions and open questions live in the Decision Ledger
 
 ## Later (planned, not fleshed out)
 
+- **The forest fire's look board** (decision forest-fire, deferred: Alex, "It's fine as is for now"): a burning grove
+  and a burnt-out trunk. Today's stand-in is W1 puffs per burning tree, bending downwind, and charred trunks; it reads
+  partly like white trees. Options when it comes back: a long thin plume, a low grey haze, inked hatching, W1 as today.
 - **A general player-side AI** (decision general-ai, deferred): plans any unit in any mission from what its
   side can see, specials included. Uses: headless playtests with honest numbers, an empty co-op seat, real
   enemy tactics. Today the player side in tests is a hand-written, all-seeing script per mission
@@ -39,6 +41,10 @@ Decisions and open questions live in the Decision Ledger
 
 ## Recently landed
 
+- 2026-10-11: the coastal wind (decisions coastal-wind, wind-with-height): a sea breeze by day and a land breeze
+  at night from the sun's hour, wander and gusts, the host's wind on every client; all smoke drifts with the wind at
+  its height; fire spreads further downwind. A bomb's target lost in fog or smoke is aimed at its last-seen place
+  (decision lost-target-last-seen). The fire's look stays the stand-in for now; its board is deferred (Alex).
 - 2026-10-11: the time-of-day sun is live (decision sun-time). Taken once at mission start from the host's clock and sent to
   clients (`scripts/net/mission_start.gd`); from the north side, NE at 06:00 through N at noon to NW at 18:00, so every shadow
   falls below its object; shadows clamped at 2 x the height; night hours fold onto the day; plane shadows follow the sun.
