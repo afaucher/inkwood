@@ -2455,6 +2455,81 @@
       },
       "status": "chosen by Alex; live 2026-10-12",
       "notes": "Alex: '12 yes, but show me'. Alex chose: 'S1 real heights'."
+    },
+    {
+      "date": "2026-10-12",
+      "board": "none (said in chat)",
+      "options": [],
+      "applied_to": [
+        "docs/backlog.md"
+      ],
+      "id": "lines-on-by-default",
+      "area": "Combat, Fog",
+      "question": "Lines of fire and lines of sight on by default?",
+      "chosen": "both on by default (to build next session: re-tune the missions, measure the viewshed's cost)",
+      "parameters": {},
+      "status": "chosen by Alex; to build",
+      "notes": "Alex: 'I think we want lines of fire and lines of sight turned on by default. I don't remember if we had a performance concern with the latter, but I think it's just the fog mask right? And if scales by the number of units?'"
+    },
+    {
+      "date": "2026-10-12",
+      "board": "none (said in chat)",
+      "options": [],
+      "applied_to": [
+        "docs/backlog.md"
+      ],
+      "id": "labels-by-type",
+      "area": "Interface",
+      "question": "Unit labels by type: what does each kind show?",
+      "chosen": "planes: altitude and speed; ships and tanks omit altitude for now; whether they need another number, later",
+      "parameters": {},
+      "status": "chosen by Alex; to build",
+      "notes": "Alex: 'Generally, we should make sure that the labels are appropriate by type and keep them terse legible and useful. For airplanes we have altitude and speed. For ships and tanks you obviously don't need altitude. Should they both just omit it or is there another critical parameter that they have? Let's omit for now and think about it in the future.' Also: 'For the tank labels, I'm actually not sure what context flying the turn comes up in.' (the roster's status line while a turn plays back)"
+    },
+    {
+      "date": "2026-10-12",
+      "board": "none (said in chat)",
+      "options": [],
+      "applied_to": [
+        "docs/backlog.md"
+      ],
+      "id": "ship-gun-range",
+      "area": "Combat",
+      "question": "Is the cruiser's Main Guns range (3,000 m) too long?",
+      "chosen": null,
+      "parameters": {},
+      "status": "open (to study)",
+      "notes": "Alex: 'I'm not sure about the range on the ship's guns. It might be too long. Let's look at it?'"
+    },
+    {
+      "date": "2026-10-12",
+      "board": "none (said in chat)",
+      "options": [],
+      "applied_to": [
+        "docs/backlog.md"
+      ],
+      "id": "tracers-wider",
+      "area": "Effects",
+      "question": "Tracers on more weapons, at least where nothing else marks the round in flight?",
+      "chosen": null,
+      "parameters": {},
+      "status": "open (Alex reconsidering tracers-mg)",
+      "notes": "Alex: 'I'm reconsidering putting tracers on everything or at least where there's not already an indicator like bombs.'"
+    },
+    {
+      "date": "2026-10-12",
+      "board": "none (said in chat)",
+      "options": [],
+      "applied_to": [
+        "docs/backlog.md"
+      ],
+      "id": "ordnance-tails",
+      "area": "Effects",
+      "question": "Should big, slow ordnance (shells, bombs) have a tail like the planes' ribbon?",
+      "chosen": null,
+      "parameters": {},
+      "status": "open",
+      "notes": "Alex: 'I'm wondering if big slow ordinance should have a tail. Just like planes.'"
     }
   ]
 }

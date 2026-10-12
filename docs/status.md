@@ -12,6 +12,8 @@ Decisions and open questions live in the Decision Ledger
 
 ## Next, free to take
 
+**The whole open list, for the next session's prioritisation, is `docs/backlog.md`.** Items below are older.
+
 1. **The third playtest's interface and tank asks** (decision playtest-3, Alex's words in its notes): the views
    (top, front, side) a section of their own in the card like 'orders'; 'altitude, step X' and 'views, step X' lose
    'step X'; the step indicator bigger, without 'step 1 of 2' and without 'click a node to change it, or add step 2';
