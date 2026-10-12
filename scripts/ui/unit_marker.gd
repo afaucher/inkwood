@@ -75,6 +75,8 @@ var wobble: float = 0.0
 # there is no baked art to place the shadow sprite (a headless run).
 var shadow_offset := Vector2.ZERO
 var _checked_k: float = -1.0   # the marker.true_scale the art was last checked against
+var _scale_changed_ms: int = 0   # when the scale (the host's ppm or marker.true_scale) last changed: Time.get_ticks_msec()
+var _art_deferred := false       # a rebake was put off (see _may_wait); set_pose asks again each frame until it is not
 var _style: UiStyle
 var _fallback_ink := Color.BLACK
 
@@ -165,9 +167,12 @@ func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_off
 	if absf(ppm - screen_ppm) > 1e-6 or k != _checked_k:
 		screen_ppm = ppm
 		_checked_k = k
+		_scale_changed_ms = Time.get_ticks_msec()
 		_ensure_art()
 	elif art == null:
 		_ensure_art()
+	elif _art_deferred:
+		_ensure_art()   # (the zoom has settled? the marker is back on screen? Cheap while the answer is still no)
 	elif art.screen_aligned and absf(angle_difference(art.rot, heading_screen + PI / 2.0)) > 0.01:
 		_ensure_art()   # a static unit turned (the camera or the unit): baked again for the new angle
 	var rot := heading_screen + PI / 2.0 + wobble_rad  # the art's nose points to -y
@@ -261,11 +266,43 @@ func _ensure_art() -> void:
 	if art != null:
 		var ratio := want / art.ppm
 		var r: float = _style.num("unit_art.rebake_ratio")
-		if ratio <= r and ratio >= 1.0 / r and not (art.screen_aligned and absf(angle_difference(art.rot, turn)) > 0.01):
+		var turned: bool = art.screen_aligned and absf(angle_difference(art.rot, turn)) > 0.01
+		if ratio <= r and ratio >= 1.0 / r and not turned:
+			_art_deferred = false
 			return
+		if not turned and _may_wait(ratio):
+			_art_deferred = true
+			return
+	_art_deferred = false
 	var a: UnitMarkerArt.Art = UnitMarkerArt.art_for(_style, silhouette, accent, want, turn)
 	if a != null:
 		art = a
+
+# May the rebake wait (builder CAM, 2026-10-11, decision playtest-3 zoom_judder; PROPOSED, data unit_art.rebake_settle_ms and its
+# neighbours; 0 is the old behaviour)? Yes when the marker is well off the screen (nobody sees its art; it is baked when it comes into view),
+# or when the scale is still changing and the art held is within unit_art.rebake_hard_ratio of the wanted one: it is drawn scaled meanwhile
+# and baked once when the zoom has settled. A frame that baked every marker's art at every wheel notch froze for 40 to 180 ms.
+func _may_wait(ratio: float) -> bool:
+	var settle: float = _style.num("unit_art.rebake_settle_ms")
+	if settle <= 0.0:
+		return false
+	if _off_screen():
+		return true
+	var hard: float = _style.num("unit_art.rebake_hard_ratio")
+	if ratio > hard or ratio < 1.0 / hard:
+		return false
+	return Time.get_ticks_msec() - _scale_changed_ms < int(settle)
+
+# Is the marker further than unit_art.rebake_offscreen_margin_px (plus its own radius) outside the screen it is drawn on?
+func _off_screen() -> bool:
+	if not is_inside_tree():
+		return false
+	var m: float = radius_px() + _style.num("unit_art.rebake_offscreen_margin_px")
+	return not get_viewport_rect().grow(m).has_point(get_global_transform_with_canvas().origin)
+
+# Has a rebake been put off (off screen, or the zoom still moving)? For tests and tools.
+func is_art_deferred() -> bool:
+	return _art_deferred
 
 # Drops the art held and bakes it again at the current scale (the art cache was
 # cleared because the pen changed, or the scale rule did).

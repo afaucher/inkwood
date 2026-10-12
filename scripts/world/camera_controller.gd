@@ -52,7 +52,8 @@ extends Node
 # so zoom pans (about the cursor both ways the round trip went nowhere). The
 # drag buttons (data: middle, right) and a trackpad pan drag the map; held keys
 # (data: WASD and arrows, Q/E and -/=) pan at a screen speed and zoom about
-# zoom_centre(). A manual pan stops following (follow.break_on_pan).
+# zoom_centre(). A manual pan stops following (follow.break_on_pan), and so does a zoom the player makes
+# (follow.break_on_zoom; builder CAM, 2026-10-11, PROPOSED: ONE OWNER OF THE VIEW -- see _player_zoom).
 #
 # FAR ZOOM (far_zoom.mode, proposed "overview_topo"): overview_amount() is how
 # much of the topographic overview should show at the current zoom (0..1);
@@ -91,6 +92,7 @@ var key_codes: Dictionary = {}    # action -> Array[int] of physical keycodes
 var edge_overscroll_px: float
 var follow_rate: float
 var break_on_pan: bool
+var break_on_zoom: bool
 var frame_margin: float
 var frame_max_zoom: float
 var insets := {"left": 0.0, "top": 0.0, "right": 0.0, "bottom": 0.0}
@@ -194,6 +196,7 @@ func _load() -> void:
 	edge_overscroll_px = data.num("pan.edge_overscroll_m") * px_per_m
 	follow_rate = data.num("follow.smoothing_per_s")
 	break_on_pan = data.flag("follow.break_on_pan")
+	break_on_zoom = data.flag("follow.break_on_zoom")
 	frame_margin = data.num("frame.margin_px")
 	frame_max_zoom = data.num("frame.max_zoom")
 	var ins: Dictionary = data.dict("frame.insets_px")
@@ -320,7 +323,19 @@ func zoom_by(factor: float, anchor: Vector2) -> void:
 
 # The player's zoom: in (factor > 1) toward `cursor`, out about zoom_centre().
 func zoom_player(factor: float, cursor: Vector2) -> void:
-	zoom_by(factor, cursor if factor > 1.0 else zoom_centre())
+	_player_zoom(factor, cursor if factor > 1.0 else zoom_centre())
+
+# A zoom the PLAYER asked for (the wheel, a pinch, a held zoom key): ONE OWNER OF THE VIEW. Following puts the
+# unit at the centre of the map area every frame; a zoom that holds a point under the cursor moves the centre
+# off it; the two ran against each other for as long as a roster click's follow lasted -- the view jumped one
+# way with each notch and eased back the other (measured 2026-10-11, tmp/cam/probe_follow.csv: the point under
+# the cursor ended 826 px from it after ten notches). So a zoom that CHANGES the zoom ends following, as a
+# manual pan does (follow.break_on_zoom, PROPOSED); a notch at the zoom limit changes nothing and keeps it.
+func _player_zoom(factor: float, anchor: Vector2) -> void:
+	var z0 := camera.zoom.x
+	zoom_by(factor, anchor)
+	if break_on_zoom and camera.zoom.x != z0:
+		stop_follow()
 
 # The centre of the map area on screen, the view less the HUD insets (screen px).
 func zoom_centre() -> Vector2:
@@ -522,7 +537,7 @@ func _process(delta: float) -> void:
 			pan_screen(-dir.normalized() * pan_keys_speed * delta)
 		var zdir := float(_held("zoom_in")) - float(_held("zoom_out"))
 		if zdir != 0.0:
-			zoom_by(pow(keys_zoom_rate, zdir * delta), zoom_centre())
+			_player_zoom(pow(keys_zoom_rate, zdir * delta), zoom_centre())
 	step_follow(delta)
 
 # One follow step of `delta` seconds (called every frame; public for tests).

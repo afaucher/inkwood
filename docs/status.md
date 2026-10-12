@@ -9,7 +9,6 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| Third playtest: the camera zooms in further, the zoom judder | lead session (builder CAM) | scripts/world/camera_controller.gd, data/view/camera.json, scripts/render/map_view.gd (its camera helpers only), scripts/tests/test_camera.gd | 2026-10-11 |
 | Third playtest: the bridge's smoke (playtest-3 bridge_smoke) | lead session | waiting on Alex's three answers | 2026-10-11 |
 
 ## Next, free to take
@@ -56,6 +55,9 @@ Decisions and open questions live in the Decision Ledger
 
 ## Recently landed
 
+- 2026-10-11: the zoom judder is fixed and the camera zooms in further (decision playtest-3): a zoom ends the follow
+  (`camera.json` follow.break_on_zoom), the units' size follows the zoom the same frame, unit art is not re-baked mid-zoom;
+  the closest zoom 3.0, a tank about 54 px (proposed). test_camera, test_zoom_scale, test_marker_rebake.
 - 2026-10-11: the third playtest's card and roster asks (decision playtest-3): the roster without its plan words and with bigger
   text; the orders card without 'step X', with a bigger step strip; the VIEWS a card of their own; a unit's special says
   whether it is set and why it cannot be (a tank has none: 'no special: weapons fire on their own'); the tank's gun on a

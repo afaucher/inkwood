@@ -35,6 +35,12 @@ extends "res://scripts/test_support/test_case.gd"
 #            framing rectangle (with and without a HUD inset), no closer than
 #            frame.max_zoom; a set too big for the zoom-out limit reports false.
 #   FOLLOW   following eases toward the unit and snaps with smoothing 0.
+#   JUDDER   (builder CAM, 2026-10-11, decision playtest-3 zoom_judder, "like there's two systems fighting each other for
+#            deciding the view") ONE OWNER OF THE VIEW: a scripted wheel zoom all the way in and back out, with a follow
+#            running every frame, never moves the zoom backwards and never moves the anchored point (the one under the
+#            cursor going in, the map area's centre coming out) by a frame; the zoom reaches the closest zoom, which is
+#            past the old 2.0 (tanks too small); a zoom that changes the zoom ends the follow (follow.break_on_zoom), a
+#            notch at the limit does not; with that switch off the fight is there to be seen (the test can fail).
 #   FAR      overview_amount is 1 below topo_below_zoom, 0 above
 #            full_above_zoom, 0 always in "full_render" mode.
 #   INSETS   (first fight, rough edge "the roster clear of the map at full zoom-out")
@@ -77,6 +83,7 @@ func setup(_main) -> void:
 	_grab()
 	_frame()
 	_follow()
+	_judder()
 	_far()
 	_scale_knob()
 	_insets()
@@ -444,6 +451,97 @@ func _follow() -> void:
 	near(_ctl.center().distance_to(Vector2(1700.0, 1500.0) * _ctl.px_per_m), 0.0, 1e-3, "with smoothing 0 the view snaps to the unit")
 	_ctl.follow_rate = _ctl.data.num("follow.smoothing_per_s")
 	_ctl.stop_follow()
+
+# --- the judder: one owner of the view (builder CAM, decision playtest-3 zoom_judder) ----------------------------
+
+func _judder() -> void:
+	var ppm := _ctl.px_per_m
+	var unit_m := _at(0.5, 0.5) / ppm
+	var getter := func() -> Variant: return unit_m
+	var cursor := Vector2(900.0, 300.0)
+	var dt := 1.0 / 60.0
+	# 1. All the way in and back out with a follow running every frame, as after a roster click (Alex's judder): three
+	# frames between notches, the follow stepped in each.
+	_ctl.set_view(unit_m * ppm, 0.2)
+	_ctl.follow(getter)
+	var held := _ctl.screen_to_world_px(cursor)
+	var z_prev := _ctl.zoom_level()
+	var back_in := 0
+	var drift_in := 0.0
+	for notch in 40:
+		_wheel_event(MOUSE_BUTTON_WHEEL_UP, cursor)
+		for f in 3:
+			_ctl.step_follow(dt)
+			var z := _ctl.zoom_level()
+			if z < z_prev - 1e-12:
+				back_in += 1
+			z_prev = z
+			drift_in = maxf(drift_in, _ctl.world_px_to_screen(held).distance_to(cursor))
+	eq(back_in, 0, "JUDDER: zooming in, no frame moves the zoom backwards")
+	check(drift_in < 0.02, "JUDDER: zooming in, no frame moves the point under the cursor (worst %.5f px over 120 frames)" % drift_in)
+	near(_ctl.zoom_level(), _ctl.zoom_max, 1e-9, "JUDDER: the closest zoom (zoom.max %.2f) is reached" % _ctl.zoom_max)
+	check(_ctl.zoom_max > 2.0, "JUDDER: and it is past the old closest zoom 2.0 (tanks were too small there)")
+	check(not _ctl.is_following(), "JUDDER: the follow gave the view up at the first notch (follow.break_on_zoom)")
+	_ctl.follow(getter)   # (a follow started again at the closest zoom is ended by the first notch out)
+	var mid := _ctl.zoom_centre()
+	var held_c := _ctl.screen_to_world_px(mid)
+	var back_out := 0
+	var drift_out := 0.0
+	for notch in 14:
+		_wheel_event(MOUSE_BUTTON_WHEEL_DOWN, cursor)
+		for f in 3:
+			_ctl.step_follow(dt)
+			var z := _ctl.zoom_level()
+			if z > z_prev + 1e-12:
+				back_out += 1
+			z_prev = z
+			drift_out = maxf(drift_out, _ctl.world_px_to_screen(held_c).distance_to(mid))
+	eq(back_out, 0, "JUDDER: zooming out, no frame moves the zoom backwards")
+	check(drift_out < 0.02, "JUDDER: zooming out, no frame moves the centre of the map area (worst %.5f px)" % drift_out)
+	print("[camera] judder: 40 notches in with a follow, zoom 0.2 to %.2f, the point under the cursor moved %.5f px; 14 out, the centre %.5f px" % [_ctl.zoom_max, drift_in, drift_out])
+
+	# 2. The fight, with the switch off (so this test can fail): the follow drags the anchored point off the cursor.
+	var d := CameraData.new(CameraData.CAMERA_PATH)
+	d.root["follow"]["break_on_zoom"]["value"] = false
+	_ctl = _make(d)
+	_ctl.set_view(unit_m * ppm, 0.2)
+	_ctl.follow(getter)
+	held = _ctl.screen_to_world_px(cursor)
+	var fight := 0.0
+	for notch in 10:
+		_wheel_event(MOUSE_BUTTON_WHEEL_UP, cursor)
+		for f in 3:
+			_ctl.step_follow(dt)
+			fight = maxf(fight, _ctl.world_px_to_screen(held).distance_to(cursor))
+	check(fight > 5.0, "JUDDER: with follow.break_on_zoom off the follow pulls the anchored point off the cursor (%.1f px): the old fight" % fight)
+	check(_ctl.is_following(), "JUDDER: and the follow runs on through the zoom")
+	_ctl = _make()
+
+	# 3. What ends a follow and what does not.
+	_ctl.set_view(unit_m * ppm, _ctl.zoom_max)
+	_ctl.follow(getter)
+	_wheel_event(MOUSE_BUTTON_WHEEL_UP, cursor)
+	check(_ctl.is_following(), "JUDDER: a notch in at the closest zoom changes nothing and keeps the follow")
+	_ctl.set_view(unit_m * ppm, 0.3)
+	_ctl.follow(getter)
+	_ctl.zoom_by(1.2, cursor)
+	check(_ctl.is_following(), "JUDDER: a zoom made in code (framing, tools) keeps it")
+	for how: String in ["wheel in", "wheel out", "pinch", "zoom key"]:
+		_ctl.set_view(unit_m * ppm, 0.3)
+		_ctl.follow(getter)
+		match how:
+			"wheel in":
+				_wheel_event(MOUSE_BUTTON_WHEEL_UP, cursor)
+			"wheel out":
+				_wheel_event(MOUSE_BUTTON_WHEEL_DOWN, cursor)
+			"pinch":
+				var mg := InputEventMagnifyGesture.new()
+				mg.position = cursor
+				mg.factor = 1.2
+				_ctl._unhandled_input(mg)
+			"zoom key":
+				_ctl._player_zoom(1.1, _ctl.zoom_centre())   # (what the held Q / E keys call each frame)
+		check(not _ctl.is_following(), "JUDDER: a player's zoom (%s) ends the follow, as a pan does" % how)
 
 # --- the scale knob ----------------------------------------------------------------------------------
 

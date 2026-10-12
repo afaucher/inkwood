@@ -23,6 +23,10 @@
     "stipple": 1,
     "bake_margin_px": 4,
     "rebake_ratio": 1.15,
+    "_rebake_settle": "PROPOSED by builder CAM, 2026-10-11 (decision playtest-3, zoom_judder). One wheel notch scales the view by 1.15, which is rebake_ratio, so every notch re-baked the art of every marker in the frame it happened: about 10 ms per tank colour, 20 to 50 ms for the bridge and 60 to 250 ms for the cruiser (measured, tmp/cam/art_cost.log), a frozen frame of 40 to 180 ms per notch (tmp/cam/probe_follow.csv) that grows with the zoom. Two rules, both off at rebake_settle_ms 0 (the old behaviour): a marker more than rebake_offscreen_margin_px off the screen keeps its art and is baked when it comes into view; and while the scale is still changing (it changed less than rebake_settle_ms ago) a marker whose art is within rebake_hard_ratio of the wanted scale keeps it, drawn scaled, and is baked once when the zoom has settled. The art is then at most rebake_hard_ratio magnified or shrunk for the length of a scroll. rebake_ratio itself stays 1.15.",
+    "rebake_settle_ms": 150,
+    "rebake_hard_ratio": 2.0,
+    "rebake_offscreen_margin_px": 120,
     "min_bake_ppm": 1.0,
     "max_bake_ppm": 30.0,
     "cache_max": 48

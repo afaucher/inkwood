@@ -52,7 +52,7 @@ extends Node2D
 #
 # CAMERA (proposed): the opening view frames every plane in sight and the first
 # turn's carry-on flight; a roster click glides to that unit and follows it
-# (through playback too) until the player pans; nothing else moves the camera.
+# (through playback too) until the player pans or zooms (follow.break_on_zoom); nothing else moves the camera.
 # Mouse: LEFT plans (Track U); MIDDLE/RIGHT drag pans; wheel zooms; WASD/arrows
 # pan; Q/E (and -/=) zoom (Track F, data/view/camera.json); F2 the knobs; Esc
 # the menu (scripts/app/main.gd). Track U's keys: Enter, Backspace, Delete,
@@ -415,6 +415,11 @@ func _build() -> void:
 	_load_t0 = Time.get_ticks_msec()
 	_load_total = _sight_chunk_total()
 	_update_plane_scale()
+	# The planes' scale follows the zoom IN THE SAME CALL that changes it (builder CAM, 2026-10-11, decision playtest-3 zoom_judder; PROPOSED fix).
+	# It used to be set in this node's _process (priority 50), after the marker layer (0) had already posed every marker for the frame, so
+	# below the zoom where the minimum-size floor binds each wheel notch drew every unit 15% too big for one frame and then snapped it back
+	# (measured: a tank 21.1 px for one frame, 18.3 px after, tmp/cam/probe_low.csv). The camera is the one writer; this follows it.
+	ctl.view_changed.connect(_update_plane_scale)
 	_bake_pause_overview = scenario.view_num("bake_pause_overview")
 	_lock_input(true)   # until the first view is baked (_finish_loading)
 	_set_bake_boost(not headless)   # the loading card is up: nobody is playing, so bake in big slices
