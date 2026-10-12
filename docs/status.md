@@ -9,6 +9,7 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
+| Scenery heights S1 live (scenery-heights) | lead session (builder SH) | data/params/render_defaults.json (wall and house heights), the tree height window in scripts/world/scene_gen.gd / structures.gd, data/terrain/terrain.json's stale note, the port check's parity defaults, tests | 2026-10-12 |
 | Gunfire G3 live (gunfire-looks) with the round model (round-model) and a material per unit (damage-looks) | lead session (builder G3) | new data/sim/rounds.json; weapons' round ids in data/units/*.json; a material per unit; scripts/fx/fx_gunfire.gd made live and its hook in fx_layer.gd/fx_field.gd/combat_feed.gd; data/fx/fx.json gunfire and tracers keys; tests | 2026-10-12 |
 
 ## Next, free to take

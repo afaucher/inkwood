@@ -2413,15 +2413,20 @@
     {
       "date": "2026-10-11",
       "board": "variants/scenery-heights/ (being made)",
-      "options": [],
+      "options": [
+        "S0 today (the prototype's px)",
+        "S1 real-world heights",
+        "S2 halfway",
+        "S3 real heights, trees a little taller"
+      ],
       "applied_to": [],
       "id": "scenery-heights",
       "area": "World, Style",
       "question": "Real-world heights for trees, houses and walls (prototype px today: walls 5-7 m, houses to 14.5 m, trees to 29 m)?",
-      "chosen": null,
+      "chosen": "S1, real heights: houses about 7 m to the ridge, compound walls about 2.5 m, trees held to 8 to 20 m (median about 12)",
       "parameters": {},
-      "status": "open (options being made)",
-      "notes": "Alex: '12 yes, but show me'."
+      "status": "chosen by Alex",
+      "notes": "Alex: '12 yes, but show me'. Alex chose: 'S1 real heights'."
     }
   ]
 }
