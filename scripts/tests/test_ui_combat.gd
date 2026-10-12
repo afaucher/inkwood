@@ -41,12 +41,12 @@ class _FakeFx extends RefCounted:
 	var calls: Array = []
 	var true_scale: float = 1.0
 	var now: float = 0.0
-	func emit_path(unit_id: String, sampler: Callable, t0: float, t1: float, frac: float, size_m: float = 9.0) -> int:
-		calls.append({"call": "emit_path", "unit": unit_id, "t0": t0, "t1": t1, "frac": frac, "size": size_m,
+	func emit_path(unit_id: String, sampler: Callable, t0: float, t1: float, frac: float, size_m: float = 9.0, back_m: float = NAN, rise_mps: float = 0.0) -> int:
+		calls.append({"call": "emit_path", "unit": unit_id, "t0": t0, "t1": t1, "frac": frac, "size": size_m, "back": back_m, "rise": rise_mps,
 			"first": sampler.call(t0), "last": sampler.call(t1)})
 		return 0
-	func falling(unit_id: String, pos: Vector2, h: float, t: float, size_m: float = 9.0, heading: float = NAN) -> int:
-		calls.append({"call": "falling", "unit": unit_id, "pos": pos, "h": h, "t": t, "size": size_m, "heading": heading})
+	func falling(unit_id: String, pos: Vector2, h: float, t: float, size_m: float = 9.0, heading: float = NAN, source_m: float = -1.0, back_m: float = NAN) -> int:
+		calls.append({"call": "falling", "unit": unit_id, "pos": pos, "h": h, "t": t, "size": size_m, "heading": heading, "source": source_m, "back": back_m})
 		return 0
 	func explode_midair(unit_id: String, pos: Vector2, h: float, t: float, size_m: float = 9.0, heading: float = NAN) -> void:
 		calls.append({"call": "explode_midair", "unit": unit_id, "pos": pos, "h": h, "t": t, "size": size_m, "heading": heading})
@@ -415,7 +415,9 @@ func _feed_damage() -> void:
 		near(float(p["frac"]), float(left) / 8.0, 1e-9, "stretch %d: the health fraction is the pips left at that moment (%d of 8)" % [i, left])
 		check(float(p["frac"]) <= prev_frac + 1e-9 and float(p["frac"]) > 0.0 and float(p["frac"]) < 1.0, "stretch %d: damaged, not dead, and never healing" % i)
 		prev_frac = float(p["frac"])
-		near(float(p["size"]), 20.0, 1e-9, "stretch %d: sized by the plane" % i)
+		near(float(p["size"]), 8.0, 1e-9, "stretch %d: sized by the plane's smoke SOURCE (data/units/bomber.json damage_smoke.source_m, 8 m), not its 20 m span" % i)
+		near(float(p["back"]), 7.0, 1e-9, "stretch %d: from the bomber's source, 7 m behind its centre (damage_smoke.source_back_m)" % i)
+		near(float(p["rise"]), 0.0, 1e-9, "stretch %d: a plane's trail does not climb (damage_smoke.rise_mps 0: its reason is in the data)" % i)
 	# What the layer's sampler is given: the path from World.sample, the height above the ground.
 	var p0: Dictionary = paths[0]
 	var s0 := w.sample("bomber", float(p0["t0"]), "history")

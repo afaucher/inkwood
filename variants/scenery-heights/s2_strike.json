@@ -1,0 +1,142 @@
+{
+  "option": "s2",
+  "scenario": "strike",
+  "seed": 20261009,
+  "patch": {
+    "tree_mult": 1.05,
+    "tree_min_m": 7.2,
+    "tree_max_m": 24.4,
+    "house_mult": 0.777777777777778,
+    "wall_mult": 0.708333333333333
+  },
+  "sun": "fixed sun: bearing 315.0, elevation 46.0, shadow x0.966",
+  "sun_len": 0.965688774807074,
+  "px_per_m": 2.0,
+  "frames": [
+    {
+      "file": "s2_village_plan.png",
+      "subject": "village",
+      "kind": "plan",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280,
+        720
+      ],
+      "mean_lightness": 0.78
+    },
+    {
+      "file": "s2_village_close.png",
+      "subject": "village",
+      "kind": "close",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280,
+        720
+      ],
+      "mean_lightness": 0.78
+    },
+    {
+      "file": "s2_wood_plan.png",
+      "subject": "wood",
+      "kind": "plan",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280,
+        720
+      ],
+      "mean_lightness": 0.784
+    },
+    {
+      "file": "s2_wood_close.png",
+      "subject": "wood",
+      "kind": "close",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280,
+        720
+      ],
+      "mean_lightness": 0.774
+    },
+    {
+      "file": "s2_plane_plan.png",
+      "subject": "plane",
+      "kind": "plan",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280,
+        720
+      ],
+      "mean_lightness": 0.78
+    },
+    {
+      "file": "s2_plane_close.png",
+      "subject": "plane",
+      "kind": "close",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280,
+        720
+      ],
+      "mean_lightness": 0.77
+    }
+  ],
+  "measured": {
+    "area_m": [
+      1217.0,
+      682.0,
+      1536.0,
+      1536.0
+    ],
+    "trees": {
+      "n": 2361,
+      "min": 7.2,
+      "p10": 8.30132170991931,
+      "median": 11.7608737797776,
+      "p90": 16.9287848811555,
+      "max": 24.4,
+      "mean": 12.2875601263966,
+      "share_12_or_more": 0.473951715374841,
+      "share_over_20": 0.0173655230834392
+    },
+    "houses": {
+      "n": 16,
+      "min": 8.35134195586667,
+      "p10": 8.4177432581922,
+      "median": 9.66985035039019,
+      "p90": 10.91431914669,
+      "max": 11.064202327868,
+      "mean": 9.69206399200542,
+      "share_12_or_more": 0.0,
+      "share_over_20": 0.0
+    },
+    "walls": {
+      "n": 3,
+      "min": 1.9125,
+      "p10": 1.9125,
+      "median": 3.825,
+      "p90": 4.25,
+      "max": 4.25,
+      "mean": 3.32916666666667,
+      "share_12_or_more": 0.0,
+      "share_over_20": 0.0
+    },
+    "hedges": {
+      "n": 108,
+      "min": 1.26739521607731,
+      "p10": 1.64612308048681,
+      "median": 2.39648232087667,
+      "p90": 3.11158648165089,
+      "max": 4.15971160554031,
+      "mean": 2.41055763304937,
+      "share_12_or_more": 0.0,
+      "share_over_20": 0.0
+    }
+  },
+  "tank_added": "tank_sh"
+}

@@ -53,6 +53,12 @@ extends RefCounted
 #                                              marker goes at the event (ui_fate.gd), and a ruin on the ground comes back with
 #                                              restore_wrecks
 # A bomb's fog rule is its BOMBER's: what your bomber drops you see land, what an unseen enemy drops you do not.
+#
+# SMOKE'S SHARED RULES (builder SMOKE, 2026-10-11; decisions smoke-consistency and impact-by-round-and-target; docs/proposals/smoke-audit.md):
+#   a damaged unit's smoke is sized by its SOURCE (data/units damage_smoke.source_m, placed source_back_m behind its centre, climbing rise_mps), never
+#   by its length; a unit with damage_smoke.enabled false (the stone bridge) leaves none, with no special case here;
+#   a bomb or a shell that lands in WATER (the layer's impact_look, data fx.json impacts.water) is a splash of rings, with no flash, smoke, clods or
+#   crater -- and none to put back for a late joiner.
 
 const UiFate = preload("res://scripts/ui/ui_fate.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
@@ -326,6 +332,10 @@ func _shell_impact(ev: Dictionary, game_t: float) -> void:
 	var pos := Vector2(float(ev.get("x", 0.0)), float(ev.get("y", 0.0)))
 	var blast := float(ev.get("blast_m", 20.0))
 	var key := _shell_key(int(ev.get("step", 0)), int(ev.get("shell", 0)))
+	if _lands_in_water(pos):
+		if _may_show(shooter) and fx.has_method("water_impact"):
+			fx.water_impact(pos, game_t, blast, shooter)   # a splash: no smoke, no crater, nothing to put back for a late joiner
+		return
 	if _may_show(shooter):
 		if fx.has_method("bomb_impact"):
 			fx.bomb_impact(pos, game_t, blast, shooter, key)
@@ -338,11 +348,22 @@ func _bomb_impact(ev: Dictionary, game_t: float) -> void:
 	var pos := Vector2(float(ev.get("x", 0.0)), float(ev.get("y", 0.0)))
 	var blast := float(ev.get("blast_m", 45.0))
 	var key := _bomb_key(int(ev.get("drop_index", 0)), int(ev.get("bomb", 0)))
+	if _lands_in_water(pos):
+		if _may_show(bomber) and fx.has_method("water_impact"):
+			fx.water_impact(pos, game_t, blast, bomber)   # a splash: no smoke, no crater, nothing to put back for a late joiner
+		return
 	if _may_show(bomber):
 		if fx.has_method("bomb_impact"):
 			fx.bomb_impact(pos, game_t, blast, bomber, key)
 	elif fx.has_method("add_crater"):
 		fx.add_crater(bomber, pos, game_t, blast, _scar_seed("%s/%d" % [bomber, key]))
+
+# Whether a round that lands at `pos` lands in water (decision impact-by-round-and-target: "a round hitting water would splash, not explode with
+# smoke"): the effects layer's say (impact_look, data fx.json impacts.water) over the World's water. A layer without the question (a fake) says land.
+func _lands_in_water(pos: Vector2) -> bool:
+	if world == null or not world.has_water() or fx == null or not fx.has_method("impact_look"):
+		return false
+	return str(fx.impact_look(world.water_depth_at(pos.x, pos.y))) == "splash"
 
 # A static unit at 0 health: its ruin where it stood.
 func _destroyed(id: String, u: Object, ev: Dictionary, game_t: float) -> void:
@@ -378,11 +399,16 @@ func _leave_smoke(id: String, to_game_t: float) -> void:
 	if f <= 0.0 or f >= 1.0 or not _may_show(id):
 		return
 	var u = world.units[id]
+	# WHAT SMOKES (builder SMOKE, decisions smoke-consistency and impact-by-round-and-target): the unit's own data (damage_smoke): a unit that does not
+	# smoke (the stone bridge) leaves none, and the puffs are sized by the SOURCE on the unit (an engine deck, a funnel), never by its length.
+	var ds: Dictionary = u.def.damage_smoke
+	if not bool(ds.get("enabled", false)):
+		return
 	var t0 := turn_t0(_turn)
 	var sampler := func(tg: float) -> Dictionary:
 		var s: Dictionary = world.sample(id, tg - t0, "history")
 		return {"x": s["x"], "y": s["y"], "height_m": marker_layer.height_above_ground(s), "heading": s["heading"]}
-	fx.emit_path(id, sampler, from_t, to_game_t, f, float(u.def.size_m))
+	fx.emit_path(id, sampler, from_t, to_game_t, f, float(ds["source_m"]), float(ds["source_back_m"]), float(ds["rise_mps"]))
 
 # One frame of a plane falling out of control: its pose at `t` seconds into the turn.
 func _ride(id: String, t: float, game_t: float) -> void:
@@ -392,8 +418,9 @@ func _ride(id: String, t: float, game_t: float) -> void:
 	var s: Dictionary = world.sample(id, t, "history")
 	if s.is_empty() or float(s.get("height_m", 0.0)) < 0.0:
 		return   # (under the water the fall has no smoke)
+	var ds: Dictionary = u.def.damage_smoke   # (the same engine that smoked before the fall smokes in it: its source, not the airframe's length)
 	fx.falling(id, Vector2(float(s["x"]), float(s["y"])), marker_layer.fall_height_above_ground(s), game_t,
-		float(u.def.size_m), float(s["heading"]))
+		float(u.def.size_m), float(s["heading"]), float(ds.get("source_m", -1.0)), float(ds.get("source_back_m", NAN)))
 
 # Whether this unit's effects may be shown: in the player's sight, or the data allows it.
 func _may_show(id: String) -> bool:

@@ -163,7 +163,10 @@ extends Node
 #                                 hides it); with it false the ribbon sits just under the planes,
 #                                 after the cones (apply_trail_order() moves it)
 #     fx (ground, shadows, air)   the effects layer, Track X's FxLayer: damage smoke, the blast, the
-#                                 wreck; below the planner and the planes
+#                                 wreck; below the planner and the planes. Its AIR pass (all smoke) is not
+#                                 here but in the marker layer's smoke slot, over the surface units and
+#                                 their shadows and under the aircraft (builder SMOKE, decision
+#                                 smoke-consistency; fx.json smoke_model.layer)
 #     planner                     (as before)
 #     cones                       ConeOverlay: the SELECTED unit's cones as a colour wash (its
 #                                 interior here, under the planes; its "Marks" child, the rim and
@@ -428,6 +431,11 @@ func _mount_combat(map_parent: Node, host_mapping: Variant) -> void:
 	fx.select(smoke_opt, crash if crash != "" else fx.data.working_default("crash"), crash_smoke if crash_smoke != "" else smoke_opt)
 	fx.mount(map_parent, fx_above)
 	map_parent.move_child(fx, planner.get_index())
+	# The smoke itself (the air pass: every puff, the pieces in flight, the forest fire's columns) goes up between the surface units' markers and the
+	# aircraft's: over a tank, a boat or the bridge and their shadows, under every plane (decision smoke-consistency; data fx.json smoke_model.layer, the
+	# old order under every marker is its other setting). The smoke's own ground shadow stays in the shadow pass, under the units.
+	if fx.data.smoke_layer() == "above_surface_units":
+		fx.mount_smoke(marker_layer.smoke_slot())
 	# The cones, then the trails, just under the markers.
 	cones = ConeOverlay.new()
 	map_parent.add_child(cones)

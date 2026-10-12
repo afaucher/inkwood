@@ -1,0 +1,93 @@
+{
+  "option": "s2",
+  "scenario": "bridge",
+  "seed": 55,
+  "patch": {
+    "tree_mult": 1.05,
+    "tree_min_m": 7.2,
+    "tree_max_m": 24.4,
+    "house_mult": 0.777777777777778,
+    "wall_mult": 0.708333333333333
+  },
+  "sun": "fixed sun: bearing 315.0, elevation 46.0, shadow x0.966",
+  "sun_len": 0.965688774807074,
+  "px_per_m": 2.0,
+  "frames": [
+    {
+      "file": "s2_bridge_plan.png",
+      "subject": "bridge",
+      "kind": "plan",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280,
+        720
+      ],
+      "mean_lightness": 0.777
+    },
+    {
+      "file": "s2_bridge_close.png",
+      "subject": "bridge",
+      "kind": "close",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280,
+        720
+      ],
+      "mean_lightness": 0.771
+    }
+  ],
+  "measured": {
+    "area_m": [
+      3067.0,
+      -33.0,
+      1536.0,
+      1536.0
+    ],
+    "trees": {
+      "n": 2813,
+      "min": 7.2,
+      "p10": 8.3176128196539,
+      "median": 11.658664076815,
+      "p90": 17.0139232189682,
+      "max": 24.4,
+      "mean": 12.2516114033878,
+      "share_12_or_more": 0.462495556345539,
+      "share_over_20": 0.0206185567010309
+    },
+    "houses": {
+      "n": 18,
+      "min": 8.71654671974946,
+      "p10": 8.76125035498757,
+      "median": 9.72481982094702,
+      "p90": 11.0191381924925,
+      "max": 11.2395081749139,
+      "mean": 9.69038421598574,
+      "share_12_or_more": 0.0,
+      "share_over_20": 0.0
+    },
+    "walls": {
+      "n": 3,
+      "min": 1.9125,
+      "p10": 1.9125,
+      "median": 3.825,
+      "p90": 4.25,
+      "max": 4.25,
+      "mean": 3.32916666666667,
+      "share_12_or_more": 0.0,
+      "share_over_20": 0.0
+    },
+    "hedges": {
+      "n": 34,
+      "min": 1.1829688053148,
+      "p10": 1.45619341182772,
+      "median": 1.95179850691545,
+      "p90": 3.09499677005249,
+      "max": 4.62886839307966,
+      "mean": 2.18091910805381,
+      "share_12_or_more": 0.0,
+      "share_over_20": 0.0
+    }
+  }
+}

@@ -57,6 +57,10 @@ var bomb_per_drop: int = 0
 # The unit's specials (data/units/_schema.json "specials"; Alex 2026-10-10: a step says "Bomb Drop", "Radio On", "Turret Fire"):
 # an Array of {id, name, action}. Empty for a unit with none, and when the file is not ok().
 var specials: Array = []
+# What the unit smokes with once it is damaged (data/units/_schema.json "damage_smoke"; builder SMOKE, 2026-10-11, PROPOSED): {enabled, source_m,
+# source_back_m, rise_mps}. The effects feed (scripts/ui/combat_feed.gd) sizes the puffs by the SOURCE, never by size_m, and a unit with enabled false
+# (the bridge) leaves no smoke at all. Empty when the file is not ok().
+var damage_smoke: Dictionary = {}
 var errors: Array[String] = []
 
 static func path_for(type_id: String, units_dir: String = UNITS_DIR) -> String:
@@ -100,6 +104,7 @@ func _init(unit_source: Variant, band_order: Array, quiet: bool = false, label: 
 		bomb_drops = int(bomb_section.get("drops", 0))
 		bomb_per_drop = int(bomb_section.get("per_drop", 0))
 		specials = v.get("specials", [])
+		damage_smoke = v.get("damage_smoke", {})
 		_check(r, stem)
 	errors = r.errors
 	if errors.is_empty():
@@ -254,6 +259,14 @@ func _check(r: Records, stem: String) -> void:
 		r.err("specials: a unit that carries bombs has the special 'bomb' (its step says what it does)")
 	if not carries_bombs() and special_ids.has("bomb"):
 		r.err("specials: the special 'bomb' needs a bomb_load (this unit carries none)")
+	# Damage smoke (builder SMOKE, 2026-10-11): a unit that smokes has a source to size the puffs by; one that does not (the stone bridge) says so.
+	if not damage_smoke.is_empty():
+		var smokes: bool = bool(damage_smoke.get("enabled", false))
+		var src: float = float(damage_smoke.get("source_m", 0.0))
+		if smokes and not (src > 0.0):
+			r.err("damage_smoke: a unit that smokes needs a source_m above 0 (the puffs are sized by it, never by size_m), got %s" % str(src))
+		if not smokes and src > 0.0:
+			r.err("damage_smoke: a unit that does not smoke (enabled false) has source_m 0, got %s" % str(src))
 	var bands: Array = e.get("altitude_bands", [])
 	var start := str(e.get("start_band", ""))
 	if start != "" and not bands.has(start):

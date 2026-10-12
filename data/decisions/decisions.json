@@ -2278,13 +2278,22 @@
       "date": "2026-10-11",
       "board": "none (said in chat)",
       "options": [],
-      "applied_to": [],
+      "applied_to": [
+        "docs/proposals/smoke-audit.md (builder SMOKE, 2026-10-11: every smoke, dust and plume source side by side, with a verdict for each difference)",
+        "PROPOSED: the effects layer's air pass (all smoke) is mounted between the surface units' markers and the aircraft's (scripts/ui/unit_marker_layer.gd smoke_slot, scripts/fx/fx_layer.gd mount_smoke, scripts/ui/unit_ui.gd; data/fx/fx.json smoke_model.layer, 'under_all' is the old order)",
+        "PROPOSED: a ground or sea unit's damage smoke rises at the smoulder's 4 m/s and leans downwind with the wind at its height (data/units/*.json damage_smoke.rise_mps, scripts/fx/fx_field.gd); the plumes of a crash, a bomb and a ruin rise like the burst thrown with them (data/fx/fx.json plume.rise_mps in every option)",
+        "PROPOSED: the differences kept and their reasons (data/fx/fx.json smoke_model.differences_kept)",
+        "scripts/tests/test_smoke_consistency.gd, scripts/app/smoke_shot.gd (tmp/smoke/)"
+      ],
       "id": "smoke-consistency",
       "area": "Effects",
       "question": "Is every smoke drawn the same way (layer, rise, wind, size)?",
       "chosen": "audit every smoke for consistency; a ground unit's damage smoke above the unit and its shadow, rising and leaning downwind; alike unless there is a reason to differ",
       "parameters": {
-        "rule": "not identical unless there is no reason to be different"
+        "rule": "not identical unless there is no reason to be different",
+        "layer": "PROPOSED: smoke over the surface units and their shadows, under the aircraft; its own ground shadow stays under the units (data/fx/fx.json smoke_model.layer)",
+        "rise": "PROPOSED: ground and sea damage smoke 4.0 m/s (= the ruin's and the wreck's smolder), a plane's trail 0 with its reason in the data",
+        "open": "docs/proposals/smoke-audit.md section 5: planes' rise, the heavy and the bomber's smaller trail, old puffs in fog"
       },
       "status": "chosen by Alex",
       "notes": "Alex: '2 - yes, audit everything for smoke consistency. Not identical unless there is no reason to be different.'"
@@ -2293,12 +2302,20 @@
       "date": "2026-10-11",
       "board": "none (said in chat)",
       "options": [],
-      "applied_to": [],
+      "applied_to": [
+        "PROPOSED: data/units/*.json damage_smoke {enabled, source_m, source_back_m, rise_mps}: a damaged unit's smoke is sized by a small source on the thing that smokes (3 to 8 m), never by its length; read by scripts/ui/combat_feed.gd, validated by data/units/_schema.json and scripts/sim/unit_def.gd",
+        "the stone bridge smokes not at all: damage_smoke.enabled false in data/units/bridge.json (Alex: 'Right now bridges don't have anything, that is fine.')",
+        "PROPOSED stand-in: a bomb or a shell that lands in water is a splash of the sinking splash's ink rings, no flash, smoke, clods or crater (data/fx/fx.json impacts.water; scripts/ui/combat_feed.gd _lands_in_water, scripts/fx/fx_layer.gd water_impact). The real impact looks are the gunfire board's (variants/gunfire/)",
+        "scripts/tests/test_smoke_consistency.gd"
+      ],
       "id": "impact-by-round-and-target",
       "area": "Effects, Combat",
       "question": "What decides the size and the look of a puff or an impact?",
       "chosen": "a property of the round, the thing hit, or both: a round hitting water splashes rather than exploding with smoke; puffs are not sized by the unit's length",
-      "parameters": {},
+      "parameters": {
+        "sizes": "PROPOSED: light fighter, heavy fighter and bomber 8 m; tank and mobile AA 3 m; tower 3 m; battery 4 m; complex 8 m; cutter and barge 4 m; cruiser 8 m",
+        "water_impact": "PROPOSED: a round lands in water where the water is at least 0.5 m deep; the splash is 0.35 x the round's blast, at least 3 m"
+      },
       "status": "chosen by Alex (the direction)",
       "notes": "Alex, on 'puffs sized by a small source, not the unit's length': '3 - yes, this should probably be a property of either the round or the thing being hit or both. Ex a round hitting water would splash, not explode with smoke. Right?'"
     },

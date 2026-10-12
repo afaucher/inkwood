@@ -39,7 +39,7 @@ func setup(_main) -> void:
 		finish()
 		return
 	var fields: Dictionary = (schema as Dictionary)["fields"]
-	for f: String in ["id", "name", "domain", "mobility", "size_m", "draught_m", "actions_per_turn", "health", "sight_range_m", "drawing", "envelope", "weapons", "bomb_load", "specials"]:
+	for f: String in ["id", "name", "domain", "mobility", "size_m", "draught_m", "actions_per_turn", "health", "sight_range_m", "drawing", "damage_smoke", "envelope", "weapons", "bomb_load", "specials"]:
 		check(fields.has(f), "schema lists '%s'" % f)
 	var special_fields: Dictionary = (fields.get("specials", {}) as Dictionary).get("item_fields", {})
 	for f: String in ["id", "name", "action"]:
@@ -50,6 +50,9 @@ func setup(_main) -> void:
 	var load_fields: Dictionary = (fields.get("bomb_load", {}) as Dictionary).get("fields", {})
 	for f: String in ["drops", "per_drop"]:
 		check(load_fields.has(f), "schema lists bomb_load.%s" % f)
+	var smoke_fields: Dictionary = (fields.get("damage_smoke", {}) as Dictionary).get("fields", {})   # builder SMOKE 2026-10-11: the thing that smokes
+	for f: String in ["enabled", "source_m", "source_back_m", "rise_mps"]:
+		check(smoke_fields.has(f), "schema lists damage_smoke.%s" % f)
 	var env_fields: Dictionary = (fields.get("envelope", {}) as Dictionary).get("fields", {})
 	for f: String in ["speed_min_mps", "speed_max_mps", "accel_mps2", "decel_mps2", "turn_rate_curve_dps", "turn_bleed_mps2", "climb_speed_cost_mps", "dive_speed_gain_mps", "altitude_bands", "reverse_from_stop"]:
 		check(env_fields.has(f), "schema lists envelope.%s" % f)
@@ -130,6 +133,10 @@ func setup(_main) -> void:
 		["two specials with one id", "specials: id 'bomb' is used twice"],
 		["a bomb load with no bomb special", "specials: a unit that carries bombs has the special 'bomb'"],
 		["the bomb special on a unit with no bombs", "specials: the special 'bomb' needs a bomb_load"],
+		["no damage smoke section", "missing section 'damage_smoke'"],
+		["a unit that smokes with no source", "damage_smoke: a unit that smokes needs a source_m above 0"],
+		["a unit that does not smoke with a source", "damage_smoke: a unit that does not smoke (enabled false) has source_m 0"],
+		["a misspelt damage smoke key", "unknown field 'damage_smoke.source_n'"],
 	]
 	for c: Array in cases:
 		var what: String = c[0]
@@ -274,6 +281,14 @@ func _break(d: Dictionary, what: String) -> void:
 			d["bomb_load"] = {"drops": {"value": 3, "_proposed": true, "_reason": "x"}, "per_drop": {"value": 4, "_proposed": true, "_reason": "x"}}
 		"the bomb special on a unit with no bombs":
 			d["specials"] = [{"id": "bomb", "name": "Bomb", "action": "Drop"}]
+		"no damage smoke section":
+			d.erase("damage_smoke")
+		"a unit that smokes with no source":
+			d["damage_smoke"]["source_m"] = {"value": 0, "_proposed": true, "_reason": "x"}
+		"a unit that does not smoke with a source":
+			d["damage_smoke"]["enabled"] = {"value": false, "_proposed": true, "_reason": "x"}
+		"a misspelt damage smoke key":
+			d["damage_smoke"]["source_n"] = {"value": 1, "_proposed": true, "_reason": "typo"}
 		_:
 			fail("no such breakage: " + what)
 
@@ -317,11 +332,14 @@ func _check_weapons(def: UnitDef) -> void:
 			# Track M2U (mission 2): the target of 'clear the guns to bomb the complex': static, unarmed, tougher than the tower
 			eq(ids, [] as Array[String], "military complex: no weapons")
 		"mobile_aa":
-			# Track M2U (mission 2): a ground vehicle that shoots up: one weapon, the battery's light flak's shape (all around, aimed up,
-			# short: the low band and not the medium)
-			eq(ids, ["aa_guns"] as Array[String], "mobile AA gun: one weapon, the light AA guns")
+			# Track M2U (mission 2): a ground vehicle that shoots up. Since decision weapon-kinds (Alex, 2026-10-11) its one weapon is a
+			# MACHINE-GUN mount, quad_mg: all around and "less up" than flak -- from the horizon to a moderate elevation (the numbers are
+			# PROPOSED), so it does not reach straight overhead and does not point below the horizon (it cannot hit what is on the ground)
+			eq(ids, ["quad_mg"] as Array[String], "mobile AA gun: one weapon, the quad machine guns")
 			eq(def.weapons[0].half_across_deg, 180.0, "...all around")
-			check(def.weapons[0].elevation_deg > 0.0 and def.weapons[0].elevation_deg + def.weapons[0].half_height_deg >= 90.0, "...aimed up, reaching straight overhead")
+			var mg_lo: float = def.weapons[0].elevation_deg - def.weapons[0].half_height_deg
+			var mg_hi: float = def.weapons[0].elevation_deg + def.weapons[0].half_height_deg
+			check(mg_lo >= 0.0 and mg_hi > 20.0 and mg_hi < 80.0, "...from the horizon to a moderate elevation, not straight overhead (%s to %s deg)" % [mg_lo, mg_hi])
 			# (the brief's 320 m kept the gun to the low band; Track M2L widened the reach to contest a medium approach: the figure is theirs,
 			# what is held is that it is at least the battery's light flak's 320 m and that the high band, 1,000 m, stays out of its reach)
 			check(def.weapons[0].effective_range_m >= 320.0 and def.weapons[0].effective_range_m * 1.2 < 997.0, "...at least the battery's light flak's 320 m, and the high band out of its reach (%s m effective)" % str(def.weapons[0].effective_range_m))
@@ -329,11 +347,15 @@ func _check_weapons(def: UnitDef) -> void:
 		"supply_boat":
 			eq(ids, [] as Array[String], "supply boat: unarmed")
 		"patrol_boat":
-			# Track WS: one weapon, light AA guns on two mounts, fore and aft, all around and aimed up like the battery's light flak
-			eq(ids, ["aa_guns"] as Array[String], "patrol boat: one weapon, the light AA guns")
+			# Track WS: one weapon on two mounts, fore and aft, all around. Since decision weapon-kinds (Alex, 2026-10-11) the cutter's guns
+			# are MACHINE GUNS, deck_mg: "around and less up" than flak, from the horizon to a moderate elevation (PROPOSED numbers)
+			eq(ids, ["deck_mg"] as Array[String], "patrol boat: one weapon, the deck machine guns")
 			eq(def.weapons[0].hardpoints.size(), 2, "...two mounts, fore and aft")
 			check(def.weapons[0].hardpoints[0].x > 0.0 and def.weapons[0].hardpoints[1].x < 0.0, "...one forward of the middle, one aft")
 			eq(def.weapons[0].half_across_deg, 180.0, "...all around")
+			var db_lo: float = def.weapons[0].elevation_deg - def.weapons[0].half_height_deg
+			var db_hi: float = def.weapons[0].elevation_deg + def.weapons[0].half_height_deg
+			check(db_lo >= 0.0 and db_hi > 20.0 and db_hi < 80.0, "...from the horizon to a moderate elevation, not straight overhead (%s to %s deg)" % [db_lo, db_hi])
 			check(def.weapons[0].elevation_deg > 0.0, "...aimed up")
 			eq(def.weapons[0].effective_range_m, 320.0, "...the battery's light flak's 320 m: the low band and not the medium")
 		"anti_aircraft_battery":

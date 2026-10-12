@@ -10,6 +10,12 @@
   "health": { "value": 6, "_proposed": true, "_reason": "armour: tougher than a patrol boat (5) and a heavy fighter (5), well under the bomber (8). The bombs (data/sim/bombs.json) take 3 for a hit within 12 m, 2 within 25 m, 1 within 45 m, so a tank dies to two direct hits or a good stick; its own light gun does 1 pip, so a tank takes six hits from another tank's gun" },
   "sight_range_m": { "value": 600, "_proposed": true, "_reason": "a tank commander's view from the turret (periscopes and the hatch): a little under the battery's 700 m and the fighters' 800, and well past its own gun's 350 m, so a tank SPOTS further than it shoots - which is the job Alex gave it, to spot the anti-aircraft batteries for the ship. Line of sight (data/view/fog.json vision.eye_height_m, ground 2.5 m) cuts it where a ridge or a cliff hides the ground" },
   "drawing": { "silhouette": "tank" },
+  "damage_smoke": {
+    "enabled": { "value": true, "_proposed": true, "_reason": "a tank smokes when hit" },
+    "source_m": { "value": 3, "_proposed": true, "_reason": "the engine deck: about half the 6 m hull (Alex, decision impact-by-round-and-target: a small source, about 8 m at most, never the unit's length). Puffs of 1 to 2.4 m radius, at the last pip about the tank's own width" },
+    "source_back_m": { "value": 2, "_proposed": true, "_reason": "the engine deck at the rear third of the hull: 2 m behind the centre of a 6 m tank" },
+    "rise_mps": { "value": 4, "_proposed": true, "_reason": "the smoulder's rate: a damaged ground or sea unit smokes like a ruin or a wreck (data/fx/fx.json ruin R1 and crash A smolder rise_mps 4.0), so its puffs climb into the faster air above and the plume leans downwind (decisions smoke-consistency, wind-with-height). PROPOSED" }
+  },
   "envelope": {
     "speed_min_mps": { "value": -2, "_proposed": true, "_reason": "slow reverse: a tank can reverse once stopped (design doc, Motion and inertia, 'ships can reverse once stopped', and the schema's reverse_from_stop for ships and tanks)" },
     "speed_cruise_mps": { "value": 8, "_proposed": true, "_reason": "a steady road march, a fifth below top speed (the AI drives at it and a new tank starts at it unless a scenario says otherwise). 8 m/s is about 29 km/h" },

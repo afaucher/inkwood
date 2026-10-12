@@ -95,6 +95,41 @@ func fire_enabled() -> bool:
 	_err_once("fire_switch", "fx.json fire_switch.enabled is not true/false")
 	return false
 
+# --- The shared rules of smoke (builder SMOKE, 2026-10-11; fx.json smoke_model and impacts; docs/proposals/smoke-audit.md) ---------------
+
+# Where the air pass (the puffs) sits among the unit markers: "above_surface_units" (over the ground and sea units and their shadows, under the
+# aircraft) or "under_all" (the old order). PROPOSED.
+func smoke_layer() -> String:
+	var sec: Variant = raw.get("smoke_model")
+	if sec is Dictionary and (sec as Dictionary).get("layer") is Dictionary:
+		var v: Variant = unwrap((sec as Dictionary)["layer"])
+		if v is String and ["above_surface_units", "under_all"].has(v):
+			return v
+	_err_once("smoke_model.layer", "fx.json smoke_model.layer is not above_surface_units or under_all")
+	return "above_surface_units"
+
+# What a round does where it lands in water, UNWRAPPED: {look: "splash" | "burst", min_depth_m, splash_size_frac, splash_min_size_m} (fx.json impacts.water).
+func impact_water() -> Dictionary:
+	var sec: Variant = raw.get("impacts")
+	if sec is Dictionary and (sec as Dictionary).get("water") is Dictionary:
+		var w: Variant = unwrap((sec as Dictionary)["water"])
+		if w is Dictionary:
+			var ok_keys := true
+			for k: String in ["look", "min_depth_m", "splash_size_frac", "splash_min_size_m"]:
+				ok_keys = ok_keys and (w as Dictionary).has(k)
+			if ok_keys:
+				return w
+	_err_once("impacts.water", "fx.json impacts.water has no look, min_depth_m, splash_size_frac and splash_min_size_m")
+	return {"look": "burst", "min_depth_m": 1.0e9, "splash_size_frac": 0.0, "splash_min_size_m": 0.0}
+
+# The look of a round that lands where the water is `water_depth_m` deep: "splash" (rings, no smoke, no crater) or "burst" (the blast and the
+# crater, as on land). Land (no water, or less than min_depth_m) is always "burst".
+func impact_look(water_depth_m: float) -> String:
+	var w := impact_water()
+	if water_depth_m >= float(w["min_depth_m"]) and str(w["look"]) == "splash":
+		return "splash"
+	return "burst"
+
 func fire_oklch() -> Array:
 	var acc: Variant = raw.get("accents")
 	if acc is Dictionary and (acc as Dictionary).get("fire") is Dictionary:

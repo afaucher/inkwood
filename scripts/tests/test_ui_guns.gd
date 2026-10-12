@@ -390,9 +390,9 @@ func _side_view() -> bool:
 # The effects layer's calls, recorded (the combat feed makes them only to a layer that has them).
 class _FakeFx extends RefCounted:
 	var calls: Array = []
-	func emit_path(_u: String, _s: Callable, _t0: float, _t1: float, _f: float, _sz: float = 9.0) -> int:
+	func emit_path(_u: String, _s: Callable, _t0: float, _t1: float, _f: float, _sz: float = 9.0, _back: float = NAN, _rise: float = 0.0) -> int:
 		return 0
-	func falling(_u: String, _p: Vector2, _h: float, _t: float, _sz: float = 9.0, _hd: float = NAN) -> int:
+	func falling(_u: String, _p: Vector2, _h: float, _t: float, _sz: float = 9.0, _hd: float = NAN, _src: float = -1.0, _back: float = NAN) -> int:
 		return 0
 	func explode_midair(_u: String, _p: Vector2, _h: float, _t: float, _sz: float = 9.0, _hd: float = NAN) -> void:
 		pass

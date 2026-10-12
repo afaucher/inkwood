@@ -107,6 +107,12 @@ extends Node2D
 # planes and `top` above them, which is where smoke belongs (the plane flies in front of
 # its own smoke).
 #
+# WHERE THE SMOKE SITS AMONG THE UNITS (builder SMOKE, 2026-10-11; decision smoke-consistency, data fx.json smoke_model.layer): UnitUI mounts the air pass
+# with mount_smoke(), in the slot between the SURFACE units' markers (tanks, batteries, boats, the bridge) and the AIRCRAFT's, so every smoke is over a ground
+# unit and its shadow and under every plane; the smoke's own ground shadow stays in the shadow pass, under the units. WHAT SIZES A DAMAGE SMOKE is the
+# unit's SOURCE (data/units damage_smoke), never its length. A round that lands in water makes a splash, not a burst (water_impact; fx.json impacts).
+# docs/proposals/smoke-audit.md lists every smoke, dust and plume source in the game side by side.
+#
 # DETERMINISTIC: every puff, piece and scar comes from (world_seed, unit, game time) alone
 # (fx_field.gd); two runs of the same calls draw the same frames.
 
@@ -245,6 +251,28 @@ func mount(below: Node, above: Node = null) -> void:
 	if above != null:
 		top_node.reparent(above, false)
 
+# Moves the AIR pass (every puff of smoke, the pieces thrown up in flight and the forest fire's columns) into `slot`, a Node2D the host has put between
+# the surface units' markers and the aircraft's (UnitMarkerLayer.smoke_slot): smoke is drawn over the tanks, the batteries, the boats and the bridge and
+# their shadows, and under every plane (builder SMOKE, decision smoke-consistency: a ground unit's smoke is drawn ABOVE the unit and its shadow, rising
+# and leaning downwind; the plane still flies in front of its own trail). The smoke's own ground shadow stays in the shadow pass, under the units.
+func mount_smoke(slot: Node) -> void:
+	_build()
+	if air_node.get_parent() != slot:
+		air_node.reparent(slot, false)
+
+# What a round does where it lands, by the water under it (fx.json impacts.water; decision impact-by-round-and-target): "splash" (rings, no smoke,
+# no crater) or "burst" (the blast and the crater). The feed asks before it calls bomb_impact.
+func impact_look(water_depth_m: float) -> String:
+	_build()
+	return data.impact_look(water_depth_m)
+
+# A round lands in water (a bomb, a shell): the sinking splash's rings, sized by the round's blast, and nothing else -- no flash, no smoke, no clods,
+# no crater. PROPOSED stand-in for the gunfire board's impact looks.
+func water_impact(ground_pos: Vector2, t: float, blast_m: float, unit_id: String = "") -> void:
+	_build()
+	var w := data.impact_water()
+	field.add_splash(unit_id, ground_pos, t, maxf(blast_m * float(w["splash_size_frac"]), float(w["splash_min_size_m"])))
+
 # --- Time -----------------------------------------------------------------------------------------------------
 
 func set_time(t: float) -> void:
@@ -276,17 +304,20 @@ func _anything() -> bool:
 
 # --- The calls the interface makes -----------------------------------------------------------------------------------
 
-func emit_damage_smoke(unit_id: String, world_pos: Vector2, height_m: float, health_fraction: float, t: float, size_m: float = 9.0, heading: float = NAN) -> int:
+# `size_m` of the damage smoke is the SIZE OF ITS SOURCE (data/units damage_smoke.source_m), `back_m` how far behind the centre the source sits
+# (NAN: the option's tail_frac x size_m) and `rise_mps` how fast a puff climbs (0: it does not): fx_field.gd's header says why.
+func emit_damage_smoke(unit_id: String, world_pos: Vector2, height_m: float, health_fraction: float, t: float, size_m: float = 9.0, heading: float = NAN, back_m: float = NAN, rise_mps: float = 0.0) -> int:
 	_build()
-	return field.emit_damage_smoke(unit_id, world_pos, height_m, health_fraction, t, size_m, heading)
+	return field.emit_damage_smoke(unit_id, world_pos, height_m, health_fraction, t, size_m, heading, back_m, rise_mps)
 
-func emit_path(unit_id: String, sampler: Callable, t0: float, t1: float, health_fraction: float, size_m: float = 9.0) -> int:
+func emit_path(unit_id: String, sampler: Callable, t0: float, t1: float, health_fraction: float, size_m: float = 9.0, back_m: float = NAN, rise_mps: float = 0.0) -> int:
 	_build()
-	return field.emit_path(unit_id, sampler, t0, t1, health_fraction, size_m)
+	return field.emit_path(unit_id, sampler, t0, t1, health_fraction, size_m, back_m, rise_mps)
 
-func falling(unit_id: String, world_pos: Vector2, height_m: float, t: float, size_m: float = 9.0, heading: float = NAN) -> int:
+# `source_m` and `back_m`: the same source the plane smoked from before it fell (size_m is then only the airframe's: the flame and the embers).
+func falling(unit_id: String, world_pos: Vector2, height_m: float, t: float, size_m: float = 9.0, heading: float = NAN, source_m: float = -1.0, back_m: float = NAN) -> int:
 	_build()
-	return field.ride(unit_id, world_pos, height_m, t, size_m, heading)
+	return field.ride(unit_id, world_pos, height_m, t, size_m, heading, source_m, back_m)
 
 func explode_midair(unit_id: String, world_pos: Vector2, height_m: float, t: float, size_m: float = 9.0, heading: float = NAN) -> void:
 	_build()

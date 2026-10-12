@@ -12,6 +12,12 @@
   "drawing": {
     "silhouette": "anti_aircraft_battery"
   },
+  "damage_smoke": {
+    "enabled": { "value": true, "_proposed": true, "_reason": "a battery smokes when hit (ammunition and the guns' engines)" },
+    "source_m": { "value": 4, "_proposed": true, "_reason": "the gun pit: a third of the 14 m sandbag ring, not the ring" },
+    "source_back_m": { "value": 0, "_proposed": true, "_reason": "the gun pit is the unit's centre" },
+    "rise_mps": { "value": 4, "_proposed": true, "_reason": "the smoulder's rate: a damaged ground or sea unit smokes like a ruin or a wreck (data/fx/fx.json ruin R1 and crash A smolder rise_mps 4.0), so its puffs climb into the faster air above and the plume leans downwind (decisions smoke-consistency, wind-with-height). PROPOSED" }
+  },
   "envelope": {
     "speed_min_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
     "speed_cruise_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },

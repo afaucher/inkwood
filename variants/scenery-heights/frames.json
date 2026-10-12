@@ -1,0 +1,454 @@
+{
+  "id": "scenery-heights",
+  "about": "Every frame of the scenery-heights board as its own PNG at native size (1280 x 720): the game's own pixels, one run of the real game per option and map (the Strike, seed 20261009, and Hold the bridge, seed 55; fog off, labels off, the sun fixed at 315 / 46). board.png is the sheet: 1:1 crops of these frames, the heights chart, the numbers table, the notes and the palette strip. The images are not committed (decision board-images): scripts/ui/boards/scenery_heights_board_shot.gd regenerates them.",
+  "frames": [
+    {
+      "file": "s0_village_plan.png",
+      "option": "s0",
+      "subject": "village",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S0 today (the prototype's px): The village: the radio tower, its walled compound, houses and a tank, planning zoom 0.35"
+    },
+    {
+      "file": "s0_village_close.png",
+      "option": "s0",
+      "subject": "village",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S0 today (the prototype's px): The village: the radio tower, its walled compound, houses and a tank, closest zoom 3.0"
+    },
+    {
+      "file": "s0_wood_plan.png",
+      "option": "s0",
+      "subject": "wood",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S0 today (the prototype's px): A wood's edge, a hedged field and open ground, planning zoom 0.35"
+    },
+    {
+      "file": "s0_wood_close.png",
+      "option": "s0",
+      "subject": "wood",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S0 today (the prototype's px): A wood's edge, a hedged field and open ground, closest zoom 3.0"
+    },
+    {
+      "file": "s0_plane_plan.png",
+      "option": "s0",
+      "subject": "plane",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S0 today (the prototype's px): A plane at 120 m (low band) over houses and a wood, for scale, planning zoom 0.35"
+    },
+    {
+      "file": "s0_plane_close.png",
+      "option": "s0",
+      "subject": "plane",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S0 today (the prototype's px): A plane at 120 m (low band) over houses and a wood, for scale, closest zoom 3.0"
+    },
+    {
+      "file": "s0_bridge_plan.png",
+      "option": "s0",
+      "subject": "bridge",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 55.0,
+      "caption": "S0 today (the prototype's px): The bridge on seed 55 with a tank beside it, planning zoom 0.35"
+    },
+    {
+      "file": "s0_bridge_close.png",
+      "option": "s0",
+      "subject": "bridge",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 55.0,
+      "caption": "S0 today (the prototype's px): The bridge on seed 55 with a tank beside it, closest zoom 3.0"
+    },
+    {
+      "file": "s1_village_plan.png",
+      "option": "s1",
+      "subject": "village",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S1 real world: The village: the radio tower, its walled compound, houses and a tank, planning zoom 0.35"
+    },
+    {
+      "file": "s1_village_close.png",
+      "option": "s1",
+      "subject": "village",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S1 real world: The village: the radio tower, its walled compound, houses and a tank, closest zoom 3.0"
+    },
+    {
+      "file": "s1_wood_plan.png",
+      "option": "s1",
+      "subject": "wood",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S1 real world: A wood's edge, a hedged field and open ground, planning zoom 0.35"
+    },
+    {
+      "file": "s1_wood_close.png",
+      "option": "s1",
+      "subject": "wood",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S1 real world: A wood's edge, a hedged field and open ground, closest zoom 3.0"
+    },
+    {
+      "file": "s1_plane_plan.png",
+      "option": "s1",
+      "subject": "plane",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S1 real world: A plane at 120 m (low band) over houses and a wood, for scale, planning zoom 0.35"
+    },
+    {
+      "file": "s1_plane_close.png",
+      "option": "s1",
+      "subject": "plane",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S1 real world: A plane at 120 m (low band) over houses and a wood, for scale, closest zoom 3.0"
+    },
+    {
+      "file": "s1_bridge_plan.png",
+      "option": "s1",
+      "subject": "bridge",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 55.0,
+      "caption": "S1 real world: The bridge on seed 55 with a tank beside it, planning zoom 0.35"
+    },
+    {
+      "file": "s1_bridge_close.png",
+      "option": "s1",
+      "subject": "bridge",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 55.0,
+      "caption": "S1 real world: The bridge on seed 55 with a tank beside it, closest zoom 3.0"
+    },
+    {
+      "file": "s2_village_plan.png",
+      "option": "s2",
+      "subject": "village",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S2 halfway: The village: the radio tower, its walled compound, houses and a tank, planning zoom 0.35"
+    },
+    {
+      "file": "s2_village_close.png",
+      "option": "s2",
+      "subject": "village",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S2 halfway: The village: the radio tower, its walled compound, houses and a tank, closest zoom 3.0"
+    },
+    {
+      "file": "s2_wood_plan.png",
+      "option": "s2",
+      "subject": "wood",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S2 halfway: A wood's edge, a hedged field and open ground, planning zoom 0.35"
+    },
+    {
+      "file": "s2_wood_close.png",
+      "option": "s2",
+      "subject": "wood",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S2 halfway: A wood's edge, a hedged field and open ground, closest zoom 3.0"
+    },
+    {
+      "file": "s2_plane_plan.png",
+      "option": "s2",
+      "subject": "plane",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S2 halfway: A plane at 120 m (low band) over houses and a wood, for scale, planning zoom 0.35"
+    },
+    {
+      "file": "s2_plane_close.png",
+      "option": "s2",
+      "subject": "plane",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S2 halfway: A plane at 120 m (low band) over houses and a wood, for scale, closest zoom 3.0"
+    },
+    {
+      "file": "s2_bridge_plan.png",
+      "option": "s2",
+      "subject": "bridge",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 55.0,
+      "caption": "S2 halfway: The bridge on seed 55 with a tank beside it, planning zoom 0.35"
+    },
+    {
+      "file": "s2_bridge_close.png",
+      "option": "s2",
+      "subject": "bridge",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 55.0,
+      "caption": "S2 halfway: The bridge on seed 55 with a tank beside it, closest zoom 3.0"
+    },
+    {
+      "file": "s3_village_plan.png",
+      "option": "s3",
+      "subject": "village",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S3 real, trees taller: The village: the radio tower, its walled compound, houses and a tank, planning zoom 0.35"
+    },
+    {
+      "file": "s3_village_close.png",
+      "option": "s3",
+      "subject": "village",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S3 real, trees taller: The village: the radio tower, its walled compound, houses and a tank, closest zoom 3.0"
+    },
+    {
+      "file": "s3_wood_plan.png",
+      "option": "s3",
+      "subject": "wood",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S3 real, trees taller: A wood's edge, a hedged field and open ground, planning zoom 0.35"
+    },
+    {
+      "file": "s3_wood_close.png",
+      "option": "s3",
+      "subject": "wood",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S3 real, trees taller: A wood's edge, a hedged field and open ground, closest zoom 3.0"
+    },
+    {
+      "file": "s3_plane_plan.png",
+      "option": "s3",
+      "subject": "plane",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S3 real, trees taller: A plane at 120 m (low band) over houses and a wood, for scale, planning zoom 0.35"
+    },
+    {
+      "file": "s3_plane_close.png",
+      "option": "s3",
+      "subject": "plane",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 20261009.0,
+      "caption": "S3 real, trees taller: A plane at 120 m (low band) over houses and a wood, for scale, closest zoom 3.0"
+    },
+    {
+      "file": "s3_bridge_plan.png",
+      "option": "s3",
+      "subject": "bridge",
+      "kind": "planning_zoom",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 55.0,
+      "caption": "S3 real, trees taller: The bridge on seed 55 with a tank beside it, planning zoom 0.35"
+    },
+    {
+      "file": "s3_bridge_close.png",
+      "option": "s3",
+      "subject": "bridge",
+      "kind": "closest_zoom",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280.0,
+        720.0
+      ],
+      "seed": 55.0,
+      "caption": "S3 real, trees taller: The bridge on seed 55 with a tank beside it, closest zoom 3.0"
+    }
+  ]
+}

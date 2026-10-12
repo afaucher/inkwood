@@ -27,6 +27,7 @@ const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 const GunWorlds = preload("res://scripts/test_support/gun_worlds.gd")
 const Spotting = preload("res://scripts/sim/spotting.gd")
 const CombatResolver = preload("res://scripts/sim/combat_resolver.gd")
+const Combat = preload("res://scripts/sim/combat.gd")
 
 # A stand-in for the fog's FogVision: the three calls Spotting.los_from_vision makes.
 class FakeVision:
@@ -118,7 +119,8 @@ func _unit_data() -> void:
 	eq(def.special_label("main_guns"), "Main Guns Fire", "the step is lettered with the special's name and its action")
 	check(not def.carries_bombs(), "it drops nothing")
 	eq(def.weapons.size(), 1, "one set of guns that fire by themselves")
-	eq(str(def.weapons[0].id), "aa_guns", "the anti-aircraft guns")
+	# DECISION weapon-kinds (Alex, 2026-10-11): the cruiser's AA is FLAK ("shells shot that then explode", pointed up), not machine guns
+	eq(str(def.weapons[0].id), "ship_flak", "the anti-aircraft guns are flak")
 	check(def.weapons[0].hardpoints.size() >= 4, "on several mounts: %d" % def.weapons[0].hardpoints.size())
 	eq(w.gun_specials("cruiser"), ["main_guns"] as Array[String], "the World sees the gun special")
 	check(w.gun_specials("spotter").is_empty() and w.gun_specials("aa").is_empty(), "and no other unit has one")
@@ -164,13 +166,25 @@ func _anti_air() -> void:
 		check(not res.is_empty(), "the low-plane turn resolves: %s" % w.last_error)
 		for ev: Dictionary in GunWorlds.events_of(res, "fire", "cruiser"):
 			fired_low += 1
-			eq(str(ev["weapon"]), "aa_guns", "the cruiser fires its anti-aircraft guns")
+			eq(str(ev["weapon"]), "ship_flak", "the cruiser fires its flak")
 			eq(str(ev["target"]), "bandit", "at the plane")
 		var wm := _plane_world("medium", seed_value)
 		var resm := GunWorlds.turn(wm)
 		fired_medium += GunWorlds.events_of(resm, "fire", "cruiser").size()
 	check(fired_low > 10, "its guns fire at a plane over it in the low band: %d rolls in three turns" % fired_low)
 	eq(fired_medium, 0, "and never at one in the medium band (the light guns reach 320 m)")
+	# FLAK POINTS UP (decision weapon-kinds; Alex: "flak guns have better coverage in the area directly above them"): the cone covers a low
+	# plane straight over the ship, and one 300 m out; a medium plane straight over is out of REACH (400 m up, the guns reach 384 m)
+	var cw := GunWorlds.world(1)
+	var flak = cw.unit_def("cruiser").weapons[0]
+	var low_m := cw.band_height("low")
+	var shoot := func(tx: float, th: float) -> Dictionary:
+		return Combat.evaluate({"x": 0.0, "y": 0.0, "heading": 0.0, "height_m": 0.0}, flak, 0, {"x": tx, "y": 0.0, "height_m": th}, cw.combat.odds_factors, cw.combat.factor_params())
+	var over: Dictionary = shoot.call(0.0, low_m)
+	check(over["in_cone"] and float(over["odds"]) > 0.0, "the flak cone covers a low plane straight over the ship (odds %.4f)" % float(over["odds"]))
+	var out300: Dictionary = shoot.call(300.0, low_m)
+	check(out300["in_cone"] and float(out300["odds"]) > 0.0, "...and one 300 m out (odds %.4f)" % float(out300["odds"]))
+	check(not (shoot.call(0.0, cw.band_height("medium")) as Dictionary)["in_cone"], "...but not a medium plane over it: out of reach, as before")
 	_sentinel += 1
 
 # --- What a request may be -----------------------------------------------------------------------------------------------

@@ -6219,6 +6219,11 @@
               "value": 1,
               "_proposed": true,
               "_reason": "from the medium tone up"
+            },
+            "rise_mps": {
+              "value": 0.0,
+              "_proposed": true,
+              "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). A mid-air burst's rise is 0 (the smoke is already in the sky, like a damaged plane's trail), so its plume's is too. PROPOSED"
             }
           },
           "debris": {
@@ -6532,6 +6537,11 @@
               "value": 1,
               "_proposed": true,
               "_reason": "from the medium tone up"
+            },
+            "rise_mps": {
+              "value": 3.0,
+              "_proposed": true,
+              "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). The value is this option's smoke_burst rise_mps. PROPOSED"
             }
           },
           "smolder": {
@@ -7345,6 +7355,11 @@
               "value": 1,
               "_proposed": true,
               "_reason": "from the medium tone up"
+            },
+            "rise_mps": {
+              "value": 0.0,
+              "_proposed": true,
+              "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). A mid-air burst's rise is 0 (the smoke is already in the sky, like a damaged plane's trail), so its plume's is too. PROPOSED"
             }
           },
           "debris": {
@@ -7658,6 +7673,11 @@
               "value": 1,
               "_proposed": true,
               "_reason": "from the medium tone up"
+            },
+            "rise_mps": {
+              "value": 3.0,
+              "_proposed": true,
+              "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). The value is this option's smoke_burst rise_mps. PROPOSED"
             }
           },
           "smolder": {
@@ -8302,6 +8322,11 @@
               "value": 1,
               "_proposed": true,
               "_reason": "from the medium tone up"
+            },
+            "rise_mps": {
+              "value": 0.0,
+              "_proposed": true,
+              "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). A mid-air burst's rise is 0 (the smoke is already in the sky, like a damaged plane's trail), so its plume's is too. PROPOSED"
             }
           },
           "debris": {
@@ -8615,6 +8640,11 @@
               "value": 1,
               "_proposed": true,
               "_reason": "from the medium tone up"
+            },
+            "rise_mps": {
+              "value": 3.0,
+              "_proposed": true,
+              "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). The value is this option's smoke_burst rise_mps. PROPOSED"
             }
           },
           "smolder": {
@@ -9169,6 +9199,11 @@
               "value": 1,
               "_proposed": true,
               "_reason": "from the medium tone up"
+            },
+            "rise_mps": {
+              "value": 0.0,
+              "_proposed": true,
+              "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). A mid-air burst's rise is 0 (the smoke is already in the sky, like a damaged plane's trail), so its plume's is too. PROPOSED"
             }
           },
           "debris": {
@@ -9482,6 +9517,11 @@
               "value": 1,
               "_proposed": true,
               "_reason": "from the medium tone up"
+            },
+            "rise_mps": {
+              "value": 2.0,
+              "_proposed": true,
+              "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). The value is this option's smoke_burst rise_mps. PROPOSED"
             }
           },
           "smolder": {
@@ -13979,6 +14019,11 @@
             "value": 1,
             "_proposed": true,
             "_reason": "from the medium tone up (thin smoke casts none)"
+          },
+          "rise_mps": {
+            "value": 2.0,
+            "_proposed": true,
+            "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). The value is this option's smoke_burst rise_mps. PROPOSED"
           }
         },
         "debris": {
@@ -14710,6 +14755,11 @@
             "value": 1,
             "_proposed": true,
             "_reason": "from the medium tone up (thin smoke casts none)"
+          },
+          "rise_mps": {
+            "value": 2.0,
+            "_proposed": true,
+            "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). The value is this option's smoke_burst rise_mps. PROPOSED"
           }
         },
         "debris": {
@@ -15428,6 +15478,11 @@
             "value": 1,
             "_proposed": true,
             "_reason": "from the medium tone up (thin smoke casts none)"
+          },
+          "rise_mps": {
+            "value": 2.0,
+            "_proposed": true,
+            "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). The value is this option's smoke_burst rise_mps. PROPOSED"
           }
         },
         "debris": {
@@ -16154,6 +16209,11 @@
             "value": 1,
             "_proposed": true,
             "_reason": "from the medium tone up (thin smoke casts none)"
+          },
+          "rise_mps": {
+            "value": 2.0,
+            "_proposed": true,
+            "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). The value is this option's smoke_burst rise_mps. PROPOSED"
           }
         },
         "debris": {
@@ -16989,6 +17049,11 @@
             "value": 1,
             "_proposed": true,
             "_reason": "from the medium tone up (thin smoke casts none)"
+          },
+          "rise_mps": {
+            "value": 3.0,
+            "_proposed": true,
+            "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). The value is this option's smoke_burst rise_mps. PROPOSED"
           }
         },
         "smolder": {
@@ -18129,6 +18194,11 @@
             "value": 1,
             "_proposed": true,
             "_reason": "from the medium tone up (thin smoke casts none)"
+          },
+          "rise_mps": {
+            "value": 3.0,
+            "_proposed": true,
+            "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). The value is this option's smoke_burst rise_mps. PROPOSED"
           }
         },
         "smolder": {
@@ -19269,6 +19339,11 @@
             "value": 1,
             "_proposed": true,
             "_reason": "from the medium tone up (thin smoke casts none)"
+          },
+          "rise_mps": {
+            "value": 3.0,
+            "_proposed": true,
+            "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). The value is this option's smoke_burst rise_mps. PROPOSED"
           }
         },
         "smolder": {
@@ -20408,6 +20483,11 @@
             "value": 1,
             "_proposed": true,
             "_reason": "from the medium tone up (thin smoke casts none)"
+          },
+          "rise_mps": {
+            "value": 3.0,
+            "_proposed": true,
+            "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). The value is this option's smoke_burst rise_mps. PROPOSED"
           }
         },
         "smolder": {
@@ -20948,10 +21028,11 @@
         "dorsal_turret",
         "tail_turret",
         "rear_gunner",
-        "aa_guns"
+        "quad_mg",
+        "deck_mg"
       ],
       "_proposed": true,
-      "_reason": "PROPOSED list of the weapon ids (data/units/*.json weapons[].id) that draw a tracer, picking out the machine guns for Alex's scope (decision tracers-mg: Alex 2026-10-11 (the second playtest): 'We should show tracers for machine guns.' and, confirming the scope, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'). wing_guns: the light fighter's twin wing guns (two hardpoints, two tracers); nose_gun, dorsal_turret, tail_turret: the bomber's flexible nose gun and turrets; rear_gunner: the heavy fighter's flexible rear gun; aa_guns: the 'Light AA guns' of the P1 cutter (the patrol boat), which the same id gives the cruiser's four mounts and the mobile AA's quad mount (one id, three unit types: listed together here, flagged to Alex). NOT listed: flak and light_flak (the battery's guns: bursts, decision flak-look F2), nose_cannon (the heavy fighter's cannon: 2 pips, not a machine gun), turret_gun (the tank's light gun: the case Alex says may be revisited; to add it, add \"turret_gun\" here and nothing else), the cruiser's main guns and the bombs (shell_fire / bomb events, not 'fire' events). The sim's weapon records have no class field; the code matches the id alone"
+      "_reason": "PROPOSED list of the weapon ids (data/units/*.json weapons[].id) that draw a tracer, picking out the machine guns for Alex's scope (decision tracers-mg: Alex 2026-10-11 (the second playtest): 'We should show tracers for machine guns.' and, confirming the scope, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'). wing_guns: the light fighter's twin wing guns (two hardpoints, two tracers); nose_gun, dorsal_turret, tail_turret: the bomber's flexible nose gun and turrets; rear_gunner: the heavy fighter's flexible rear gun; quad_mg: the mobile AA's quad machine-gun mount and deck_mg: the P1 cutter's (the patrol boat's) deck machine guns (decision weapon-kinds, 2026-10-11, Alex: 'Flak would be shells shot that then explode. Machine guns would be bullets which don't.', and on the mapping 'the mobile AA's quad mount and the cutter's guns are machine guns, the cruiser's AA is flak': '5 good'; both were the one id aa_guns, with the flak's upward cone, before). NOT listed: flak, light_flak and ship_flak (the battery's guns and the cruiser's flak: bursts, decision flak-look F2; ship_flak is the cruiser's, decision weapon-kinds), nose_cannon (the heavy fighter's cannon: 2 pips, not a machine gun), turret_gun (the tank's light gun: the case Alex says may be revisited; to add it, add \"turret_gun\" here and nothing else), the cruiser's main guns and the bombs (shell_fire / bomb events, not 'fire' events). The sim's weapon records have no class field; the code matches the id alone"
     },
     "fog": {
       "shown_when": {
@@ -21526,6 +21607,61 @@
             "_reason": "PROPOSED (Track TR): ...and its width"
           }
         }
+      }
+    }
+  },
+  "smoke_model": {
+    "_about": "THE SHARED RULES OF SMOKE (builder SMOKE, 2026-10-11; docs/proposals/smoke-audit.md has the audit these come from). Alex, decision smoke-consistency: '2 - yes, audit everything for smoke consistency. Not identical unless there is no reason to be different.', on the proposal that a ground unit's damage smoke is drawn ABOVE the unit and its shadow, rising and leaning downwind. The rules: (1) smoke is drawn above the surface units and their shadows and below the aircraft (layer, below); (2) every puff drifts with the wind at its own height (decision wind-with-height: fx_field.gd puff_drift), and smoke from a surface source RISES, so it leans downwind as it climbs; (3) a damage smoke's puffs are sized by a small SOURCE on the thing that smokes (data/units/*.json damage_smoke.source_m), never by the unit's size_m. Each difference kept has its reason in the record that holds it.",
+    "layer": {
+      "value": "above_surface_units",
+      "choices": [
+        "above_surface_units",
+        "under_all"
+      ],
+      "_proposed": true,
+      "_reason": "where the effects layer's air pass (every puff, the pieces in flight and the forest fire's columns) sits among the unit markers. 'above_surface_units': over the tanks, the batteries, the boats, the bridge and their shadows, under every aircraft and its own trail's newest puffs (the plane flies in front of its own smoke, as it always did): Alex's ask that smoke rises above the thing that smokes. 'under_all': the old order, under every marker (the bridge playtest: tank shadows lay on the smoke). The smoke's own ground SHADOW stays on the ground, under the units, whichever is chosen. A smoke plume that climbs past the low band (120 m: the forest fire's reaches 188 m) is still drawn under the planes: a per-puff sort by height is not built. PROPOSED"
+    },
+    "differences_kept": {
+      "value": [
+        "A plane's damage trail, its fall trail and a mid-air burst do not climb (rise_mps 0): the smoke is laid along a path at the plane's altitude, where the wind is already 1.6 times the ground's, and a climb of 4 m/s would lift an old puff by 100 m in its life (data/units/*.json damage_smoke.rise_mps holds the reason). The weakest reason: Alex may want them alike.",
+        "Flak (F2) is drawn in ink washes (flak.wash.*), not W1: Alex's flak-look choice, a dark ragged powder burst; it rises 0.8 m/s (small, at altitude).",
+        "The forest fire's columns are in MAP metres and climb 24 m/s slowing (188 m in 12 s): a tree is map scenery drawn at the map's scale and a burning grove is a big hot source; a unit's smoke is drawn at the units' own drawn scale because the unit is.",
+        "Explosions (a mid-air burst, a crash, a ruin) are sized by what blew up (the airframe, the unit, the round's blast), a damage smoke by its SOURCE: an explosion consumes the whole thing, damage smokes from one place.",
+        "Sunk ships make no damage smoke (decision ship-sinks); a damaged ship still afloat does.",
+        "Flash flipbooks stay in the top pass, over the planes: a flash is a moment of light, not a body of smoke.",
+        "Smoke that climbs past the low band (the forest plume, 188 m, against the low band's 120 m) is still drawn under every plane: a per-puff sort by height is not built.",
+        "A puff made while its place was in sight stays on the map when the place later falls in fog, but a forest column is hidden at once with the fog: the field's gate is at emission (combat.fx.smoke_when_hidden), the column's is per frame. OPEN: docs/proposals/smoke-audit.md question 3."
+      ],
+      "_proposed": true,
+      "_reason": "the audit's KEPT rows (docs/proposals/smoke-audit.md): every place where one smoke differs from another and the difference stays, each with its reason, so that 'not identical unless there is no reason to be different' (Alex, decision smoke-consistency) can be checked against the data. PROPOSED by builder SMOKE, 2026-10-11"
+    }
+  },
+  "impacts": {
+    "_about": "WHAT A ROUND DOES WHERE IT LANDS, by the surface it lands on (builder SMOKE, 2026-10-11). Alex, decision impact-by-round-and-target: 'this should probably be a property of either the round or the thing being hit or both. Ex a round hitting water would splash, not explode with smoke. Right?' This is the THING-HIT half, for water only: a bomb or a shell (the cruiser's main guns) that lands in water makes no flash, no smoke, no clods and no crater, and the ink rings of a sinking ship's splash (data/world/boats.json game.sunk.splash) go up in their place. The real looks (a column of water, a round's own weight) are the gunfire board's (variants/gunfire/, builder GF); this is a PROPOSED stand-in. The round half is the blast the splash is sized by (a bomb's blast_m, a shell's): a bigger round, a bigger splash.",
+    "water": {
+      "look": {
+        "value": "splash",
+        "choices": [
+          "splash",
+          "burst"
+        ],
+        "_proposed": true,
+        "_reason": "'splash': the sinking splash's rings (scripts/fx/fx_layer.gd _draw_splashes), no smoke and no crater; 'burst': treat water as land (the old look, the switch's other setting). PROPOSED stand-in until the gunfire board's impact looks are picked"
+      },
+      "min_depth_m": {
+        "value": 0.5,
+        "_proposed": true,
+        "_reason": "a round lands in water where the water is at least this deep (World.water_depth_at): the shallows count, a wet shore edge of a few centimetres does not. PROPOSED"
+      },
+      "splash_size_frac": {
+        "value": 0.35,
+        "_proposed": true,
+        "_reason": "the splash's size as a share of the round's blast_m (the rings end at 0.8 of it): a 45 m bomb blast rings out to about 13 m, a 20 m shell blast to about 6 m, a 6 m shell to 1.7 m. PROPOSED"
+      },
+      "splash_min_size_m": {
+        "value": 3.0,
+        "_proposed": true,
+        "_reason": "the least a splash is sized by (m): the sinking splash's rings start 2 m out and end at 0.8 of this, so a small shell's blast of 6 m (x 0.35 = 2.1) would ring inward; 3 m ends at 2.4 m. PROPOSED"
       }
     }
   },

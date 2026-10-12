@@ -27,8 +27,10 @@ const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const CombatFeed = preload("res://scripts/ui/combat_feed.gd")
 
 const SEED := 20261009
-const MG_WEAPONS := ["wing_guns", "nose_gun", "dorsal_turret", "tail_turret", "rear_gunner", "aa_guns"]
-const NOT_TRACER := ["flak", "light_flak", "nose_cannon", "turret_gun"]
+# decision weapon-kinds (Alex, 2026-10-11): what a weapon fires decides its look. quad_mg (the mobile AA's quad mount) and deck_mg (the cutter's
+# guns) are machine guns; ship_flak (the cruiser's AA) is flak, a burst. They were one id, aa_guns.
+const MG_WEAPONS := ["wing_guns", "nose_gun", "dorsal_turret", "tail_turret", "rear_gunner", "quad_mg", "deck_mg"]
+const NOT_TRACER := ["flak", "light_flak", "ship_flak", "nose_cannon", "turret_gun"]
 
 # The effects layer as the feed sees it: the real tracer list from the data, the calls recorded.
 class _FakeFx extends RefCounted:
@@ -202,6 +204,9 @@ func _check_data() -> void:
 	var have := _unit_weapon_ids()
 	for w: String in weapons:
 		check(w in have, "listed weapon '%s' exists on some unit (data/units)" % w)
+	for w: String in NOT_TRACER:
+		check(w in have, "'%s' (no tracer) exists on some unit too: the test is about a real weapon (data/units)" % w)
+	check(not ("aa_guns" in have) and not ("aa_guns" in weapons), "the old shared id aa_guns is gone from the units and from the list (weapon-kinds)")
 	# nothing in the code keys on a class or kind: adding the tank's gun is one id in the list
 	var b2 := _book()
 	check(not b2.is_weapon("turret_gun"), "the tank's gun is not a tracer weapon today")
@@ -292,6 +297,10 @@ func _check_which(events: Array) -> void:
 func _check_feed(events: Array) -> void:
 	var w := _world(7)
 	w.add_unit({"id": "aa1", "type": "anti_aircraft_battery", "side": "axis", "controller": "ai", "x": 3100.0, "y": 2300.0, "heading": 0.4})
+	# (player-controlled, so the ready-up of this one-player world still resolves: an AI mobile unit would add a participant to wait for)
+	w.add_unit({"id": "mobile1", "type": "mobile_aa", "side": "allies", "controller": "player", "x": 3100.0, "y": 2500.0, "heading": 0.0, "speed": 0.0})
+	w.add_unit({"id": "boat1", "type": "patrol_boat", "side": "allies", "controller": "player", "x": 3100.0, "y": 2700.0, "heading": 0.0, "speed": 0.0})
+	w.add_unit({"id": "ship1", "type": "cruiser", "side": "allies", "controller": "player", "x": 3100.0, "y": 2900.0, "heading": 0.0, "speed": 0.0})
 	w.commit("local")
 	w.resolve()   # the units have a path, so the feed can lead the target
 	var fake := _FakeFx.new()
@@ -331,6 +340,14 @@ func _check_feed(events: Array) -> void:
 	feed.on_event({"type": "fire", "turn": 1, "tick": 4, "unit": "aa1", "target": "bomber", "t": 1.0, "hit": false, "tx": 2600.0, "ty": 2400.0, "theight_m": 400.0, "weapon": "light_flak", "hardpoint": 0, "x": 3100.0, "y": 2300.0})
 	eq(fake.of("tracer").size(), 0, "light flak draws no tracer")
 	eq(fake.of("flak_burst").size(), 1, "...a burst")
+	# DECISION weapon-kinds (Alex, 2026-10-11): the mobile AA's quad mount and the cutter's deck guns are machine guns (a tracer, no burst);
+	# the cruiser's AA is flak (a burst, no tracer). The weapon ids are the real units'.
+	for spec: Array in [["mobile1", "mobile_aa", true], ["boat1", "patrol_boat", true], ["ship1", "cruiser", false]]:
+		fake.calls.clear()
+		var wid := str(w.unit_def(str(spec[1])).weapons[0].id)
+		feed.on_event({"type": "fire", "turn": 1, "tick": 6, "unit": spec[0], "target": "bomber", "t": 1.0, "hit": true, "tx": 2600.0, "ty": 2400.0, "theight_m": 400.0, "weapon": wid, "hardpoint": 0, "x": 3100.0, "y": 2500.0})
+		eq(fake.of("tracer").size(), 1 if bool(spec[2]) else 0, "the %s's %s event draws %s" % [spec[1], wid, "a tracer" if bool(spec[2]) else "no tracer"])
+		eq(fake.of("flak_burst").size(), 0 if bool(spec[2]) else 1, "...and %s" % ("no flak burst" if bool(spec[2]) else "a flak burst"))
 	# a cruiser's shell: neither
 	fake.calls.clear()
 	feed.on_event({"type": "shell_fire", "turn": 1, "unit": "bomber", "step": 1, "t": 1.0})

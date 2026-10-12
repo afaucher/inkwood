@@ -36,6 +36,16 @@
         "silhouette": { "kind": "text", "about": "Silhouette id for the drawing layer; chosen from a variant board (design doc, Unit design sheets)." }
       }
     },
+    "damage_smoke": {
+      "kind": "section",
+      "about": "WHAT THE UNIT SMOKES WITH once it is damaged (builder SMOKE, 2026-10-11; Alex, decisions smoke-consistency and impact-by-round-and-target: 'this should probably be a property of either the round or the thing being hit or both', puffs are not sized by the unit's length; the shape is PROPOSED). The effects layer (scripts/fx/fx_layer.gd) leaves a trail of puffs while 0 < health < full; this section is the THING THAT SMOKES: where on the unit the smoke comes from and how big that source is. The puffs are sized by the SOURCE (the engine deck, a funnel), never by the unit's size_m, so a 40 m bridge or a 120 m cruiser does not wear a puff as big as itself. Colour, life and growth stay in data/fx/fx.json (the damage smoke option); this is only the unit's part.",
+      "fields": {
+        "enabled": { "kind": "bool", "about": "Whether this unit smokes when damaged at all. False for a thing that cannot (a stone bridge: Alex, 'Right now bridges don't have anything, that is fine.'): the effects feed leaves no smoke for it, with no special case in code." },
+        "source_m": { "kind": "number", "min": 0, "unit": "m", "about": "The size of the smoke's source: a puff's radius is the option's radius_frac (W1: 0.34 at one pip lost, 0.8 at the last pip) times this. Proposed at 8 m at most (the lead's reading of Alex's 'a small source'); greater than 0 exactly when enabled (unit_def.gd checks)." },
+        "source_back_m": { "kind": "number", "min": -100, "unit": "m", "about": "Where the source is along the unit: metres BEHIND its centre on its heading (an engine deck at the rear of a tank, a funnel aft of amidships); negative is ahead of the centre, 0 is the centre." },
+        "rise_mps": { "kind": "number", "min": 0, "unit": "m/s", "about": "How fast a puff climbs after it is born. A rising puff drifts with the wind at its height (data/sim/wind.json profile: faster higher up), so a plume stands over its source and leans downwind as it climbs, as the forest fire's does. 0 for smoke laid along a flight path in the air; the ground and sea units share the smoulder's rate of the wrecks and ruins (data/fx/fx.json crash and ruin smolder rise_mps; test_smoke_consistency holds them equal)." }
+      }
+    },
     "envelope": {
       "kind": "section",
       "about": "The performance envelope (scripts/sim/envelope.gd). Each step the player picks a point; the envelope decides which points are reachable from the unit's state at the start of the step. Inertia: speed changes at most accel/decel per second, heading at most the turn rate at the step's starting speed, and turning and climbing cost speed.",

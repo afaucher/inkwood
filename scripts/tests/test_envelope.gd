@@ -174,6 +174,7 @@ func _ship() -> void:
 		"bomb_load": {"drops": rec.call(0), "per_drop": rec.call(0)}, "specials": [],
 		"size_m": rec.call(120), "draught_m": rec.call(6), "actions_per_turn": rec.call(2), "health": rec.call(20),
 		"sight_range_m": rec.call(3000), "drawing": {"silhouette": "small_cruiser"}, "weapons": [],
+		"damage_smoke": {"enabled": rec.call(true), "source_m": rec.call(8), "source_back_m": rec.call(12), "rise_mps": rec.call(4)},
 		"envelope": {
 			"speed_min_mps": rec.call(-4), "speed_cruise_mps": rec.call(10), "speed_max_mps": rec.call(15),
 			"dive_speed_max_mps": rec.call(15), "accel_mps2": rec.call(0.3), "decel_mps2": rec.call(0.4),

@@ -10,6 +10,12 @@
   "health": { "value": 5, "_proposed": true, "_reason": "between the light fighter and the bomber" },
   "sight_range_m": { "value": 800, "decision": "fog-first-option", "_reason": "Alex 2026-10-09 accepted the lead's fog recommendation (about 800 m so sight edges show at play zoom). Was proposed: same as the light fighter; unused until Track F's vision rule" },
   "drawing": { "silhouette": "heavy_fighter" },
+  "damage_smoke": {
+    "enabled": { "value": true, "_proposed": true, "_reason": "a fighter smokes when hit" },
+    "source_m": { "value": 8, "_proposed": true, "_reason": "one engine's smoke, not the 16 m span (Alex, decision impact-by-round-and-target; the lead's 'about 8 m at most'): the same source as the light fighter's, so the trail is smaller than the old 0.34 to 0.8 of 16 m. PROPOSED, a board may pick another" },
+    "source_back_m": { "value": 5, "_proposed": true, "_reason": "where the smoke leaves the plane: 5 m behind its centre, about the old 0.35 x 16 m (W1 tail_frac)" },
+    "rise_mps": { "value": 0, "_proposed": true, "_reason": "0, a REASON TO DIFFER from the ground units' 4 m/s: a plane's trail is laid along its path at its altitude (a low plane is 120 m up, where the wind is already 1.6 times the ground's) and its own speed spreads it; a puff climbing 4 m/s would lift an old puff by 100 m in its life. PROPOSED" }
+  },
   "envelope": {
     "speed_min_mps": { "value": 50, "_proposed": true, "_reason": "stall about 180 km/h, heavier wing loading than the light fighter" },
     "speed_cruise_mps": { "value": 105, "_proposed": true, "_reason": "about 380 km/h; long-range twins cruised a little faster" },

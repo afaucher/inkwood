@@ -30,13 +30,23 @@ printed by `scripts/test_support/strike_tuning.gd`.
 ## The water's units (Track WS, 2026-10-10)
 
 `patrol_boat.json` and `supply_boat.json` are `"domain": "sea"` units (the P1 Cutter, 27 m, with
-light AA guns on two mounts; the S2 barge, 34 m, unarmed) and `bridge.json` a static ground unit
+machine guns on two mounts, `deck_mg`; the S2 barge, 34 m, unarmed) and `bridge.json` a static ground unit
 that bombs can destroy like the tower. Every unit file now carries `draught_m`: the depth of
 water a sea unit needs under it (above 0 for domain sea, 0 for the rest). The World keeps a sea
 unit afloat (`World.set_water`, `data/sim/sea.json`: a step that would leave the water is slowed,
 then held, with the limit `shore`); the boats sail their routes under the AI's `sail` role
 (`data/sim/ai.json`). Where they and the bridge stand is `WaterGen.sites()`; `data/scenarios/strike.json`
 carries them behind its `"water"` switch, off until the drawing can show them. All values are proposed.
+
+## What a weapon fires decides its look and its cone (decision weapon-kinds, Alex, 2026-10-11)
+
+"Flak would be shells shot that then explode. Machine guns would be bullets which don't. But Flak is pointed up and
+machine guns are around and less up. So flak guns have better coverage in the area directly above them." The anti-aircraft
+weapons are named for what they fire (the old shared id `aa_guns` is gone): `flak` and `light_flak` (the battery) and
+`ship_flak` (the cruiser) are flak, a cone from 2 degrees above the horizon to straight up, drawn as bursts (F2); `quad_mg`
+(the mobile AA's quad mount) and `deck_mg` (the cutter's guns) are machine guns, all around but from the horizon to 50
+degrees up (the band is proposed), drawn as tracers (the ids are in `data/fx/fx.json` `tracers.weapons`). A machine gun
+cannot hit a plane straight over it; flak can.
 
 ## The tank (Track TK2, 2026-10-11)
 
@@ -50,3 +60,13 @@ rule): dry land only; no height step off the road (Alex's decision `terrain-pass
 no river but over an intact bridge unit; half speed off the road, a third in woods (trees slow it, they never block it). The
 AI drives it with the `drive` role (`scripts/sim/ai_drive.gd`, `data/sim/ai.json` `drive`): waypoints and/or the road to a target,
 from a start turn. A scenario with a tank gives its World the ground (`SandboxScenario.populate`, `scripts/world/ground_map.gd`).
+
+## What a damaged unit smokes with (builder SMOKE, 2026-10-11; decisions smoke-consistency and impact-by-round-and-target)
+
+Every unit file carries `damage_smoke`: `enabled`, `source_m`, `source_back_m`, `rise_mps`. The effects layer's damage smoke is sized
+by this SOURCE (an engine deck, a funnel; at most about 8 m: Alex, 'a property of either the round or the thing being hit or both'),
+never by `size_m`, so a 40 m bridge or a 120 m cruiser does not wear a puff as big as itself. `enabled` false is the stone bridge
+(Alex: 'Right now bridges don't have anything, that is fine.'): the effects feed leaves no smoke for it and has no case for it in code.
+`rise_mps` is how fast a puff climbs (a rising puff drifts with the wind at its height, so the plume leans downwind): 4.0 for ground and
+sea units, the smoulder's rate of the ruins and wrecks, 0 for planes, whose trail is laid along their path (the reason is in each file).
+All values are proposed; the audit that led to them is `docs/proposals/smoke-audit.md`.

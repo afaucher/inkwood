@@ -39,6 +39,7 @@ const Mission = preload("res://scripts/sim/mission.gd")
 const SandboxScenario = preload("res://scripts/app/sandbox_scenario.gd")
 const BombWorlds = preload("res://scripts/test_support/bomb_worlds.gd")
 const JsMath = preload("res://scripts/core/js_math.gd")
+const Combat = preload("res://scripts/sim/combat.gd")
 
 const SEED := 20261009
 const OTHER_SEEDS := [1, 2, 3, 4, 5, 6]
@@ -553,7 +554,7 @@ func _guns() -> void:
 			if ev["type"] == "fire" and ev["unit"] == "boat":
 				fired += 1
 				mounts[int(ev["hardpoint"])] = true
-				eq(ev["weapon"], "aa_guns", "the boat's guns are its aa_guns")
+				eq(ev["weapon"], "deck_mg", "the boat's guns are its deck machine guns (decision weapon-kinds)")
 				eq(ev["target"], "fighter", "...and they fire at the plane")
 			if ev["type"] == "hit" and ev["by"] == "boat":
 				hits += 1
@@ -570,6 +571,17 @@ func _guns() -> void:
 			if ev["type"] == "fire" and ev["unit"] == "boat":
 				medium += 1
 	eq(medium, 0, "the boat's light guns do not reach a plane in the medium band (the battery's light flak does not either)")
+	# DECISION weapon-kinds (Alex, 2026-10-11): the cutter's guns are MACHINE GUNS, "around and less up" than flak. Their band is PROPOSED
+	# (the horizon to 50 degrees): a low plane straight over the boat is above the cone, one 300 m out is in it, and the guns cannot hit what is on the water
+	var cw := World.new()
+	var mg = cw.unit_def("patrol_boat").weapons[0]
+	var shoot := func(tx: float, th: float) -> Dictionary:
+		return Combat.evaluate({"x": 0.0, "y": 0.0, "heading": 0.0, "height_m": 0.0}, mg, 0, {"x": tx, "y": 0.0, "height_m": th}, cw.combat.odds_factors, cw.combat.factor_params())
+	var over: Dictionary = shoot.call(mg.hardpoints[0].x + 0.5, cw.band_height("low"))
+	check(not over["in_cone"] and float(over["odds"]) == 0.0, "the boat's machine guns do not reach a low plane straight over the mount")
+	var out300: Dictionary = shoot.call(300.0, cw.band_height("low"))
+	check(out300["in_cone"] and float(out300["odds"]) > 0.0, "...and do reach one 300 m out (odds %.4f)" % float(out300["odds"]))
+	check(not (shoot.call(150.0, 0.0) as Dictionary)["in_cone"], "...and never a unit on the water")
 	var barge := 0
 	for sd in range(1, 11):
 		var w := _gun_world(sd, "low", "supply_boat")

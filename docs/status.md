@@ -10,10 +10,7 @@ Decisions and open questions live in the Decision Ledger
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
 | Lines of fire, stage 1 (decision line-of-fire): the height grid and the line check, not used by combat yet; proofs: the heights over the map, side views of real shots | lead session (builder LOF1) | new scripts/sim/line_of_fire*.gd and height_grid*.gd, new data/sim/line_of_fire.json, the blockers' sim shapes (structures and the battery's sandbags as data), a debug overlay and shot scripts, scripts/tests/test_line_of_fire*.gd | 2026-10-11 |
-| Smoke consistency (smoke-consistency, impact-by-round-and-target): audit every smoke, then make it consistent | lead session (builder SMOKE) | scripts/fx/ smoke and puffs, data/fx/fx.json smoke keys, scripts/ui/combat_feed.gd damage smoke, the effects' layer order in scripts/ui/unit_ui.gd, units' smoke fields; docs/proposals/smoke-audit.md | 2026-10-11 |
-| The AA weapons by what they fire (weapon-kinds) | lead session (builder AA) | data/units/mobile_aa.json, patrol_boat.json, cruiser.json, data/fx/fx.json tracers.weapons, their tests | 2026-10-11 |
 | Board: muzzle smoke and impacts by what is hit (gunfire-looks) | lead session (builder GF) | variants/gunfire/, a new board script under scripts/fx/ | 2026-10-11 |
-| Board: scenery heights (scenery-heights) | lead session (builder SH) | variants/scenery-heights/, a new board script | 2026-10-11 |
 
 ## Next, free to take
 
@@ -62,6 +59,11 @@ Decisions and open questions live in the Decision Ledger
 
 ## Recently landed
 
+- 2026-10-11: smoke made consistent (decision smoke-consistency; the audit is docs/proposals/smoke-audit.md): every smoke
+  above surface units and their shadows and under aircraft; damage smoke sized by a small source per unit (`damage_smoke` in
+  every unit file), climbing 4 m/s and leaning downwind; no smoke on the bridge; a bomb or shell in water splashes. The AA
+  weapons by what they fire (weapon-kinds): `quad_mg` (mobile AA) and `deck_mg` (cutter) are machine guns with tracers,
+  level to 50 degrees up; `ship_flak` (cruiser) bursts. The scenery-heights board (variants/scenery-heights/) waits on Alex.
 - 2026-10-11: the zoom judder is fixed and the camera zooms in further (decision playtest-3): a zoom ends the follow
   (`camera.json` follow.break_on_zoom), the units' size follows the zoom the same frame, unit art is not re-baked mid-zoom;
   the closest zoom 3.0, a tank about 54 px (proposed). test_camera, test_zoom_scale, test_marker_rebake.

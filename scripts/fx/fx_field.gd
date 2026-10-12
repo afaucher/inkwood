@@ -174,14 +174,20 @@ func size_factor(size_m: float) -> float:
 # puffs are left every interval(i) game seconds along the way, at positions interpolated
 # between the previous call and this one. Nothing is emitted for t at or before the
 # latest time this unit has already emitted at (a scrub back and forth makes no duplicates).
-# `world_pos` is the plane's centre; `heading` (radians, 0 = +x) puts the smoke at its tail.
-func emit_damage_smoke(unit_id: String, world_pos: Vector2, height_m: float, health_fraction: float, t: float, size_m: float = 9.0, heading: float = NAN) -> int:
+# `world_pos` is the unit's centre; `heading` (radians, 0 = +x) puts the smoke behind it.
+#
+# WHAT SIZES THE PUFFS (builder SMOKE, 2026-10-11, decisions smoke-consistency and impact-by-round-and-target): `size_m` is the SIZE OF THE SOURCE
+# (the unit's data/units damage_smoke.source_m, an engine deck or a funnel), never the unit's own length: a puff's radius is the option's radius_frac
+# times it. `back_m` is how far behind the centre the source sits (damage_smoke.source_back_m; NAN: the option's tail_frac x size_m, as the boards
+# draw it) and `rise_mps` how fast a puff climbs after it is born (damage_smoke.rise_mps; 0: it stays at the height it was born at). A rising puff
+# drifts with the wind at its height (puff_drift), so a plume stands over its source and leans downwind as it climbs.
+func emit_damage_smoke(unit_id: String, world_pos: Vector2, height_m: float, health_fraction: float, t: float, size_m: float = 9.0, heading: float = NAN, back_m: float = NAN, rise_mps: float = 0.0) -> int:
 	var i := FxPuff.intensity(smoke_o, health_fraction)
-	return _emit_trail(unit_id, "smoke", smoke_o, "smoke", i, FxPuff.tone_of(smoke_o, i), FxPuff.interval_s(smoke_o, i), world_pos, height_m, t, size_m, heading, -1.0)
+	return _emit_trail(unit_id, "smoke", smoke_o, "smoke", i, FxPuff.tone_of(smoke_o, i), FxPuff.interval_s(smoke_o, i), world_pos, height_m, t, size_m, heading, -1.0, back_m, rise_mps)
 
 # The same from a sampler (time -> {x, y, height_m, heading}) between t0 and t1, on the exact
 # emission grid: independent of how often a host calls. Returns the puffs added.
-func emit_path(unit_id: String, sampler: Callable, t0: float, t1: float, health_fraction: float, size_m: float = 9.0) -> int:
+func emit_path(unit_id: String, sampler: Callable, t0: float, t1: float, health_fraction: float, size_m: float = 9.0, back_m: float = NAN, rise_mps: float = 0.0) -> int:
 	var made := 0
 	var i := FxPuff.intensity(smoke_o, health_fraction)
 	if i <= 0.0:
@@ -195,7 +201,7 @@ func emit_path(unit_id: String, sampler: Callable, t0: float, t1: float, health_
 			var pos := Vector2(float(s["x"]), float(s["y"]))
 			var h := float(s.get("height_m", 0.0))
 			var hd := float(s.get("heading", NAN))
-			made += _add_trail_puff(unit_id, "smoke", smoke_o, "smoke", i, FxPuff.tone_of(smoke_o, i), pos, h, t, size_m, hd, -1.0)
+			made += _add_trail_puff(unit_id, "smoke", smoke_o, "smoke", i, FxPuff.tone_of(smoke_o, i), pos, h, t, size_m, hd, -1.0, back_m, rise_mps)
 			st["high"] = t
 		t += iv
 	st["next"] = t
@@ -210,7 +216,7 @@ func _emit_state(unit_id: String, kind: String) -> Dictionary:
 	return _emit[key]
 
 # One trail: accumulates along the calls. `fixed_life` < 0 takes the option's life at intensity i.
-func _emit_trail(unit_id: String, kind: String, o: Dictionary, set_id: String, i: float, tone: int, interval: float, pos: Vector2, h: float, t: float, size_m: float, heading: float, fixed_life: float) -> int:
+func _emit_trail(unit_id: String, kind: String, o: Dictionary, set_id: String, i: float, tone: int, interval: float, pos: Vector2, h: float, t: float, size_m: float, heading: float, fixed_life: float, back_m: float = NAN, rise_mps: float = 0.0) -> int:
 	var st: Dictionary = _emit_state(unit_id, kind)
 	if not st.has("high"):
 		st["high"] = -INF
@@ -229,7 +235,7 @@ func _emit_trail(unit_id: String, kind: String, o: Dictionary, set_id: String, i
 		while nxt <= t + 1e-9:
 			if nxt > float(st["high"]):
 				var f := 0.0 if t <= t_prev else clampf((nxt - t_prev) / (t - t_prev), 0.0, 1.0)
-				made += _add_trail_puff(unit_id, kind, o, set_id, i, tone, p_prev.lerp(pos, f), lerpf(h_prev, h, f), nxt, size_m, heading, fixed_life)
+				made += _add_trail_puff(unit_id, kind, o, set_id, i, tone, p_prev.lerp(pos, f), lerpf(h_prev, h, f), nxt, size_m, heading, fixed_life, back_m, rise_mps)
 				st["high"] = nxt
 			nxt += interval
 	else:
@@ -241,12 +247,14 @@ func _emit_trail(unit_id: String, kind: String, o: Dictionary, set_id: String, i
 	st["high"] = maxf(float(st["high"]), t - 1e-9)
 	return made
 
-func _add_trail_puff(unit_id: String, kind: String, o: Dictionary, set_id: String, i: float, tone: int, pos: Vector2, h: float, t: float, size_m: float, heading: float, fixed_life: float) -> int:
+func _add_trail_puff(unit_id: String, kind: String, o: Dictionary, set_id: String, i: float, tone: int, pos: Vector2, h: float, t: float, size_m: float, heading: float, fixed_life: float, back_m: float = NAN, rise_mps: float = 0.0) -> int:
 	var seed_v := FxBake.seed_of(world_seed, unit_id + kind, int(round(t * 1000.0)))
 	var rng := Mulberry32.new(seed_v)
 	var tail := Vector2.ZERO
 	if not is_nan(heading):
-		tail = -Vector2.from_angle(heading) * FxData.f(o, "tail_frac") * size_m
+		# where the smoke leaves the thing: the unit's own source (damage_smoke.source_back_m) or, without one, the option's share of the size
+		var back: float = FxData.f(o, "tail_frac") * size_m if is_nan(back_m) else back_m
+		tail = -Vector2.from_angle(heading) * back
 	var drift := _wind(o, rng, t)
 	var r_m := FxPuff.radius_m(o, i, size_m) * (0.8 + rng.next() * 0.4)
 	var p := {
@@ -258,6 +266,8 @@ func _add_trail_puff(unit_id: String, kind: String, o: Dictionary, set_id: Strin
 		"life": fixed_life if fixed_life > 0.0 else FxPuff.life_s(o, i),
 		"wind": drift, "dir": 0.0 if is_nan(heading) else heading,
 	}
+	if rise_mps > 0.0:
+		p["rise"] = rise_mps   # (a puff that does not climb carries no key, as the planes' always did)
 	_add_puff(p)
 	return 1
 
@@ -383,12 +393,16 @@ func prune(t: float) -> void:
 
 # Called each frame a plane is falling out of control (from World.sample): the trail of
 # heavy smoke it leaves, the embers it sheds, and the pose the layer hangs its flame on.
-func ride(unit_id: String, world_pos: Vector2, height_m: float, t: float, size_m: float = 9.0, heading: float = NAN) -> int:
+#
+# THE SOURCE (builder SMOKE, 2026-10-11): the trail's puffs are sized by `source_m` and leave `back_m` behind the centre when the caller gives them (the
+# plane's data/units damage_smoke: the same engine that smoked before it fell, so the trail does not jump in size at down_at); without them by `size_m`,
+# as before. `size_m` still sizes what is the airframe's (the flame, the embers).
+func ride(unit_id: String, world_pos: Vector2, height_m: float, t: float, size_m: float = 9.0, heading: float = NAN, source_m: float = -1.0, back_m: float = NAN) -> int:
 	var fall := FxData.grp(crash_o, "falling")
 	var smoke_key := _smoke_key(FxData.s(fall, "smoke_option"))
 	var o := _fall_smoke(smoke_key, fall)
 	var i := FxData.f(fall, "intensity")
-	var made := _emit_trail(unit_id, "fall", o, "fall:" + smoke_key, i, FxData.i(fall, "tone"), FxData.f(fall, "interval_s"), world_pos, height_m, t, size_m, heading, FxData.f(fall, "life_s"))
+	var made := _emit_trail(unit_id, "fall", o, "fall:" + smoke_key, i, FxData.i(fall, "tone"), FxData.f(fall, "interval_s"), world_pos, height_m, t, source_m if source_m > 0.0 else size_m, heading, FxData.f(fall, "life_s"), back_m)
 	var fl := FxData.grp(fall, "flame")
 	if fire_on and FxData.b(fl, "enabled"):
 		var every := FxData.f(fl, "ember_every_s")
@@ -484,17 +498,21 @@ func _add_plume(unit_id: String, phase: String, pl: Dictionary, pos: Vector2, h:
 	var sf := size_factor(size_m)
 	var unit_m := base_m if base_m > 0.0 else common_ref_plane_m * sf   # metres a radius_frac of 1 stands for
 	var n := FxData.i(pl, "count")
+	var rise := FxData.f(pl, "rise_mps")
 	for k in n:
 		var a := rng.next() * TAU
 		var d := sqrt(rng.next()) * FxData.f(pl, "spread_frac") * unit_m
 		var born := t + FxData.f(pl, "delay_s") + float(k) * FxData.f(pl, "interval_s")
-		_add_puff({
+		var plume_puff := {
 			"id": _new_id(), "unit": unit_id, "kind": "plume", "set": id, "born": born,
 			"pos": pos + Vector2.from_angle(a) * d, "h": maxf(h, 0.0), "size_m": size_m,
 			"r_m": lerpf(float(rf[0]), float(rf[1]), rng.next()) * unit_m,
 			"tone": FxData.i(pl, "tone"), "variant": int(rng.next() * float(FxData.i(o, "variants"))),
 			"life": FxData.f(pl, "life_s"), "wind": _wind(o, rng, born),
-		})
+		}
+		if rise > 0.0:
+			plume_puff["rise"] = rise   # the plume climbs like the burst thrown with it (builder SMOKE, decision smoke-consistency)
+		_add_puff(plume_puff)
 
 # The wreck keeps smoking (Alex 2026-10-09: "an explosion, then smoking"): a column of puffs from
 # the wreck for the data's duration, born at a rate that falls as the wreck burns out, narrowing

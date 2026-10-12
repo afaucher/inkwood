@@ -7,7 +7,10 @@ extends "res://scripts/test_support/test_case.gd"
 #   1. both unit files load and validate; the gun is a mobile ground unit that drives (a road speed of 8 to 10 m/s, the tank's
 #      movement system) with ONE weapon, a short all-around cone aimed up; the complex is a static ground unit, no weapons, no bombs,
 #      more health than the radio tower, a footprint of about 80 m
-#   2. THE GUN'S REACH: its cone covers a plane in the LOW band round it and never the HIGH band, from straight below or from any
+#   2. THE GUN IS A MACHINE GUN (decision weapon-kinds, Alex 2026-10-11: 'machine guns are around and less up'; the band is PROPOSED):
+#      weapon quad_mg, a cone from the horizon to a moderate elevation, so a plane STRAIGHT OVER it (low or medium) is out of the cone,
+#      a blind disc under the plane, and a low plane 150 to 300 m out is in; the medium band is reached only in a ring
+#      THE GUN'S REACH: its cone covers a plane in the LOW band round it and never the HIGH band, from straight below or from any
 #      distance (the brief said the medium band too was out of reach; Track M2L widened the reach to contest a medium approach, so the
 #      figure is theirs and the ORDER is held: low at least as dangerous as medium, high out of reach); it cannot hurt a unit on the
 #      ground; played through the World, a plane flying over it at the low band loses pips, a high one none, and the gun rolls only at
@@ -107,10 +110,15 @@ func _reach() -> void:
 	var w := World.new()
 	var aa: UnitDef = w.unit_def("mobile_aa")
 	var gun: CombatWeapon = aa.weapons[0]
-	eq(gun.id, "aa_guns", "the weapon is the light AA guns")
+	# DECISION weapon-kinds (Alex, 2026-10-11): the quad mount is a MACHINE GUN ("machine guns are around and less up"; flak "has better
+	# coverage in the area directly above"). Its band is PROPOSED: from the horizon to a moderate elevation, so a plane straight over it is
+	# out of the cone and a plane some way out is in it
+	eq(gun.id, "quad_mg", "the weapon is the quad machine guns")
 	eq(gun.kind, "flexible", "mounted like a flexible gun")
 	eq(gun.half_across_deg, 180.0, "all around")
-	check(gun.elevation_deg > 0.0 and gun.elevation_deg + gun.half_height_deg >= 90.0 and gun.elevation_deg - gun.half_height_deg < 15.0, "aimed up from a low angle to straight overhead (centre %s)" % str(gun.elevation_deg))
+	var lo_deg: float = gun.elevation_deg - gun.half_height_deg
+	var hi_deg: float = gun.elevation_deg + gun.half_height_deg
+	check(lo_deg >= 0.0 and hi_deg > 20.0 and hi_deg < 80.0, "aimed from the horizon to a moderate elevation, not straight overhead (%s to %s deg)" % [lo_deg, hi_deg])
 	var muzzle: float = gun.hardpoints[0].z
 	var reach := gun.max_range_m(w.combat.range_overshoot)
 	var low := w.band_height("low")
@@ -124,11 +132,18 @@ func _reach() -> void:
 	var params := w.combat.factor_params()
 	var shoot := func(tx: float, ty: float, theight: float) -> Dictionary:
 		return Combat.evaluate({"x": 0.0, "y": 0.0, "heading": 0.0, "height_m": 0.0}, gun, 0, {"x": tx, "y": ty, "height_m": theight}, factors, params)
+	# THE MACHINE GUN'S BLIND DISC: a plane straight over the mount is above the cone, low or medium; a low plane 300 m out is in it
 	var over_low: Dictionary = shoot.call(0.0, 1.0, low)
-	check(over_low["in_cone"] and float(over_low["odds"]) > 0.0, "a low plane right over the guns is in the cone, at odds %.4f" % float(over_low["odds"]))
+	check(not over_low["in_cone"] and float(over_low["odds"]) == 0.0, "a low plane right over the guns is NOT in the cone (it is above %s deg)" % str(hi_deg))
+	var over_med: Dictionary = shoot.call(0.0, 1.0, med)
+	check(not over_med["in_cone"] and float(over_med["odds"]) == 0.0, "nor is a medium plane right over them")
+	var blind_low := (low - muzzle) / tan(deg_to_rad(hi_deg))
+	check(not (shoot.call(blind_low * 0.9, 0.0, low) as Dictionary)["in_cone"] and (shoot.call(blind_low * 1.1, 0.0, low) as Dictionary)["in_cone"], "the blind disc under a low plane is %.0f m wide on the ground (inside it out, just outside it in)" % (2.0 * blind_low))
+	var low_best := 0.0
 	for off: float in [150.0, 250.0, 300.0]:
 		var e: Dictionary = shoot.call(off, 0.0, low)
 		check(e["in_cone"] and float(e["odds"]) > 0.0, "a low plane %.0f m off is in the cone and has odds (%.4f)" % [off, float(e["odds"])])
+		low_best = maxf(low_best, float(e["odds"]))
 	var low_ground := sqrt(maxf(reach * reach - (low - muzzle) * (low - muzzle), 0.0))
 	check(not (shoot.call(low_ground + 60.0, 0.0, low) as Dictionary)["in_cone"], "a low plane beyond its reach (%.0f m off) is out: the guns are short" % (low_ground + 60.0))
 	var med_ground := sqrt(maxf(reach * reach - (med - muzzle) * (med - muzzle), 0.0)) if reach > med - muzzle else -1.0
@@ -140,8 +155,12 @@ func _reach() -> void:
 			worst = maxf(worst, float(m["odds"]))
 			if off > med_ground + 1.0 and (m["in_cone"] or float(m["odds"]) != 0.0):
 				fail("a medium plane %.0f m off at azimuth %d is beyond the reach (%.0f m on the ground) and in it (odds %.4f)" % [off, roundi(rad_to_deg(az)), med_ground, float(m["odds"])])
-	var low_over := float((shoot.call(0.0, 1.0, low) as Dictionary)["odds"])
-	check(worst <= low_over + 1e-12, "no medium plane has better odds than a low one right over the guns (%.4f against %.4f)" % [worst, low_over])
+	check(worst <= low_best + 1e-12, "no medium plane has better odds than a low one in the cone (%.4f against %.4f)" % [worst, low_best])
+	# the medium band is reached only in a RING (the machine guns do not point up that far): 400 m out it is in the cone, 200 m out it is not
+	var ring_inner := (med - muzzle) / tan(deg_to_rad(hi_deg))
+	var ring_in := (shoot.call(ring_inner * 1.1, 0.0, med) as Dictionary)
+	check(ring_in["in_cone"] and float(ring_in["odds"]) > 0.0, "a medium plane just outside the ring's inner edge (%.0f m out, %.0f m on the ground) is in the cone" % [ring_inner * 1.1, ring_inner])
+	check(not (shoot.call(ring_inner * 0.9, 0.0, med) as Dictionary)["in_cone"], "and one just inside it is not: too steep for the machine guns")
 	var hi_worst := 0.0
 	for off: float in [0.0, 200.0, 600.0]:
 		hi_worst = maxf(hi_worst, float((shoot.call(off, 0.0, w.band_height("high")) as Dictionary)["odds"]))
@@ -208,9 +227,9 @@ func _pass_through_the_world() -> void:
 				for ev: Dictionary in res.get("events", []):
 					if ev["type"] == "fire" and ev["unit"] == "aa":
 						rolls_at[band] += 1
-						check(ev["weapon"] == "aa_guns" and ev["target"] == "p" and float(ev["r"]) <= 1.0, "a gun roll names the gun's weapon and the plane, inside the cone")
+						check(ev["weapon"] == "quad_mg" and ev["target"] == "p" and float(ev["r"]) <= 1.0, "a gun roll names the gun's weapon and the plane, inside the cone")
 					elif ev["type"] == "hit":
-						check(ev["by"] == "aa" and ev["weapon"] == "aa_guns" and ev["damage"] == 1, "a hit takes one pip")
+						check(ev["by"] == "aa" and ev["weapon"] == "quad_mg" and ev["damage"] == 1, "a hit takes one pip")
 					elif ev["type"] == "down":
 						went_down = true
 						check(ev["by"] == "aa" and (ev["fate"] == Unit.FATE_EXPLODED or ev["fate"] == Unit.FATE_OUT_OF_CONTROL), "shot down by the gun: it explodes or falls")

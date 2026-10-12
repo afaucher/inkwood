@@ -1,0 +1,555 @@
+{
+  "id": "scenery-heights",
+  "date": "2026-10-11",
+  "area": "World, Style (the scale of the scenery)",
+  "question": "Real-world heights for trees, houses and walls (prototype px today: walls 5-7 m, houses 10.7-14.5 m, trees 6-29 m at 2 px/m)? Alex: '12 yes, but show me'.",
+  "source": "scripts/ui/boards/scenery_heights_board_shot.gd: one run of the real game per option and map (BoardScene on the Strike, seed 20261009, and Hold the bridge, seed 55; fog off, labels off, the sun fixed at 315 / 46), the heights switched by scripts/ui/boards/scenery_heights_patch.gd. Rendered in a throwaway checkout at HEAD because other builders were editing the units' data in the shared tree.",
+  "seeds": {
+    "strike": 20261009,
+    "bridge": 55
+  },
+  "held_constant": {
+    "sun": "FIXED (data/params/sun.json mode 'fixed': bearing 315, elevation 46, a shadow 0.966 x the height) so the frames compare; the game's live sun follows the time of day (0.58 x at noon to 2.0 x), which makes every difference between options larger",
+    "map": "the same map, water, fog off; the same crowns, footprints, tree placement and random streams in every option (a height is read by the shadow passes only): the measured square holds the same 2361 trees on the Strike and 2813 on seed 55 in all four options",
+    "units": "a tank on the village road (Strike), a light fighter in the low band (120 m) over the village's south edge, the Strike's own tower and bridge; on seed 55 the two player tanks and the bridge (the enemy tanks and the cruiser are out of the shot); every other unit waits at (4400, 4400)",
+    "left_off": "the HUD, the height and speed lettering, the target ring, the roster",
+    "zooms": "planning zoom 0.35 (0.7 px per metre) and the closest zoom 3.0 (6 px per metre), the same camera centres in every option"
+  },
+  "mechanism": {
+    "what": "Heights are set by three lines of the port: scene_gen.gd sync_tree (t.h = t.r * P.height * (0.85 + 0.3 * t.hr)), structures.gd sync_struct (s.h = P.wallH * s.hs for a wall, P.houseSize * 0.9 * s.hs for a house) and village_draw.gd (a hedge tree's h = r * P.height * (...) * terrain.json hedge.height_frac). A height drives the shadow passes (terrain_shadows.gd, chunk_terrain_provider.gd _struct_sil) and the trees' draw order, and nothing else: sprites, footprints, crowns, tree placement and every random draw are independent of it.",
+    "board_override": "scripts/ui/boards/scenery_heights_patch.gd rewrites the two lines of scene_gen.gd and structures.gd in memory (Script.source_code + reload(), before the first instance; the files on disk are untouched) and puts the option's numbers in Engine meta 'scenery_heights'. With no meta the patched lines compute what they computed before. The hedge trees are not patched: they are already about 2 m.",
+    "why_not_data": "wall_height and tree_height are data keys; a house's height is the literal 0.9 x house_size (the footprint's own scale, so house_size cannot be used), and trees have no height window."
+  },
+  "to_make_it_live": {
+    "_about": "PROPOSED, if Alex picks an option: each option's own 'to_make_it_live' lists the values. Data edits alone: parameters.wall_height.default and parameters.tree_height.default (plus a prototype_default beside each). Two small code edits: a house_height_ratio key replacing the literal 0.9 in structures.gd sync_struct (default 0.9 keeps the port check), and a tree_height_min_m / tree_height_max_m window in scene_gen.gd sync_tree (absent = no clamp, which the port check needs). RenderParams reads both (render_params.gd); test_scene_gen, test_port_utils and --parity keep the prototype's values through prototype_default. The board's patch file and this board script are then retired or kept as a look-compare tool."
+  },
+  "yardsticks_m": {
+    "tank": [
+      2.0,
+      2.5
+    ],
+    "radio_tower": [
+      23.0,
+      27.0
+    ],
+    "terrain_steps": [
+      12.0,
+      24.0
+    ],
+    "low_band_plane": 120.0,
+    "source": "docs/proposals/shot-heights.md heights table"
+  },
+  "options": [
+    {
+      "id": "s0",
+      "name": "S0",
+      "title": "Today's heights",
+      "proposed": false,
+      "patch_m": {},
+      "multiples_read_by_the_patch": {},
+      "set_by": "today's data (nothing patched)",
+      "to_make_it_live": {},
+      "measured_m_strike_map": {
+        "trees": {
+          "n": 2361.0,
+          "min": 6.41304818084729,
+          "p10": 7.90602067611363,
+          "median": 11.2008321712167,
+          "p90": 16.1226522677672,
+          "max": 28.6620380740785,
+          "mean": 11.7173153836828,
+          "share_12_or_more": 0.420160948750529,
+          "share_over_20": 0.0139771283354511
+        },
+        "houses": {
+          "n": 16.0,
+          "min": 10.7374396575429,
+          "p10": 10.8228127605328,
+          "median": 12.432664736216,
+          "p90": 14.0326960457442,
+          "max": 14.2254029929731,
+          "mean": 12.4612251325784,
+          "share_12_or_more": 0.5625,
+          "share_over_20": 0.0
+        },
+        "walls": {
+          "n": 3.0,
+          "min": 2.7,
+          "p10": 2.7,
+          "median": 5.4,
+          "p90": 6.0,
+          "max": 6.0,
+          "mean": 4.7,
+          "share_12_or_more": 0.0,
+          "share_over_20": 0.0
+        },
+        "hedges": {
+          "n": 108.0,
+          "min": 1.26739521607731,
+          "p10": 1.64612308048681,
+          "median": 2.39648232087667,
+          "p90": 3.11158648165089,
+          "max": 4.15971160554031,
+          "mean": 2.41055763304937,
+          "share_12_or_more": 0.0,
+          "share_over_20": 0.0
+        },
+        "trees_seed_55": {
+          "n": 2813.0,
+          "min": 6.35767685948991,
+          "p10": 7.921536018718,
+          "median": 11.1034895969667,
+          "p90": 16.2037363990173,
+          "max": 28.275220447684,
+          "mean": 11.6802446747534,
+          "share_12_or_more": 0.406683256309989,
+          "share_over_20": 0.0145751866334874
+        }
+      },
+      "mean_lightness_strike_frames": {
+        "village_plan": 0.78,
+        "village_close": 0.778,
+        "wood_plan": 0.785,
+        "wood_close": 0.774,
+        "plane_plan": 0.78,
+        "plane_close": 0.768
+      },
+      "files": [
+        "s0_village_plan.png",
+        "s0_village_close.png",
+        "s0_wood_plan.png",
+        "s0_wood_close.png",
+        "s0_plane_plan.png",
+        "s0_plane_close.png",
+        "s0_bridge_plan.png",
+        "s0_bridge_close.png"
+      ]
+    },
+    {
+      "id": "s1",
+      "name": "S1",
+      "title": "Real-world heights",
+      "proposed": true,
+      "patch_m": {
+        "tree_mult": 1.1,
+        "tree_min_m": 8.0,
+        "tree_max_m": 20.0,
+        "house_mean_m": 7.0,
+        "wall_mean_m": 2.5
+      },
+      "multiples_read_by_the_patch": {
+        "tree_mult": 1.1,
+        "tree_min_m": 8.0,
+        "tree_max_m": 20.0,
+        "house_mult": 0.5556,
+        "wall_mult": 0.4167
+      },
+      "set_by": "scripts/ui/boards/scenery_heights_patch.gd: the board-only override; the live equivalent is 'to_make_it_live'",
+      "to_make_it_live": {
+        "parameters.wall_height.default": 5.0,
+        "parameters.house_height_ratio.default (NEW key; today the literal 0.9 in structures.gd sync_struct)": 0.5,
+        "parameters.tree_height.default": 1.43,
+        "parameters.tree_height_min_m / tree_height_max_m (NEW keys; no clamp today, read in scene_gen.gd sync_tree)": [
+          8.0,
+          20.0
+        ],
+        "data/terrain/terrain.json level_heights_m reason": "the text 'the tallest tree (~14 m)' is stale at 2 px/m; reword it with the pick",
+        "render_defaults.json prototype_default entries": "wall_height 12 and tree_height 1.3 keep a prototype_default beside the new default, as shadow_strength does, so --parity and test_scene_gen still compare with the prototype"
+      },
+      "measured_m_strike_map": {
+        "trees": {
+          "n": 2361.0,
+          "min": 8.0,
+          "p10": 8.696622743725,
+          "median": 12.3209153883384,
+          "p90": 17.7349174945439,
+          "max": 20.0,
+          "mean": 12.812058031751,
+          "share_12_or_more": 0.531977975434138,
+          "share_over_20": 0.0
+        },
+        "houses": {
+          "n": 16.0,
+          "min": 5.96524425419048,
+          "p10": 6.01267375585157,
+          "median": 6.90703596456442,
+          "p90": 7.79594224763569,
+          "max": 7.90300166276283,
+          "mean": 6.92290285143245,
+          "share_12_or_more": 0.0,
+          "share_over_20": 0.0
+        },
+        "walls": {
+          "n": 3.0,
+          "min": 1.125,
+          "p10": 1.125,
+          "median": 2.25,
+          "p90": 2.5,
+          "max": 2.5,
+          "mean": 1.95833333333333,
+          "share_12_or_more": 0.0,
+          "share_over_20": 0.0
+        },
+        "hedges": {
+          "n": 108.0,
+          "min": 1.26739521607731,
+          "p10": 1.64612308048681,
+          "median": 2.39648232087667,
+          "p90": 3.11158648165089,
+          "max": 4.15971160554031,
+          "mean": 2.41055763304937,
+          "share_12_or_more": 0.0,
+          "share_over_20": 0.0
+        },
+        "trees_seed_55": {
+          "n": 2813.0,
+          "min": 8.0,
+          "p10": 8.7136896205898,
+          "median": 12.2138385566633,
+          "p90": 17.8241100389191,
+          "max": 20.0,
+          "mean": 12.7674229070027,
+          "share_12_or_more": 0.517952364024173,
+          "share_over_20": 0.0
+        }
+      },
+      "mean_lightness_strike_frames": {
+        "village_plan": 0.78,
+        "village_close": 0.783,
+        "wood_plan": 0.784,
+        "wood_close": 0.773,
+        "plane_plan": 0.779,
+        "plane_close": 0.772
+      },
+      "files": [
+        "s1_village_plan.png",
+        "s1_village_close.png",
+        "s1_wood_plan.png",
+        "s1_wood_close.png",
+        "s1_plane_plan.png",
+        "s1_plane_close.png",
+        "s1_bridge_plan.png",
+        "s1_bridge_close.png"
+      ]
+    },
+    {
+      "id": "s2",
+      "name": "S2",
+      "title": "Halfway between S0 and S1",
+      "proposed": true,
+      "patch_m": {
+        "tree_mult": 1.05,
+        "tree_min_m": 7.2,
+        "tree_max_m": 24.4,
+        "house_mean_m": 9.8,
+        "wall_mean_m": 4.25
+      },
+      "multiples_read_by_the_patch": {
+        "tree_mult": 1.05,
+        "tree_min_m": 7.2,
+        "tree_max_m": 24.4,
+        "house_mult": 0.7778,
+        "wall_mult": 0.7083
+      },
+      "set_by": "scripts/ui/boards/scenery_heights_patch.gd: the board-only override; the live equivalent is 'to_make_it_live'",
+      "to_make_it_live": {
+        "parameters.wall_height.default": 8.5,
+        "parameters.house_height_ratio.default (NEW key; today the literal 0.9 in structures.gd sync_struct)": 0.7,
+        "parameters.tree_height.default": 1.365,
+        "parameters.tree_height_min_m / tree_height_max_m (NEW keys; no clamp today, read in scene_gen.gd sync_tree)": [
+          7.2,
+          24.4
+        ],
+        "data/terrain/terrain.json level_heights_m reason": "the text 'the tallest tree (~14 m)' is stale at 2 px/m; reword it with the pick",
+        "render_defaults.json prototype_default entries": "wall_height 12 and tree_height 1.3 keep a prototype_default beside the new default, as shadow_strength does, so --parity and test_scene_gen still compare with the prototype"
+      },
+      "measured_m_strike_map": {
+        "trees": {
+          "n": 2361.0,
+          "min": 7.2,
+          "p10": 8.30132170991931,
+          "median": 11.7608737797776,
+          "p90": 16.9287848811555,
+          "max": 24.4,
+          "mean": 12.2875601263966,
+          "share_12_or_more": 0.473951715374841,
+          "share_over_20": 0.0173655230834392
+        },
+        "houses": {
+          "n": 16.0,
+          "min": 8.35134195586667,
+          "p10": 8.4177432581922,
+          "median": 9.66985035039019,
+          "p90": 10.91431914669,
+          "max": 11.064202327868,
+          "mean": 9.69206399200542,
+          "share_12_or_more": 0.0,
+          "share_over_20": 0.0
+        },
+        "walls": {
+          "n": 3.0,
+          "min": 1.9125,
+          "p10": 1.9125,
+          "median": 3.825,
+          "p90": 4.25,
+          "max": 4.25,
+          "mean": 3.32916666666667,
+          "share_12_or_more": 0.0,
+          "share_over_20": 0.0
+        },
+        "hedges": {
+          "n": 108.0,
+          "min": 1.26739521607731,
+          "p10": 1.64612308048681,
+          "median": 2.39648232087667,
+          "p90": 3.11158648165089,
+          "max": 4.15971160554031,
+          "mean": 2.41055763304937,
+          "share_12_or_more": 0.0,
+          "share_over_20": 0.0
+        },
+        "trees_seed_55": {
+          "n": 2813.0,
+          "min": 7.2,
+          "p10": 8.3176128196539,
+          "median": 11.658664076815,
+          "p90": 17.0139232189682,
+          "max": 24.4,
+          "mean": 12.2516114033878,
+          "share_12_or_more": 0.462495556345539,
+          "share_over_20": 0.0206185567010309
+        }
+      },
+      "mean_lightness_strike_frames": {
+        "village_plan": 0.78,
+        "village_close": 0.78,
+        "wood_plan": 0.784,
+        "wood_close": 0.774,
+        "plane_plan": 0.78,
+        "plane_close": 0.77
+      },
+      "files": [
+        "s2_village_plan.png",
+        "s2_village_close.png",
+        "s2_wood_plan.png",
+        "s2_wood_close.png",
+        "s2_plane_plan.png",
+        "s2_plane_close.png",
+        "s2_bridge_plan.png",
+        "s2_bridge_close.png"
+      ]
+    },
+    {
+      "id": "s3",
+      "name": "S3",
+      "title": "Real heights, trees a little taller",
+      "proposed": true,
+      "patch_m": {
+        "tree_mult": 1.3,
+        "tree_min_m": 9.0,
+        "tree_max_m": 24.0,
+        "house_mean_m": 7.0,
+        "wall_mean_m": 2.5
+      },
+      "multiples_read_by_the_patch": {
+        "tree_mult": 1.3,
+        "tree_min_m": 9.0,
+        "tree_max_m": 24.0,
+        "house_mult": 0.5556,
+        "wall_mult": 0.4167
+      },
+      "set_by": "scripts/ui/boards/scenery_heights_patch.gd: the board-only override; the live equivalent is 'to_make_it_live'",
+      "to_make_it_live": {
+        "parameters.wall_height.default": 5.0,
+        "parameters.house_height_ratio.default (NEW key; today the literal 0.9 in structures.gd sync_struct)": 0.5,
+        "parameters.tree_height.default": 1.69,
+        "parameters.tree_height_min_m / tree_height_max_m (NEW keys; no clamp today, read in scene_gen.gd sync_tree)": [
+          9.0,
+          24.0
+        ],
+        "data/terrain/terrain.json level_heights_m reason": "the text 'the tallest tree (~14 m)' is stale at 2 px/m; reword it with the pick",
+        "render_defaults.json prototype_default entries": "wall_height 12 and tree_height 1.3 keep a prototype_default beside the new default, as shadow_strength does, so --parity and test_scene_gen still compare with the prototype"
+      },
+      "measured_m_strike_map": {
+        "trees": {
+          "n": 2361.0,
+          "min": 9.0,
+          "p10": 10.2778268789477,
+          "median": 14.5610818225818,
+          "p90": 20.9594479480973,
+          "max": 24.0,
+          "mean": 15.1387567417627,
+          "share_12_or_more": 0.737822956374418,
+          "share_over_20": 0.135112240576027
+        },
+        "houses": {
+          "n": 16.0,
+          "min": 5.96524425419048,
+          "p10": 6.01267375585157,
+          "median": 6.90703596456442,
+          "p90": 7.79594224763569,
+          "max": 7.90300166276283,
+          "mean": 6.92290285143245,
+          "share_12_or_more": 0.0,
+          "share_over_20": 0.0
+        },
+        "walls": {
+          "n": 3.0,
+          "min": 1.125,
+          "p10": 1.125,
+          "median": 2.25,
+          "p90": 2.5,
+          "max": 2.5,
+          "mean": 1.95833333333333,
+          "share_12_or_more": 0.0,
+          "share_over_20": 0.0
+        },
+        "hedges": {
+          "n": 108.0,
+          "min": 1.26739521607731,
+          "p10": 1.64612308048681,
+          "median": 2.39648232087667,
+          "p90": 3.11158648165089,
+          "max": 4.15971160554031,
+          "mean": 2.41055763304937,
+          "share_12_or_more": 0.0,
+          "share_over_20": 0.0
+        },
+        "trees_seed_55": {
+          "n": 2813.0,
+          "min": 9.0,
+          "p10": 10.2979968243334,
+          "median": 14.4345364760567,
+          "p90": 21.0648573187225,
+          "max": 24.0,
+          "mean": 15.0887593377233,
+          "share_12_or_more": 0.719872022751511,
+          "share_over_20": 0.148595805190188
+        }
+      },
+      "mean_lightness_strike_frames": {
+        "village_plan": 0.779,
+        "village_close": 0.783,
+        "wood_plan": 0.784,
+        "wood_close": 0.773,
+        "plane_plan": 0.779,
+        "plane_close": 0.771
+      },
+      "files": [
+        "s3_village_plan.png",
+        "s3_village_close.png",
+        "s3_wood_plan.png",
+        "s3_wood_close.png",
+        "s3_plane_plan.png",
+        "s3_plane_close.png",
+        "s3_bridge_plan.png",
+        "s3_bridge_close.png"
+      ]
+    }
+  ],
+  "subjects": [
+    {
+      "id": "village",
+      "scenario": "strike",
+      "seed": 20261009,
+      "title": "The village: the radio tower, its walled compound, houses and a tank",
+      "camera_centre_m": [
+        2004.0,
+        1435.0
+      ],
+      "crop_plan": [
+        412.0,
+        200.0,
+        456.0,
+        320.0
+      ],
+      "crop_close": [
+        440.0,
+        120.0,
+        456.0,
+        480.0
+      ]
+    },
+    {
+      "id": "wood",
+      "scenario": "strike",
+      "seed": 20261009,
+      "title": "A wood's edge, a hedged field and open ground",
+      "camera_centre_m": [
+        1735.0,
+        1345.0
+      ],
+      "crop_plan": [
+        412.0,
+        200.0,
+        456.0,
+        320.0
+      ],
+      "crop_close": [
+        250.0,
+        100.0,
+        456.0,
+        540.0
+      ]
+    },
+    {
+      "id": "plane",
+      "scenario": "strike",
+      "seed": 20261009,
+      "title": "A plane at 120 m (low band) over houses and a wood, for scale",
+      "camera_centre_m": [
+        1990.0,
+        1555.0
+      ],
+      "crop_plan": [
+        412.0,
+        200.0,
+        456.0,
+        320.0
+      ],
+      "crop_close": [
+        412.0,
+        150.0,
+        456.0,
+        420.0
+      ]
+    },
+    {
+      "id": "bridge",
+      "scenario": "bridge",
+      "seed": 55,
+      "title": "The bridge on seed 55 with a tank beside it",
+      "camera_centre_m": [
+        3835.0,
+        735.0
+      ],
+      "crop_plan": [
+        412.0,
+        200.0,
+        456.0,
+        320.0
+      ],
+      "crop_close": [
+        560.0,
+        40.0,
+        456.0,
+        520.0
+      ]
+    }
+  ],
+  "notes_proposed": [
+    "WHAT CHANGES IN THE SHADOWS. Houses and walls carry the change; trees hardly move. At the board's sun a house's shadow goes from 12.0 m to 6.7 m in S1 (at the game's longest sun, x2.0, from 24.9 m to 13.8 m): today it is as long as the house is deep and falls across the next house and the road, in S1 it is a short wedge. The compound's rampart ring throws a 5.8 m shadow today (a second ring beside the 8 m wide earthwork) and 2.4 m in S1, so it reads as a low earthwork with a thin shadow instead of a fortress wall: the outer wall is 2.4 to 3.0 tanks tall today and 1.0 to 1.3 in S1, a house 5.0 to 6.2 tanks today and 2.8 to 3.5 in S1. The radio tower, unchanged at 23 to 27 m, goes from twice a house's height to 3.6 times it.",
+    "TREES. S1 changes a tree's shadow by little: the median tree goes from 11.2 m to 12.3 m, its shadow from 10.8 m to 11.9 m, and only the tails move (the 1.4 percent of trees over 20 m, up to 28.7 m, stop at 20; the smallest, under 7.3 m today, come up to 8 m). Today's trees are already real-sized: the median is 11.2 m on this map (the 12.7 m of the study was the theoretical middle), a plausible broadleaf. What is odd today is that a median tree is SHORTER than a house (0.9 x); in S1 it is 1.8 x. S3's trees are 30 percent taller than today's: 74 percent of them reach the 12 m terrain step and 13.5 percent pass 20 m.",
+    "AT THE PLANNING ZOOM the four options are close to indistinguishable: a house's shadow is 8 px long at 0.7 px per metre today and 5 px in S1, and the walls' and trees' differences are 1 to 3 px (compare the first row of each subject). The choice is plain at the closest zoom 3.0, where a house's shadow is 72 px today and 40 px in S1 beside a tank 54 px long. It is a close-up decision, and the game's longer sun (x2.0) doubles every difference.",
+    "THE REASON FOR S3, CHECKED. A crown is drawn 19 m across (the prototype's 38 px at 2 px/m), and a tree's shadow is displaced by its height times the sun's length: 7.7 m (15.5 px) for a tree of 8 m against a crown radius of about 19 px, so only the shortest trees' shadows start to hide under their own crowns, and S1's floor of 8 m already holds those. In the planning rows S1 and S3 are hard to tell apart; S3's extra height buys little and costs a tree shadow twice as long as a house's (14.1 m against 6.7 m) and three quarters of the trees as tall as the terrain step.",
+    "THE HEDGES AND THE PLANE. Hedge trees are already 1.3 to 4.2 m (median 2.4 m, about a tank's height) in all four, so no option touches them and S1's 'hedges about 2 m' is met. A low-band plane's shadow stands 1.2 m from it in every option (the decided 1 percent rule), unrelated to the scenery's heights.",
+    "WHAT TO DECIDE (Alex), one recommendation each, all PROPOSED. (1) Houses and walls to real heights? Recommended yes, S1's numbers: a house 0.5 x its footprint scale (about 7 m to the ridge) and walls 5 px (2.5 m). (2) Trees: lift 10 percent and hold to 8 to 20 m (S1), or leave them as they are? Recommended S1's rule, but it is the one part with no visible difference at the planning zoom and it needs a new height window in the tree generator; leaving tree_height at 1.3 is a defensible smaller change. (3) Keep S2 (halfway) or S3 (taller trees) in play? Recommended no: S2 is a compromise nobody asked for and S3's reason is met by S1's 8 m floor.",
+    "WHAT IT COSTS TO MAKE LIVE (PROPOSED). Data: wall_height 12 to 5, with a prototype_default of 12 beside it (so --parity and test_scene_gen still compare with the prototype, as shadow_strength does). One new key, house_height_ratio, replacing the literal 0.9 in structures.gd (0.9 to 0.5; default 0.9 keeps the port check). If the tree rule is taken, a tree_height_min_m / tree_height_max_m window in scene_gen.gd sync_tree (absent means no clamp). terrain.json's 'tallest tree (~14 m)' text reworded (24 m + 20 m = 44 m stays under the 120 m low band, Track S's constraint). No sprite, footprint or random stream changes, so every map bakes as before apart from the shadow passes. One caution: wall_height and the house ratio are in prototype px, right only at the demo baseline of 2 px per metre; a key in metres times px_per_m would follow the map-scale knob."
+  ],
+  "recommendation_proposed": "S1 (PROPOSED, Alex decides): houses about 7 m to the ridge, compound walls about 2.5 m, trees held to 8 to 20 m (median 12.3). It fixes the two clear misfits (a house 5 to 6 tanks high, a wall 2.4 to 3 tanks) and puts the tower, trees, houses, walls and tanks in the real order of heights (25 m, 12 m, 7 m, 2.5 m, 2.3 m), while the trees themselves hardly change. If Alex wants the smallest edit: S1's houses and walls with today's trees, two data values and one new key, which looks the same at the planning zoom. Not S3 (its reason is met by S1's 8 m floor) and not S2 (a compromise nobody asked for).",
+  "palette_check": "Heights add no colour: every shadow is the one steel tint at the same strength, a shadow over a lit roof the roof-shaded chip. Taller scenery puts more of the ground in shadow (the mean lightness of the closest-zoom frames is in each option), a change in the SHARE of the ground in shadow, not in the lightness ramp. The chart's bars use the object, roof, wall and rock fills. Material stays linework: sprites and the shadow-side pen are identical in every option.",
+  "frames": "frames.json (every frame, native 1280 x 720)",
+  "sheet": "board.png (1:1 crops of every frame, the heights chart, the numbers table, the notes, the palette strip)",
+  "chosen": null,
+  "chosen_by": null
+}

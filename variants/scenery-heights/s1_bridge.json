@@ -1,0 +1,93 @@
+{
+  "option": "s1",
+  "scenario": "bridge",
+  "seed": 55,
+  "patch": {
+    "tree_mult": 1.1,
+    "tree_min_m": 8.0,
+    "tree_max_m": 20.0,
+    "house_mult": 0.555555555555556,
+    "wall_mult": 0.416666666666667
+  },
+  "sun": "fixed sun: bearing 315.0, elevation 46.0, shadow x0.966",
+  "sun_len": 0.965688774807074,
+  "px_per_m": 2.0,
+  "frames": [
+    {
+      "file": "s1_bridge_plan.png",
+      "subject": "bridge",
+      "kind": "plan",
+      "zoom": 0.35,
+      "px_per_m": 0.7,
+      "size": [
+        1280,
+        720
+      ],
+      "mean_lightness": 0.777
+    },
+    {
+      "file": "s1_bridge_close.png",
+      "subject": "bridge",
+      "kind": "close",
+      "zoom": 3.0,
+      "px_per_m": 6.0,
+      "size": [
+        1280,
+        720
+      ],
+      "mean_lightness": 0.771
+    }
+  ],
+  "measured": {
+    "area_m": [
+      3067.0,
+      -33.0,
+      1536.0,
+      1536.0
+    ],
+    "trees": {
+      "n": 2813,
+      "min": 8.0,
+      "p10": 8.7136896205898,
+      "median": 12.2138385566633,
+      "p90": 17.8241100389191,
+      "max": 20.0,
+      "mean": 12.7674229070027,
+      "share_12_or_more": 0.517952364024173,
+      "share_over_20": 0.0
+    },
+    "houses": {
+      "n": 18,
+      "min": 6.22610479982104,
+      "p10": 6.25803596784826,
+      "median": 6.94629987210501,
+      "p90": 7.87081299463753,
+      "max": 8.02822012493853,
+      "mean": 6.92170301141838,
+      "share_12_or_more": 0.0,
+      "share_over_20": 0.0
+    },
+    "walls": {
+      "n": 3,
+      "min": 1.125,
+      "p10": 1.125,
+      "median": 2.25,
+      "p90": 2.5,
+      "max": 2.5,
+      "mean": 1.95833333333333,
+      "share_12_or_more": 0.0,
+      "share_over_20": 0.0
+    },
+    "hedges": {
+      "n": 34,
+      "min": 1.1829688053148,
+      "p10": 1.45619341182772,
+      "median": 1.95179850691545,
+      "p90": 3.09499677005249,
+      "max": 4.62886839307966,
+      "mean": 2.18091910805381,
+      "share_12_or_more": 0.0,
+      "share_over_20": 0.0
+    }
+  }
+}

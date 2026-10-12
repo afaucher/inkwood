@@ -10,6 +10,12 @@
   "health": { "value": 6, "_proposed": true, "_reason": "an unarmoured barge is a big target and carries cargo, not guns: a little tougher than the gunboat (5) because it is a bigger hull, two direct bomb hits (3 each). It is not a target of the mission" },
   "sight_range_m": { "value": 250, "_proposed": true, "_reason": "a deckhand's watch from a low barge: it sees what is almost alongside. The enemy AI counts what its units see, so this is kept short" },
   "drawing": { "silhouette": "supply_boat" },
+  "damage_smoke": {
+    "enabled": { "value": true, "_proposed": true, "_reason": "a barge smokes when hit; a SUNK barge draws no damage (decision ship-sinks)" },
+    "source_m": { "value": 4, "_proposed": true, "_reason": "the engine and the stove pipe of a 34 m barge, not its length" },
+    "source_back_m": { "value": 8, "_proposed": true, "_reason": "the engine room is aft: 8 m behind the centre of a 34 m hull" },
+    "rise_mps": { "value": 4, "_proposed": true, "_reason": "the smoulder's rate: a damaged ground or sea unit smokes like a ruin or a wreck (data/fx/fx.json ruin R1 and crash A smolder rise_mps 4.0), so its puffs climb into the faster air above and the plume leans downwind (decisions smoke-consistency, wind-with-height). PROPOSED" }
+  },
   "envelope": {
     "speed_min_mps": { "value": -2, "_proposed": true, "_reason": "slow astern: a barge can reverse once stopped" },
     "speed_cruise_mps": { "value": 5, "_proposed": true, "_reason": "about 10 knots: a loaded coaster or a tug-and-barge's steady speed, half the patrol boat's" },

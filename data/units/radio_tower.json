@@ -10,6 +10,12 @@
   "health": { "value": 8, "_proposed": true, "_reason": "pips the bombs must take (3 for a hit within 12 m, 2 within 25 m, 1 within 45 m: data/sim/bombs.json). 8 pips is three direct hits, or a dozen near misses. A bomber's stick of four at the ideal release angle does 7.9 pips on average from the low band (the tower dies to the first stick 62 percent of the time, 1.4 drops on average), 4.8 from medium (2.2 drops; dead within the bomber's three drops 98 percent of the time) and 1.8 from high (5.3 drops; 19 percent): the tuning table, scripts/test_support/strike_tuning.gd B" },
   "sight_range_m": { "value": 500, "_proposed": true, "_reason": "a tower with a lookout on it sees a fighter a few hundred metres out; the enemy AI counts what its units see (scripts/sim/ai_sense.gd), so this is how far the tower warns the patrol" },
   "drawing": { "silhouette": "radio_tower" },
+  "damage_smoke": {
+    "enabled": { "value": true, "_proposed": true, "_reason": "the equipment at the foot of the mast burns when the tower is hit" },
+    "source_m": { "value": 3, "_proposed": true, "_reason": "the hut and the equipment at the foot of the mast, not the 12 m footprint (the mast itself is a thin line)" },
+    "source_back_m": { "value": 0, "_proposed": true, "_reason": "the foot of the mast is the unit's centre" },
+    "rise_mps": { "value": 4, "_proposed": true, "_reason": "the smoulder's rate: a damaged ground or sea unit smokes like a ruin or a wreck (data/fx/fx.json ruin R1 and crash A smolder rise_mps 4.0), so its puffs climb into the faster air above and the plume leans downwind (decisions smoke-consistency, wind-with-height). PROPOSED" }
+  },
   "envelope": {
     "speed_min_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
     "speed_cruise_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },

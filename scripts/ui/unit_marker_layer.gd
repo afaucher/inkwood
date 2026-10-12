@@ -15,7 +15,9 @@ extends Node2D
 # units (Track U1, data marker.standout; nothing at all in the default mode
 # "none"), every unit's shadow (one CanvasGroup, composited
 # once at the map's shadow strength, so overlapping shadows merge and never
-# darken twice -- the map's own shadow rule), every plane, then the marks: side
+# darken twice -- the map's own shadow rule), the SURFACE units (boats, the bridge, then tanks, batteries, the tower), the smoke slot (the effects
+# layer's air pass: every smoke is over the ground and sea units and their shadows, builder SMOKE 2026-10-11, decision smoke-consistency), every
+# AIRCRAFT (over the smoke, so a plane flies in front of its own trail, and over every surface unit), then the marks: side
 # roundels (OFF FOR AIRCRAFT since Alex's second playtest, 2026-10-11 -- data marker.side_badge.drawn_for;
 # the wingtip ribbon says the side; still drawn for ground units, ships and static units, PROPOSED), the selected unit's inked ring, and its leader line up to its
 # roster row (the design doc's proposed selection treatment; the line is OFF since Alex's
@@ -68,7 +70,9 @@ var playback_paused: bool = false
 
 var _under: Node2D            # the stand-out shapes and rings, below the shadows
 var _shadows: CanvasGroup
-var _planes: Node2D
+var _planes: Node2D           # the SURFACE units' markers (ground and sea: the node keeps its old name "Planes")
+var _smoke_slot: Node2D       # where the effects layer's smoke is mounted: over the surface units, under the aircraft (smoke_slot())
+var _air: Node2D              # the AIRCRAFT's markers, over the smoke slot
 var _marks: Node2D
 var _standout: Dictionary = {}     # UnitStandout.parse() of the data's mode
 var _standout_mode := ""
@@ -104,6 +108,12 @@ func _build() -> void:
 	_planes = Node2D.new()
 	_planes.name = "Planes"
 	add_child(_planes)
+	_smoke_slot = Node2D.new()
+	_smoke_slot.name = "SmokeSlot"
+	add_child(_smoke_slot)
+	_air = Node2D.new()
+	_air.name = "Aircraft"
+	add_child(_air)
 	_marks = Node2D.new()
 	_marks.name = "Marks"
 	add_child(_marks)
@@ -129,7 +139,7 @@ func sync_units() -> void:
 		elif UnitMarkerArt.is_map_scale(u.def.silhouette):
 			m.map_scale = true   # the bridge: drawn at the MAP's scale, not the planes' (Track BB)
 		m.setup(style, id, u.def.silhouette, u.def.size_m, style.side_color(u.side), _shadows, _under)
-		_planes.add_child(m)
+		(_air if str(u.def.domain) == "air" else _planes).add_child(m)   # an aircraft is over the smoke slot, everything else under it
 		markers[id] = m
 		m.selected = selection != null and selection.unit_id == id
 		if not _standout.is_empty():
@@ -150,6 +160,11 @@ func _order_markers() -> void:
 
 func marker(id: String) -> UnitMarker:
 	return markers.get(id)
+
+# The Node2D between the surface units' markers and the aircraft's: the effects layer mounts its smoke here (FxLayer.mount_smoke), so smoke is drawn
+# over a tank, a boat or the bridge and their shadows, and under every plane.
+func smoke_slot() -> Node2D:
+	return _smoke_slot
 
 # Every marker bakes its art again (after UnitMarkerArt.clear_cache(): the pen
 # changed, say).

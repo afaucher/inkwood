@@ -10,6 +10,12 @@
   "health": { "value": 3, "_proposed": true, "_reason": "light and fragile: the fewest pips of the three aircraft (Steambirds-style role trade-off)" },
   "sight_range_m": { "value": 800, "decision": "fog-first-option", "_reason": "Alex 2026-10-09 accepted the lead's fog recommendation (about 800 m so sight edges show at play zoom). Was proposed: about 15 s of flight at cruise ahead; unused until Track F's vision rule" },
   "drawing": { "silhouette": "light_fighter" },
+  "damage_smoke": {
+    "enabled": { "value": true, "_proposed": true, "_reason": "a fighter smokes when hit" },
+    "source_m": { "value": 8, "_proposed": true, "_reason": "one engine's smoke, not the wingspan (Alex, decision impact-by-round-and-target: puffs are not sized by the unit's length; the lead's 'about 8 m at most'). 8 m is close to the 9 m span the W1 puffs were drawn from, so a fighter's trail looks as it did" },
+    "source_back_m": { "value": 3, "_proposed": true, "_reason": "where the smoke leaves the plane: 3 m behind its centre, the old 0.35 x 9 m (W1 tail_frac) kept" },
+    "rise_mps": { "value": 0, "_proposed": true, "_reason": "0, a REASON TO DIFFER from the ground units' 4 m/s: a plane's trail is laid along its path at its altitude (a low plane is 120 m up, where the wind is already 1.6 times the ground's) and its own speed spreads it; a puff climbing 4 m/s would lift an old puff by 100 m in its life. PROPOSED" }
+  },
   "envelope": {
     "speed_min_mps": { "value": 45, "_proposed": true, "_reason": "stall about 160 km/h, typical of WWII single-engine fighters (140-170 km/h)" },
     "speed_cruise_mps": { "value": 100, "_proposed": true, "_reason": "360 km/h, a fighter's ordinary cruise" },
