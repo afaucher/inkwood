@@ -2171,6 +2171,42 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'The wind should pick up as the smoke rises'. The lead's answer: wind shear, the near-ground wind slowed by friction and growing with height; the profile and its numbers are the lead's proposal."
+    },
+    {
+      "id": "weapon-kinds",
+      "date": "2026-10-11",
+      "area": "Combat, Effects",
+      "question": "Do the cruiser and the mobile AA fire tracers or flak?",
+      "board": "none (said in chat)",
+      "options": [
+        "by what the weapon fires: flak shells or machine-gun bullets"
+      ],
+      "chosen": "the weapon decides: flak is shells that explode, its cone points up and it covers the area directly above best; machine guns fire bullets that do not explode, cover around and less up, and draw tracers",
+      "parameters": {
+        "flak": "exploding shells, an upward cone, best directly overhead, drawn as bursts",
+        "machine_gun": "bullets, around and lower, drawn as tracers",
+        "mapping_proposed": "PROPOSED, awaiting Alex: the mobile AA's quad mount and the cutter's guns are machine guns; the cruiser's AA is flak"
+      },
+      "applied_to": [],
+      "status": "chosen by Alex (the rule); the mapping proposed",
+      "notes": "Alex: 'So, I think the question is what is the weapon. Flak would be shells shot that then explode. Machine guns would be bullets which don't. But Flak is pointed up and machine guns are around and less up. So flak guns have better coverage in the area directly above them.' Today all three (cruiser, mobile AA, patrol boat) share one 'aa_guns' weapon with the flak's upward cone, and it draws tracers."
+    },
+    {
+      "id": "cruiser-fan",
+      "date": "2026-10-11",
+      "area": "Interface",
+      "question": "The cruiser's range of motion is hidden under its own hull: fix it?",
+      "board": "variants/motion-range/ (the cruiser rows)",
+      "options": [
+        "leave it",
+        "draw the planner over the ship",
+        "centre the control on a point in front of the ship"
+      ],
+      "chosen": "try it as it is for now",
+      "parameters": {},
+      "applied_to": [],
+      "status": "chosen by Alex; deferred",
+      "notes": "Alex: 'The only thing I could think here is to center the control as a point in front of the ship. There just isn't a way to indicate that that is what you are doing. Let me just try it as is for now.'"
     }
   ]
 }
