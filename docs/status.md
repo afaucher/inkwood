@@ -9,6 +9,10 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
+| Third playtest (decision playtest-3, item 1 below): the card and roster asks, the tank's special and arc | lead session (builder CARD) | scripts/ui/motion_planner_panel.gd, roster.gd, side_view*.gd (the card's sections), data/ui/ui.json card and roster keys, data/units/tank.json (the gun's arc), their tests | 2026-10-11 |
+| Third playtest: the camera zooms in further, the zoom judder | lead session (builder CAM) | scripts/world/camera_controller.gd, data/view/camera.json, scripts/render/map_view.gd (its camera helpers only), scripts/tests/test_camera.gd | 2026-10-11 |
+| Third playtest: two studies, reported to Alex before anything is built (the visual feedback coverage; the shot height model and the heights chart) | lead session (study agents) | read-only; notes in tmp/studies/ | 2026-10-11 |
+| Third playtest: the bridge's smoke (playtest-3 bridge_smoke) | lead session | waiting on Alex's three answers | 2026-10-11 |
 
 ## Next, free to take
 
