@@ -175,6 +175,8 @@ func _ship() -> void:
 		"size_m": rec.call(120), "draught_m": rec.call(6), "actions_per_turn": rec.call(2), "health": rec.call(20),
 		"sight_range_m": rec.call(3000), "drawing": {"silhouette": "small_cruiser"}, "weapons": [],
 		"damage_smoke": {"enabled": rec.call(true), "source_m": rec.call(8), "source_back_m": rec.call(12), "rise_mps": rec.call(4)},
+		"shape": {"boxes": [{"part": "body", "material": "ship", "kind": "box", "stamp": rec.call(false), "standable": rec.call(false), "forward_m": rec.call(0),
+			"right_m": rec.call(0), "length_m": rec.call(120), "width_m": rec.call(15), "bottom_m": rec.call(0), "top_m": rec.call(10)}]},
 		"envelope": {
 			"speed_min_mps": rec.call(-4), "speed_cruise_mps": rec.call(10), "speed_max_mps": rec.call(15),
 			"dive_speed_max_mps": rec.call(15), "accel_mps2": rec.call(0.3), "decel_mps2": rec.call(0.4),

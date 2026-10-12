@@ -70,3 +70,16 @@ never by `size_m`, so a 40 m bridge or a 120 m cruiser does not wear a puff as b
 `rise_mps` is how fast a puff climbs (a rising puff drifts with the wind at its height, so the plume leans downwind): 4.0 for ground and
 sea units, the smoulder's rate of the ruins and wrecks, 0 for planes, whose trail is laid along their path (the reason is in each file).
 All values are proposed; the audit that led to them is `docs/proposals/smoke-audit.md`.
+
+## The unit's body for lines of fire (builder LOF1, 2026-10-11; decision line-of-fire; PROPOSED)
+
+Every unit file now carries a `shape`: its `boxes`, lowest layer first (`_schema.json`). Alex: "yes, two layers, hull and turret", so a
+ground vehicle that drives (the tank, the mobile AA) is two boxes and every other unit is one (the lead's proposal); the battery
+adds its sandbag ring, which is the first sim shape the sandbags have had. A box has a size, a place on the unit (forward and right of its
+middle), a bottom and a top above the unit's BASE, and a material (a name from `data/sim/line_of_fire.json`). The base is the ground (or the
+bridge's deck) under a surface unit, the water's surface under a boat, and the band's absolute height under a plane (bands are absolute
+heights), so a plane's box reaches below and above its band. `stamp` puts a static unit's box in the height grid as an obstacle while the
+unit stands (the ring, the bridge's deck; `standable` lets other units stand on it: the deck); a mobile unit's boxes are only targets.
+`scripts/sim/line_of_fire_shapes.gd` places them in the world and picks the points a line is traced to; combat does not read any of it yet
+(`data/sim/line_of_fire.json` `enabled` false). The bridge deck's top is `data/world/bridges.json` arch.crown_h (6.5 m); `test_line_of_fire`
+holds the two equal.

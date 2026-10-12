@@ -16,6 +16,24 @@
     "source_back_m": { "value": 0, "_proposed": true, "_reason": "the foot of the mast is the unit's centre" },
     "rise_mps": { "value": 4, "_proposed": true, "_reason": "the smoulder's rate: a damaged ground or sea unit smokes like a ruin or a wreck (data/fx/fx.json ruin R1 and crash A smolder rise_mps 4.0), so its puffs climb into the faster air above and the plume leans downwind (decisions smoke-consistency, wind-with-height). PROPOSED" }
   },
+  "shape": {
+    "_about": "One box: the lattice mast. The art's tower is 23-27 m (docs/proposals/shot-heights.md); a thin lattice, so the box is narrow. Not stamped (it is a target, not cover). Every number PROPOSED.",
+    "boxes": [
+        {
+          "part": "body",
+          "material": "armour",
+          "kind": "box",
+          "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
+          "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
+          "forward_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit" },
+          "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
+          "length_m": { "value": 3, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 3.0 m, a mast's base seen from above (size_m 12 is the guy anchors' footprint)" },
+          "width_m": { "value": 3, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 3.0 m, square" },
+          "bottom_m": { "value": 0, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): on the ground" },
+          "top_m": { "value": 25, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 25 m, the middle of the art's 23-27 m. Material armour stands for 'metal': the damage-looks table has no steel row" }
+        }
+    ]
+  },
   "envelope": {
     "speed_min_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
     "speed_cruise_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },

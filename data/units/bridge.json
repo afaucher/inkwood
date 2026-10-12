@@ -16,6 +16,24 @@
     "source_back_m": { "value": 0, "_proposed": true, "_reason": "none: it does not smoke" },
     "rise_mps": { "value": 0, "_proposed": true, "_reason": "none: it does not smoke" }
   },
+  "shape": {
+    "_about": "One box: the deck, stamped into the height grid as stone that other units STAND ON (a tank on the bridge stands at the deck's top, 6.5 m, not at the river's 0 m). The deck's height is data/world/bridges.json arch.crown_h and test_line_of_fire holds the two equal. The arches under the deck are not modelled: 2.5D has one top height per cell, so the deck is solid to the water (a line along the river under the arches is blocked; the lead's note). Every number PROPOSED.",
+    "boxes": [
+        {
+          "part": "deck",
+          "material": "stone",
+          "kind": "box",
+          "stamp": { "value": true, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): the deck is solid cover for a line below its top, and the surface a tank on the bridge stands on" },
+          "standable": { "value": true, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): a unit on the bridge stands at the deck's top" },
+          "forward_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit" },
+          "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
+          "length_m": { "value": 40, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 40 m, the unit's size_m (26 m of river plus an abutment of 6 m each side)" },
+          "width_m": { "value": 16, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 16 m, data/world/bridges.json deck_width_m" },
+          "bottom_m": { "value": 0, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): from the water's surface" },
+          "top_m": { "value": 6.5, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 6.5 m, data/world/bridges.json arch.crown_h (the art's deck above the water)" }
+        }
+    ]
+  },
   "envelope": {
     "speed_min_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
     "speed_cruise_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },

@@ -16,6 +16,24 @@
     "source_back_m": { "value": 0, "_proposed": true, "_reason": "the main building is at the compound's centre" },
     "rise_mps": { "value": 4, "_proposed": true, "_reason": "the smoulder's rate: a damaged ground or sea unit smokes like a ruin or a wreck (data/fx/fx.json ruin R1 and crash A smolder rise_mps 4.0), so its puffs climb into the faster air above and the plume leans downwind (decisions smoke-consistency, wind-with-height). PROPOSED" }
   },
+  "shape": {
+    "_about": "One box: the compound's sheds, not the whole 80 x 60 m yard and fence (size_m). Every number PROPOSED.",
+    "boxes": [
+        {
+          "part": "body",
+          "material": "timber",
+          "kind": "box",
+          "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
+          "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
+          "forward_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit" },
+          "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
+          "length_m": { "value": 50, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 50 m, the sheds' block inside the 80 m compound" },
+          "width_m": { "value": 30, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 30 m, inside the 60 m compound" },
+          "bottom_m": { "value": 0, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): on the ground" },
+          "top_m": { "value": 6, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 6 m, a shed or hangar's eaves (the damage-looks table: timber = the hangar yard)" }
+        }
+    ]
+  },
   "envelope": {
     "speed_min_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
     "speed_cruise_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },

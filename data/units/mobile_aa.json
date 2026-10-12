@@ -16,6 +16,37 @@
     "source_back_m": { "value": 2, "_proposed": true, "_reason": "the engine deck at the rear of the hull, as the tank's" },
     "rise_mps": { "value": 4, "_proposed": true, "_reason": "the smoulder's rate: a damaged ground or sea unit smokes like a ruin or a wreck (data/fx/fx.json ruin R1 and crash A smolder rise_mps 4.0), so its puffs climb into the faster air above and the plume leans downwind (decisions smoke-consistency, wind-with-height). PROPOSED" }
   },
+  "shape": {
+    "_about": "A ground vehicle: two boxes, hull and turret (Alex, decision line-of-fire). A half-track or light carrier with a quad mount (the unit sheet's mobile AA, data/ui/unit_art_mission2.json). Every number PROPOSED.",
+    "boxes": [
+        {
+          "part": "hull",
+          "material": "armour",
+          "kind": "box",
+          "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
+          "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
+          "forward_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit" },
+          "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
+          "length_m": { "value": 6.5, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 6.5 m, the unit's size_m" },
+          "width_m": { "value": 2.4, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 2.4 m, a half-track's width" },
+          "bottom_m": { "value": 0, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): on the ground" },
+          "top_m": { "value": 1.9, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 1.9 m, an open carrier's side and cab, under the mount" }
+        },
+        {
+          "part": "turret",
+          "material": "armour",
+          "kind": "box",
+          "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
+          "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
+          "forward_m": { "value": -0.8, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 0.8 m behind the hull's middle, where the quad mount's hardpoint is (data/units/mobile_aa.json weapons)" },
+          "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
+          "length_m": { "value": 1.6, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 1.6 m, a quad mount's cradle and shield" },
+          "width_m": { "value": 1.6, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 1.6 m, round" },
+          "bottom_m": { "value": 1.9, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): on top of the hull" },
+          "top_m": { "value": 2.9, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 2.9 m, over the mount's hardpoint at 2.6 m" }
+        }
+    ]
+  },
   "envelope": {
     "speed_min_mps": { "value": -2, "_proposed": true, "_reason": "slow reverse, as the tank: a vehicle can reverse once stopped (design doc, Motion and inertia)" },
     "speed_cruise_mps": { "value": 7, "_proposed": true, "_reason": "a steady road march, a fifth under top speed (the AI drives at it and a new vehicle starts at it unless a scenario says otherwise): 7 m/s is about 25 km/h" },

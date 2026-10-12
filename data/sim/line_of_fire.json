@@ -1,0 +1,104 @@
+{
+  "_about": "LINES OF FIRE, STAGE 1 (decision line-of-fire, builder LOF1, 2026-10-11): the height grid and the line check (scripts/sim/height_grid.gd, height_grid_build.gd, line_of_fire.gd, line_of_fire_shapes.gd read this through scripts/sim/line_of_fire_rules.gd). ALEX'S (decision line-of-fire, option b): real lines of fire against every blocker's height; trees THIN (a chance per canopy to stop a round); hull-down with TWO layers, hull and turret; a target that is fully hidden is HELD ('otherwise we would just mow down anything in between on purpose'); the same line check between planes and the ground (hills can block the low band). THE METHOD (agreed): 2.5D. A straight line is walked across a grid of top heights; nothing is a 3D mesh. EVERYTHING BELOW IS PROPOSED by builder LOF1 (cell size, block size, tree band, tree chance, sample counts): none is Alex's. STAGE 1 DOES NOT FIRE ANYTHING: 'enabled' is false and nothing in combat reads this file; stage 2 (the odds, the misses and the combat hook) will. Record shape as data/sim/bombs.json: {value, _proposed, _reason}. Metres.",
+
+  "enabled": {
+    "value": false,
+    "_proposed": true,
+    "_reason": "Stage 1 builds the grid, the line check and two proofs only. Combat does not read the grid or the check; stage 2 switches this on when the hook lands"
+  },
+
+  "grid": {
+    "cell_m": {
+      "value": 1.0,
+      "_proposed": true,
+      "_reason": "A cell is 1 m square. Chosen by measurement on the Strike (seed 20261009) and Hold the bridge (seed 55), the whole 5 km map, one thread, the machine busy: at 1 m 92 to 94 MB (277 to 283 of the 400 chunks hold arrays, the rest are one height), cells 22 to 24 s plus 13 to 14 s of the map's trees; at 2 m 24 MB, cells 8 to 9 s plus the same trees. A check costs the same at both (20 to 30 us). 1 m is taken because the sandbag ring is 1 m thick and a 2 m cell would make it 2 m, and a wall can be 1.35 m; Alex: RAM is not the worry (decision memory-budget). 2 m is the one-value switch (a coarser ring, a third of the cell time, a quarter of the memory). Must divide the terrain chunk (256 m) and be a whole number of blocks"
+    },
+    "block_m": {
+      "value": 16.0,
+      "_proposed": true,
+      "_reason": "The coarse step of the line walk: the grid keeps the highest top of every 16 m block, and a line that passes above a whole block skips it without looking at its cells. Measured on the village and its woods: a tank-high 300 m line walks about 10 blocks and 11 cells (it is stopped early), a 350 m plane line about 22 blocks and 4 cells, a plane over the village 25 blocks and none; without the blocks a 350 m line is about 500 cells. Must be a whole number of cells and divide the chunk"
+    }
+  },
+
+  "materials": {
+    "value": ["ground", "water", "stone", "timber", "earthworks", "trees", "armour", "aircraft", "ship"],
+    "_proposed": true,
+    "_reason": "The material ids, by index. The first five are the grid cell's (ground, water, stone for walls and the bridge, timber for houses, earthworks for the sandbags); 'trees' is a canopy's, never a cell's; armour, aircraft and ship are a unit box's, named as the damage-looks table names its materials (decision damage-looks, proposed table). Later stages draw an impact by round x material (decision impact-by-round-and-target). The code fixes the first six positions and checks them on load"
+  },
+
+  "scenery": {
+    "wall_material": {
+      "value": "stone",
+      "_proposed": true,
+      "_reason": "the village's walls (the compound's ring and divider) are stone (the damage-looks table: stone = the bridge, walls)"
+    },
+    "house_material": {
+      "value": "timber",
+      "_proposed": true,
+      "_reason": "the village's houses are timber (the damage-looks table: timber = houses)"
+    },
+    "_heights_from": "NOT A TUNABLE, A NOTE: a wall's and a house's height is the structure's own `h` (scripts/world/structures.gd sync_struct: wall_height and house_size x 0.9, in map px) divided by the map scale, and a tree's is the tree's own `h` (scene_gen.gd sync_tree) over the scale. So whatever the scenery-heights board decides, once it is live in those two lines, flows into the grid with no change here"
+  },
+
+  "water": {
+    "margin_m": {
+      "value": 6.0,
+      "_proposed": true,
+      "_reason": "How far from a shore (in the water's own depth units, metres of water) an 8 m lattice cell is taken as wholly wet or wholly dry from its five samples; a cell nearer than this to a shore is decided cell by cell with the sim's own water query (WaterGen.depth_at). Checked against that query in test_line_of_fire"
+    }
+  },
+
+  "canopy": {
+    "base_frac": {
+      "value": 0.0,
+      "_proposed": true,
+      "_reason": "Where a canopy's band starts, as a fraction of the tree's height above its ground. 0: a tree stops a low line from the ground up (trunk, branches and crown as a low gun sees them), so rounds hit trees (Alex's own question, 'cross over sandbags but hit tanks, or houses, or maybe even trees'). A raised crown (0.3) would let a tank's round pass under every tree"
+    },
+    "stop_chance": {
+      "value": 0.35,
+      "_proposed": true,
+      "_reason": "Alex: trees are THIN, 'a chance per canopy to stop a round'. The chance that a line through the middle of a canopy (a full-diameter chord) is stopped; the number is the lead's guess, a dial. A grove of five canopies in a row passes a line with 0.65^5 = 12 percent"
+    },
+    "scale_by_chord": {
+      "value": true,
+      "_proposed": true,
+      "_reason": "true: the chance is stop_chance x (the line's chord through the canopy's band over the canopy's diameter), so a line that only grazes a crown is rarely stopped; false: stop_chance flat per canopy, Alex's words read literally"
+    },
+    "roll_salt": {
+      "value": 5150123,
+      "_proposed": true,
+      "_reason": "mixed into every canopy roll. The roll is a hash of (this salt, the caller's roll key, the canopy's id): its own stream, never the combat stream (combat seeds every roll from a unit's index; scripts/sim/combat.gd roll_seed), so asking where a line stops never shifts the dice. The same key and the same line always give the same answer on every peer"
+    }
+  },
+
+  "sampling": {
+    "row_spacing_m": {
+      "value": 0.5,
+      "_proposed": true,
+      "_reason": "a box is sampled in rows this far apart, up its height (a hull 1.5 m high gets 3 rows, a turret 0.8 m gets 2), each row at the middle of its slice"
+    },
+    "col_spacing_m": {
+      "value": 1.0,
+      "_proposed": true,
+      "_reason": "and in columns this far apart across the silhouette (a 3 m wide hull gets 3 columns), each at the middle of its slice"
+    },
+    "max_rows": {
+      "value": 3,
+      "_proposed": true,
+      "_reason": "at most this many rows per box, so a 10 m tall radio tower or a bomber is not 20 lines"
+    },
+    "max_cols": {
+      "value": 5,
+      "_proposed": true,
+      "_reason": "at most this many columns per box. A tank seen end on is 3 rows x 4 columns for the hull and 2 x 3 for the turret, 18 lines; a bomber 5 x 3 = 15"
+    }
+  },
+
+  "trace": {
+    "clear_eps_m": {
+      "value": 0.0001,
+      "_proposed": true,
+      "_reason": "a line is blocked by a cell only when it passes this far below the cell's top, so a line laid exactly along flat ground, or exactly on a wall's top, is clear (float noise must not decide a shot)"
+    }
+  }
+}

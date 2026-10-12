@@ -16,6 +16,24 @@
     "source_back_m": { "value": 8, "_proposed": true, "_reason": "the engine room is aft: 8 m behind the centre of a 34 m hull" },
     "rise_mps": { "value": 4, "_proposed": true, "_reason": "the smoulder's rate: a damaged ground or sea unit smokes like a ruin or a wreck (data/fx/fx.json ruin R1 and crash A smolder rise_mps 4.0), so its puffs climb into the faster air above and the plume leans downwind (decisions smoke-consistency, wind-with-height). PROPOSED" }
   },
+  "shape": {
+    "_about": "One box (the S2 barge). Every number PROPOSED.",
+    "boxes": [
+        {
+          "part": "body",
+          "material": "ship",
+          "kind": "box",
+          "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
+          "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
+          "forward_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit" },
+          "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
+          "length_m": { "value": 34, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 34 m, the unit's size_m" },
+          "width_m": { "value": 8, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 8 m, a canal barge's beam" },
+          "bottom_m": { "value": 0, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): from the water's surface" },
+          "top_m": { "value": 3, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 3 m, a low deck and its cargo" }
+        }
+    ]
+  },
   "envelope": {
     "speed_min_mps": { "value": -2, "_proposed": true, "_reason": "slow astern: a barge can reverse once stopped" },
     "speed_cruise_mps": { "value": 5, "_proposed": true, "_reason": "about 10 knots: a loaded coaster or a tug-and-barge's steady speed, half the patrol boat's" },

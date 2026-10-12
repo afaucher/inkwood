@@ -61,6 +61,10 @@ var specials: Array = []
 # source_back_m, rise_mps}. The effects feed (scripts/ui/combat_feed.gd) sizes the puffs by the SOURCE, never by size_m, and a unit with enabled false
 # (the bridge) leaves no smoke at all. Empty when the file is not ok().
 var damage_smoke: Dictionary = {}
+# The unit's body for lines of fire (data/units/_schema.json "shape"; builder LOF1, 2026-10-11, PROPOSED): Array of box Dictionaries
+# {part, material, kind ("box" | "ring"), stamp, standable, forward_m, right_m, length_m, width_m, bottom_m, top_m}, lowest layer first
+# (a tank: hull, turret; scripts/sim/line_of_fire_shapes.gd turns them into world boxes). Empty when the file is not ok().
+var shape_boxes: Array = []
 var errors: Array[String] = []
 
 static func path_for(type_id: String, units_dir: String = UNITS_DIR) -> String:
@@ -105,6 +109,7 @@ func _init(unit_source: Variant, band_order: Array, quiet: bool = false, label: 
 		bomb_per_drop = int(bomb_section.get("per_drop", 0))
 		specials = v.get("specials", [])
 		damage_smoke = v.get("damage_smoke", {})
+		shape_boxes = (v.get("shape", {}) as Dictionary).get("boxes", [])
 		_check(r, stem)
 	errors = r.errors
 	if errors.is_empty():
@@ -267,6 +272,26 @@ func _check(r: Records, stem: String) -> void:
 			r.err("damage_smoke: a unit that smokes needs a source_m above 0 (the puffs are sized by it, never by size_m), got %s" % str(src))
 		if not smokes and src > 0.0:
 			r.err("damage_smoke: a unit that does not smoke (enabled false) has source_m 0, got %s" % str(src))
+	# Shape (builder LOF1, 2026-10-11): a unit has a body to hit; a box has a size and a top above its bottom; a ring's inner diameter is
+	# inside its outer; only a box that stamps can be stood on.
+	if shape_boxes.is_empty():
+		r.err("shape.boxes: a unit has at least one box (the lines of fire need something to hit)")
+	for b: Variant in shape_boxes:
+		var bd: Dictionary = b
+		var part := str(bd.get("part", "?"))
+		if not (float(bd.get("length_m", 0.0)) > 0.0):
+			r.err("shape.boxes '%s': length_m must be above 0" % part)
+		if float(bd.get("top_m", 0.0)) <= float(bd.get("bottom_m", 0.0)):
+			r.err("shape.boxes '%s': top_m (%s) must be above bottom_m (%s)" % [part, str(bd.get("top_m")), str(bd.get("bottom_m"))])
+		if str(bd.get("kind", "")) == "ring":
+			if not (float(bd.get("width_m", 0.0)) > 0.0) or float(bd.get("width_m", 0.0)) >= float(bd.get("length_m", 0.0)):
+				r.err("shape.boxes '%s': a ring's width_m (inner diameter) must be above 0 and under its length_m (outer diameter)" % part)
+		elif not (float(bd.get("width_m", 0.0)) > 0.0):
+			r.err("shape.boxes '%s': width_m must be above 0" % part)
+		if bool(bd.get("standable", false)) and not bool(bd.get("stamp", false)):
+			r.err("shape.boxes '%s': a box is standable only if it stamps into the grid" % part)
+		if bool(bd.get("stamp", false)) and mobility != "static":
+			r.err("shape.boxes '%s': only a static unit stamps its boxes into the height grid (a mobile unit is a target, not scenery)" % part)
 	var bands: Array = e.get("altitude_bands", [])
 	var start := str(e.get("start_band", ""))
 	if start != "" and not bands.has(start):

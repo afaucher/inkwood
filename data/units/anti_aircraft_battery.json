@@ -18,6 +18,37 @@
     "source_back_m": { "value": 0, "_proposed": true, "_reason": "the gun pit is the unit's centre" },
     "rise_mps": { "value": 4, "_proposed": true, "_reason": "the smoulder's rate: a damaged ground or sea unit smokes like a ruin or a wreck (data/fx/fx.json ruin R1 and crash A smolder rise_mps 4.0), so its puffs climb into the faster air above and the plume leans downwind (decisions smoke-consistency, wind-with-height). PROPOSED" }
   },
+  "shape": {
+    "_about": "The battery's sandbag ring is the FIRST sim shape the sandbags have had (they were art only, scripts/ui/unit_marker_art_static.gd gen_aa: radius 3.7-4.3 m, band 0.8-1.1 m, bags 1.0-1.25 m high, a gap of 32-48 degrees). A full ring here (the art's gap is seeded per marker and is not modelled), stamped into the height grid as earthworks so it blocks a low line; the guns are the target inside it. Every number PROPOSED.",
+    "boxes": [
+        {
+          "part": "sandbags",
+          "material": "earthworks",
+          "kind": "ring",
+          "stamp": { "value": true, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): the ring blocks lines: 'rounds over sandbags' was the misfit (docs/proposals/shot-heights.md)" },
+          "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
+          "forward_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit" },
+          "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
+          "length_m": { "value": 8, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 8.0 m outer diameter, the art's radius 3.7-4.3 m" },
+          "width_m": { "value": 6, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 6.0 m inner diameter: the art's band is 0.8-1.1 m, so 1.0 m of bags" },
+          "bottom_m": { "value": 0, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): on the ground" },
+          "top_m": { "value": 1.15, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 1.15 m, the middle of the art's bag height 1.0-1.25 m" }
+        },
+        {
+          "part": "guns",
+          "material": "armour",
+          "kind": "box",
+          "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
+          "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
+          "forward_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit" },
+          "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
+          "length_m": { "value": 3, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 3.0 m, the gun pit's mounts and shields at the middle of the ring" },
+          "width_m": { "value": 3, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 3.0 m, as long" },
+          "bottom_m": { "value": 0, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): on the ground (the pit)" },
+          "top_m": { "value": 3, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 3.0 m, the light flak's muzzle height; the heavy flak's barrels reach 4.2 m at their highest (the art), the heavy hardpoint is 6 m" }
+        }
+    ]
+  },
   "envelope": {
     "speed_min_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },
     "speed_cruise_mps": { "value": 0, "_proposed": true, "_reason": "static: never moves" },

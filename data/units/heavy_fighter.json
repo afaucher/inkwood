@@ -16,6 +16,24 @@
     "source_back_m": { "value": 5, "_proposed": true, "_reason": "where the smoke leaves the plane: 5 m behind its centre, about the old 0.35 x 16 m (W1 tail_frac)" },
     "rise_mps": { "value": 0, "_proposed": true, "_reason": "0, a REASON TO DIFFER from the ground units' 4 m/s: a plane's trail is laid along its path at its altitude (a low plane is 120 m up, where the wind is already 1.6 times the ground's) and its own speed spreads it; a puff climbing 4 m/s would lift an old puff by 100 m in its life. PROPOSED" }
   },
+  "shape": {
+    "_about": "One box. A plane's base is its BAND's absolute height. Every number PROPOSED.",
+    "boxes": [
+        {
+          "part": "body",
+          "material": "aircraft",
+          "kind": "box",
+          "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
+          "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
+          "forward_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit" },
+          "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
+          "length_m": { "value": 12, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 12 m, a twin-engine fighter's length (P-38 11.5 m)" },
+          "width_m": { "value": 16, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 16 m, the unit's size_m (the wingspan)" },
+          "bottom_m": { "value": -1.2, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 1.2 m under the band's height" },
+          "top_m": { "value": 2, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 2 m over it: the tail fins and the gondola's top" }
+        }
+    ]
+  },
   "envelope": {
     "speed_min_mps": { "value": 50, "_proposed": true, "_reason": "stall about 180 km/h, heavier wing loading than the light fighter" },
     "speed_cruise_mps": { "value": 105, "_proposed": true, "_reason": "about 380 km/h; long-range twins cruised a little faster" },

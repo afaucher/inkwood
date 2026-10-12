@@ -16,6 +16,24 @@
     "source_back_m": { "value": 6, "_proposed": true, "_reason": "the engine room is aft of the middle: 6 m behind the centre of a 27 m hull" },
     "rise_mps": { "value": 4, "_proposed": true, "_reason": "the smoulder's rate: a damaged ground or sea unit smokes like a ruin or a wreck (data/fx/fx.json ruin R1 and crash A smolder rise_mps 4.0), so its puffs climb into the faster air above and the plume leans downwind (decisions smoke-consistency, wind-with-height). PROPOSED" }
   },
+  "shape": {
+    "_about": "One box (the P1 cutter). Every number PROPOSED.",
+    "boxes": [
+        {
+          "part": "body",
+          "material": "ship",
+          "kind": "box",
+          "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
+          "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
+          "forward_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit" },
+          "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
+          "length_m": { "value": 27, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 27 m, the unit's size_m" },
+          "width_m": { "value": 6, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 6 m, a motor gunboat's beam" },
+          "bottom_m": { "value": 0, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): from the water's surface" },
+          "top_m": { "value": 4, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 4 m, a bridge house over the deck (the machine guns are at 2.5 m)" }
+        }
+    ]
+  },
   "envelope": {
     "speed_min_mps": { "value": -3, "_proposed": true, "_reason": "slow astern: a boat can reverse once stopped (design doc, Motion and inertia: ships can reverse once stopped), which is also how it backs off a shore the water rule has held it at" },
     "speed_cruise_mps": { "value": 10, "_proposed": true, "_reason": "about 19 knots: a coastal patrol's steady speed, a tenth of a light fighter's" },

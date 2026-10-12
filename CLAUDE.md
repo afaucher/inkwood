@@ -198,6 +198,10 @@ mixed-warfare): water is generated per seed (`scripts/world/water_gen.gd`,
   (`Sun.start_message()` / `Sun.apply_start()`), read as `Sun.current().asked_hour`.
   Only sun.gd reads the machine clock; every test runs on the fixed sun
   (`test_case.gd` calls `Sun.enter_test_harness()`, and a test that reaches the clock fails).
+- Lines of fire (decision line-of-fire, stage 1): `scripts/sim/height_grid*.gd` builds a
+  1 m height-and-material grid per chunk from the seed; `scripts/sim/line_of_fire.gd` walks
+  straight lines across it (`trace`, `exposure`; tree canopies thin; units' `shape.boxes`).
+  Combat does not read it yet (`data/sim/line_of_fire.json` enabled false; `test_line_of_fire`).
 - The Style guide is the design doc's "Style guide" tab: read it before drawing
   anything new.
 Work on a track stays inside the folders it owns and reads other tracks' data

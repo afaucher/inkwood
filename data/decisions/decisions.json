@@ -2361,7 +2361,13 @@
       "date": "2026-10-11",
       "board": "none (said in chat)",
       "options": [],
-      "applied_to": [],
+      "applied_to": [
+        "data/sim/line_of_fire.json (enabled false: combat does not read it yet)",
+        "scripts/sim/height_grid*.gd, height_chunk.gd (1 m cells, top height and material, per 256 m chunk, built from the seed)",
+        "scripts/sim/line_of_fire*.gd (trace, exposure; canopies thin)",
+        "data/units/*.json shape.boxes (hull and turret for tanks and the mobile AA)",
+        "scripts/tests/test_line_of_fire.gd"
+      ],
       "id": "line-of-fire",
       "area": "Combat",
       "question": "Does cover block shots: (a) a cover factor, (b) real lines of fire against every blocker's height, (c) the fog's line of sight?",
@@ -2375,7 +2381,7 @@
         "fully_hidden": "hold: a gun does not fire at a target it cannot see any part of (Alex)",
         "air_ground": "the same line check between planes and the ground: hills can block the low band (Alex)"
       },
-      "status": "open (to discuss)",
+      "status": "open: stage 1 built (the grid and the check, not in combat); stage 2 (odds, misses, the combat hook) waits on Alex",
       "notes": "Alex: '9 I want to discuss b'. And on tank accuracy falling with range and rising with target size: '11, yes but directly impacts 9'. On the questions: '3 let's discuss this model in more detail? Are we doing ray casting? How do we do the height calculation?' / '4 thin' / '5 yes, two layers, hull and turret.' / '6 Later' / '7 what line rule?' On the line-of-fire explanation: '1. Hold, otherwise we would just mow down anything in between on purpose.' / '2. Yes' / '3. What could you actually show here?'"
     },
     {

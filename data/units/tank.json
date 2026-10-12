@@ -16,6 +16,37 @@
     "source_back_m": { "value": 2, "_proposed": true, "_reason": "the engine deck at the rear third of the hull: 2 m behind the centre of a 6 m tank" },
     "rise_mps": { "value": 4, "_proposed": true, "_reason": "the smoulder's rate: a damaged ground or sea unit smokes like a ruin or a wreck (data/fx/fx.json ruin R1 and crash A smolder rise_mps 4.0), so its puffs climb into the faster air above and the plume leans downwind (decisions smoke-consistency, wind-with-height). PROPOSED" }
   },
+  "shape": {
+    "_about": "Alex (decision line-of-fire): 'yes, two layers, hull and turret'. A tank behind a wall or sandbags shows its turret and little hull. Heights: the lead's brief from Alex's decision, hull to about 1.5 m and turret to 2.3 m; the sizes are the unit sheet's tank (scripts/ui/unit_marker_art.gd gen_tank: length 5.6-6.6, width 2.9-3.3, hull_h 1.5-1.8, turret_h 0.75-0.95, turret_r 1.0-1.2, turret 0.2-0.55 m ahead of the middle). Every number PROPOSED.",
+    "boxes": [
+        {
+          "part": "hull",
+          "material": "armour",
+          "kind": "box",
+          "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
+          "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
+          "forward_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit" },
+          "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
+          "length_m": { "value": 6, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 6.0 m, the unit's size_m (the sheet's 5.6-6.6 m)" },
+          "width_m": { "value": 3.1, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 3.1 m, the middle of the sheet's 2.9-3.3 m" },
+          "bottom_m": { "value": 0, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): on the ground (the tracks are the hull's underside)" },
+          "top_m": { "value": 1.5, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 1.5 m, 'hull to about 1.5 m' (the lead's brief from Alex's decision; the sheet's hull is 1.5-1.8)" }
+        },
+        {
+          "part": "turret",
+          "material": "armour",
+          "kind": "box",
+          "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
+          "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
+          "forward_m": { "value": 0.4, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 0.4 m ahead of the hull's middle, where the gun's hardpoint is (the sheet: turret_y -0.55 to -0.2)" },
+          "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
+          "length_m": { "value": 2.2, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 2.2 m, the sheet's round turret (turret_r 1.0-1.2)" },
+          "width_m": { "value": 2.2, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 2.2 m, as long as it is wide (a round turret)" },
+          "bottom_m": { "value": 1.5, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): on top of the hull" },
+          "top_m": { "value": 2.3, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 2.3 m, 'turret to 2.3 m' and the gun's hardpoint height (data/units/tank.json weapons)" }
+        }
+    ]
+  },
   "envelope": {
     "speed_min_mps": { "value": -2, "_proposed": true, "_reason": "slow reverse: a tank can reverse once stopped (design doc, Motion and inertia, 'ships can reverse once stopped', and the schema's reverse_from_stop for ships and tanks)" },
     "speed_cruise_mps": { "value": 8, "_proposed": true, "_reason": "a steady road march, a fifth below top speed (the AI drives at it and a new tank starts at it unless a scenario says otherwise). 8 m/s is about 29 km/h" },

@@ -46,6 +46,29 @@
         "rise_mps": { "kind": "number", "min": 0, "unit": "m/s", "about": "How fast a puff climbs after it is born. A rising puff drifts with the wind at its height (data/sim/wind.json profile: faster higher up), so a plume stands over its source and leans downwind as it climbs, as the forest fire's does. 0 for smoke laid along a flight path in the air; the ground and sea units share the smoulder's rate of the wrecks and ruins (data/fx/fx.json crash and ruin smolder rise_mps; test_smoke_consistency holds them equal)." }
       }
     },
+    "shape": {
+      "kind": "section",
+      "about": "THE UNIT'S BODY FOR LINES OF FIRE (builder LOF1, 2026-10-11, decision line-of-fire; PROPOSED shape and values). What a straight round can hit and what can stand in its way, as a few boxes (scripts/sim/line_of_fire_shapes.gd, scripts/sim/line_of_fire.gd). Alex: a ground vehicle is TWO boxes, hull and turret ('yes, two layers, hull and turret'); every other unit gets ONE box (the lead's proposal). Not read by combat yet (data/sim/line_of_fire.json enabled false). A box stands on its unit's BASE height: the ground under it (or the bridge's deck) for a surface unit, the water's surface for a boat, the band's absolute height for a plane (bands are absolute heights, data/sim/altitude.json), so a plane's box reaches below and above its band (bottom_m negative). Axes as the hardpoints': forward along the heading, right to its right (clockwise on screen).",
+      "fields": {
+        "boxes": {
+          "kind": "list",
+          "about": "The unit's boxes, the lowest layer first. A hull then a turret; a battery's sandbag ring then its guns. An empty list would mean a unit nothing can hit, which no unit is.",
+          "item_fields": {
+            "part": { "kind": "text", "about": "What the box is: 'hull', 'turret', 'body', 'deck', 'sandbags', 'guns'. A report names the visible share by part." },
+            "material": { "kind": "text", "about": "Its material, one of data/sim/line_of_fire.json materials (armour, aircraft, ship, stone, timber, earthworks, ...): what a round that stops on it would strike. Checked by test_line_of_fire." },
+            "kind": { "kind": "enum", "values": ["box", "ring"], "about": "'box': a rectangle length_m long and width_m wide. 'ring': an annulus, length_m its OUTER diameter and width_m its INNER diameter (a sandbag ring seen from above; a full ring, the art's gap is not modelled)." },
+            "stamp": { "kind": "bool", "about": "Whether this box is put into the height grid as an obstacle while the unit stands (a static unit's sandbag ring, a bridge's deck: other lines are blocked by it). A mobile unit's box is a target only, so false." },
+            "standable": { "kind": "bool", "about": "Whether other units stand ON the stamped box (the bridge's deck: a tank on the bridge stands at the deck's top, not at the river's). Only meaningful with stamp true." },
+            "forward_m": { "kind": "number", "min": -1000, "unit": "m", "about": "The box centre's offset from the unit's centre, along its heading." },
+            "right_m": { "kind": "number", "min": -1000, "unit": "m", "about": "The box centre's offset to the unit's right." },
+            "length_m": { "kind": "number", "min": 0, "unit": "m", "about": "Along the heading (a box), or the outer diameter (a ring)." },
+            "width_m": { "kind": "number", "min": 0, "unit": "m", "about": "Across it (a box), or the inner diameter (a ring)." },
+            "bottom_m": { "kind": "number", "min": -1000, "unit": "m", "about": "The box's underside above the unit's base height. Negative for a plane, whose base is the band's height." },
+            "top_m": { "kind": "number", "min": -1000, "unit": "m", "about": "The box's top above the unit's base height." }
+          }
+        }
+      }
+    },
     "envelope": {
       "kind": "section",
       "about": "The performance envelope (scripts/sim/envelope.gd). Each step the player picks a point; the envelope decides which points are reachable from the unit's state at the start of the step. Inertia: speed changes at most accel/decel per second, heading at most the turn rate at the step's starting speed, and turning and climbing cost speed.",
