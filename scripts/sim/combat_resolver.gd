@@ -84,6 +84,9 @@ var bomb_rules: BombRules = null
 var gun_rules: GunRules = null
 # Set by the World each resolve: it has water, so a destroyed sea unit sinks (fate out_of_control, no spin) instead of being destroyed.
 var ships_sink: bool = false
+# Set by the World each resolve when the lines of fire are on (scripts/sim/combat_lines.gd; data/sim/line_of_fire.json `enabled`): null is the old
+# combat, unchanged to the byte.
+var lines: RefCounted = null
 
 # One run's working state (reset by run()).
 var _units: Dictionary = {}
@@ -187,6 +190,13 @@ func _fire_hardpoint(active: Array[String], states: Dictionary, sid: String, w_i
 	var range_sq := reach_m * reach_m
 	var best_id := ""
 	var best: Dictionary = {}
+	# THE LINES OF FIRE (stage 2, builder LOF2; scripts/sim/combat_lines.gd): only with the switch on AND for a weapon with a straight round in
+	# the data. A target of which nothing is in view is not a candidate (the gun HOLDS); a visible one has its odds from the share of the
+	# round's spread on what is visible, and the fire event says where each round went.
+	var use_lines: bool = lines != null and lines.applies(weapon)
+	var roll_seed := 0
+	if use_lines:
+		roll_seed = Combat.roll_seed(_seed, _turn, int(_index[sid]), w_i, h_i, tick)
 	for tid: String in active:
 		var target: Unit = _units[tid]
 		if target.side == shooter.side:
@@ -197,6 +207,12 @@ func _fire_hardpoint(active: Array[String], states: Dictionary, sid: String, w_i
 		var g := Combat.evaluate_pose(p, weapon, ts, rules.odds_factors, _params)
 		if not g["in_cone"]:
 			continue
+		if use_lines:
+			var la: Dictionary = lines.assess(shooter, states[sid], p, weapon, g, target, ts, roll_seed)
+			if not bool(la["visible"]):
+				continue
+			g["odds"] = la["odds"]
+			g["lines"] = la
 		# The target rule "best_odds" (the only one): the best odds, then the
 		# nearer, then the unit added first (strict comparisons keep the first).
 		if best_id == "" or float(g["odds"]) > float(best["odds"]) \
@@ -217,6 +233,9 @@ func _fire_hardpoint(active: Array[String], states: Dictionary, sid: String, w_i
 			"x": p["x"], "y": p["y"], "height_m": p["z"],
 			"tx": tstate["x"], "ty": tstate["y"], "theight_m": tstate["height_m"],
 		})
+		if use_lines:
+			# where this round went: drawn from the roll's own stream, never from `rng` (a draw here would shift every later roll)
+			(_events[_events.size() - 1] as Dictionary).merge(lines.landing(best["lines"], hit, roll_seed, _j))
 		if not hit:
 			continue
 		_hurt(best_id, sid, weapon.id, weapon.damage_pips, t, tick, tstate)
@@ -243,6 +262,8 @@ func _hurt(target_id: String, by_id: String, weapon_id: String, pips: int, t: fl
 		else:
 			fate = {"fate": Unit.FATE_DESTROYED, "spin": 0}
 		_fates[target_id] = fate
+		if lines != null and (_units[target_id] as Unit).def.is_static():
+			lines.grid.unstamp(target_id)   # a battery's sandbags or the bridge's parapets are cover no longer, from this moment
 		_events.append({
 			"type": "down", "turn": _turn, "unit": target_id, "by": by_id, "t": t,
 			"x": tstate["x"], "y": tstate["y"], "height_m": tstate["height_m"],

@@ -13,6 +13,7 @@ const SimRules = preload("res://scripts/sim/sim_rules.gd")
 const UnitDef = preload("res://scripts/sim/unit_def.gd")
 const Records = preload("res://scripts/sim/records.gd")
 const CombatWeapon = preload("res://scripts/sim/combat_weapon.gd")
+const Rounds = preload("res://scripts/sim/rounds.gd")
 
 # The demo's air units (design doc, Initial unit roster). More files may exist;
 # these must.
@@ -39,13 +40,13 @@ func setup(_main) -> void:
 		finish()
 		return
 	var fields: Dictionary = (schema as Dictionary)["fields"]
-	for f: String in ["id", "name", "domain", "mobility", "size_m", "draught_m", "actions_per_turn", "health", "sight_range_m", "drawing", "damage_smoke", "envelope", "weapons", "bomb_load", "specials"]:
+	for f: String in ["id", "name", "domain", "mobility", "size_m", "draught_m", "actions_per_turn", "health", "sight_range_m", "drawing", "material", "damage_smoke", "envelope", "weapons", "bomb_load", "specials"]:
 		check(fields.has(f), "schema lists '%s'" % f)
 	var special_fields: Dictionary = (fields.get("specials", {}) as Dictionary).get("item_fields", {})
 	for f: String in ["id", "name", "action"]:
 		check(special_fields.has(f), "schema lists specials[].%s" % f)
 	var weapon_fields: Dictionary = (fields.get("weapons", {}) as Dictionary).get("item_fields", {})
-	for f: String in ["id", "name", "kind", "hardpoints", "mount_deg", "half_across_deg", "elevation_deg", "half_height_deg", "effective_range_m", "base_hit_chance", "rim_odds_factor", "falloff_exponent", "tracking_dps", "damage_pips", "rolls_per_second"]:
+	for f: String in ["id", "name", "kind", "round", "hardpoints", "mount_deg", "half_across_deg", "elevation_deg", "half_height_deg", "effective_range_m", "base_hit_chance", "rim_odds_factor", "falloff_exponent", "tracking_dps", "damage_pips", "rolls_per_second"]:
 		check(weapon_fields.has(f), "schema lists weapons[].%s" % f)
 	var load_fields: Dictionary = (fields.get("bomb_load", {}) as Dictionary).get("fields", {})
 	for f: String in ["drops", "per_drop"]:
@@ -82,6 +83,10 @@ func setup(_main) -> void:
 			str(def.envelope.bands)])
 		_check_weapons(def)
 		_check_load_and_mobility(def)
+		# THE ROUND MODEL (builder G3, decisions round-model and damage-looks): a unit names its material, a weapon its round, both in data/sim/rounds.json
+		check(def.material != "" and (Rounds.shared() as Rounds).materials.has(def.material), "%s: names a material of the one vocabulary (%s)" % [def.id, def.material])
+		for w in def.weapons:
+			check(w.round_id != "" and (Rounds.shared() as Rounds).has_round(w.round_id), "%s.%s: names a round of data/sim/rounds.json (%s)" % [def.id, w.id, w.round_id])
 	for id: String in REQUIRED + WATER_UNITS:
 		check(found.has(id), "data/units/%s.json exists" % id)
 	check(not _fixed_tracking.is_empty() and not _gunner_tracking.is_empty() and _fixed_tracking.max() < _gunner_tracking.min(), "every fixed gun tracks worse than every flexible gun and turret (fixed up to %s deg/s, gunners from %s)" % [str(_fixed_tracking.max()), str(_gunner_tracking.min())])
@@ -137,6 +142,11 @@ func setup(_main) -> void:
 		["a unit that smokes with no source", "damage_smoke: a unit that smokes needs a source_m above 0"],
 		["a unit that does not smoke with a source", "damage_smoke: a unit that does not smoke (enabled false) has source_m 0"],
 		["a misspelt damage smoke key", "unknown field 'damage_smoke.source_n'"],
+		["no material", "missing field 'material'"],
+		["a material outside the vocabulary", "'material' = 'plasma' is not one of"],
+		["a box material outside the vocabulary", "shape.boxes 'body': material 'aircraft' is not one of"],
+		["a weapon with no round", "missing field 'weapons[0].round'"],
+		["a weapon firing an unknown round", "'weapons[0].round' = 'laser' is not one of"],
 	]
 	for c: Array in cases:
 		var what: String = c[0]
@@ -289,6 +299,16 @@ func _break(d: Dictionary, what: String) -> void:
 			d["damage_smoke"]["enabled"] = {"value": false, "_proposed": true, "_reason": "x"}
 		"a misspelt damage smoke key":
 			d["damage_smoke"]["source_n"] = {"value": 1, "_proposed": true, "_reason": "typo"}
+		"no material":
+			d.erase("material")
+		"a material outside the vocabulary":
+			d["material"] = {"value": "plasma", "_proposed": true, "_reason": "x"}
+		"a box material outside the vocabulary":
+			d["shape"]["boxes"][0]["material"] = "aircraft"
+		"a weapon with no round":
+			(d["weapons"][0] as Dictionary).erase("round")
+		"a weapon firing an unknown round":
+			d["weapons"][0]["round"] = {"value": "laser", "_proposed": true, "_reason": "x"}
 		_:
 			fail("no such breakage: " + what)
 

@@ -2,6 +2,9 @@ extends SceneTree
 
 # BOARD: SCENERY HEIGHTS (builder SH, 2026-10-11). WINDOWED ONLY. Nothing in the game changes until Alex picks.
 #
+# RETIRED 2026-10-12: Alex picked S1 and it is live as data (see scenery_heights_patch.gd). The option runs refuse to start (the patch
+# says so); the frames, sidecars and board.png in variants/scenery-heights/ are the record. A re-run would draw S1 as S0.
+#
 # Alex, asked "Scenery heights: fix the heights of trees, houses and walls to real-world sizes, with look options before
 # anything is built?": "12 yes, but show me" (decision scenery-heights). Misfit 3 of docs/proposals/shot-heights.md: scenery is
 # authored in the prototype's px, so at the decided 2 px/m a median tree is 12.7 m (6.3 to 28.8), houses 10.7 to 14.5 m, walls

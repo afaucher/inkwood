@@ -14,8 +14,8 @@ extends RefCounted
 # right (-sin h, cos h): heading 0 along +x, positive turns clockwise on screen (y down).
 #
 # THE SAMPLES. A shooter sees a box as a silhouette: its width across the line of sight and its height. The silhouette is cut into
-# columns (data sampling.col_spacing_m, at most max_cols) and rows (row_spacing_m, max_rows); a sample point sits at the middle of each
-# slice, ON THE BOX'S NEAR FACE (the front point where a line parallel to the line of sight, at that column, meets the box: the
+# columns (data sampling.col_spacing_m, at most max_cols; a point at the middle of each) and rows (row_spacing_m, max_rows; STAGE 2: spread
+# from just under the top to just over the bottom, each with the band of heights it stands for as its weight); a point sits ON THE BOX'S NEAR FACE (the front point where a line parallel to the line of sight, at that column, meets the box: the
 # point nearest the shooter), so a line to it is a line to a point of the box, not to the air beside a corner.
 
 const Rules = preload("res://scripts/sim/line_of_fire_rules.gd")
@@ -32,7 +32,8 @@ static func world_boxes(def: Variant, rules: Object, x: float, y: float, heading
 		var length := float(sb["length_m"])
 		var wid := float(sb["width_m"])
 		out.append({
-			"part": str(sb["part"]), "material": rules.material_id(str(sb["material"])), "material_name": str(sb["material"]), "kind": kind,
+			"part": str(sb["part"]), "material": rules.stamp_id(str(sb["material"])) if bool(sb["stamp"]) else rules.material_id(str(sb["material"])),
+			"material_name": str(sb["material"]), "kind": kind,
 			"stamp": bool(sb["stamp"]), "standable": bool(sb["standable"]),
 			"cx": x + f * cs - r * sn, "cy": y + f * sn + r * cs, "cs": cs, "sn": sn,
 			"hl": length * 0.5 if kind == "box" else 0.0, "hw": wid * 0.5 if kind == "box" else 0.0,
@@ -77,7 +78,8 @@ static func contains(b: Dictionary, px: float, py: float) -> bool:
 	return absf(lx) <= float(b["hl"]) and absf(ly) <= float(b["hw"])
 
 # The sample points on a world box for a shooter at (from_x, from_y): {pts: PackedFloat64Array [x, y, z, ...] column by column, rows,
-# cols, width (the silhouette's, metres), height, area (width x height)}.
+# cols, width (the silhouette's, metres), height, area (width x height), and per point: w (its weight, summing to 1), zlo and zhi (the band of
+# heights it stands for), col_w (the width of its column)}.
 static func samples(b: Dictionary, from_x: float, from_y: float, rules: Object) -> Dictionary:
 	var cx := float(b["cx"])
 	var cy := float(b["cy"])
@@ -102,9 +104,33 @@ static func samples(b: Dictionary, from_x: float, from_y: float, rules: Object) 
 		pw = absf(float(b["hl"]) * (cs * ux + sn * uy)) + absf(float(b["hw"]) * (-sn * ux + cs * uy))
 	var z0 := float(b["z0"])
 	var height := float(b["z1"]) - z0
-	var rows := clampi(ceili(height / rules.row_spacing_m - 1e-9), 1, rules.max_rows)
+	# THE ROWS (stage 2, builder LOF2, PROPOSED: the finding of stage 1 that rows at the middle of their slices let a 1.35 m wall hide a whole
+	# 1.5 m hull): rows are SPREAD from just under the top to just over the bottom (data sampling.row_edge_inset_m), so the top band of a box
+	# is always looked at. A row stands for the band between the halfway points to its neighbours (the end rows to the box's edges), and that
+	# band is its WEIGHT (the trapezoid rule): a wall that hides everything but the top row leaves that row's band exposed, not a whole slice.
+	var inset := minf(rules.row_edge_inset_m, height * 0.25)
+	var rows := 1
+	if height > 4.0 * rules.row_edge_inset_m:
+		rows = clampi(ceili((height - 2.0 * inset) / rules.row_spacing_m - 1e-9) + 1, 2, maxi(rules.max_rows, 2))
+	var row_z := PackedFloat64Array()
+	var row_lo := PackedFloat64Array()
+	var row_hi := PackedFloat64Array()
+	if rows == 1:
+		row_z.append(z0 + height * 0.5)
+		row_lo.append(z0)
+		row_hi.append(z0 + height)
+	else:
+		var step := (height - 2.0 * inset) / float(rows - 1)
+		for k in rows:
+			var zc := z0 + inset + float(k) * step
+			row_z.append(zc)
+			row_lo.append(z0 if k == 0 else zc - step * 0.5)
+			row_hi.append(z0 + height if k == rows - 1 else zc + step * 0.5)
 	var cols := clampi(ceili(2.0 * pw / rules.col_spacing_m - 1e-9), 1, rules.max_cols)
 	var pts := PackedFloat64Array()
+	var wts := PackedFloat64Array()      # the sample's share of the box's silhouette (the weights of one box sum to 1)
+	var zlo := PackedFloat64Array()      # the band of heights the sample stands for
+	var zhi := PackedFloat64Array()
 	for j in cols:
 		var s := -pw + (float(j) + 0.5) * (2.0 * pw / float(cols))
 		var t := 0.0
@@ -142,5 +168,8 @@ static func samples(b: Dictionary, from_x: float, from_y: float, rules: Object) 
 		for k in rows:
 			pts.append(qx)
 			pts.append(qy)
-			pts.append(z0 + (float(k) + 0.5) * height / float(rows))
-	return {"pts": pts, "rows": rows, "cols": cols, "width": 2.0 * pw, "height": height, "area": 2.0 * pw * height}
+			pts.append(row_z[k])
+			wts.append((row_hi[k] - row_lo[k]) / height / float(cols))
+			zlo.append(row_lo[k])
+			zhi.append(row_hi[k])
+	return {"pts": pts, "w": wts, "zlo": zlo, "zhi": zhi, "col_w": 2.0 * pw / float(cols), "rows": rows, "cols": cols, "width": 2.0 * pw, "height": height, "area": 2.0 * pw * height}

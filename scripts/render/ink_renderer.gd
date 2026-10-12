@@ -33,8 +33,10 @@ extends RefCounted
 # stands -- including decisions taken since the prototype (shadow_strength
 # 0.44 and the shadow-side pen, Alex 2026-10-09). A parity render ("parity":
 # true) sets every parameter that carries a `prototype_default` back to it
-# (shadow_strength -> 0.92, linework.pen -> "even"), so the frame can be
-# compared with the browser prototype at its own defaults.
+# (shadow_strength -> 0.92, linework.pen -> "even", and the scenery heights
+# of decision scenery-heights: wall_height 12, house_height_ratio 0.9, no tree
+# height scale or window), so the frame can be compared with the browser
+# prototype at its own defaults.
 
 const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
 const ShadowPass = preload("res://scripts/render/shadow_pass.gd")
@@ -339,32 +341,20 @@ static func render_scene(seed_value: int, size: Vector2i, options: Dictionary = 
 
 # Sets every P parameter whose data entry carries a `prototype_default` to
 # that value (render_defaults.json keeps the prototype's value beside a
-# decided one). Returns a line per change. Only parameters RenderParams maps
-# are touched; the map is the prototype's name for each data key.
+# decided one). Returns a line per change. The parameters are RenderParams'
+# own (use_prototype_defaults: the map of data keys to the prototype's names,
+# which now includes the scenery heights of decision scenery-heights); the
+# pen is InkCanvas's, so it is done here.
 static func apply_prototype_defaults(P: RenderParams) -> Array[String]:
-	const NAMES := {"brush_size": "brush", "density": "density", "canopy_size": "treeSize",
-		"size_variation": "sizeVar", "inner_contour_rings": "rings", "tree_height": "height",
-		"wall_width": "wallW", "wall_height": "wallH", "house_size": "houseSize", "sun_direction": "sunAz",
-		"sun_elevation": "elev", "shadow_strength": "shadowStr", "line_weight": "lw", "hand_wobble": "wob",
-		"paper_grain": "grain"}
 	var out: Array[String] = []
 	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(P.source_path))
-	var prm: Dictionary = (raw as Dictionary).get("parameters", {}) if raw is Dictionary else {}
 	# linework.pen.prototype_default: the prototype's even line (the pen is InkCanvas's, global)
 	var pen: Dictionary = ((raw as Dictionary).get("linework", {}) as Dictionary).get("pen", {}) if raw is Dictionary else {}
 	if pen.has("prototype_default"):
 		var was_pen := InkCanvas.pen_mode()
 		InkCanvas.set_pen_mode(str(pen.prototype_default))
 		out.append("pen %s -> %s (linework.pen.prototype_default)" % [was_pen, InkCanvas.pen_mode()])
-	for key: String in prm:
-		var entry: Variant = prm[key]
-		if not (entry is Dictionary and (entry as Dictionary).has("prototype_default") and NAMES.has(key)):
-			continue
-		var v: Variant = entry["prototype_default"]
-		var name: String = NAMES[key]
-		var was: Variant = P.get(name)
-		P.set(name, int(v) if name == "rings" else float(v))
-		out.append("P.%s %s -> %s (parameters.%s.prototype_default)" % [name, str(was), str(P.get(name)), key])
+	out.append_array(P.use_prototype_defaults())
 	return out
 
 static func _ms(t0: int) -> float:

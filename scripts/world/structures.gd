@@ -295,7 +295,9 @@ static func make_house(rng: Mulberry32, x: float, y: float, rot: float) -> Dicti
 # (the drawing layer's sprite cache keys on it too).
 static func sync_struct(s: Dictionary, P: RenderParams) -> void:
 	var key := "%s|%s|%s|%s|%s|%s" % [P.lw, P.wob, P.sunAz, P.wallW, P.houseSize, P.shadowCol.to_html(false)]
-	s.h = (P.wallH if s.kind == "wall" else P.houseSize * 0.9) * s.hs
+	# A house's height was the literal houseSize * 0.9 in the prototype; the ratio is data now (decision scenery-heights, S1:
+	# 0.5, about 7 m to the ridge at 2 px/m), the prototype's 0.9 its prototype_default. The same multiplication either way.
+	s.h = (P.wallH if s.kind == "wall" else P.houseSize * P.houseHeightRatio) * s.hs
 	if key == s.get("key", ""):
 		return
 	s.key = key

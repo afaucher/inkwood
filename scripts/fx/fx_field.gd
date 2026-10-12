@@ -396,13 +396,14 @@ func prune(t: float) -> void:
 #
 # THE SOURCE (builder SMOKE, 2026-10-11): the trail's puffs are sized by `source_m` and leave `back_m` behind the centre when the caller gives them (the
 # plane's data/units damage_smoke: the same engine that smoked before it fell, so the trail does not jump in size at down_at); without them by `size_m`,
-# as before. `size_m` still sizes what is the airframe's (the flame, the embers).
-func ride(unit_id: String, world_pos: Vector2, height_m: float, t: float, size_m: float = 9.0, heading: float = NAN, source_m: float = -1.0, back_m: float = NAN) -> int:
+# as before. `size_m` still sizes what is the airframe's (the flame, the embers). `rise_mps` is the same damage_smoke.rise_mps: the trail it
+# continues climbs (Alex, 2026-10-12, decision smoke-consistency, planes' trails rise like ground smoke), so the fall trail climbs with it.
+func ride(unit_id: String, world_pos: Vector2, height_m: float, t: float, size_m: float = 9.0, heading: float = NAN, source_m: float = -1.0, back_m: float = NAN, rise_mps: float = 0.0) -> int:
 	var fall := FxData.grp(crash_o, "falling")
 	var smoke_key := _smoke_key(FxData.s(fall, "smoke_option"))
 	var o := _fall_smoke(smoke_key, fall)
 	var i := FxData.f(fall, "intensity")
-	var made := _emit_trail(unit_id, "fall", o, "fall:" + smoke_key, i, FxData.i(fall, "tone"), FxData.f(fall, "interval_s"), world_pos, height_m, t, source_m if source_m > 0.0 else size_m, heading, FxData.f(fall, "life_s"), back_m)
+	var made := _emit_trail(unit_id, "fall", o, "fall:" + smoke_key, i, FxData.i(fall, "tone"), FxData.f(fall, "interval_s"), world_pos, height_m, t, source_m if source_m > 0.0 else size_m, heading, FxData.f(fall, "life_s"), back_m, rise_mps)
 	var fl := FxData.grp(fall, "flame")
 	if fire_on and FxData.b(fl, "enabled"):
 		var every := FxData.f(fl, "ember_every_s")

@@ -1,7 +1,8 @@
 extends RefCounted
 
-# THE GUNFIRE LOOKS (builder GF, 2026-10-11; decisions gunfire-looks and impact-by-round-and-target, both OPEN). EVERY NUMBER AND EVERY LOOK HERE IS
-# PROPOSED; nothing is chosen until Alex picks a family from variants/gunfire/. Alex, in the third playtest: "Fired shots should have smoke for large
+# THE GUNFIRE LOOKS (builder GF, 2026-10-11; decisions gunfire-looks and impact-by-round-and-target). ALEX CHOSE THE FAMILY G3 (decision gunfire-looks,
+# 2026-10-11: 'G3 W1 soft puffs'), and builder G3 made it live (2026-10-12): the game reads it from data/fx/fx.json `gunfire` (cfg_from_data), the board still
+# reads variants/gunfire/families.json (load_cfg). Every number inside the family stays PROPOSED. Alex, in the third playtest: "Fired shots should have smoke for large
 # rounds (tanks, artillery and ship cannons). Landed shots should have an impact even if they don't destroy you." and "this should probably be a
 # property of either the round or the thing being hit or both. Ex a round hitting water would splash, not explode with smoke. Right?"
 #
@@ -27,6 +28,11 @@ extends RefCounted
 # class's min_px so the smallest still reads at the planning zoom; WHERE a puff is stays a world position that the wind moves and the camera follows.
 # DETERMINISTIC. Every random number comes from Mulberry32 seeded by (world seed, shot id, time), so two peers drawing the same events draw the same marks.
 # Game time, as the effects layer's.
+#
+# IN THE GAME (builder G3, 2026-10-12): FxLayer owns a Book and a Painter made from fx.json (gunfire_muzzle / gunfire_impact), draws them in its ground,
+# shadows and air passes, and scripts/ui/gunfire_feed.gd makes the records from the sim's events. The materials are the round model's one vocabulary
+# (data/sim/rounds.json: metal, stone, wood, earth, water); an impact record may carry `off`, a world offset from `pos` in the unit's own metres that the
+# drawn scale applies at draw time (a hit inside a tank's drawn hull, a miss beside it), as the tracers' offsets are.
 
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
@@ -43,6 +49,17 @@ const TONES := 3
 const STAGES := 3
 
 # --- Data ---------------------------------------------------------------------------------------------------------------------------
+
+# The game's configuration, from data/fx/fx.json `gunfire` (values unwrapped), in the shape the Book reads: {classes, materials, puffs, families: {<id>:
+# {muzzle, impact}}, game: the whole unwrapped section (the feed's own settings: which rounds, the geometry, the fog, the miss)}. {} when the file has none.
+static func cfg_from_data(fxd: FxData) -> Dictionary:
+	var raw: Variant = fxd.raw.get("gunfire")
+	if not (raw is Dictionary):
+		return {}
+	var g: Dictionary = FxData.unwrap(raw)
+	var recipes: Dictionary = g.get("recipes", {})
+	return {"classes": g.get("classes", {}), "materials": g.get("materials", {}), "puffs": g.get("puffs", {}), "game": g,
+		"families": {str(g.get("family", "G3")): {"muzzle": recipes.get("muzzle", []), "impact": recipes.get("impact", {})}}}
 
 static func load_cfg(path: String = FAMILIES_PATH) -> Dictionary:
 	if not FileAccess.file_exists(path):
@@ -131,6 +148,7 @@ class Book extends RefCounted:
 	var world_seed: int = 20261009
 	var wind: Object = null
 	var profile: RefCounted = null
+	var max_records: int = 0               # 0: no cap; else the oldest go first (data fx.json gunfire.limits.max_records)
 	var _seen: Dictionary = {}
 	var _next: int = 0
 
@@ -172,18 +190,28 @@ class Book extends RefCounted:
 		_seen["m|" + shot_id] = true
 		_next += 1
 		records.append({"id": _next, "kind": "muzzle", "shot": shot_id, "cls": gun, "centre": centre, "dir": dir, "fwd_m": fwd_m, "lat_m": lat_m, "t0": t,
-			"h": height_m, "seed": FxBake.seed_of(world_seed, shot_id, int(round(t * 1000.0))), "mat": ""})
+			"h": height_m, "seed": FxBake.seed_of(world_seed, shot_id, int(round(t * 1000.0))), "mat": "", "off": Vector2.ZERO})
+		_trim()
 		return true
 
 	# A round lands without destroying: `round_cls` (bullet, small, medium, large), `material` (ground, water, stone, metal, wood), `pos` world m.
-	func add_impact(shot_id: String, round_cls: String, material: String, pos: Vector2, t: float, dir: float = 0.0, height_m: float = 0.0) -> bool:
+	# `off`: a world offset from `pos`, metres in the unit's own scale (the drawn scale applies at draw time): where inside a hull a hit lands, how far
+	# beside a target a miss does.
+	func add_impact(shot_id: String, round_cls: String, material: String, pos: Vector2, t: float, dir: float = 0.0, height_m: float = 0.0, off: Vector2 = Vector2.ZERO) -> bool:
 		if fam.is_empty() or _seen.has("i|" + shot_id):
 			return false
 		_seen["i|" + shot_id] = true
 		_next += 1
 		records.append({"id": _next, "kind": "impact", "shot": shot_id, "cls": round_cls, "centre": pos, "dir": dir, "fwd_m": 0.0, "lat_m": 0.0, "t0": t,
-			"h": height_m, "seed": FxBake.seed_of(world_seed, shot_id, int(round(t * 1000.0))), "mat": material})
+			"h": height_m, "seed": FxBake.seed_of(world_seed, shot_id, int(round(t * 1000.0))), "mat": material, "off": off})
+		_trim()
 		return true
+
+	func _trim() -> void:
+		while max_records > 0 and records.size() > max_records:
+			var gone: Dictionary = records[0]
+			_seen.erase(("m|" if str(gone["kind"]) == "muzzle" else "i|") + str(gone["shot"]))
+			records.remove_at(0)
 
 	func look_of(material: String) -> String:
 		var m: Dictionary = (cfg.get("materials", {}) as Dictionary).get(material, {})
@@ -319,7 +347,7 @@ class Painter extends RefCounted:
 		ct = book.class_table(r)
 		var centre: Vector2 = r["centre"]
 		var dir_w := float(r["dir"])
-		wpos = centre
+		wpos = centre + (r.get("off", Vector2.ZERO) as Vector2) * ts
 		if str(r["kind"]) == "muzzle":
 			var fwd := Vector2.from_angle(dir_w)
 			var side := Vector2(-fwd.y, fwd.x)

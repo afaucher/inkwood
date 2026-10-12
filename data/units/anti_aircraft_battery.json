@@ -12,6 +12,7 @@
   "drawing": {
     "silhouette": "anti_aircraft_battery"
   },
+  "material": { "value": "earth", "_proposed": true, "_reason": "PROPOSED by builder G3 (2026-10-12; the board's table, variants/gunfire/board.json material_table, which Alex's decisions damage-looks, 'the model makes sense', and gunfire-looks, G3, put to use): the battery's visible mass is its ring of sandbags and earth; the guns inside are metal and are their own shape box (the board's note: 'could be told apart later'). Decides what a round that lands on it does (data/fx/fx.json gunfire): earth." },
   "damage_smoke": {
     "enabled": { "value": true, "_proposed": true, "_reason": "a battery smokes when hit (ammunition and the guns' engines)" },
     "source_m": { "value": 4, "_proposed": true, "_reason": "the gun pit: a third of the 14 m sandbag ring, not the ring" },
@@ -23,7 +24,7 @@
     "boxes": [
         {
           "part": "sandbags",
-          "material": "earthworks",
+          "material": "earth",
           "kind": "ring",
           "stamp": { "value": true, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): the ring blocks lines: 'rounds over sandbags' was the misfit (docs/proposals/shot-heights.md)" },
           "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
@@ -36,7 +37,7 @@
         },
         {
           "part": "guns",
-          "material": "armour",
+          "material": "metal",
           "kind": "box",
           "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
           "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
@@ -71,6 +72,7 @@
       "id": "flak",
       "name": "Flak",
       "kind": "flexible",
+      "round": { "value": "flak_medium", "decision": "weapon-kinds", "_reason": "ALEX (decision weapon-kinds, 2026-10-11): 'Flak would be shells shot that then explode.' The battery's heavy flak fires a medium flak shell (the board's mapping: flak, medium), a burst in the air (decision flak-look, F2)" },
       "hardpoints": { "value": [[0, 0, 6]], "_proposed": true, "_reason": "Track S2: the guns' muzzles about six metres above the ground, at the battery's centre; the height is part of the cone's geometry (a plane at 120 m is 114 m above the muzzle)" },
       "mount_deg": { "value": 0, "_proposed": true, "_reason": "Track S2: the cone is all around (half_across 180), so the mount does not matter; 0 is the battery's heading" },
       "half_across_deg": { "value": 180, "_proposed": true, "_reason": "Track S2: all around. 180 means the azimuth is not part of the cone test (combat.gd): flak fires at anything above it, whichever way the battery faces" },
@@ -88,6 +90,7 @@
       "id": "light_flak",
       "name": "Light flak",
       "kind": "flexible",
+      "round": { "value": "flak_small", "decision": "weapon-kinds", "_reason": "ALEX (decision weapon-kinds, 2026-10-11): 'Flak would be shells shot that then explode.' The battery's light flak fires a small flak shell (the board's mapping: light_flak, small), a burst in the air (F2)" },
       "hardpoints": { "value": [[0, 0, 3]], "_proposed": true, "_reason": "Track F (2026-10-10): the light guns' muzzles about three metres above the ground at the battery's centre (the heavy flak's are six): smaller guns on lower mounts. A plane at 120 m is 117 m above them, one at 400 m 397 m" },
       "mount_deg": { "value": 0, "_proposed": true, "_reason": "Track F: the cone is all around (half_across 180), so the mount does not matter; 0 is the battery's heading, as for the heavy flak" },
       "half_across_deg": { "value": 180, "_proposed": true, "_reason": "Track F: all around, like the heavy flak: the azimuth is not part of the cone test (combat.gd), the guns fire at anything above them whichever way the battery faces" },

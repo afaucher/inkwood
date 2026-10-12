@@ -102,6 +102,9 @@ const GroundMap = preload("res://scripts/world/ground_map.gd")
 const Reveal = preload("res://scripts/sim/reveal.gd")
 const FireTrees = preload("res://scripts/sim/fire_trees.gd")
 const Wind = preload("res://scripts/sim/wind.gd")
+const LineOfFireRules = preload("res://scripts/sim/line_of_fire_rules.gd")
+const HeightGrid = preload("res://scripts/sim/height_grid.gd")
+const CombatLines = preload("res://scripts/sim/combat_lines.gd")
 
 const WATER_PREFIX := "water."
 const SCENARIO_DIR := "res://data/scenarios"
@@ -334,7 +337,29 @@ func populate(world: Object) -> Array[String]:
 			world.set_wind(wnd as Wind)
 		else:
 			_err("the wind's data did not load: %s" % str(wnd.errors), false)
+	# THE LINES OF FIRE (decision line-of-fire, stage 2; builder LOF2): only when data/sim/line_of_fire.json says `enabled` (it does not: the
+	# switch is Alex's once he has looked at the proofs). Straight rounds then need a line to the target, and their odds come from the share of
+	# the round's spread on what is visible (scripts/sim/combat_lines.gd).
+	var lof_rules := LineOfFireRules.new(LineOfFireRules.PATH, true)
+	if lof_rules.ok() and lof_rules.enabled:
+		attach_lines_of_fire(world, lof_rules)
 	return ids
+
+# Give the World the lines of fire over this scenario's map (populate does it when the data's switch is on; a test or a proof may call it with
+# rules of its own). The grid is the seed's shared one, with the water if the scenario has it. Returns whether it took.
+func attach_lines_of_fire(world: Object, lof_rules: LineOfFireRules = null) -> bool:
+	var lr: LineOfFireRules = lof_rules if lof_rules != null else LineOfFireRules.new()
+	if not lr.ok():
+		_err("the line-of-fire data did not load: %s" % str(lr.errors), false)
+		return false
+	var grid: Object = HeightGrid.shared(seed_value, water())
+	if not grid.ok():
+		_err("the height grid of seed %d did not build: %s" % [seed_value, str(grid.errors)], false)
+		return false
+	var cl := CombatLines.new(grid, lr)
+	world.set_line_of_fire(cl)
+	cl.prebuild(world.units)
+	return true
 
 # The centre of the battle area, for the wind to look for the sea from: the objective's unit, else the mean of where the units start, else the map's centre.
 func _wind_centre(world: Object) -> Vector2:

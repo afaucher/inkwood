@@ -59,11 +59,18 @@ extends RefCounted
 #   by its length; a unit with damage_smoke.enabled false (the stone bridge) leaves none, with no special case here;
 #   a bomb or a shell that lands in WATER (the layer's impact_look, data fx.json impacts.water) is a splash of rings, with no flash, smoke, clods or
 #   crater -- and none to put back for a late joiner.
+#
+# GUNFIRE (builder G3, 2026-10-12; decisions gunfire-looks (G3, the W1 soft puffs), round-model, impact-by-round-and-target, damage-looks): the fire, hit and
+# shell_fire events also go to scripts/ui/gunfire_feed.gd, which looks up the ROUND the weapon fires (data/units weapons[].round -> data/sim/rounds.json) and
+# draws, by what the data lists (data/fx/fx.json gunfire): a muzzle's flash and smoke for cannon rounds, flak shells and the Main Guns' shells, sized by the
+# round's calibre; an impact for a cannon round that lands without destroying (a hit: the target's material; a miss: beside it, water or earth). The bombs'
+# and shells' own impacts are above (B3, the water splash) and are not touched; tracers (T5) and the flak burst (F2) are as they were.
 
 const UiFate = preload("res://scripts/ui/ui_fate.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
 const World = preload("res://scripts/sim/world.gd")
 const FxTracer = preload("res://scripts/fx/fx_tracer.gd")   # (Track TR) FxTracer.feed_event: a fire event becomes the layer's tracer() call
+const GunfireFeed = preload("res://scripts/ui/gunfire_feed.gd")   # (builder G3) a cannon's or a flak gun's muzzle smoke, a cannon round's impact, the Main Guns' salvo
 
 var world: Object = null
 var fx: Variant = null              # the FxLayer (or a fake with its calls)
@@ -74,6 +81,8 @@ var marks: Variant = null           # HitMarks, optional
 # The turn being played, as events (Array of Dictionary): the feed reads ahead in it for where this turn's bombs land
 # (UnitUI sets it). An empty Callable: no lookahead, a bomb is then dropped only from World.bombs_in_flight.
 var lookahead: Callable = Callable()
+
+var gunfire: GunfireFeed = null     # (builder G3, decision gunfire-looks) muzzles and impacts, from the rounds the weapons fire
 
 var _turn: int = 0
 var _frac: Dictionary = {}          # unit id -> health fraction as shown now (0 for a unit that is down)
@@ -87,6 +96,8 @@ func setup(w: Object, effects: Variant, markers: Object, ui_health: RefCounted, 
 	marker_layer = markers
 	health = ui_health
 	style = st
+	gunfire = GunfireFeed.new(self)
+	gunfire.note_world()
 
 # --- The clock -----------------------------------------------------------------------------
 
@@ -107,6 +118,9 @@ func game_time(playing: bool, playback_turn: int, playback_t: float) -> float:
 
 func begin_turn(turn: int) -> void:
 	_turn = turn
+	if gunfire != null:
+		gunfire.begin_turn()
+		gunfire.note_world()   # (reinforcements and a late joiner's units: every unit type of the World is in the round model's weapon index)
 	_frac.clear()
 	_smoke_to.clear()
 	_falling.clear()
@@ -151,17 +165,23 @@ func on_event(ev: Dictionary) -> void:
 				_frac[id] = clampf(float(ev.get("health", 0)) / float(full), 0.0, 1.0)
 			if marks != null:
 				marks.add_hit(id, game_t, int(ev.get("damage", 1)))
+			if gunfire != null:
+				gunfire.on_hit(ev, game_t)   # a cannon round that did not destroy lands as an impact on its target
 		"fire":
 			if marks != null:
 				marks.add_shot(ev, game_t)
 			if not _tracer(ev, game_t):   # a machine gun draws a tracer (Track TR), anything else from the ground at a plane is flak
 				_flak(ev, game_t)
+			if gunfire != null:
+				gunfire.on_fire(ev, game_t)   # a cannon's or a flak gun's muzzle smoke, a missed cannon round's impact
 		"bomb_release":
 			_bomb_drops(ev, turn_no)
 		"bomb_impact":
 			_bomb_impact(ev, game_t)
 		"shell_fire":
 			_shell_flights(ev, turn_no)
+			if gunfire != null:
+				gunfire.on_shell_fire(ev, turn_no, game_t)   # the Main Guns' muzzle smoke, shell by shell
 		"shell_impact":
 			_shell_impact(ev, game_t)
 		"down":
@@ -420,7 +440,7 @@ func _ride(id: String, t: float, game_t: float) -> void:
 		return   # (under the water the fall has no smoke)
 	var ds: Dictionary = u.def.damage_smoke   # (the same engine that smoked before the fall smokes in it: its source, not the airframe's length)
 	fx.falling(id, Vector2(float(s["x"]), float(s["y"])), marker_layer.fall_height_above_ground(s), game_t,
-		float(u.def.size_m), float(s["heading"]), float(ds.get("source_m", -1.0)), float(ds.get("source_back_m", NAN)))
+		float(u.def.size_m), float(s["heading"]), float(ds.get("source_m", -1.0)), float(ds.get("source_back_m", NAN)), float(ds.get("rise_mps", 0.0)))
 
 # Whether this unit's effects may be shown: in the player's sight, or the data allows it.
 func _may_show(id: String) -> bool:

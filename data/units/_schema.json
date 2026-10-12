@@ -17,7 +17,9 @@
     "band": "a value record holding one band id from data/sim/altitude.json",
     "section": "an object whose own fields are listed under 'fields'",
     "points3": "a value record holding a non-empty list of [forward, right, up] points, metres, in the airframe's axes (a weapon's hardpoints)",
-    "list": "a plain list of objects, each validated against 'item_fields' (the weapons); the list is structure, the fields in each item are the tunables"
+    "list": "a plain list of objects, each validated against 'item_fields' (the weapons); the list is structure, the fields in each item are the tunables",
+    "material": "a value record holding one material of the vocabulary in data/sim/rounds.json (metal, stone, wood, earth, water): what a round that lands on the thing hits",
+    "round": "a value record holding one round id of data/sim/rounds.json: what a weapon fires"
   },
   "fields": {
     "id": { "kind": "text", "about": "Unit type id; must equal the file name without .json. The World's units refer to it as their 'type'." },
@@ -36,6 +38,7 @@
         "silhouette": { "kind": "text", "about": "Silhouette id for the drawing layer; chosen from a variant board (design doc, Unit design sheets)." }
       }
     },
+    "material": { "kind": "material", "about": "WHAT THE UNIT IS MADE OF, for what a round does when it hits (builder G3, 2026-10-12; Alex, decisions damage-looks, 'the model makes sense', everything names a material, and gunfire-looks, G3: the materials told apart by lightness). One word of the ONE vocabulary of data/sim/rounds.json (metal, stone, wood, earth, water), the same words the line-of-fire grid's cells and a unit's shape boxes use. The effects feed looks the impact up by this and the round (data/fx/fx.json gunfire); a unit with parts of two materials (a battery's sandbag ring and its guns) names its main one here and each box its own. Every value is PROPOSED (the board's table, variants/gunfire/board.json material_table)." },
     "damage_smoke": {
       "kind": "section",
       "about": "WHAT THE UNIT SMOKES WITH once it is damaged (builder SMOKE, 2026-10-11; Alex, decisions smoke-consistency and impact-by-round-and-target: 'this should probably be a property of either the round or the thing being hit or both', puffs are not sized by the unit's length; the shape is PROPOSED). The effects layer (scripts/fx/fx_layer.gd) leaves a trail of puffs while 0 < health < full; this section is the THING THAT SMOKES: where on the unit the smoke comes from and how big that source is. The puffs are sized by the SOURCE (the engine deck, a funnel), never by the unit's size_m, so a 40 m bridge or a 120 m cruiser does not wear a puff as big as itself. Colour, life and growth stay in data/fx/fx.json (the damage smoke option); this is only the unit's part.",
@@ -43,7 +46,7 @@
         "enabled": { "kind": "bool", "about": "Whether this unit smokes when damaged at all. False for a thing that cannot (a stone bridge: Alex, 'Right now bridges don't have anything, that is fine.'): the effects feed leaves no smoke for it, with no special case in code." },
         "source_m": { "kind": "number", "min": 0, "unit": "m", "about": "The size of the smoke's source: a puff's radius is the option's radius_frac (W1: 0.34 at one pip lost, 0.8 at the last pip) times this. Proposed at 8 m at most (the lead's reading of Alex's 'a small source'); greater than 0 exactly when enabled (unit_def.gd checks)." },
         "source_back_m": { "kind": "number", "min": -100, "unit": "m", "about": "Where the source is along the unit: metres BEHIND its centre on its heading (an engine deck at the rear of a tank, a funnel aft of amidships); negative is ahead of the centre, 0 is the centre." },
-        "rise_mps": { "kind": "number", "min": 0, "unit": "m/s", "about": "How fast a puff climbs after it is born. A rising puff drifts with the wind at its height (data/sim/wind.json profile: faster higher up), so a plume stands over its source and leans downwind as it climbs, as the forest fire's does. 0 for smoke laid along a flight path in the air; the ground and sea units share the smoulder's rate of the wrecks and ruins (data/fx/fx.json crash and ruin smolder rise_mps; test_smoke_consistency holds them equal)." }
+        "rise_mps": { "kind": "number", "min": 0, "unit": "m/s", "about": "How fast a puff climbs after it is born. A rising puff drifts with the wind at its height (data/sim/wind.json profile: faster higher up), so a plume stands over its source and leans downwind as it climbs, as the forest fire's does. Every unit that smokes shares the smoulder's rate of the wrecks and ruins (data/fx/fx.json crash and ruin smolder rise_mps; test_smoke_consistency holds them equal), a plane's trail and its fall trail too (Alex, decision smoke-consistency, 2026-10-12, asked whether planes' trails rise like ground smoke: 'Yes to both'); 0 only for a unit that does not smoke." }
       }
     },
     "shape": {
@@ -55,7 +58,7 @@
           "about": "The unit's boxes, the lowest layer first. A hull then a turret; a battery's sandbag ring then its guns. An empty list would mean a unit nothing can hit, which no unit is.",
           "item_fields": {
             "part": { "kind": "text", "about": "What the box is: 'hull', 'turret', 'body', 'deck', 'sandbags', 'guns'. A report names the visible share by part." },
-            "material": { "kind": "text", "about": "Its material, one of data/sim/line_of_fire.json materials (armour, aircraft, ship, stone, timber, earthworks, ...): what a round that stops on it would strike. Checked by test_line_of_fire." },
+            "material": { "kind": "text", "about": "Its material, one word of the vocabulary of data/sim/rounds.json (metal, stone, wood, earth): what a round that stops on it would strike. Checked by unit_def.gd and test_line_of_fire. A STAMPED box of earth (a sandbag ring) puts the grid's raised-earth cell in the height grid." },
             "kind": { "kind": "enum", "values": ["box", "ring"], "about": "'box': a rectangle length_m long and width_m wide. 'ring': an annulus, length_m its OUTER diameter and width_m its INNER diameter (a sandbag ring seen from above; a full ring, the art's gap is not modelled)." },
             "stamp": { "kind": "bool", "about": "Whether this box is put into the height grid as an obstacle while the unit stands (a static unit's sandbag ring, a bridge's deck: other lines are blocked by it). A mobile unit's box is a target only, so false." },
             "standable": { "kind": "bool", "about": "Whether other units stand ON the stamped box (the bridge's deck: a tank on the bridge stands at the deck's top, not at the river's). Only meaningful with stamp true." },
@@ -96,6 +99,7 @@
       "item_fields": {
         "id": { "kind": "text", "about": "The weapon's id, unique within the unit (combat events name it)." },
         "name": { "kind": "text", "about": "Display name." },
+        "round": { "kind": "round", "about": "What the weapon fires (builder G3, 2026-10-12; Alex, decision round-model: a round per weapon; decision weapon-kinds: what a weapon fires decides its look): a round id of data/sim/rounds.json. The round carries the class, calibre, explosive, path, tracer and blast; the effects feed draws the muzzle smoke, the impact and the tracer from it (data/fx/fx.json gunfire, tracers)." },
         "kind": { "kind": "enum", "values": ["fixed", "flexible", "turret"], "about": "How it is mounted: fixed (points where the nose points), flexible (a gunner aims it within a cone) or turret (a powered mount with a wide arc). Identity, not a number: what it implies for the odds is in rim_odds_factor." },
         "hardpoints": { "kind": "points3", "unit": "m [forward, right, up]", "about": "Where the cone starts: offsets from the unit's centre in the airframe's axes. One or more; each hardpoint rolls on its own, with its own cone." },
         "mount_deg": { "kind": "number", "min": -180, "max": 180, "unit": "deg", "about": "The cone centre's direction relative to the nose, around: 0 forward, 180 rearward, positive to the right (clockwise seen from above)." },

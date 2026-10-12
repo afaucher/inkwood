@@ -29,9 +29,9 @@ Wind: every puff drifts by the wind at its birth time times the integral of the 
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | Damage smoke of a ground or sea unit (tank, mobile AA, tower, battery, complex, cutter, barge, cruiser) | air, under all | **slot**; shadow in shadows | was 0.34-0.8 x `size_m`; now 0.34-0.8 x `damage_smoke.source_m` (3 to 8 m) | was 0; now 4.0 | yes, from the puff's height: it climbs, so it leans about 1.7 times as far in 20 s as a level puff | W1 `smoke.w.white/lgrey/grey`, 3 ages x 3 tones | 24-40 s (5 to 8 turns); one puff every 0.07-0.3 s | at emission (`_may_show` of the unit) | **FIXED**: layer, size, rise |
 | 1a | The same on the bridge | air, under all | none | none: `damage_smoke.enabled` false | none | none | none | none | none | **FIXED**: per-unit switch (Alex: "bridges don't have anything") |
-| 2 | Damage smoke of a plane (light, heavy, bomber) | air, under all | **slot**: over ground units, under every plane | was 0.34-0.8 x the span (9 / 16 / 20 m); now x 8 m for all three | 0 | yes, at its altitude (1.64 at the low band, 2.09 medium, 2.19 high) | W1 | 24-40 s | at emission | **FIXED**: layer, size. Rise 0 **KEPT** (reason below) |
-| 3 | Out-of-control plane's fall trail (`ride`, kind "fall") | air, under all | **slot** | was the span; now the same 8 m engine (`source_m`, `source_back_m`) | 0 | yes, at the fall height | W1 via `select_crash_smoke`; tone 1, intensity 0.5 | 14 s, one per 0.09 s | at emission | **FIXED**: size (no jump at `down_at`); layer. Rise 0 **KEPT** |
-| 4 | Mid-air explosion: smoke burst (9 puffs thrown 16-34 m/s), plume (7) | air, under all | **slot**; the flash flipbook stays in top | the airframe: `size_factor` = (span / 9)^0.75 x 9 m | burst 0, plume 0 | yes | W1 | burst 36 s, plume 40 s | at the event (`_may_show`) | **KEPT**: sized by the whole airframe that blew up (a property of the thing hit); rise 0 shared with the plane's own trail |
+| 2 | Damage smoke of a plane (light, heavy, bomber) | air, under all | **slot**: over ground units, under every plane | was 0.34-0.8 x the span (9 / 16 / 20 m); now x 8 m for all three (Alex 2026-10-12: stays) | was 0; now 4.0 | yes, from its altitude and climbing (1.64 at the low band, 2.09 medium, 2.19 high) | W1 | 24-40 s | at emission | **FIXED**: layer, size, rise. Size and rise are **Alex's** (2026-10-12, 'Yes to both') |
+| 3 | Out-of-control plane's fall trail (`ride`, kind "fall") | air, under all | **slot** | was the span; now the same 8 m engine (`source_m`, `source_back_m`) | was 0; now 4.0 (the engine's `rise_mps`) | yes, at the fall height | W1 via `select_crash_smoke`; tone 1, intensity 0.5 | 14 s, one per 0.09 s | at emission | **FIXED**: size (no jump at `down_at`); layer; rise (the trail it continues climbs, so no jump there either) |
+| 4 | Mid-air explosion: smoke burst (9 puffs thrown 16-34 m/s), plume (7) | air, under all | **slot**; the flash flipbook stays in top | the airframe: `size_factor` = (span / 9)^0.75 x 9 m | burst 0, plume 0 | yes | W1 | burst 36 s, plume 40 s | at the event (`_may_show`) | **KEPT**: sized by the whole airframe that blew up (a property of the thing hit). Rise 0 was 'shared with the plane's own trail'; that trail climbs now, so this is the one plane smoke that does not: **OPEN** (question 6) |
 | 5 | Crash on the ground: smoke burst (10), plume (11), smolder column (60 s of births), scar | air, under all; scar in ground | **slot**; scar in ground | the wreck: `size_factor` of the span | burst 3; plume was 0, now 3; smolder 4 | yes | W1 (crash smoke follows the damage smoke) | burst 40 s, plume 48 s, column puff 26 s | at the event; out of sight only the scar | **FIXED**: layer, plume rise. The rest **KEPT** (the thing hit is the airframe) |
 | 6 | Bomb impact (B3): flash, smoke burst (7), plume (5), clods, crater | air, under all; crater in ground | **slot**; crater in ground | the ROUND's `blast_m` (45 m) x fractions | burst 2; plume was 0, now 2 | yes | W1 | burst 30 s, plume 34 s | the bomber's sight; out of sight only the crater | **FIXED**: layer, plume rise; **in water: a splash and nothing else** |
 | 7 | Cruiser shell impact (the same function) | as 6 | as 6 | the shell's `blast_m` (20 m) | as 6 | as 6 | as 6 | as 6 | the shooter's sight | **FIXED** as 6, a smaller splash in water |
@@ -77,7 +77,7 @@ times as big. A board can pick other numbers: they are `data/units/*.json damage
 2. **Source.** `data/units/*.json damage_smoke` {`enabled`, `source_m`, `source_back_m`, `rise_mps`}, validated by `_schema.json` and
    `unit_def.gd` (a smoking unit has a source above 0; a non-smoking one has 0). `combat_feed.gd` reads it: no unit is a case in code.
 3. **Rise and wind.** One model for all of it: a puff keeps its birth height, climbs at its rise and drifts with the wind at its height
-   (`puff_drift`). Ground and sea damage smoke climbs at 4 m/s, the smolders' rate (`test_smoke_consistency` holds the two numbers equal);
+   (`puff_drift`). Every unit's damage smoke climbs at 4 m/s, the smolders' rate, a plane's trail and its fall trail too (Alex, 2026-10-12, 'Yes to both'; `test_smoke_consistency` holds the numbers equal);
    the plumes of a crash, a bomb and a ruin climb like the burst thrown with them (they did not rise at all; `plume.rise_mps` in every
    option of `fx.json`).
 4. **Bridge.** `damage_smoke.enabled` false. Dust at each hit, cracks and the ruin are open (playtest-3 bridge_smoke 1).
@@ -87,9 +87,11 @@ times as big. A board can pick other numbers: they are `data/units/*.json damage
 
 ## 4. Differences kept, and why (the reason is in the data it lives in)
 
-- **A plane's trail does not climb** (`damage_smoke.rise_mps` 0 in the three planes' files, and the mid-air burst and plume 0): it is laid
-  along a path at its altitude, a low plane already in air 1.64 times the ground's wind, and 4 m/s would lift an old puff by 100 m in its
-  life. This is the one place the ground and the air differ and it is the weakest reason: Alex may want them alike (question 1).
+- **~~A plane's trail does not climb~~ (ENDED, Alex 2026-10-12, 'Yes to both')**: it did not (`damage_smoke.rise_mps` 0 in the three planes' files),
+  for the reason that a low plane is already in air 1.64 times the ground's wind and 4 m/s would lift an old puff by 100 m in its life; that was
+  the weakest reason and the one place the ground and the air differed. A plane's damage trail and its fall trail now climb at 4 m/s, the
+  ground smoke's rate, through the same model (`fx_field.gd puff_drift`); `test_smoke_consistency` holds the rate equal for every unit.
+  What is left of the difference is the mid-air explosion's burst and plume (rise 0): question 6.
 - **Flak is ink, not W1**: Alex chose F2, a dark ragged burst; fire's smoke is white to grey. Flak rises 0.8 m/s.
 - **Forest columns** are in map metres and climb 24 m/s: a tree is map scenery, drawn at the map's scale, and a burning grove is a big hot
   source; a tank's or a wreck's smoke is drawn at the units' own drawn scale because the unit is.
@@ -104,8 +106,9 @@ times as big. A board can pick other numbers: they are `data/units/*.json damage
 
 ## 5. Questions for Alex
 
-1. A plane's damage trail does not climb and a tank's does. Make them alike (the planes' trail rises 4 m/s too) or keep the reason? **Recommend keep**: the planes' look was chosen from the board with no climb, and in a top-down view the climb shows only as a longer lean.
-2. The heavy fighter's and the bomber's trails are now as big as the light fighter's (an engine's smoke, 8 m). Keep, or give them a bigger source? **Recommend keep**.
+1. ~~A plane's damage trail does not climb and a tank's does. Make them alike, or keep the reason?~~ **ANSWERED (Alex, 2026-10-12): 'Yes to both'**: the planes' trails rise like ground smoke (4 m/s). Done.
+2. ~~The heavy fighter's and the bomber's trails are now as big as the light fighter's (an engine's smoke, 8 m). Keep, or give them a bigger source?~~ **ANSWERED (Alex, 2026-10-12): 'Yes to both'**: they stay at 8 m. Done.
 3. Fog and smoke already made. A trail left while you could see the plane stays on the map after the plane flies on out of sight; the forest's columns vanish with the fog (Alex: "No, fog should hide smoke."). Make the trails the same? **Recommend leave**: a trail you saw is a thing you remember, the fire is the tree's own state; the gate is at emission so no trail gives away where an unseen plane flew.
 4. Water impacts are a stand-in (three ink rings). The real look is on the gunfire board (GF); nothing to decide until it is picked.
 5. A damaged bridge could show dust at each hit and cracks (playtest-3 bridge_smoke 1). Not built: Alex said "that is fine" for now.
+6. (new, 2026-10-12, PROPOSED) The mid-air explosion's smoke burst and plume still do not climb (the crash on the ground, a bomb and a ruin do, at 2 to 3 m/s). Its reason was 'the same as the plane's trail', which now climbs. Make it climb like the ground crash's burst (3 m/s)? **Recommend yes**: it is one value per crash option (`midair.smoke_burst.rise_mps` and `midair.plume.rise_mps`, kept equal by test_smoke_consistency).

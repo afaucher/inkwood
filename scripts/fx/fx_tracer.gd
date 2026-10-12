@@ -2,11 +2,12 @@ extends RefCounted
 
 # MACHINE-GUN TRACERS (Track TR, 2026-10-11). Alex's note from the second playtest was "We should show tracers for machine guns"
 # (decision playtest-2); the scope is machine guns only (decision tracers-mg) and the look is his pick from variants/tracers/, T5, an
-# ink streak with a dot for a hit and a tick for a miss (decision tracers-look). STILL PROPOSED: the list of weapon ids that count as
-# machine guns and every number of the options, in data/fx/fx.json `tracers`.
+# ink streak with a dot for a hit and a tick for a miss (decision tracers-look). STILL PROPOSED: every number of the options, in
+# data/fx/fx.json `tracers`. WHICH WEAPONS draw one is the ROUND's tracer flag (builder G3, 2026-10-12, decision round-model: data/sim/rounds.json; a weapon
+# names its round in data/units/*.json), no longer a list of weapon ids here: exactly the weapons that fire the bullet round, as the list was.
 #
 # WHAT IT DRAWS. A "fire" event (scripts/sim/combat.gd: one per roll, with the weapon id, the hardpoint, the muzzle's place x/y,
-# the target's centre tx/ty and whether the roll hit) from a weapon in tracers.weapons gets one tracer: a short-lived line of fire
+# the target's centre tx/ty and whether the roll hit) from a weapon whose round has a tracer gets one tracer: a short-lived line of fire
 # from the gun's hardpoint toward the target. A HIT ends on the target (a point on its airframe, picked by the event); a MISS
 # passes beside it (a lateral offset picked by the event) and carries on a little past. Flak, light flak, the cruiser's shells
 # and bombs are not tracers (they have their own events and looks). Visual only: nothing here is read by the sim.
@@ -28,6 +29,7 @@ extends RefCounted
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 const FxData = preload("res://scripts/fx/fx_data.gd")
 const FxBake = preload("res://scripts/fx/fx_bake.gd")
+const Rounds = preload("res://scripts/sim/rounds.gd")
 
 # --- The call a fire event becomes -------------------------------------------------------------------------------
 
@@ -55,6 +57,7 @@ static func feed_event(fx: Object, ev: Dictionary, game_t: float, centre: Vector
 
 class Book extends RefCounted:
 	var data: FxData
+	var rounds: Rounds = null                # the round model (data/sim/rounds.json): which weapons fire a round with a tracer
 	var cfg: Dictionary = {}                 # fx.json tracers, unwrapped
 	var name: String = ""
 	var opt: Dictionary = {}                 # the selected option, unwrapped
@@ -62,8 +65,9 @@ class Book extends RefCounted:
 	var _seen: Dictionary = {}               # shot id -> true
 	var _next_id: int = 0
 
-	func _init(fx_data: FxData = null) -> void:
+	func _init(fx_data: FxData = null, round_model: Rounds = null) -> void:
 		data = fx_data if fx_data != null else FxData.shared()
+		rounds = round_model if round_model != null else (Rounds.shared() as Rounds)
 		var raw: Variant = data.raw.get("tracers")
 		if raw is Dictionary:
 			cfg = FxData.unwrap(raw)
@@ -93,9 +97,9 @@ class Book extends RefCounted:
 	func enabled() -> bool:
 		return not cfg.is_empty() and bool(cfg.get("enabled", false)) and not opt.is_empty()
 
-	# Whether a weapon id (data/units/*.json weapons[].id) draws a tracer: the list in the data, while tracers are on.
+	# Whether a weapon id (data/units/*.json weapons[].id) draws a tracer: its round's tracer flag (data/sim/rounds.json), while tracers are on.
 	func is_weapon(weapon: String) -> bool:
-		return enabled() and weapon in (cfg.get("weapons", []) as Array)
+		return enabled() and rounds.weapon_tracer(weapon)
 
 	# Whether the fog lets the layer show this shot (the data's policy; the feed says what the player sees).
 	func shown(seen_shooter: bool, seen_target: bool) -> bool:

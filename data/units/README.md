@@ -67,9 +67,10 @@ Every unit file carries `damage_smoke`: `enabled`, `source_m`, `source_back_m`, 
 by this SOURCE (an engine deck, a funnel; at most about 8 m: Alex, 'a property of either the round or the thing being hit or both'),
 never by `size_m`, so a 40 m bridge or a 120 m cruiser does not wear a puff as big as itself. `enabled` false is the stone bridge
 (Alex: 'Right now bridges don't have anything, that is fine.'): the effects feed leaves no smoke for it and has no case for it in code.
-`rise_mps` is how fast a puff climbs (a rising puff drifts with the wind at its height, so the plume leans downwind): 4.0 for ground and
-sea units, the smoulder's rate of the ruins and wrecks, 0 for planes, whose trail is laid along their path (the reason is in each file).
-All values are proposed; the audit that led to them is `docs/proposals/smoke-audit.md`.
+`rise_mps` is how fast a puff climbs (a rising puff drifts with the wind at its height, so the plume leans downwind): 4.0 for every unit,
+the smoulder's rate of the ruins and wrecks. A plane's trail climbed 0 until Alex answered the audit's question 1 (2026-10-12, decision
+smoke-consistency: 'Yes to both'), and the heavy fighter's and the bomber's trails keep the light fighter's 8 m source. The other values
+are proposed; the audit that led to them is `docs/proposals/smoke-audit.md`.
 
 ## The unit's body for lines of fire (builder LOF1, 2026-10-11; decision line-of-fire; PROPOSED)
 
@@ -83,3 +84,15 @@ unit stands (the ring, the bridge's deck; `standable` lets other units stand on 
 `scripts/sim/line_of_fire_shapes.gd` places them in the world and picks the points a line is traced to; combat does not read any of it yet
 (`data/sim/line_of_fire.json` `enabled` false). The bridge deck's top is `data/world/bridges.json` arch.crown_h (6.5 m); `test_line_of_fire`
 holds the two equal.
+
+## What a unit is made of, and what its weapons fire (builder G3, 2026-10-12; decisions round-model, damage-looks, weapon-kinds, gunfire-looks)
+
+Every unit file names a `material` (one word of the ONE vocabulary of `data/sim/rounds.json`: metal, stone, wood, earth, water: what a
+round that lands on the unit hits; the shape boxes and the line-of-fire grid use the same words), and every weapon names its `round`
+(a round id of `data/sim/rounds.json`: its class, calibre, explosive, path, tracer and blast). The effects feed (`scripts/ui/gunfire_feed.gd`)
+draws the muzzle smoke and the impacts from the round and the material (`data/fx/fx.json` `gunfire`), and a weapon draws a tracer when its round
+has one (`tracers` no longer lists weapon ids). Metal: the planes, the tank, the mobile AA, the tower, the cruiser and the cutter; stone:
+the bridge and the military complex; wood: the barge; earth: the AA battery (its sandbag ring; its guns box is metal). The cruiser's Main Guns
+and the bomb drop are specials, so their rounds are named in `rounds.json` `specials`. All of it is proposed except where a record names
+Alex's decision; `test_rounds` holds the tables, `test_unit_defs` refuses a unit with no material or a weapon with no round.
+

@@ -10,6 +10,7 @@
   "health": { "value": 12, "_proposed": true, "_reason": "pips the bombs must take (3 for a hit within 12 m, 2 within 25 m, 1 within 45 m: data/sim/bombs.json): 12 is four direct hits, or a dozen and more near misses, against the tower's 8 and the bridge's 10. The tower dies to a bomber's first stick 62 percent of the time from the low band (7.9 pips on average, strike_tuning.gd table B); MEASURED (scripts/test_support/mission2_unit_tuning.gd table B, a bomber's stick of four on a perfect line at the centre, 300 seeds): from the LOW band 7.9 pips a stick, 2.0 sticks to destroy it on average (destroyed within the bomber's three drops 100 percent of the time, 99 percent with the release half way to the cone's rim, 57 percent at the rim); from the MEDIUM band 4.8 pips a stick, 3.0 sticks (78 percent within three drops on a perfect line, 35 percent half way to the rim); from the HIGH band 1.8 pips a stick, 7.6 sticks (2 percent). The tower (8 pips) is 1.4 sticks low and 2.2 medium: this is about half as much work again" },
   "sight_range_m": { "value": 500, "_proposed": true, "_reason": "guards on the fence and a watch tower on the corner: the radio tower's 500 m. The enemy AI counts what its units see (scripts/sim/ai_sense.gd), including its static units, so this is how far the complex warns the patrol" },
   "drawing": { "silhouette": "military_complex" },
+  "material": { "value": "stone", "_proposed": true, "_reason": "PROPOSED by builder G3 (2026-10-12; the board's table, variants/gunfire/board.json material_table, which Alex's decisions damage-looks, 'the model makes sense', and gunfire-looks, G3, put to use): the compound's stone buildings and walls. Decides what a round that lands on it does (data/fx/fx.json gunfire): stone." },
   "damage_smoke": {
     "enabled": { "value": true, "_proposed": true, "_reason": "the compound's buildings burn when it is hit" },
     "source_m": { "value": 8, "_proposed": true, "_reason": "one building's roof: the top of Alex's 'about 8 m' (the lead's reading), not the 80 m footprint (the complex's destroyed look is sized by its main building too: unit_art_mission2.json ruin.effects_size_frac)" },
@@ -21,7 +22,7 @@
     "boxes": [
         {
           "part": "body",
-          "material": "timber",
+          "material": "stone",
           "kind": "box",
           "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
           "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },

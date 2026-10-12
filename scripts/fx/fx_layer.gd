@@ -113,6 +113,18 @@ extends Node2D
 # unit's SOURCE (data/units damage_smoke), never its length. A round that lands in water makes a splash, not a burst (water_impact; fx.json impacts).
 # docs/proposals/smoke-audit.md lists every smoke, dust and plume source in the game side by side.
 #
+# GUNFIRE (builder G3, 2026-10-12; decision gunfire-looks, Alex: 'G3 W1 soft puffs'; data fx.json gunfire, scripts/fx/fx_gunfire.gd, the records are made by
+# scripts/ui/gunfire_feed.gd from the sim's events):
+#   fx.gunfire_muzzle(shot_id, gun_class, centre, dir, fwd_m, t, height_m, lat_m)
+#       A gun fires: a soft flash and W1 smoke puffs at its muzzle, sized by the round's calibre (gun_class: small, medium, large), drifting with the wind.
+#       `centre` is the shooter's centre, `dir` the world heading it fires along, `fwd_m` and `lat_m` the muzzle's place from the centre along and across
+#       `dir` in the unit's own metres (the drawn scale applies at draw time).
+#   fx.gunfire_impact(shot_id, round_class, material, pos, t, dir, height_m, off)
+#       A round lands without destroying: a mark sized by the round (bullet, small, medium, large) and shaped by the MATERIAL (metal, stone, wood, earth,
+#       water: data/sim/rounds.json); water splashes and never smokes. `off`: a world offset from `pos`, in the unit's own metres.
+#   fx.gunfire_enabled(), fx.gunfire_cfg()    the switch and the feed's settings (fx.json gunfire, unwrapped)
+# They are drawn in the ground pass (scorch, the water's rings), the shadow pass (the puffs' shadows) and the air pass (the flash and the puffs).
+#
 # DETERMINISTIC: every puff, piece and scar comes from (world_seed, unit, game time) alone
 # (fx_field.gd); two runs of the same calls draw the same frames.
 
@@ -129,6 +141,7 @@ const FxBomb = preload("res://scripts/fx/fx_bomb.gd")
 const FxRuin = preload("res://scripts/fx/fx_ruin.gd")
 const FxTracer = preload("res://scripts/fx/fx_tracer.gd")
 const FxFire = preload("res://scripts/fx/fx_fire.gd")
+const FxGunfire = preload("res://scripts/fx/fx_gunfire.gd")
 
 var style: FxStyle = null
 var data: FxData = null
@@ -138,6 +151,10 @@ var field: FxField = null
 var fire: FxFire = null
 # THE WIND (decision coastal-wind): the air all smoke drifts with, or null for each option's own data wind (see set_wind).
 var wind: Object = null
+# THE GUNFIRE (builder G3, decision gunfire-looks): the records of muzzles and impacts and the painter that draws them; null when fx.json has no gunfire.
+var gunfire: FxGunfire.Book = null
+var gunfire_painter: FxGunfire.Painter = null
+var _gunfire_cfg: Dictionary = {}
 var mapping: UiMapping = null
 
 var true_scale: float = 1.0          # the plane's drawn px per metre / the mapping's, set by the host
@@ -180,6 +197,12 @@ func _build() -> void:
 	if fire == null:
 		fire = FxFire.new(data)
 	_ratio = data.common_num("rebake_ratio")
+	_gunfire_cfg = FxGunfire.cfg_from_data(data)
+	if not _gunfire_cfg.is_empty():
+		gunfire = FxGunfire.Book.new(_gunfire_cfg)
+		gunfire.select((_gunfire_cfg["families"] as Dictionary).keys()[0])
+		gunfire.max_records = int(((_gunfire_cfg["game"] as Dictionary).get("limits", {}) as Dictionary).get("max_records", 0))
+		gunfire_painter = FxGunfire.Painter.new(style, data)
 	ground_node = _make_pass("ground")
 	var sg := FxShadowPass.new()
 	sg.name = "Shadows"
@@ -211,6 +234,8 @@ func setup(host_mapping: Variant, world_seed: int = -1) -> void:
 		field.world_seed = world_seed
 	else:
 		field.world_seed = style.scene_seed
+	if gunfire != null:
+		gunfire.world_seed = field.world_seed
 
 func set_mapping(host_mapping: Variant) -> void:
 	mapping = UiMapping.from(host_mapping) as UiMapping
@@ -273,6 +298,31 @@ func water_impact(ground_pos: Vector2, t: float, blast_m: float, unit_id: String
 	var w := data.impact_water()
 	field.add_splash(unit_id, ground_pos, t, maxf(blast_m * float(w["splash_size_frac"]), float(w["splash_min_size_m"])))
 
+# --- Gunfire (builder G3, decision gunfire-looks) -------------------------------------------------------------------------------
+
+func gunfire_enabled() -> bool:
+	_build()
+	return gunfire != null and bool(((_gunfire_cfg["game"] as Dictionary).get("enabled", false)))
+
+# The feed's settings (fx.json gunfire, unwrapped): which rounds, the geometry of a muzzle, where a miss lands, the fog.
+func gunfire_cfg() -> Dictionary:
+	_build()
+	return (_gunfire_cfg.get("game", {}) as Dictionary)
+
+func gunfire_muzzle(shot_id: String, gun_class: String, centre: Vector2, dir: float, fwd_m: float, t: float, height_m: float = 2.0, lat_m: float = 0.0) -> bool:
+	_build()
+	if not gunfire_enabled():
+		return false
+	gunfire.world_seed = field.world_seed
+	return gunfire.add_muzzle(shot_id, gun_class, centre, dir, fwd_m, t, height_m, lat_m)
+
+func gunfire_impact(shot_id: String, round_class: String, material: String, pos: Vector2, t: float, dir: float = 0.0, height_m: float = 0.0, off: Vector2 = Vector2.ZERO) -> bool:
+	_build()
+	if not gunfire_enabled():
+		return false
+	gunfire.world_seed = field.world_seed
+	return gunfire.add_impact(shot_id, round_class, material, pos, t, dir, height_m, off)
+
 # --- Time -----------------------------------------------------------------------------------------------------
 
 func set_time(t: float) -> void:
@@ -292,11 +342,14 @@ func queue_redraws() -> void:
 
 func _process(_delta: float) -> void:
 	# a camera that moves or zooms is followed with no call, as the markers are
-	if mapping != null and mapping.is_live() and (_anything() or _tracers_live()):
+	if mapping != null and mapping.is_live() and (_anything() or _tracers_live() or _gunfire_live()):
 		queue_redraws()
 
 func _tracers_live() -> bool:   # (Track TR) a tracer in flight moves with the camera too
 	return field.tracers != null and field.tracers.live_count(now) > 0
+
+func _gunfire_live() -> bool:   # (builder G3) a muzzle's smoke or an impact in its life moves with the camera too
+	return gunfire != null and gunfire.live_count(now) > 0
 
 func _anything() -> bool:
 	return fire.active() or not (field.puffs.is_empty() and field.bursts.is_empty() and field.scars.is_empty() and field.debris.is_empty() and field.riders.is_empty() \
@@ -315,9 +368,9 @@ func emit_path(unit_id: String, sampler: Callable, t0: float, t1: float, health_
 	return field.emit_path(unit_id, sampler, t0, t1, health_fraction, size_m, back_m, rise_mps)
 
 # `source_m` and `back_m`: the same source the plane smoked from before it fell (size_m is then only the airframe's: the flame and the embers).
-func falling(unit_id: String, world_pos: Vector2, height_m: float, t: float, size_m: float = 9.0, heading: float = NAN, source_m: float = -1.0, back_m: float = NAN) -> int:
+func falling(unit_id: String, world_pos: Vector2, height_m: float, t: float, size_m: float = 9.0, heading: float = NAN, source_m: float = -1.0, back_m: float = NAN, rise_mps: float = 0.0) -> int:
 	_build()
-	return field.ride(unit_id, world_pos, height_m, t, size_m, heading, source_m, back_m)
+	return field.ride(unit_id, world_pos, height_m, t, size_m, heading, source_m, back_m, rise_mps)
 
 func explode_midair(unit_id: String, world_pos: Vector2, height_m: float, t: float, size_m: float = 9.0, heading: float = NAN) -> void:
 	_build()
@@ -404,6 +457,8 @@ func set_wind(w: Object) -> void:
 	wind = w
 	field.wind = w
 	fire.set_wind(w)
+	if gunfire != null:
+		gunfire.set_wind(w)
 	queue_redraws()
 
 # The game ends or restarts: every puff, burst, piece and scar goes. The baked art stays
@@ -412,6 +467,8 @@ func clear() -> void:
 	_build()
 	field.clear()
 	fire.clear()
+	if gunfire != null:
+		gunfire.clear()
 	now = 0.0
 	queue_redraws()
 
@@ -422,10 +479,13 @@ func release_art() -> void:
 	_bomb_sets.clear()
 	_drop_sets.clear()
 	_ruin_sets.clear()
+	if gunfire_painter != null:
+		gunfire_painter.release()
 
 func stats() -> Dictionary:
 	var c := field.counts()
 	c["fire_trees"] = fire.tree_count() if fire != null else 0
+	c["gunfire"] = gunfire.records.size() if gunfire != null else 0
 	c["baked_sets"] = _puff_sets.size() + _burst_sets.size() + _parts_sets.size() + _bomb_sets.size() + _drop_sets.size() + _ruin_sets.size()
 	c["bakes"] = _bakes
 	c["bake_ms"] = _bake_ms
@@ -570,16 +630,25 @@ func draw_pass(item: CanvasItem, kind: String) -> void:
 	match kind:
 		"ground":
 			_draw_ground(item, view)
+			_draw_gunfire(item, "ground")
 		"shadows":
 			if show_shadows:
 				_draw_shadows(item, view)
 				fire.draw_shadows(self, item, view)
+				_draw_gunfire(item, "shadows")
 		"air":
 			_draw_air(item, view)
 			fire.draw_air(self, item, view)
+			_draw_gunfire(item, "air")
 		"top":
 			_draw_top(item, view)
 	item.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+# The muzzles and impacts of one pass (fx_gunfire.gd Painter): "ground" (scorch, the water's rings), "shadows" (the puffs' ground shadows), "air".
+func _draw_gunfire(item: CanvasItem, which: String) -> void:
+	if gunfire == null or gunfire_painter == null or gunfire.records.is_empty():
+		return
+	gunfire_painter.draw(item, gunfire, mapping, true_scale, now, Rect2(Vector2.ZERO, get_viewport_rect().size), which)
 
 # Draws `tex` with its `origin` at `pos`, rotated and scaled, tinted.
 func _blit(item: CanvasItem, tex: Texture2D, origin: Vector2, pos: Vector2, rot: float, sc: float, mod: Color) -> void:

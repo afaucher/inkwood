@@ -201,7 +201,12 @@ mixed-warfare): water is generated per seed (`scripts/world/water_gen.gd`,
 - Lines of fire (decision line-of-fire, stage 1): `scripts/sim/height_grid*.gd` builds a
   1 m height-and-material grid per chunk from the seed; `scripts/sim/line_of_fire.gd` walks
   straight lines across it (`trace`, `exposure`; tree canopies thin; units' `shape.boxes`).
-  Combat does not read it yet (`data/sim/line_of_fire.json` enabled false; `test_line_of_fire`).
+  Stage 2 (`combat_lines.gd`, `line_of_fire_odds.gd`): odds from the visible share and the
+  round's spread, misses landing with a material, a hidden target held; ALL behind
+  `data/sim/line_of_fire.json` enabled (false: off changes no event; `test_line_of_fire_combat`).
+- Every weapon names its round (`data/sim/rounds.json`: class, calibre, explosive, path, tracer)
+  and every unit its material (metal, stone, wood, earth, water); the effects read both
+  (decisions round-model, gunfire-looks; `test_rounds`, `test_gunfire`).
 - The Style guide is the design doc's "Style guide" tab: read it before drawing
   anything new.
 Work on a track stays inside the folders it owns and reads other tracks' data

@@ -25,6 +25,7 @@ const FxLayer = preload("res://scripts/fx/fx_layer.gd")
 const UiMapping = preload("res://scripts/ui/ui_mapping.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const CombatFeed = preload("res://scripts/ui/combat_feed.gd")
+const Rounds = preload("res://scripts/sim/rounds.gd")
 
 const SEED := 20261009
 # decision weapon-kinds (Alex, 2026-10-11): what a weapon fires decides its look. quad_mg (the mobile AA's quad mount) and deck_mg (the cutter's
@@ -188,17 +189,24 @@ func _check_data() -> void:
 	var scope: Dictionary = (raw as Dictionary).get("scope", {})
 	eq(str(scope.get("decision", "")), "tracers-mg", "the scope is Alex's decision tracers-mg")
 	check(str(scope.get("_decided", "")).contains("Tracers for mg only for now"), "...with his words")
-	var wrec: Dictionary = (raw as Dictionary).get("weapons", {})
-	check(str(wrec.get("_reason", "")).contains("Tracers for mg only for now"), "the weapon list's reason quotes Alex's scope")
-	check(wrec.get("_proposed") == true, "the weapon list (which ids are machine guns) is a proposal")
+	# WHICH WEAPONS draw a tracer is the ROUND's flag now (builder G3, 2026-10-12, decision round-model; data/sim/rounds.json), not a list in fx.json
+	check(not (raw as Dictionary).has("weapons"), "fx.json tracers no longer lists weapon ids: the round's tracer flag decides")
+	var rm := Rounds.shared() as Rounds
+	check(rm.ok(), "the round model loads: %s" % str(rm.errors))
+	for rid: String in rm.round_ids():
+		var tr_rec: Dictionary = (((JSON.parse_string(FileAccess.get_file_as_string(Rounds.PATH)) as Dictionary)["rounds"] as Dictionary)[rid] as Dictionary)["tracer"]
+		check(str(tr_rec.get("decision", "")) == "tracers-mg" or str(tr_rec.get("_reason", "")).contains("Tracers for mg only for now"), "round %s: its tracer flag quotes Alex's scope (decision tracers-mg)" % rid)
+		eq(rm.round_of(rid).tracer, rid == "bullet", "round %s: only the bullet draws a tracer (machine guns only, for now)" % rid)
 	var book := _book()
 	check(book.enabled(), "tracers are on in the working data")
-	var weapons: Array = book.cfg.get("weapons", [])
+	var weapons: Array = rm.tracer_weapons()
 	var sorted_w := weapons.duplicate()
 	sorted_w.sort()
 	var want := MG_WEAPONS.duplicate()
 	want.sort()
-	eq(sorted_w, want, "the machine guns (and only they) are listed")
+	eq(sorted_w, want, "the machine guns (and only they) draw tracers: the same weapons as the old list")
+	for w: String in MG_WEAPONS:
+		check(book.is_weapon(w), "'%s' draws a tracer through the book" % w)
 	for w: String in NOT_TRACER:
 		check(not book.is_weapon(w), "'%s' draws no tracer" % w)
 	var have := _unit_weapon_ids()
@@ -207,11 +215,15 @@ func _check_data() -> void:
 	for w: String in NOT_TRACER:
 		check(w in have, "'%s' (no tracer) exists on some unit too: the test is about a real weapon (data/units)" % w)
 	check(not ("aa_guns" in have) and not ("aa_guns" in weapons), "the old shared id aa_guns is gone from the units and from the list (weapon-kinds)")
-	# nothing in the code keys on a class or kind: adding the tank's gun is one id in the list
+	# nothing in the code keys on a class or kind: giving the tank's round a tracer is one flag in rounds.json
 	var b2 := _book()
 	check(not b2.is_weapon("turret_gun"), "the tank's gun is not a tracer weapon today")
-	(b2.cfg["weapons"] as Array).append("turret_gun")
-	check(b2.is_weapon("turret_gun"), "...and one id in the data list makes it one (no code change)")
+	var changed: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(Rounds.PATH))
+	((changed["rounds"] as Dictionary)["cannon_medium"] as Dictionary)["tracer"]["value"] = true
+	var rm2 := Rounds.new(changed, true)
+	check(rm2.ok(), "a round model with the tank's round tracing loads")
+	var b3 := FxTracer.Book.new(_data, rm2)
+	check(b3.is_weapon("turret_gun") and b3.is_weapon("wing_guns") and not b3.is_weapon("nose_cannon"), "...and one flag in the data makes it one (no code change), and no other cannon")
 	# options
 	eq(book.option_names(), ["T1", "T2", "T3", "T4", "T5"], "five proposed options")
 	check(book.cfg["options"].has(_data.working_default("tracers")), "the working default is one of them")

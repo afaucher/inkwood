@@ -136,7 +136,7 @@ static func case_house(scene: ProbeScene, title: String, notes: Array) -> Dictio
 		for bx: Dictionary in exp["boxes"]:
 			for ln: Dictionary in bx["lines"]:
 				any_line = true
-				if not bool(ln["reach"]) and ln["stop"]["material_name"] != "timber":
+				if not bool(ln["reach"]) and ln["stop"]["material_name"] != "wood":
 					only_house = false
 		if any_line and only_house and float(exp["share"]) < 0.001:
 			return cs
@@ -177,7 +177,7 @@ static func case_sandbags(scene: ProbeScene, title: String, notes: Array) -> Dic
 		var clean := true
 		for bx: Dictionary in cs["targets"][0]["exposure"]["boxes"]:
 			for ln: Dictionary in bx["lines"]:
-				if not bool(ln["reach"]) and ln["stop"]["material_name"] != "earthworks":
+				if not bool(ln["reach"]) and ln["stop"]["material_name"] != "earth":
 					clean = false
 		if clean:
 			return cs
@@ -238,3 +238,23 @@ static func case_hill(scene: ProbeScene, title: String, notes: Array, scarp: Dic
 	var cs := scene.make_case(title, notes + ["a %.0f m scarp %.0f m ahead of the gun; at 120 m a plane is hidden beyond %.0f m (the muzzle at %.1f m)" % [H, lead, d_edge, mz[2]]],
 		"aa_mobile", ["fighter_near", "fighter_far"], ["low-band plane, %.0f m" % near_d, "low-band plane, %.0f m" % far_d], maxf(1.2, 1300.0 / (far_d + 40.0)), 5.0)
 	return cs
+
+# --- a3: beside the low bridge's parapet (stage 2, builder LOF2) ----------------------------------------------------------------
+
+# Hold the bridge's low bridge: a gun on the bank (really the river's line: the probe world is given no water for the placement, as a tank cannot
+# stand in a river) `gun_m` metres off one side of the bridge, a tank on the deck 3 m the other side of the axis (its front 1 m behind the near
+# parapet, 1 m of stone). The hull's lower rows are behind the parapet; its upper rows and the turret are over it.
+static func case_parapet(scene: ProbeScene, gun_m: float, title: String, notes: Array) -> Dictionary:
+	var site: Dictionary = scene.water.sites()["bridge"]
+	if not scene.world.units.has("bridge_1"):
+		scene.add("bridge_1", "bridge", site["pos"], float(site["heading"]))
+	var bp: Vector2 = site["pos"]
+	var hd: float = site["heading"]
+	var across := Vector2(-sin(hd), cos(hd))
+	var gun_at := bp + across * gun_m
+	var tgt_at := bp + across * 3.0
+	scene.world.set_water(Callable())
+	scene.add("tank_gun_par", "tank", gun_at, (tgt_at - gun_at).angle())
+	scene.add("tank_deck_par", "tank", tgt_at, (gun_at - tgt_at).angle())
+	scene.world.set_water(Callable(scene.water, "depth_at"))
+	return scene.make_case(title, notes, "tank_gun_par", ["tank_deck_par"], ["enemy tank on the deck, behind the parapet"], maxf(2.0, 1100.0 / (gun_m + 24.0)), 40.0)

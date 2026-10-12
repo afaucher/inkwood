@@ -1,10 +1,10 @@
 {
-  "_about": "LINES OF FIRE, STAGE 1 (decision line-of-fire, builder LOF1, 2026-10-11): the height grid and the line check (scripts/sim/height_grid.gd, height_grid_build.gd, line_of_fire.gd, line_of_fire_shapes.gd read this through scripts/sim/line_of_fire_rules.gd). ALEX'S (decision line-of-fire, option b): real lines of fire against every blocker's height; trees THIN (a chance per canopy to stop a round); hull-down with TWO layers, hull and turret; a target that is fully hidden is HELD ('otherwise we would just mow down anything in between on purpose'); the same line check between planes and the ground (hills can block the low band). THE METHOD (agreed): 2.5D. A straight line is walked across a grid of top heights; nothing is a 3D mesh. EVERYTHING BELOW IS PROPOSED by builder LOF1 (cell size, block size, tree band, tree chance, sample counts): none is Alex's. STAGE 1 DOES NOT FIRE ANYTHING: 'enabled' is false and nothing in combat reads this file; stage 2 (the odds, the misses and the combat hook) will. Record shape as data/sim/bombs.json: {value, _proposed, _reason}. Metres.",
+  "_about": "LINES OF FIRE, STAGE 1 (decision line-of-fire, builder LOF1, 2026-10-11): the height grid and the line check (scripts/sim/height_grid.gd, height_grid_build.gd, line_of_fire.gd, line_of_fire_shapes.gd read this through scripts/sim/line_of_fire_rules.gd). ALEX'S (decision line-of-fire, option b): real lines of fire against every blocker's height; trees THIN (a chance per canopy to stop a round); hull-down with TWO layers, hull and turret; a target that is fully hidden is HELD ('otherwise we would just mow down anything in between on purpose'); the same line check between planes and the ground (hills can block the low band). THE METHOD (agreed): 2.5D. A straight line is walked across a grid of top heights; nothing is a 3D mesh. EVERYTHING BELOW IS PROPOSED by builder LOF1 (cell size, block size, tree band, tree chance, sample counts): none is Alex's. STAGE 2 (builder LOF2, 2026-10-12; Alex: 'proceed with stage 2') HOOKED COMBAT TO IT behind 'enabled' (false: play does not change until Alex has looked at the proofs): see the 'odds' and 'targets' sections, scripts/sim/combat_lines.gd, line_of_fire_odds.gd and the resolver's use_lines branch. Record shape as data/sim/bombs.json: {value, _proposed, _reason}. Metres.",
 
   "enabled": {
     "value": false,
     "_proposed": true,
-    "_reason": "Stage 1 builds the grid, the line check and two proofs only. Combat does not read the grid or the check; stage 2 switches this on when the hook lands"
+    "_reason": "The switch of stage 2: false, so combat is exactly what it was (byte for byte: the same events from eight seeded runs before and after the hook). With true, SandboxScenario.populate gives the World the lines of fire (World.set_line_of_fire): straight rounds (the weapons in odds.weapons) need a line to the target and take their odds from the visible share. Alex flips it once he has looked at the proofs (tmp/lof2/)"
   },
 
   "grid": {
@@ -21,9 +21,9 @@
   },
 
   "materials": {
-    "value": ["ground", "water", "stone", "timber", "earthworks", "trees", "armour", "aircraft", "ship"],
+    "value": ["earth", "water", "stone", "wood", "earth", "wood", "metal"],
     "_proposed": true,
-    "_reason": "The material ids, by index. The first five are the grid cell's (ground, water, stone for walls and the bridge, timber for houses, earthworks for the sandbags); 'trees' is a canopy's, never a cell's; armour, aircraft and ship are a unit box's, named as the damage-looks table names its materials (decision damage-looks, proposed table). Later stages draw an impact by round x material (decision impact-by-round-and-target). The code fixes the first six positions and checks them on load"
+    "_reason": "The cell kinds, by id, each named in THE ONE VOCABULARY for what a round hits (data/sim/rounds.json vocabulary.materials: metal, stone, wood, earth, water; builder G3, 2026-10-12, so the grid, a unit's boxes and a unit's material say the same words; this renamed ground to earth, timber to wood, earthworks to earth, and merged armour, aircraft and ship into metal). Two kinds can share a name because they differ in what they are, not in what a round hits: id 0 is open ground (earth) and id 4 the sandbags and earthworks (raised earth: a vehicle is driven over open ground and stands on top of it, but it stands UNDER a sandbag cell), id 3 a house (wood) and id 5 a tree's canopy (wood, never a cell). Ids: 0 open ground, 1 water, 2 stone (walls, the bridge), 3 house, 4 raised earth, 5 canopy, 6 metal (a unit box only; no cell is metal). The code fixes the first six and checks them on load; the names must be in the vocabulary. `material_id(name)` is the first id of a name (earth is 0, wood is 3); a STAMPED box of earth puts id 4 in the grid (rules.stamp_id)"
   },
 
   "scenery": {
@@ -33,11 +33,11 @@
       "_reason": "the village's walls (the compound's ring and divider) are stone (the damage-looks table: stone = the bridge, walls)"
     },
     "house_material": {
-      "value": "timber",
+      "value": "wood",
       "_proposed": true,
-      "_reason": "the village's houses are timber (the damage-looks table: timber = houses)"
+      "_reason": "the village's houses are wood (the damage-looks table: timber = houses; renamed to the round model's word, data/sim/rounds.json)"
     },
-    "_heights_from": "NOT A TUNABLE, A NOTE: a wall's and a house's height is the structure's own `h` (scripts/world/structures.gd sync_struct: wall_height and house_size x 0.9, in map px) divided by the map scale, and a tree's is the tree's own `h` (scene_gen.gd sync_tree) over the scale. So whatever the scenery-heights board decides, once it is live in those two lines, flows into the grid with no change here"
+    "_heights_from": "NOT A TUNABLE, A NOTE: a wall's and a house's height is the structure's own `h` (scripts/world/structures.gd sync_struct: wall_height, and house_size x house_height_ratio, in map px) divided by the map scale, and a tree's is the tree's own `h` (scene_gen.gd sync_tree, scaled and held to the tree height window) over the scale. Decision scenery-heights (Alex: 'S1 real heights') is live in those lines (2026-10-12): houses about 6 to 8 m, the compound's walls 1.1 to 2.5 m, trees 8 to 20 m, and it flowed into the grid with no change here (test_scenery_heights holds it)"
   },
 
   "water": {
@@ -73,9 +73,9 @@
 
   "sampling": {
     "row_spacing_m": {
-      "value": 0.5,
+      "value": 0.3,
       "_proposed": true,
-      "_reason": "a box is sampled in rows this far apart, up its height (a hull 1.5 m high gets 3 rows, a turret 0.8 m gets 2), each row at the middle of its slice"
+      "_reason": "STAGE 2 (builder LOF2): the rows of a box are about this far apart, SPREAD from just under its top to just over its bottom (row_edge_inset_m), so the top band is always looked at. Stage 1 put them at the middle of equal slices (0.5 m: a hull 1.5 m high got rows at 0.25, 0.75 and 1.25), and its finding was that a 1.35 m wall hid every row of a 1.5 m hull. Now a hull 1.5 m high gets 6 rows (0.05 to 1.45 m), a turret 0.8 m gets 4, and a row's WEIGHT is the band it stands for (the trapezoid rule), so a wall at 1.35 m leaves the top row and its 0.1 of the hull in view. Cost: a tank seen broadside is about 40 lines, an exposure about 1 ms"
     },
     "col_spacing_m": {
       "value": 1.0,
@@ -83,14 +83,140 @@
       "_reason": "and in columns this far apart across the silhouette (a 3 m wide hull gets 3 columns), each at the middle of its slice"
     },
     "max_rows": {
-      "value": 3,
+      "value": 6,
       "_proposed": true,
-      "_reason": "at most this many rows per box, so a 10 m tall radio tower or a bomber is not 20 lines"
+      "_reason": "at most this many rows per box, so a 25 m tall radio tower or a bomber is not 60 lines (was 3 in stage 1, when the rows were equal slices)"
+    },
+    "row_edge_inset_m": {
+      "value": 0.05,
+      "_proposed": true,
+      "_reason": "STAGE 2 (builder LOF2): the first and the last row of a box stand this far inside its bottom and its top: a row exactly at the bottom would be a line into the ground the box stands on, and one exactly at the top a line along the edge of a wall of the same height"
     },
     "max_cols": {
       "value": 5,
       "_proposed": true,
       "_reason": "at most this many columns per box. A tank seen end on is 3 rows x 4 columns for the hull and 2 x 3 for the turret, 18 lines; a bomber 5 x 3 = 15"
+    }
+  },
+
+  "targets": {
+    "not_targets": {
+      "value": ["deck"],
+      "_proposed": true,
+      "_reason": "STAGE 2 (builder LOF2): the parts of a unit that are never aimed at: the low bridge's deck (a level surface at the banks' height, with no side to hit; the parapets are the bridge as a target). A part is named here, not marked in each unit's file, so no unit file needs a new field"
+    }
+  },
+
+  "odds": {
+    "_about": "STAGE 2 (builder LOF2, decision line-of-fire, 'proceed with stage 2'; Alex on tank accuracy: 'yes but directly impacts 9'). THE MODEL, PROPOSED: for a STRAIGHT round (bullets and cannon: a weapon named in 'weapons' below; the arcs and the air bursts keep their old rules) the chance of a hit per roll is the SHARE OF THE ROUND'S SPREAD THAT FALLS ON THE TARGET'S VISIBLE PARTS. The spread is a two-dimensional normal distribution about the aim point, in the plane across the line of fire, with a standard deviation of (the weapon's angular spread) x (the distance): s = spread_mrad / 1000 x metres. The target's silhouette is cut into the cells the sample lines are traced to (columns across, rows up each box, hull and turret apart); a cell is VISIBLE if its line reaches it (nothing in the height grid, no tree that rolled to stop it); the chance is the sum, over the visible cells, of the share of the normal curve that falls in the cell. Range and size come out of it: a far or small target takes a smaller share of the curve (decision tank-accuracy: accuracy falls with range and rises with the target's size), a tank behind a wall shows only its turret and takes the share on the turret, and a target with NO visible cell is HELD (not fired on: Alex, 'Hold, otherwise we would just mow down anything in between on purpose'). THE OLD FACTORS: base_hit_chance is replaced by this share for these weapons (it stays the calibration: each spread is set so that a still, fully exposed target at the weapon's typical range, seen from every side, takes the weapon's old base_hit_chance); the centre (aim quality in the cone), range (the fringe past the effective range) and crossing_rate (the target's motion) factors stay, multiplied on. A weapon not in 'weapons' (flak) is unchanged. Alex's words and decisions are in decisions.json (line-of-fire, tank-accuracy); every number below is PROPOSED.",
+    "aim": {
+      "value": "visible_centroid",
+      "_proposed": true,
+      "_reason": "Where the gunner aims on the target: the centroid of the parts he can see (a tank behind a wall is aimed at by its turret, and the rounds that fall short land in the wall). The other setting, silhouette_centre, aims at the middle of the whole target as the old model did (a hull-down tank is then hit much less)"
+    },
+    "landing_attempts": {
+      "value": 64,
+      "_proposed": true,
+      "_reason": "A round that MISSED is drawn from its own spread again and again until the draw falls outside the visible parts (rejection sampling, bounded: the loop is never open). At most this many draws; a spread wholly inside the visible parts (close range) would otherwise take for ever, and then the round is placed just outside the silhouette"
+    },
+    "miss_run_m": {
+      "value": 500.0,
+      "_proposed": true,
+      "_reason": "A round that missed flies on from the point where it passed the target and is followed this far, to the first thing it meets (a cell's top, a canopy, the ground or the water). If it meets nothing in that run (a round aimed up at a plane) it is reported as lost in the air at the end of the run"
+    },
+    "landing_salt": {
+      "value": 7710041,
+      "_proposed": true,
+      "_reason": "Mixed into the seed of the stream a round's landing is drawn from. The stream is the roll's own (the combat seed of that hardpoint, that tick and that roll, through this salt): NO number is ever drawn from the combat dice for it (CLAUDE.md: combat seeds every roll from the shooter's index, so an extra draw would reshuffle every later roll)"
+    },
+    "roll_key_salt": {
+      "value": 31337,
+      "_proposed": true,
+      "_reason": "Mixed into the key the trees' rolls on one shot's lines are made from (scripts/sim/line_of_fire.gd canopy_roll), so that the same canopy is not stopped by the same dice in every shot"
+    },
+    "weapons": {
+      "_about": "The straight rounds: every weapon whose round has the path 'straight' in data/sim/rounds.json (bullets and cannon rounds) is listed here, and no other (test_line_of_fire_combat holds both). spread_mrad: the angular spread (the standard deviation, milliradians) of the round about the aim, SET BY scripts/test_support/lof_calibrate.gd so that the reference case, a still, fully exposed target of the named type at the typical range, seen from eight sides (every 45 degrees) and at the elevation given, takes the old base_hit_chance (reference.odds, held equal to the weapon's own by the test). The typical ranges are PROPOSED (the lead's reading of how each weapon is used; Alex said the tank gun's is about 200 m).",
+      "turret_gun": {
+        "spread_mrad": { "value": 17.67, "_proposed": true, "_reason": "CALIBRATED by scripts/test_support/lof_calibrate.gd (builder LOF2, 2026-10-12): at this spread a still, fully exposed target of the reference type at the reference range, seen from eight sides, takes the old base_hit_chance (reference.odds). The spread is PROPOSED; the reference case is the lead's reading of how the weapon is used" },
+        "reference": {
+          "target": { "value": "tank", "_proposed": true, "_reason": "a tank against a tank" },
+          "range_m": { "value": 200.0, "_proposed": true, "_reason": "about 200 m (the lead's brief; its effective range is 350 m)" },
+          "elevation_deg": { "value": 0.0, "_proposed": true, "_reason": "level" },
+          "odds": { "value": 0.12, "_proposed": true, "_reason": "the tank gun's base_hit_chance today (data/units/tank.json), flat to 350 m" }
+        }
+      },
+      "wing_guns": {
+        "spread_mrad": { "value": 22.49, "_proposed": true, "_reason": "CALIBRATED by scripts/test_support/lof_calibrate.gd (builder LOF2, 2026-10-12): at this spread a still, fully exposed target of the reference type at the reference range, seen from eight sides, takes the old base_hit_chance (reference.odds). The spread is PROPOSED; the reference case is the lead's reading of how the weapon is used" },
+        "reference": {
+          "target": { "value": "light_fighter", "_proposed": true, "_reason": "a fighter against a fighter" },
+          "range_m": { "value": 200.0, "_proposed": true, "_reason": "about 200 m of its 450 m" },
+          "elevation_deg": { "value": 0.0, "_proposed": true, "_reason": "level" },
+          "odds": { "value": 0.14, "_proposed": true, "_reason": "the wing guns' base_hit_chance today (data/units/light_fighter.json)" }
+        }
+      },
+      "nose_cannon": {
+        "spread_mrad": { "value": 20.47, "_proposed": true, "_reason": "CALIBRATED by scripts/test_support/lof_calibrate.gd (builder LOF2, 2026-10-12): at this spread a still, fully exposed target of the reference type at the reference range, seen from eight sides, takes the old base_hit_chance (reference.odds). The spread is PROPOSED; the reference case is the lead's reading of how the weapon is used" },
+        "reference": {
+          "target": { "value": "bomber", "_proposed": true, "_reason": "the heavy fighter hunts bombers" },
+          "range_m": { "value": 250.0, "_proposed": true, "_reason": "about 250 m of its 600 m" },
+          "elevation_deg": { "value": 0.0, "_proposed": true, "_reason": "level" },
+          "odds": { "value": 0.3, "_proposed": true, "_reason": "the nose cannon's base_hit_chance today (data/units/heavy_fighter.json)" }
+        }
+      },
+      "rear_gunner": {
+        "spread_mrad": { "value": 31.33, "_proposed": true, "_reason": "CALIBRATED by scripts/test_support/lof_calibrate.gd (builder LOF2, 2026-10-12): at this spread a still, fully exposed target of the reference type at the reference range, seen from eight sides, takes the old base_hit_chance (reference.odds). The spread is PROPOSED; the reference case is the lead's reading of how the weapon is used" },
+        "reference": {
+          "target": { "value": "light_fighter", "_proposed": true, "_reason": "the gunner shoots at the fighter on its tail" },
+          "range_m": { "value": 200.0, "_proposed": true, "_reason": "about 200 m of its 350 m" },
+          "elevation_deg": { "value": 0.0, "_proposed": true, "_reason": "level" },
+          "odds": { "value": 0.08, "_proposed": true, "_reason": "the rear gunner's base_hit_chance today (data/units/heavy_fighter.json)" }
+        }
+      },
+      "nose_gun": {
+        "spread_mrad": { "value": 31.33, "_proposed": true, "_reason": "CALIBRATED by scripts/test_support/lof_calibrate.gd (builder LOF2, 2026-10-12): at this spread a still, fully exposed target of the reference type at the reference range, seen from eight sides, takes the old base_hit_chance (reference.odds). The spread is PROPOSED; the reference case is the lead's reading of how the weapon is used" },
+        "reference": {
+          "target": { "value": "light_fighter", "_proposed": true, "_reason": "a fighter at the bomber's nose" },
+          "range_m": { "value": 200.0, "_proposed": true, "_reason": "about 200 m of its 350 m" },
+          "elevation_deg": { "value": 0.0, "_proposed": true, "_reason": "level" },
+          "odds": { "value": 0.08, "_proposed": true, "_reason": "the bomber's nose gun base_hit_chance today (data/units/bomber.json)" }
+        }
+      },
+      "dorsal_turret": {
+        "spread_mrad": { "value": 31.33, "_proposed": true, "_reason": "CALIBRATED by scripts/test_support/lof_calibrate.gd (builder LOF2, 2026-10-12): at this spread a still, fully exposed target of the reference type at the reference range, seen from eight sides, takes the old base_hit_chance (reference.odds). The spread is PROPOSED; the reference case is the lead's reading of how the weapon is used" },
+        "reference": {
+          "target": { "value": "light_fighter", "_proposed": true, "_reason": "a fighter above and behind the bomber" },
+          "range_m": { "value": 200.0, "_proposed": true, "_reason": "about 200 m of its 400 m" },
+          "elevation_deg": { "value": 0.0, "_proposed": true, "_reason": "level" },
+          "odds": { "value": 0.08, "_proposed": true, "_reason": "the dorsal turret's base_hit_chance today (data/units/bomber.json)" }
+        }
+      },
+      "tail_turret": {
+        "spread_mrad": { "value": 31.33, "_proposed": true, "_reason": "CALIBRATED by scripts/test_support/lof_calibrate.gd (builder LOF2, 2026-10-12): at this spread a still, fully exposed target of the reference type at the reference range, seen from eight sides, takes the old base_hit_chance (reference.odds). The spread is PROPOSED; the reference case is the lead's reading of how the weapon is used" },
+        "reference": {
+          "target": { "value": "light_fighter", "_proposed": true, "_reason": "a fighter on the bomber's tail" },
+          "range_m": { "value": 200.0, "_proposed": true, "_reason": "about 200 m of its 400 m" },
+          "elevation_deg": { "value": 0.0, "_proposed": true, "_reason": "level" },
+          "odds": { "value": 0.08, "_proposed": true, "_reason": "the tail turret's base_hit_chance today (data/units/bomber.json)" }
+        }
+      },
+      "quad_mg": {
+        "spread_mrad": { "value": 21.08, "_proposed": true, "_reason": "CALIBRATED by scripts/test_support/lof_calibrate.gd (builder LOF2, 2026-10-12): at this spread a still, fully exposed target of the reference type at the reference range, seen from eight sides, takes the old base_hit_chance (reference.odds). The spread is PROPOSED; the reference case is the lead's reading of how the weapon is used" },
+        "reference": {
+          "target": { "value": "light_fighter", "_proposed": true, "_reason": "the mobile AA shoots at planes" },
+          "range_m": { "value": 300.0, "_proposed": true, "_reason": "about 300 m of its 600 m" },
+          "elevation_deg": { "value": 25.0, "_proposed": true, "_reason": "the middle of its cone (25 degrees up)" },
+          "odds": { "value": 0.07, "_proposed": true, "_reason": "the quad mount's base_hit_chance today (data/units/mobile_aa.json)" }
+        }
+      },
+      "deck_mg": {
+        "spread_mrad": { "value": 31.77, "_proposed": true, "_reason": "CALIBRATED by scripts/test_support/lof_calibrate.gd (builder LOF2, 2026-10-12): at this spread a still, fully exposed target of the reference type at the reference range, seen from eight sides, takes the old base_hit_chance (reference.odds). The spread is PROPOSED; the reference case is the lead's reading of how the weapon is used" },
+        "reference": {
+          "target": { "value": "light_fighter", "_proposed": true, "_reason": "the cutter's deck gun shoots at planes" },
+          "range_m": { "value": 200.0, "_proposed": true, "_reason": "about 200 m of its 320 m" },
+          "elevation_deg": { "value": 25.0, "_proposed": true, "_reason": "the middle of its cone (25 degrees up)" },
+          "odds": { "value": 0.07, "_proposed": true, "_reason": "the deck gun's base_hit_chance today (data/units/patrol_boat.json)" }
+        }
+      }
     }
   },
 

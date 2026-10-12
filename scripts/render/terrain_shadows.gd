@@ -132,7 +132,7 @@ func _init(t: Terrain, params: RenderParams = null) -> void:
 # rect grown by this much.
 func reach_px() -> float:
 	var top := terrain.heights_m[terrain.heights_m.size() - 1] * terrain.px_per_m
-	var tallest := P.treeSize * (1.0 + P.sizeVar) * P.big_tree_scale * P.height * 1.15
+	var tallest := P.tallest_tree_px()   # the biggest crown's height under the scenery-heights window (decision scenery-heights)
 	return (top + tallest) * maxf(L, tree_L) + tallest * maxf(stretch, tree_stretch) * 1.3 + 8.0
 
 # --- terrain class -------------------------------------------------------------------

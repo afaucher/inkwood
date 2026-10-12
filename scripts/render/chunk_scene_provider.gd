@@ -93,7 +93,7 @@ func reach_px() -> float:
 	var L := 1.0 / tan(P.elev * PI / 180.0)
 	var stretch := minf(P.canopy_shadow_stretch_max, 1.0 + L * 0.3)
 	var half := r_max * 1.3 + 4.0
-	return r_max * P.height * 1.15 * L + half * stretch + 4.0
+	return P.tallest_tree_px() * L + half * stretch + 4.0
 
 func chunk_content(c: Vector2i) -> Dictionary:
 	return objects(c)

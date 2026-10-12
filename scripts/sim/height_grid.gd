@@ -73,6 +73,7 @@ var _flat: Array = []
 var _outside: Chunk
 var _trees_loaded: Dictionary = {}    # chunk key -> true
 var _stamps: Dictionary = {}          # owner -> Array of world boxes (line_of_fire_shapes.gd)
+var _stamp_keys: Dictionary = {}      # owner -> "type|x|y|heading" of the unit stamped (sync_statics)
 var _river_chunks: Dictionary = {}    # chunk key -> PackedInt32Array of river segment indices
 var _river_ready := false
 var _timings := {"chunks": 0, "chunk_ms": 0.0, "trees_ms": 0.0, "stamp_ms": 0.0, "worst_chunk_ms": 0.0}
@@ -389,7 +390,9 @@ func _apply_box(c: Chunk, b: Dictionary) -> void:
 					break
 			if hit:
 				var idx := iy * n + ix
-				if top > oh[idx]:
+				# a cell takes the stamp when it is higher than what a stamp left there, or as high and nothing was written yet (a deck level
+				# with the banks: the low bridge, decision line-of-fire; its top is 0, the overlay's empty value)
+				if top > oh[idx] or (top == oh[idx] and om[idx] == 0):
 					oh[idx] = top
 					om[idx] = mat
 					var bi := (iy / block_cells) * nb + ix / block_cells
@@ -401,7 +404,7 @@ func _apply_box(c: Chunk, b: Dictionary) -> void:
 
 # Every static unit of a World's `units` (Dictionary id -> Unit) that stands is stamped, every one that is down is unstamped. The unit's
 # base is the ground (or the water) it stands on. Cheap to call again each turn: a unit already stamped in the same place is left.
-func sync_statics(units: Dictionary) -> int:
+func sync_statics(units: Dictionary, drop_strangers: bool = false) -> int:
 	var count := 0
 	for id: String in units:
 		var u: Object = units[id]
@@ -416,10 +419,19 @@ func sync_statics(units: Dictionary) -> int:
 		if u.down:
 			unstamp(id)
 			continue
-		if _stamps.has(id):
+		# already stamped, in the same place and the same type: left (another World's unit of the same id elsewhere is stamped again)
+		var key := "%s|%.3f|%.3f|%.5f" % [str(u.def.id), float(u.x), float(u.y), float(u.heading)]
+		if _stamps.has(id) and _stamp_keys.get(id, "") == key:
 			continue
 		stamp(id, Shapes.world_boxes(u.def, rules, float(u.x), float(u.y), float(u.heading), stand_z(float(u.x), float(u.y))))
+		_stamp_keys[id] = key
 		count += 1
+	# a stamp of a unit this World does not have (the grid is shared by seed, and another World, or a test, may have stamped it) is taken out
+	if drop_strangers:
+		for owner: Variant in _stamps.keys():
+			var oid := str(owner)
+			if not units.has(oid) and not oid.begins_with("test_"):
+				unstamp(oid)
 	return count
 
 # --- the river (for the builder) -----------------------------------------------------------------------------

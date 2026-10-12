@@ -1,0 +1,105 @@
+{
+  "_about": "THE ROUND MODEL (decision round-model; builder G3, 2026-10-12; scripts/sim/rounds.gd reads this). ALEX (decision round-model, 2026-10-11): 'a round per weapon with class, calibre, explosive, path, tracer and blast; a round x material table for impacts; armour and penetration later'. On the proposed properties: '2 rounds - for now' (the proposal is docs/proposals/damage-rounds-cover.md section 2). On the direction: '6 good but we need more here. Let's discuss.' WHAT A WEAPON FIRES decides its look (decision weapon-kinds, Alex: 'Flak would be shells shot that then explode. Machine guns would be bullets which don't.'): every weapon in data/units/*.json names its round (weapons[].round); the cruiser's Main Guns and the bomb drop are specials, named in `specials` below. A ROUND carries: class (what it is), calibre (small, medium, large: it sets the muzzle smoke's and the impact's size, data/fx/fx.json gunfire), explosive (an explosion on landing, or a strike of sparks and dust), path (a straight line, an arc, or a burst in the air), tracer (it draws a tracer: decision tracers-mg), and for an explosive round that has one a pointer to the BLAST TABLE it already has (not moved, not copied: {file, path} resolves to a list of [distance_m, pips]). WHAT A ROUND DOES WHERE IT LANDS is a table of round x MATERIAL (the thing hit; `vocabulary.materials`; each unit file and each line-of-fire cell names one): data/fx/fx.json gunfire. Later, not now (Alex: 'armour and penetration later'): whether a bullet can hurt a tank, and damage per round. THE SEVEN ROUNDS BELOW ARE PROPOSED by builder G3 from the board's table (variants/gunfire/families.json rounds: bullet, small, medium, large) and the proposal's five classes; the class decides the look, the calibre the size: two cannon rounds, two flak shells, and one each of the others. Record shape as the other sim data: {value, _proposed, _reason} or {value, decision, _reason}.",
+
+  "vocabulary": {
+    "classes": {
+      "value": ["bullet", "cannon_round", "flak_shell", "shell", "bomb"],
+      "_proposed": true,
+      "_reason": "the proposal's five classes (docs/proposals/damage-rounds-cover.md section 2: bullet for machine guns, cannon round for the tank and the nose cannon, flak shell that bursts in the air, shell for the Main Guns, bomb). PROPOSED"
+    },
+    "calibres": {
+      "value": ["small", "medium", "large"],
+      "_proposed": true,
+      "_reason": "Alex's round-model direction names calibre; the three sizes are the proposal's (small, medium, large) and the gunfire board's size tables (variants/gunfire/families.json classes). PROPOSED"
+    },
+    "paths": {
+      "value": ["straight", "arc", "air_burst"],
+      "_proposed": true,
+      "_reason": "the proposal's three paths: straight (bullets, cannon), arc (shells, bombs), air burst at a height (flak). PROPOSED"
+    },
+    "materials": {
+      "value": ["metal", "stone", "wood", "earth", "water"],
+      "decision": "gunfire-looks",
+      "_reason": "THE ONE VOCABULARY for what a round hits (decisions damage-looks, 'the model makes sense', everything names a material, and gunfire-looks, G3: 'the materials told apart by lightness'). The board's table (variants/gunfire/board.json material_table, PROPOSED) said ground; the line-of-fire grid said ground, timber and earthworks; they are now ONE set: metal (planes, armour, ships, the tower's lattice), stone (the bridge, walls, the complex), wood (houses, trees, the barge), earth (open ground, roads, fields, sandbags and earthworks, the AA battery) and water (every depth). The NAMES 'earth' and 'wood' are the lead's (2026-10-12, PROPOSED): the board's ground and the grid's timber renamed to match a unit file's words"
+    }
+  },
+
+  "rounds": {
+    "bullet": {
+      "_about": "A machine gun's bullet: the wing guns, the bomber's nose gun and turrets, the heavy fighter's rear gunner, the mobile AA's quad mount and the cutter's deck guns. It draws a tracer (T5) and a hit is the hit ink, not a G3 impact (the lead's brief, gunfire-looks: 'Machine-gun bullets keep T5').",
+      "class": { "value": "bullet", "_proposed": true, "_reason": "machine guns fire bullets (decision weapon-kinds)" },
+      "calibre": { "value": "small", "_proposed": true, "_reason": "the smallest round; the impact table's 'bullet' size (0.7 m) is the gunfire board's, keyed by class" },
+      "explosive": { "value": false, "decision": "weapon-kinds", "_reason": "ALEX (decision weapon-kinds, 2026-10-11): 'Machine guns would be bullets which don't [explode].'" },
+      "path": { "value": "straight", "_proposed": true, "_reason": "a bullet flies a straight line (the tracer is drawn along it)" },
+      "tracer": { "value": true, "decision": "tracers-mg", "_reason": "ALEX (decision tracers-mg, 2026-10-11): 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. The weapon list that scope used to pick out (data/fx/fx.json tracers.weapons) is this flag now: exactly the same weapons draw tracers" },
+      "blast": { "value": "none", "_proposed": true, "_reason": "not explosive: no blast" }
+    },
+    "cannon_small": {
+      "_about": "The heavy fighter's nose cannon (2 pips a hit, 600 m).",
+      "class": { "value": "cannon_round", "_proposed": true, "_reason": "an aircraft cannon: a straight round that is not a machine gun's" },
+      "calibre": { "value": "small", "_proposed": true, "_reason": "the board's mapping (variants/gunfire/families.json rounds nose_cannon: small): a plane's cannon is lighter than a tank's gun, its muzzle smoke 1.7 m"  },
+      "explosive": { "value": true, "_proposed": true, "_reason": "the proposal: a cannon fires high explosive ('cannon HE': a strike of sparks and dust on landing)" },
+      "path": { "value": "straight", "_proposed": true, "_reason": "fired along the nose, level" },
+      "tracer": { "value": false, "decision": "tracers-mg", "_reason": "ALEX (decision tracers-mg): 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. Machine guns only for now, so a cannon round has none; the flag is the switch" },
+      "blast": { "value": "none", "_proposed": true, "_reason": "no area table: a hit takes the weapon's damage_pips from its target and nothing else (data/units/heavy_fighter.json nose_cannon). The pointer would be {file, path} to one" }
+    },
+    "cannon_medium": {
+      "_about": "The tank's turret gun (data/units/tank.json turret_gun).",
+      "class": { "value": "cannon_round", "_proposed": true, "_reason": "a tank gun: a straight round that is not a machine gun's" },
+      "calibre": { "value": "medium", "_proposed": true, "_reason": "the board's mapping (turret_gun: medium): the muzzle puff 2.4 m, the impact 2.8 m" },
+      "explosive": { "value": true, "_proposed": true, "_reason": "the proposal: cannon HE" },
+      "path": { "value": "straight", "_proposed": true, "_reason": "a flat-trajectory gun at 350 m; an arc is not drawn" },
+      "tracer": { "value": false, "decision": "tracers-mg", "_reason": "ALEX (decision tracers-mg): 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. To revisit the tank: set this true and nothing else" },
+      "blast": { "value": "none", "_proposed": true, "_reason": "no area table: a hit takes the weapon's damage_pips (1) from its target" }
+    },
+    "flak_small": {
+      "_about": "The battery's light flak and the cruiser's ship flak (both 320 m, one pip a hit).",
+      "class": { "value": "flak_shell", "decision": "weapon-kinds", "_reason": "ALEX (decision weapon-kinds): 'Flak would be shells shot that then explode.' The battery's light flak and the cruiser's AA (ship_flak: the same 320 m reach as light_flak) are flak" },
+      "calibre": { "value": "small", "_proposed": true, "_reason": "the board's mapping (light_flak: small); ship_flak is placed here by its 320 m reach, the same as light_flak (PROPOSED: the board did not name it)" },
+      "explosive": { "value": true, "decision": "weapon-kinds", "_reason": "ALEX (decision weapon-kinds): flak is 'shells shot that then explode'" },
+      "path": { "value": "air_burst", "decision": "weapon-kinds", "_reason": "it bursts in the air near its target (decision flak-look F2, the ragged burst, is drawn at the target's height)" },
+      "tracer": { "value": false, "decision": "tracers-mg", "_reason": "ALEX (decision tracers-mg): machine guns only; flak is a burst (F2), not a tracer" },
+      "blast": { "value": "none", "_proposed": true, "_reason": "no area table: a burst that hits takes the weapon's damage_pips from the plane it hit" }
+    },
+    "flak_medium": {
+      "_about": "The battery's heavy flak (900 m).",
+      "class": { "value": "flak_shell", "decision": "weapon-kinds", "_reason": "ALEX (decision weapon-kinds): 'Flak would be shells shot that then explode.'" },
+      "calibre": { "value": "medium", "_proposed": true, "_reason": "the board's mapping (flak: medium): the heavy gun, the muzzle puff 2.4 m" },
+      "explosive": { "value": true, "decision": "weapon-kinds", "_reason": "ALEX (decision weapon-kinds): flak is 'shells shot that then explode'" },
+      "path": { "value": "air_burst", "decision": "weapon-kinds", "_reason": "it bursts in the air near its target (decision flak-look F2)" },
+      "tracer": { "value": false, "decision": "tracers-mg", "_reason": "ALEX (decision tracers-mg): machine guns only; flak is a burst (F2), not a tracer" },
+      "blast": { "value": "none", "_proposed": true, "_reason": "no area table: a hit takes the weapon's damage_pips from the plane" }
+    },
+    "shell_large": {
+      "_about": "The cruiser's Main Guns (the special main_guns, data/sim/guns.json): an arc, six to a salvo.",
+      "class": { "value": "shell", "_proposed": true, "_reason": "the proposal's shell: an arc that blasts where it lands" },
+      "calibre": { "value": "large", "_proposed": true, "_reason": "the board's mapping (main_guns: large): the muzzle puff 6.5 m, the impact 6.5 m" },
+      "explosive": { "value": true, "_proposed": true, "_reason": "it blasts where it lands: pips by distance, 6 / 12 / 20 m (decision shell-blast)" },
+      "path": { "value": "arc", "_proposed": true, "_reason": "a high arc over its range (data/sim/guns.json apex_per_range)" },
+      "tracer": { "value": false, "decision": "tracers-mg", "_reason": "ALEX (decision tracers-mg): machine guns only; a shell is drawn as specks in flight" },
+      "blast": { "value": { "file": "data/sim/guns.json", "path": ["specials", "main_guns", "blast_pips_by_distance"] }, "decision": "shell-blast", "_reason": "ALEX (decision shell-blast): 'for the smaller ship lets do high damage smaller range.' The table stays where it is; this points at it" }
+    },
+    "bomb": {
+      "_about": "The bomber's bombs (the special bomb, data/sim/bombs.json).",
+      "class": { "value": "bomb", "_proposed": true, "_reason": "the proposal's bomb class: a round that is dropped and blasts where it lands (data/sim/bombs.json)" },
+      "calibre": { "value": "large", "_proposed": true, "_reason": "the biggest round in the game: a 45 m blast" },
+      "explosive": { "value": true, "_proposed": true, "_reason": "a blast and a crater (impact B3)" },
+      "path": { "value": "arc", "_proposed": true, "_reason": "falls from its release height under gravity (data/sim/bombs.json gravity_mps2)" },
+      "tracer": { "value": false, "decision": "tracers-mg", "_reason": "ALEX (decision tracers-mg): machine guns only" },
+      "blast": { "value": { "file": "data/sim/bombs.json", "path": ["blast_pips_by_distance"] }, "_proposed": true, "_reason": "the bombs' own table (12 / 25 / 45 m at 3 / 2 / 1 pips), not moved: this points at it" }
+    }
+  },
+
+  "specials": {
+    "main_guns": {
+      "value": "shell_large",
+      "_proposed": true,
+      "_reason": "the cruiser's Main Guns special (data/units/cruiser.json specials, data/sim/guns.json specials.main_guns) is not in weapons[], so the round it fires is named here"
+    },
+    "bomb": {
+      "value": "bomb",
+      "_proposed": true,
+      "_reason": "the bomb drop special (the units' bomb_load, data/sim/bombs.json) is not in weapons[], so the round it drops is named here"
+    }
+  }
+}

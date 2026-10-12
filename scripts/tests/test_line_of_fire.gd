@@ -1,7 +1,9 @@
 extends "res://scripts/test_support/test_case.gd"
 
-# LINES OF FIRE, STAGE 1 (builder LOF1, 2026-10-11; decision line-of-fire): the height grid and the line check, headless. Nothing here is
-# used by combat (data/sim/line_of_fire.json `enabled` is false; this test checks that nothing in the combat scripts names it).
+# LINES OF FIRE, STAGE 1 (builder LOF1, 2026-10-11; decision line-of-fire): the height grid and the line check, headless. Stage 2 (builder LOF2,
+# 2026-10-12) hooked combat to them behind the switch (data/sim/line_of_fire.json `enabled`, false); test_line_of_fire_combat holds that side, and
+# this test holds the three files that name the grid and says no other combat script does. Stage 2 changed here: the low bridge (a deck level with
+# the banks and 1 m parapets), and the rows of a box (spread to its top, weighted).
 #
 #   DATA         the rules load; every unit has a shape whose materials exist; a tank is two boxes (hull to 1.5 m, turret to 2.3 m: Alex's
 #                two layers), a vehicle that drives two, every other unit one; the bridge deck's height is bridges.json's crown.
@@ -86,16 +88,24 @@ func _data() -> void:
 			eq(str(boxes[0]["part"]), "hull", "%s: the lower box is the hull" % id)
 			eq(str(boxes[1]["part"]), "turret", "%s: the upper box is the turret" % id)
 			near(float(boxes[0]["top_m"]), float(boxes[1]["bottom_m"]), 1e-9, "%s: the turret stands on the hull" % id)
+		elif id == "bridge":
+			eq(boxes.size(), 3, "the low bridge is a deck and two parapets")
 		elif id != "anti_aircraft_battery":
 			eq(boxes.size(), 1, "%s is one box" % id)
 	var tb: Array = tank_def.shape_boxes
 	near(float(tb[0]["top_m"]), 1.5, 1e-9, "the tank's hull goes to 1.5 m")
 	near(float(tb[1]["top_m"]), 2.3, 1e-9, "the tank's turret goes to 2.3 m")
-	# the bridge deck is the crown of data/world/bridges.json (one number, two files)
+	# the bridge deck is the crown of data/world/bridges.json, its parapets the parapet height (one number, two files): THE LOW BRIDGE
+	# (Alex: the deck level with the banks, with 1 m parapets)
 	var bridges: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/world/bridges.json"))
 	var crown := float(bridges["arch"]["crown_h"]["value"])
 	var bdef: Variant = world.unit_def("bridge")
 	near(float(bdef.shape_boxes[0]["top_m"]), crown, 1e-9, "the bridge unit's deck height is bridges.json arch.crown_h (%s)" % crown)
+	near(crown, 0.0, 1e-9, "the deck is level with the banks (0 m)")
+	for k in [1, 2]:
+		eq(str(bdef.shape_boxes[k]["part"]), "parapet", "box %d of the bridge is a parapet" % k)
+		near(float(bdef.shape_boxes[k]["top_m"]) - float(bdef.shape_boxes[k]["bottom_m"]), float(bridges["arch"]["parapet_h"]["value"]), 1e-9, "a parapet is bridges.json arch.parapet_h tall")
+		near(float(bdef.shape_boxes[k]["top_m"]) - float(bdef.shape_boxes[k]["bottom_m"]), 1.0, 1e-9, "... 1 m (Alex)")
 	check(bool(bdef.shape_boxes[0]["stamp"]) and bool(bdef.shape_boxes[0]["standable"]), "the deck stamps and can be stood on")
 	var adef: Variant = world.unit_def("anti_aircraft_battery")
 	eq(str(adef.shape_boxes[0]["kind"]), "ring", "the battery's first box is its sandbag ring")
@@ -243,7 +253,10 @@ func _bay_geometry() -> void:
 	var wall := _box(bay.x + 95.0, shooter_y, 1.5, 10.0, 0.0, 1.35)
 	g.stamp("test_wall", [wall])
 	var cover := l.exposure_xyz(muzzle[0], muzzle[1], muzzle[2], target, 7)
-	near(float(cover["boxes"][0]["share"]), 0.0, 1e-12, "a 1.35 m wall in front of a tank blocks its whole hull")
+	# stage 2: the rows are spread to the top (the stage 1 finding: rows at the middle of their slices let a 1.35 m wall hide the whole of a
+	# 1.5 m hull): the hull's top row (1.45 m) is over the wall and stands for the top 0.19 m of 1.5 m, 12.7 percent of the hull
+	near(float(cover["boxes"][0]["share"]), 0.19 / 1.5, 0.002, "a 1.35 m wall in front of a tank leaves only the top band of its hull in view (the top row, 0.127)")
+	check(float(cover["boxes"][0]["share"]) > 0.0, "... which is not nothing: the finding of stage 1 is fixed")
 	near(float(cover["boxes"][1]["share"]), 1.0, 1e-12, "... and none of its turret")
 	check(cover["visible"] and float(cover["share"]) > 0.0 and float(cover["share"]) < 1.0, "hull-down: the tank is partly in view (share %.2f)" % float(cover["share"]))
 	var first_line: Dictionary = cover["boxes"][0]["lines"][0]
@@ -451,31 +464,43 @@ func _statics() -> void:
 	var bp: Vector2 = b["pos"]
 	var hd := float(b["heading"])
 	g.build_rect(Rect2(bp.x - 60.0, bp.y - 60.0, 120.0, 120.0))
-	var crown := 6.5
+	var crown := 0.0
+	var parapet := 1.0
 	near(g.stand_z(bp.x, bp.y), 0.0, 1e-6, "before the bridge is stamped a unit at the crossing stands on the river's 0 m")
 	var n := g.sync_statics(w.units)
 	check(n >= 1, "sync_statics stamps the World's static units (%d)" % n)
 	eq(g.sync_statics(w.units), 0, "... and a second sync changes nothing")
-	near(g.stand_z(bp.x, bp.y), crown, 1e-6, "a unit on the bridge stands on the deck (%s m)" % crown)
-	check(g.is_deck(bp.x, bp.y), "... the cell is a deck")
+	near(g.stand_z(bp.x, bp.y), crown, 1e-6, "a unit on the bridge stands on the deck (%s m, the banks' level)" % crown)
+	check(g.is_deck(bp.x, bp.y), "... the cell is a deck (a deck level with the water still reads as the deck: the stamp wins a tie)")
 	eq(g.material_at(bp.x, bp.y), Rules.STONE, "... of stone")
-	# the deck's footprint is 40 m along the road and 16 across
+	# the deck's footprint is 40 m along the road and 16 across, with a 1 m stone parapet along each side
 	var along := Vector2(cos(hd), sin(hd))
 	var across := Vector2(-sin(hd), cos(hd))
-	near(g.top_at(bp.x + along.x * 19.0, bp.y + along.y * 19.0), crown, 1e-6, "the deck reaches 19 m along the road")
-	near(g.top_at(bp.x + along.x * 22.0, bp.y + along.y * 22.0), g.top_at(bp.x + along.x * 40.0, bp.y + along.y * 40.0), 7.0, "... and not 22 m")
-	check(g.top_at(bp.x + across.x * 12.0, bp.y + across.y * 12.0) < crown, "... nor 12 m across")
-	# a low line across the deck is stopped by it; one above it passes
+	check(g.is_deck(bp.x + along.x * 19.0, bp.y + along.y * 19.0), "the deck reaches 19 m along the road")
+	check(not g.is_deck(bp.x + along.x * 22.0, bp.y + along.y * 22.0), "... and not 22 m")
+	check(not g.is_deck(bp.x + across.x * 12.0, bp.y + across.y * 12.0), "... nor 12 m across")
+	for side in [-1.0, 1.0]:
+		var pc: Vector2 = bp + across * (7.5 * side)
+		near(g.top_at(pc.x, pc.y), parapet, 1e-6, "the parapet along one side is 1 m high")
+		eq(g.material_at(pc.x, pc.y), Rules.STONE, "... of stone")
+		var ac: Vector2 = pc + along * 17.0
+		near(g.top_at(ac.x, ac.y), parapet, 1e-6, "... and runs the deck's length (17 m from the middle)")
+	near(g.top_at(bp.x + across.x * 3.0, bp.y + across.y * 3.0), crown, 1e-6, "between the parapets the roadway is level with the banks")
+	# a line along the roadway at any height above 0 is clear (the deck is level); a line across the deck at 0.5 m meets a parapet, one at 1.2 m passes
 	var from := bp - along * 30.0
 	var to := bp + along * 30.0
-	var low := l.trace_xyz(from.x, from.y, 3.0, to.x, to.y, 3.0, 1)
-	check(not bool(low["clear"]) and low["material_name"] == "stone" and bool(low["deck"]), "a line at 3 m along the bridge hits the deck's stone")
-	check(bool(l.trace_xyz(from.x, from.y, 12.0, to.x, to.y, 12.0, 1)["clear"]), "a line at 12 m passes over the deck")
-	# the bridge as a target: its deck is its only box and stamps, so the lines are drawn to a metre and a half short of its face
+	check(bool(l.trace_xyz(from.x, from.y, 0.5, to.x, to.y, 0.5, 1)["clear"]), "a line at 0.5 m along the middle of the roadway is clear: the low bridge is level")
+	var cross_a := bp - across * 14.0
+	var cross_b := bp + across * 14.0
+	var low := l.trace_xyz(cross_a.x, cross_a.y, 0.5, cross_b.x, cross_b.y, 0.5, 1)
+	check(not bool(low["clear"]) and low["material_name"] == "stone", "a line across the roadway at 0.5 m is stopped by the parapet's stone")
+	check(bool(l.trace_xyz(cross_a.x, cross_a.y, 1.2, cross_b.x, cross_b.y, 1.2, 1)["clear"]), "... one at 1.2 m passes over the parapets")
+	# the bridge as a target: its parapets are what a gun sees (the deck is no target); each stamps, so the lines are drawn to a metre and a half short
 	var bx := Shapes.world_boxes(world.unit_def("bridge"), rules, bp.x, bp.y, hd, 0.0)
 	var gun_at := bp - along * 70.0
 	var bex := l0.exposure_xyz(gun_at.x, gun_at.y, 2.3, bx, 1)
-	near(float(bex["share"]), 1.0, 1e-12, "a gun 70 m down the road sees the whole bridge")
+	check(bool(bex["visible"]) and float(bex["share"]) > 0.05 and float(bex["share"]) < 1.0, "a gun 70 m down the road sees the bridge's parapets end on, and the far parts of each behind its own near part (share %.2f)" % float(bex["share"]))
+	eq((bex["boxes"] as Array).size(), 2, "the bridge's targets are its two parapets, not its deck")
 	# a tank on the deck: its base is the deck
 	var base := l.base_z(bp.x, bp.y, 0.0, "terrain")
 	near(base, crown, 1e-6, "a surface unit on the bridge has the deck as its base")
@@ -495,7 +520,7 @@ func _statics() -> void:
 	near(gz, 0.0, 1e-6, "the battery site is on the low ground")
 	# the ring: 8 m outer, 6 m inner diameter, 1.15 m of bags
 	near(g.top_at(bat.x + 3.5, bat.y), gz + 1.15, 1e-4, "the sandbag ring is 1.15 m high at 3.5 m from the middle")
-	eq(g.material_at(bat.x + 3.5, bat.y), Rules.EARTHWORKS, "... of earthworks")
+	eq(g.material_at(bat.x + 3.5, bat.y), Rules.EARTHWORKS, "... of earthworks (raised earth: the sandbags)")
 	near(g.top_at(bat.x, bat.y), gz, 1e-4, "... and the ground inside it is open")
 	near(g.top_at(bat.x + 5.5, bat.y), gz, 1e-4, "... and outside")
 	near(g.stand_z(bat.x + 3.5, bat.y), gz, 1e-4, "a vehicle over the sandbags stands on the ground there")
@@ -507,10 +532,10 @@ func _statics() -> void:
 	var tgt := Shapes.world_boxes(tank_def, rules, tank_x, bat.y, PI, gz)
 	var ex := l0.exposure_xyz(muzzle[0], muzzle[1], muzzle[2], tgt, 3)
 	print("[lof] a tank 7.5 m behind a battery's ring, shot from 47 m: hull %.2f, turret %.2f" % [ex["boxes"][0]["share"], ex["boxes"][1]["share"]])
-	# bags 1.15 m, the hull's rows at 0.25, 0.75 and 1.25 m: the top row clears them. The turret is over them.
-	near(float(ex["boxes"][0]["share"]), 1.0 / 3.0, 0.01, "a tank behind the sandbags: only the hull's top row shows")
+	# bags 1.15 m, the hull's spread rows at 0.05, 0.33, 0.61, 0.89, 1.17 and 1.45 m: the top two clear them (together 0.31 of the hull). The turret is over them.
+	near(float(ex["boxes"][0]["share"]), 0.3133, 0.01, "a tank behind the sandbags: only the hull's top two rows show (a third of it)")
 	near(float(ex["boxes"][1]["share"]), 1.0, 1e-12, "... the whole turret shows")
-	check(ex["boxes"][0]["lines"][0]["stop"]["material_name"] == "earthworks", "... and a stopped hull line says earthworks")
+	check(ex["boxes"][0]["lines"][0]["stop"]["material_name"] == "earth", "... and a stopped hull line says earth (the round model's word for sandbags; the cell is raised earth, id 4)")
 	# the battery as a target: its guns are the target, the ring is its cover
 	var gun_t := Shapes.world_boxes(def_bat, rules, bat.x, bat.y, 0.0, gz)
 	var exb := l0.exposure_xyz(muzzle[0], muzzle[1], muzzle[2], gun_t, 3)
@@ -544,8 +569,10 @@ func _brute_force() -> void:
 		var length := rng.randf_range(20.0, 150.0)
 		var p := tower + Vector2(rng.randf_range(-170.0, 170.0), rng.randf_range(-170.0, 170.0))
 		var q := p + Vector2(cos(a), sin(a)) * length
-		var z0 := rng.randf_range(0.4, 15.0)
-		var z1 := z0 if i % 3 == 0 else rng.randf_range(0.4, 15.0)
+		# 0.4 to 9 m: the band the village stands in under decision scenery-heights (S1: houses 6 to 8 m, walls to 2.5 m; the lines were
+		# 0.4 to 15 m when houses were 11 to 14 m, and with the lower scenery too few of them met anything)
+		var z0 := rng.randf_range(0.4, 9.0)
+		var z1 := z0 if i % 3 == 0 else rng.randf_range(0.4, 9.0)
 		var r := l0.trace_xyz(p.x, p.y, z0, q.x, q.y, z1, i)
 		# the samples
 		var steps := int(length / 0.1)
@@ -677,12 +704,15 @@ func _timing() -> void:
 # --- nothing in combat reads it ------------------------------------------------------------------------------------------
 
 func _combat_untouched() -> void:
+	# STAGE 2 hooked combat to the lines of fire, behind the switch: exactly three scripts name them (the glue, the resolver and the World that
+	# hands it over); every other combat, bomb, gun, AI, spotting and mission script is as it was
 	var dir := DirAccess.open("res://scripts/sim")
-	var readers := 0
+	var readers: Array[String] = []
 	for f in dir.get_files():
 		if f.ends_with(".gd") and (f.begins_with("combat") or f.begins_with("bomb") or f.begins_with("gun") or f.begins_with("ai_") or f.begins_with("world") or f.begins_with("spotting") or f.begins_with("mission")):
 			var src := FileAccess.get_file_as_string("res://scripts/sim/" + f)
-			if src.contains("line_of_fire") or src.contains("height_grid"):
-				readers += 1
-				print("[lof] reads the line of fire: ", f)
-	eq(readers, 0, "stage 1: no combat, bomb, gun, AI, spotting, mission or World script reads the line-of-fire files (combat is untouched)")
+			if src.contains("line_of_fire") or src.contains("height_grid") or src.contains("combat_lines"):
+				readers.append(f)
+	readers.sort()
+	eq(readers, ["combat_lines.gd", "combat_resolver.gd", "world.gd"], "stage 2: only the glue, the resolver and the World name the lines of fire (no bomb, gun, AI, spotting or mission script does)")
+	check(not rules.enabled, "... and the switch is off")

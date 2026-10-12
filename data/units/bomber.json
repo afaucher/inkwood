@@ -10,18 +10,19 @@
   "health": { "value": 8, "_proposed": true, "_reason": "built to take hits: the most pips of the three aircraft" },
   "sight_range_m": { "value": 650, "decision": "fog-first-option", "_reason": "Alex 2026-10-09 accepted the lead's fog recommendation (scaled with the fighters, 1200 x 800/1500 rounded). Was proposed: slower, so it needs less look-ahead; unused until Track F's vision rule" },
   "drawing": { "silhouette": "bomber" },
+  "material": { "value": "metal", "_proposed": true, "_reason": "PROPOSED by builder G3 (2026-10-12; the board's table, variants/gunfire/board.json material_table, which Alex's decisions damage-looks, 'the model makes sense', and gunfire-looks, G3, put to use): an airframe is metal. Decides what a round that lands on it does (data/fx/fx.json gunfire): metal." },
   "damage_smoke": {
     "enabled": { "value": true, "_proposed": true, "_reason": "a bomber smokes when hit" },
-    "source_m": { "value": 8, "_proposed": true, "_reason": "one engine's smoke, not the 20 m span (Alex, decision impact-by-round-and-target; the lead's 'about 8 m at most'): the same source as the fighters', so the trail is smaller than the old 0.34 to 0.8 of 20 m (a puff 2.2 times the fighter's). PROPOSED, a board may pick another" },
+    "source_m": { "value": 8, "decision": "smoke-consistency", "_reason": "one engine's smoke, not the 20 m span (the lead's 'about 8 m at most', decision impact-by-round-and-target): the same source as the fighters', so the trail is smaller than the old 0.34 to 0.8 of 20 m (a puff 2.2 times the fighter's). ALEX (decision smoke-consistency, 2026-10-12), asked whether the heavy fighter's and the bomber's trails should stay at that new, smaller size: 'Yes to both'. So it stays 8 m (a board may still pick another)" },
     "source_back_m": { "value": 7, "_proposed": true, "_reason": "where the smoke leaves the plane: 7 m behind its centre, the old 0.35 x 20 m (W1 tail_frac) kept" },
-    "rise_mps": { "value": 0, "_proposed": true, "_reason": "0, a REASON TO DIFFER from the ground units' 4 m/s: a plane's trail is laid along its path at its altitude (a low plane is 120 m up, where the wind is already 1.6 times the ground's) and its own speed spreads it; a puff climbing 4 m/s would lift an old puff by 100 m in its life. PROPOSED" }
+    "rise_mps": { "value": 4, "decision": "smoke-consistency", "_reason": "ALEX (decision smoke-consistency, 2026-10-12), asked 'should planes' trails rise like ground smoke, and should the heavy fighter's and bomber's trails stay at their new, smaller size?': 'Yes to both'. So a plane's damage trail CLIMBS at 4 m/s, the same rate as a tank's, a boat's and the ruins' and wrecks' smolder (data/fx/fx.json ruin and crash smolder rise_mps), through the same model: a puff keeps the height it was born at, climbs and drifts with the wind at its height (fx_field.gd puff_drift), so an old puff of a low plane leans further downwind. It was 0 (PROPOSED by builder SMOKE, 2026-10-11: 'a puff climbing 4 m/s would lift an old puff by 100 m in its life'); Alex's answer ends that difference, and the fall trail of a plane out of control climbs with it (no jump at the moment it goes down). The number 4 is the ground smoke's, test_smoke_consistency holds the two equal" }
   },
   "shape": {
     "_about": "One box. A plane's base is its BAND's absolute height. Every number PROPOSED.",
     "boxes": [
         {
           "part": "body",
-          "material": "aircraft",
+          "material": "metal",
           "kind": "box",
           "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
           "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
@@ -56,6 +57,7 @@
       "id": "nose_gun",
       "name": "Nose gun",
       "kind": "flexible",
+      "round": { "value": "bullet", "decision": "weapon-kinds", "_reason": "ALEX (decision weapon-kinds, 2026-10-11): 'Machine guns would be bullets which don't [explode].' A machine gun fires the bullet (data/sim/rounds.json), which draws a tracer (decision tracers-mg) and no G3 impact" },
       "hardpoints": { "value": [[10.5, 0, 0]], "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided. In the nose, 10.5 m forward of the centre" },
       "mount_deg": { "value": 0, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
       "half_across_deg": { "value": 30, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
@@ -73,6 +75,7 @@
       "id": "dorsal_turret",
       "name": "Dorsal turret",
       "kind": "turret",
+      "round": { "value": "bullet", "decision": "weapon-kinds", "_reason": "ALEX (decision weapon-kinds, 2026-10-11): 'Machine guns would be bullets which don't [explode].' A machine gun fires the bullet (data/sim/rounds.json), which draws a tracer (decision tracers-mg) and no G3 impact" },
       "hardpoints": { "value": [[-1.0, 0, 1.5]], "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided. On the spine, a little behind the centre" },
       "mount_deg": { "value": 180, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
       "half_across_deg": { "value": 110, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
@@ -90,6 +93,7 @@
       "id": "tail_turret",
       "name": "Tail turret",
       "kind": "turret",
+      "round": { "value": "bullet", "decision": "weapon-kinds", "_reason": "ALEX (decision weapon-kinds, 2026-10-11): 'Machine guns would be bullets which don't [explode].' A machine gun fires the bullet (data/sim/rounds.json), which draws a tracer (decision tracers-mg) and no G3 impact" },
       "hardpoints": { "value": [[-10.5, 0, 0.5]], "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided. In the tail, 10.5 m behind the centre" },
       "mount_deg": { "value": 180, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
       "half_across_deg": { "value": 40, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },

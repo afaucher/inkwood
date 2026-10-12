@@ -10,6 +10,7 @@
   "health": { "value": 6, "_proposed": true, "_reason": "armour: tougher than a patrol boat (5) and a heavy fighter (5), well under the bomber (8). The bombs (data/sim/bombs.json) take 3 for a hit within 12 m, 2 within 25 m, 1 within 45 m, so a tank dies to two direct hits or a good stick; its own light gun does 1 pip, so a tank takes six hits from another tank's gun" },
   "sight_range_m": { "value": 600, "_proposed": true, "_reason": "a tank commander's view from the turret (periscopes and the hatch): a little under the battery's 700 m and the fighters' 800, and well past its own gun's 350 m, so a tank SPOTS further than it shoots - which is the job Alex gave it, to spot the anti-aircraft batteries for the ship. Line of sight (data/view/fog.json vision.eye_height_m, ground 2.5 m) cuts it where a ridge or a cliff hides the ground" },
   "drawing": { "silhouette": "tank" },
+  "material": { "value": "metal", "_proposed": true, "_reason": "PROPOSED by builder G3 (2026-10-12; the board's table, variants/gunfire/board.json material_table, which Alex's decisions damage-looks, 'the model makes sense', and gunfire-looks, G3, put to use): armour plate. Decides what a round that lands on it does (data/fx/fx.json gunfire): metal." },
   "damage_smoke": {
     "enabled": { "value": true, "_proposed": true, "_reason": "a tank smokes when hit" },
     "source_m": { "value": 3, "_proposed": true, "_reason": "the engine deck: about half the 6 m hull (Alex, decision impact-by-round-and-target: a small source, about 8 m at most, never the unit's length). Puffs of 1 to 2.4 m radius, at the last pip about the tank's own width" },
@@ -21,7 +22,7 @@
     "boxes": [
         {
           "part": "hull",
-          "material": "armour",
+          "material": "metal",
           "kind": "box",
           "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
           "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
@@ -34,7 +35,7 @@
         },
         {
           "part": "turret",
-          "material": "armour",
+          "material": "metal",
           "kind": "box",
           "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
           "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
@@ -69,6 +70,7 @@
       "id": "turret_gun",
       "name": "Light gun",
       "kind": "turret",
+      "round": { "value": "cannon_medium", "_proposed": true, "_reason": "PROPOSED by builder G3 (decision round-model, 2026-10-12): the tank's light gun fires a medium cannon round (the board's mapping, variants/gunfire/families.json rounds turret_gun: medium). Its muzzle smoke and its hit and miss impacts are decision gunfire-looks (G3), sized by that round's calibre" },
       "hardpoints": { "value": [[0.4, 0, 2.3]], "_proposed": true, "_reason": "the turret's centre as the unit sheet draws it (turret_y -0.55 to -0.2 m, i.e. 0.4 m ahead of the hull's middle) and its height (hull 1.5 to 1.8 m plus half the turret's 0.75 to 0.95 m): about 2.3 m up. The same height the fog's eye is (data/view/fog.json eye_height_m, ground 2.5 m)" },
       "mount_deg": { "value": 0, "decision": "playtest-3", "_reason": "the hull's front: the arc is centred on the nose (half_across_deg 85), so a tank fires on what is ahead of it and has to turn to face a target. Was 0 with an all-round cone, where the mount did not matter" },
       "half_across_deg": { "value": 85, "decision": "playtest-3", "_reason": "ALEX (decision playtest-3, the third playtest, 2026-10-11): 'Tanks should have like a forward 170 arc. Not shoot directly behind.' So the light gun covers a FORWARD arc of 170 degrees: 85 either side of the hull's nose (mount_deg 0), the full width being 2 x 85 = 170. A target behind the tank, or beside it past 85 degrees, is out of the arc and is not fired on: the tank has to turn to bring it round (its pivot turn is 30 deg/s, so a step of 2.5 s turns it up to 75 degrees and a target dead astern takes two steps). The 'about' in Alex's 'like a forward 170' is taken as exactly 170 (PROPOSED reading; the number is data). Was 180, the turret traversing all the way round (PROPOSED by Track TK, never Alex's)" },

@@ -286,6 +286,18 @@ func _check_parity_switch() -> void:
 		check(lines.size() >= 1, "apply_prototype_defaults reports what it changed")
 	else:
 		near(q.shadowStr, float(entry.get("default", NAN)), 0.0, "no prototype_default: a parity frame keeps the default")
+	# the scenery heights (decision scenery-heights, Alex: "S1 real heights"): the game frame runs S1, a parity frame the prototype
+	var game := RenderParams.new()
+	near(game.wallH, 5.0, 0.0, "the game frame uses S1's wall height (5 px)")
+	near(game.houseHeightRatio, 0.5, 0.0, "the game frame uses S1's house height ratio (0.5)")
+	near(game.treeHeightScale, 1.1, 0.0, "the game frame uses S1's tree height scale (1.1)")
+	near(game.treeHeightMin, 16.0, 0.0, "the game frame holds trees to 16 px (8 m) ...")
+	near(game.treeHeightMax, 40.0, 0.0, "... to 40 px (20 m)")
+	near(q.wallH, 12.0, 0.0, "a parity frame uses the prototype's wall height (12 px)")
+	near(q.houseHeightRatio, 0.9, 0.0, "a parity frame uses the prototype's house height ratio (0.9)")
+	near(q.treeHeightScale, 1.0, 0.0, "a parity frame has no tree height scale")
+	near(q.treeHeightMin, 0.0, 0.0, "a parity frame has no tree height floor")
+	near(q.treeHeightMax, 0.0, 0.0, "a parity frame has no tree height ceiling")
 
 # --- 6. the pen ------------------------------------------------------------------------
 

@@ -2324,7 +2324,11 @@
       "date": "2026-10-11",
       "board": "none (said in chat)",
       "options": [],
-      "applied_to": [],
+      "applied_to": [
+        "data/sim/rounds.json",
+        "scripts/sim/rounds.gd",
+        "data/units/*.json weapons' round ids"
+      ],
       "id": "round-model",
       "area": "Combat, Effects",
       "question": "What does a weapon fire, and which of the round's properties matter (a 'fires' field: machine gun, cannon, flak, shell)?",
@@ -2345,7 +2349,11 @@
         "G3 the W1 soft puffs",
         "G4 a flash and one ring"
       ],
-      "applied_to": [],
+      "applied_to": [
+        "data/fx/fx.json gunfire (G3)",
+        "scripts/fx/fx_gunfire.gd",
+        "scripts/ui/gunfire_feed.gd"
+      ],
       "id": "gunfire-looks",
       "area": "Effects",
       "question": "How do big guns' muzzle smoke and a hit that does not kill look?",
@@ -2415,20 +2423,37 @@
     },
     {
       "date": "2026-10-11",
-      "board": "variants/scenery-heights/ (being made)",
+      "board": "variants/scenery-heights/",
       "options": [
         "S0 today (the prototype's px)",
         "S1 real-world heights",
         "S2 halfway",
         "S3 real heights, trees a little taller"
       ],
-      "applied_to": [],
+      "applied_to": [
+        "data/params/render_defaults.json#parameters.wall_height (default 5, prototype_default 12)",
+        "data/params/render_defaults.json#parameters.house_height_ratio (NEW: default 0.5, prototype_default 0.9, the literal it replaces)",
+        "data/params/render_defaults.json#parameters.tree_height_scale (NEW: default 1.1, prototype_default 1)",
+        "data/params/render_defaults.json#parameters.tree_height_min_px (NEW: default 16 = 8 m, prototype_default 0)",
+        "data/params/render_defaults.json#parameters.tree_height_max_px (NEW: default 40 = 20 m, prototype_default 0)",
+        "scripts/world/render_params.gd (the new fields, use_prototype_defaults, tallest_tree_px)",
+        "scripts/world/scene_gen.gd sync_tree (the scale and the window)",
+        "scripts/world/structures.gd sync_struct (the house ratio)",
+        "data/terrain/terrain.json#height.level_heights_m (the stale 'tallest tree 14 m' reworded)"
+      ],
       "id": "scenery-heights",
       "area": "World, Style",
       "question": "Real-world heights for trees, houses and walls (prototype px today: walls 5-7 m, houses to 14.5 m, trees to 29 m)?",
       "chosen": "S1, real heights: houses about 7 m to the ridge, compound walls about 2.5 m, trees held to 8 to 20 m (median about 12)",
-      "parameters": {},
-      "status": "chosen by Alex",
+      "parameters": {
+        "wall_height_px": 5,
+        "house_height_ratio": 0.5,
+        "tree_height_scale": 1.1,
+        "tree_height_min_px": 16,
+        "tree_height_max_px": 40,
+        "_note": "px at the demo baseline of 2 px per metre: walls 2.5 m, houses 7 m (x0.85 to 1.15 each), trees x1.1 held to 8 to 20 m; hedge trees untouched (about 2.4 m). The prototype's values (12, 0.9, 1, 0, 0) are each entry's prototype_default: render's -Parity and the port check (test_scene_gen) use them, the game uses S1."
+      },
+      "status": "chosen by Alex; live 2026-10-12",
       "notes": "Alex: '12 yes, but show me'. Alex chose: 'S1 real heights'."
     }
   ]

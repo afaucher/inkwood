@@ -107,6 +107,7 @@ static func gen(kind: String, d: Dictionary, rng: Mulberry32, ruin: bool, river_
 			p.parapet_w = _rr(rng, kd["parapet_w"])
 			p.wing = _rr(rng, kd["wing_m"])
 			p.crown_h = float(val(kd["crown_h"]))
+			p.parapet_h = float(val(kd["parapet_h"])) if kd.has("parapet_h") else 1.1
 			p.pier_h = float(val(kd["pier_h"]))
 			p.slab_h = float(val(kd["slab_h"]))
 			p.humped_deck = bool(val(kd["humped_deck"])) if kd.has("humped_deck") else true
@@ -307,14 +308,18 @@ static func _build_arch(p: Dictionary) -> Dictionary:
 	# the cast shadow: the roadway slab floats on its arches; the piers and abutments are solid
 	var crown: float = p.crown_h
 	var casts: Array = []
-	casts.append(_prism(G.deck, crown - float(p.slab_h) - 0.5, crown))
-	casts.append(_prism(G.parapets, crown - 0.4, crown + 1.1))
+	# THE LOW BRIDGE (decision line-of-fire, Alex): the deck is level with the banks and the parapets are 1 m (data arch.crown_h 0, arch.parapet_h 1),
+	# so the shadow is the parapets' metre and nothing under the roadway: no prism starts below the surface (a negative height would throw the
+	# shadow toward the light).
+	var parapet_h: float = p.parapet_h
+	casts.append(_prism(G.deck, maxf(crown - float(p.slab_h) - 0.5, 0.0), maxf(crown, 0.0)))
+	casts.append(_prism(G.parapets, maxf(crown - 0.4, 0.0), crown + parapet_h))
 	var pier_polys: Array = []
 	for pr: Dictionary in G.piers:
 		pier_polys.append(pr.poly)
 	casts.append(_prism(pier_polys, 0.0, float(p.pier_h)))
 	casts.append(_prism(G.abutments, 0.0, float(p.pier_h)))
-	casts.append(_prism(G.wings, 0.0, 1.6))
+	casts.append(_prism(G.wings, 0.0, minf(1.6, parapet_h)))
 	var rp: Array = []
 	for r: Dictionary in G.rubble:
 		rp.append(r.poly)

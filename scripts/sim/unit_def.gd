@@ -23,6 +23,7 @@ extends RefCounted
 const Records = preload("res://scripts/sim/records.gd")
 const Envelope = preload("res://scripts/sim/envelope.gd")
 const CombatWeapon = preload("res://scripts/sim/combat_weapon.gd")
+const Rounds = preload("res://scripts/sim/rounds.gd")
 
 const UNITS_DIR := "res://data/units"
 const SCHEMA_PATH := "res://data/units/_schema.json"
@@ -42,6 +43,9 @@ var actions_per_turn: int = 0
 var health: int = 0
 var sight_range_m: float = NAN
 var silhouette: String = ""
+# What the unit is made of, for what a round does when it hits it (data/units/_schema.json "material"; builder G3, 2026-10-12, PROPOSED): one word of the
+# vocabulary of data/sim/rounds.json (metal, stone, wood, earth, water). The effects feed looks an impact up by it and the round.
+var material: String = ""
 # The validated envelope section as plain values (the curve as [speeds, deg/s]),
 # and the Envelope built from it. envelope is null when the file is not ok().
 var envelope_values: Dictionary = {}
@@ -87,6 +91,9 @@ func _init(unit_source: Variant, band_order: Array, quiet: bool = false, label: 
 		data = unit_source
 	else:
 		r.err("a unit source is a path or a Dictionary, got %s" % type_string(typeof(unit_source)))
+	var round_model := Rounds.shared() as Rounds
+	if not round_model.ok():
+		r.err("the round model %s did not load, so no material or round can be checked: %s" % [Rounds.PATH, "; ".join(round_model.errors)])
 	var schema: Variant = Records.new(SCHEMA_PATH, quiet).read_json(SCHEMA_PATH)
 	if not (schema is Dictionary) or not ((schema as Dictionary).get("fields") is Dictionary):
 		r.err("the unit schema %s is missing or has no 'fields'" % SCHEMA_PATH)
@@ -102,6 +109,7 @@ func _init(unit_source: Variant, band_order: Array, quiet: bool = false, label: 
 		health = int(v.get("health", 0))
 		sight_range_m = float(v.get("sight_range_m", NAN))
 		silhouette = str((v.get("drawing", {}) as Dictionary).get("silhouette", ""))
+		material = str(v.get("material", ""))
 		envelope_values = v.get("envelope", {})
 		weapon_values = v.get("weapons", [])
 		var bomb_section: Dictionary = v.get("bomb_load", {})
@@ -177,6 +185,10 @@ static func _walk(r: Records, fields: Dictionary, data: Dictionary, prefix: Stri
 				out[key] = r.id_list(data, key, label, band_order)
 			"band":
 				out[key] = r.id_value(data, key, label, band_order)
+			"material":
+				out[key] = r.id_value(data, key, label, (Rounds.shared() as Rounds).materials)
+			"round":
+				out[key] = r.id_value(data, key, label, (Rounds.shared() as Rounds).round_ids())
 			"points3":
 				out[key] = _points3(r, data, key, label)
 			"list":
@@ -288,6 +300,8 @@ func _check(r: Records, stem: String) -> void:
 				r.err("shape.boxes '%s': a ring's width_m (inner diameter) must be above 0 and under its length_m (outer diameter)" % part)
 		elif not (float(bd.get("width_m", 0.0)) > 0.0):
 			r.err("shape.boxes '%s': width_m must be above 0" % part)
+		if not (Rounds.shared() as Rounds).materials.has(str(bd.get("material", ""))):
+			r.err("shape.boxes '%s': material '%s' is not one of the vocabulary %s (data/sim/rounds.json)" % [part, str(bd.get("material", "")), str((Rounds.shared() as Rounds).materials)])
 		if bool(bd.get("standable", false)) and not bool(bd.get("stamp", false)):
 			r.err("shape.boxes '%s': a box is standable only if it stamps into the grid" % part)
 		if bool(bd.get("stamp", false)) and mobility != "static":

@@ -10,18 +10,19 @@
   "health": { "value": 3, "_proposed": true, "_reason": "light and fragile: the fewest pips of the three aircraft (Steambirds-style role trade-off)" },
   "sight_range_m": { "value": 800, "decision": "fog-first-option", "_reason": "Alex 2026-10-09 accepted the lead's fog recommendation (about 800 m so sight edges show at play zoom). Was proposed: about 15 s of flight at cruise ahead; unused until Track F's vision rule" },
   "drawing": { "silhouette": "light_fighter" },
+  "material": { "value": "metal", "_proposed": true, "_reason": "PROPOSED by builder G3 (2026-10-12; the board's table, variants/gunfire/board.json material_table, which Alex's decisions damage-looks, 'the model makes sense', and gunfire-looks, G3, put to use): an airframe is metal. Decides what a round that lands on it does (data/fx/fx.json gunfire): metal." },
   "damage_smoke": {
     "enabled": { "value": true, "_proposed": true, "_reason": "a fighter smokes when hit" },
     "source_m": { "value": 8, "_proposed": true, "_reason": "one engine's smoke, not the wingspan (Alex, decision impact-by-round-and-target: puffs are not sized by the unit's length; the lead's 'about 8 m at most'). 8 m is close to the 9 m span the W1 puffs were drawn from, so a fighter's trail looks as it did" },
     "source_back_m": { "value": 3, "_proposed": true, "_reason": "where the smoke leaves the plane: 3 m behind its centre, the old 0.35 x 9 m (W1 tail_frac) kept" },
-    "rise_mps": { "value": 0, "_proposed": true, "_reason": "0, a REASON TO DIFFER from the ground units' 4 m/s: a plane's trail is laid along its path at its altitude (a low plane is 120 m up, where the wind is already 1.6 times the ground's) and its own speed spreads it; a puff climbing 4 m/s would lift an old puff by 100 m in its life. PROPOSED" }
+    "rise_mps": { "value": 4, "decision": "smoke-consistency", "_reason": "ALEX (decision smoke-consistency, 2026-10-12), asked 'should planes' trails rise like ground smoke, and should the heavy fighter's and bomber's trails stay at their new, smaller size?': 'Yes to both'. So a plane's damage trail CLIMBS at 4 m/s, the same rate as a tank's, a boat's and the ruins' and wrecks' smolder (data/fx/fx.json ruin and crash smolder rise_mps), through the same model: a puff keeps the height it was born at, climbs and drifts with the wind at its height (fx_field.gd puff_drift), so an old puff of a low plane leans further downwind. It was 0 (PROPOSED by builder SMOKE, 2026-10-11: 'a puff climbing 4 m/s would lift an old puff by 100 m in its life'); Alex's answer ends that difference, and the fall trail of a plane out of control climbs with it (no jump at the moment it goes down). The number 4 is the ground smoke's, test_smoke_consistency holds the two equal" }
   },
   "shape": {
     "_about": "One box. A plane's base is its BAND's absolute height (bands are absolute heights, data/sim/altitude.json), so the box reaches below and above it. Every number PROPOSED.",
     "boxes": [
         {
           "part": "body",
-          "material": "aircraft",
+          "material": "metal",
           "kind": "box",
           "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
           "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },
@@ -56,6 +57,7 @@
       "id": "wing_guns",
       "name": "Wing guns",
       "kind": "fixed",
+      "round": { "value": "bullet", "decision": "weapon-kinds", "_reason": "ALEX (decision weapon-kinds, 2026-10-11): 'Machine guns would be bullets which don't [explode].' A machine gun fires the bullet (data/sim/rounds.json), which draws a tracer (decision tracers-mg) and no G3 impact" },
       "hardpoints": { "value": [[-0.3, -3.0, 0], [-0.3, 3.0, 0]], "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided. A fixed machine-gun PAIR, one hardpoint per wing, each rolling for itself" },
       "mount_deg": { "value": 0, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },
       "half_across_deg": { "value": 10, "_proposed": true, "_reason": "the lead's engagement-cones proposal (variants/engagement-cones/weapons_proposed.json), shown to Alex 2026-10-09, not yet decided" },

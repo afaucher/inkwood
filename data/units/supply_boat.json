@@ -10,6 +10,7 @@
   "health": { "value": 6, "_proposed": true, "_reason": "an unarmoured barge is a big target and carries cargo, not guns: a little tougher than the gunboat (5) because it is a bigger hull, two direct bomb hits (3 each). It is not a target of the mission" },
   "sight_range_m": { "value": 250, "_proposed": true, "_reason": "a deckhand's watch from a low barge: it sees what is almost alongside. The enemy AI counts what its units see, so this is kept short" },
   "drawing": { "silhouette": "supply_boat" },
+  "material": { "value": "wood", "_proposed": true, "_reason": "PROPOSED by builder G3 (2026-10-12; the board's table, variants/gunfire/board.json material_table, which Alex's decisions damage-looks, 'the model makes sense', and gunfire-looks, G3, put to use): a timber barge (the S2 barge). Decides what a round that lands on it does (data/fx/fx.json gunfire): wood." },
   "damage_smoke": {
     "enabled": { "value": true, "_proposed": true, "_reason": "a barge smokes when hit; a SUNK barge draws no damage (decision ship-sinks)" },
     "source_m": { "value": 4, "_proposed": true, "_reason": "the engine and the stove pipe of a 34 m barge, not its length" },
@@ -21,7 +22,7 @@
     "boxes": [
         {
           "part": "body",
-          "material": "ship",
+          "material": "wood",
           "kind": "box",
           "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
           "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },

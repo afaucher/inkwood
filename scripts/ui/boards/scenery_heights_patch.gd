@@ -2,6 +2,11 @@ extends RefCounted
 
 # THE SCENERY-HEIGHTS BOARD'S OVERRIDE (builder SH, 2026-10-11). BOARD ONLY: nothing in the game or its data files changes.
 #
+# RETIRED 2026-10-12: Alex chose S1 (decision scenery-heights) and it is live as DATA (render_defaults.json: wall_height,
+# house_height_ratio, tree_height_scale, tree_height_min_px, tree_height_max_px, each with its prototype_default; read by
+# scene_gen.gd sync_tree and structures.gd sync_struct). apply() now refuses, so the board cannot be re-run under a wrong label
+# (an "S0" frame would be S1). The text below describes how the board worked.
+#
 # Scenery heights come out of three lines of the port, and none of them has a data key that can say "7 m":
 #
 #   trees   scripts/world/scene_gen.gd   sync_tree     t.h = t.r * P.height * (0.85 + 0.3 * t.hr)        (tree_height is a multiple of the crown's radius)
@@ -51,6 +56,9 @@ const STRUCT_REPLACE := "\ts.h = (P.wallH if s.kind == \"wall\" else P.houseSize
 # Patches the two scripts and sets the numbers. Returns "" on success, else what went wrong (nothing is then left half done:
 # the meta is set only after both patches compiled).
 static func apply(option: Dictionary, px_per_m: float) -> String:
+	var sg: GDScript = load(SCENE_GEN) as GDScript
+	if sg != null and sg.source_code.contains("treeHeightScale"):
+		return "RETIRED: the scenery heights are data now (decision scenery-heights, S1 is live in render_defaults.json); this override no longer applies"
 	if option.is_empty():
 		clear()
 		return ""

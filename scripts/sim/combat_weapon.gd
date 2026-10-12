@@ -25,6 +25,8 @@ const KINDS: Array[String] = ["fixed", "flexible", "turret"]
 var id: String = ""
 var name: String = ""
 var kind: String = ""
+# What the weapon fires: a round id of data/sim/rounds.json (decision round-model; "" for a weapon built by hand in a test).
+var round_id: String = ""
 var hardpoints: Array[Vector3] = []
 var mount_deg: float = 0.0           # cone centre relative to the nose: 0 forward, 180 rearward, + clockwise (right)
 var half_across_deg: float = 1.0     # half the cone's width, in azimuth
@@ -51,6 +53,7 @@ func _init(v: Dictionary = {}) -> void:
 	id = str(v.get("id", ""))
 	name = str(v.get("name", ""))
 	kind = str(v.get("kind", ""))
+	round_id = str(v.get("round", ""))
 	var pts: Variant = v.get("hardpoints", [])
 	hardpoints = []
 	if pts is Array:
@@ -79,7 +82,7 @@ func _init(v: Dictionary = {}) -> void:
 # CombatWeapon.new(w.values() with one key replaced).
 func values() -> Dictionary:
 	return {
-		"id": id, "name": name, "kind": kind,
+		"id": id, "name": name, "kind": kind, "round": round_id,
 		"hardpoints": hardpoints.duplicate(),
 		"mount_deg": mount_deg, "half_across_deg": half_across_deg,
 		"elevation_deg": elevation_deg, "half_height_deg": half_height_deg,

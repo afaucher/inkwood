@@ -159,7 +159,7 @@ func _result(x: float, y: float, z: float, t: float) -> Dictionary:
 	if _s_kind == KIND_CANOPY:
 		r["kind"] = "canopy"
 		r["material"] = Rules.TREES
-		r["material_name"] = "trees"
+		r["material_name"] = rules.material_name(Rules.TREES)   # wood (a canopy); r.kind says it is a canopy
 		r["canopy"] = _s_can
 		r["chance"] = _s_chance
 		r["roll"] = _s_roll
@@ -362,17 +362,27 @@ func canopy_roll(roll_key: int, canopy_id: int) -> float:
 # half short of its face so its own cells do not stop the line. {visible, share (the silhouette-area weighted share of the target in
 # view), boxes: [{part, material, material_name, samples, reached, share, rows, cols, area, lines: [{from, to, reach, stop}]}]}.
 # `roll_key` is the caller's: each line gets its own from it. `with_lines` false skips the per-line records.
-func exposure(from3: Vector3, target_boxes: Array, roll_key: int = 0, with_lines: bool = true) -> Dictionary:
-	return exposure_xyz(from3.x, from3.y, from3.z, target_boxes, roll_key, with_lines)
+func exposure(from3: Vector3, target_boxes: Array, roll_key: int = 0, with_lines: bool = true, with_cells: bool = false) -> Dictionary:
+	return exposure_xyz(from3.x, from3.y, from3.z, target_boxes, roll_key, with_lines, with_cells)
 
-func exposure_xyz(fx: float, fy: float, fz: float, target_boxes: Array, roll_key: int = 0, with_lines: bool = true) -> Dictionary:
-	var picked: Array = []
+# STAGE 2 (builder LOF2): the share is WEIGHTED by the band of the box each sample stands for (Shapes.samples: the rows are spread and the
+# end rows weigh half a slice), the parts data targets.not_targets names (a level deck) are never sampled, and `with_cells` adds to each box
+# record `cells`: [{x, y, z (the sample point on the near face), zlo, zhi (the band of heights it stands for), w (its weight in the box), reach}]
+# and `col_w` (the width of a column): the cut of the silhouette the odds (scripts/sim/line_of_fire_odds.gd) sums over.
+func exposure_xyz(fx: float, fy: float, fz: float, target_boxes: Array, roll_key: int = 0, with_lines: bool = true, with_cells: bool = false) -> Dictionary:
+	var candidates: Array = []
 	for i in target_boxes.size():
+		if not rules.not_target_parts.has(str((target_boxes[i] as Dictionary).get("part", ""))):
+			candidates.append(i)
+	if candidates.is_empty():
+		for i in target_boxes.size():
+			candidates.append(i)
+	var picked: Array = []
+	for i: int in candidates:
 		if not bool((target_boxes[i] as Dictionary).get("stamp", false)):
 			picked.append(i)
 	if picked.is_empty():
-		for i in target_boxes.size():
-			picked.append(i)
+		picked = candidates
 	var out_boxes: Array = []
 	var area_sum := 0.0
 	var seen_sum := 0.0
@@ -381,14 +391,20 @@ func exposure_xyz(fx: float, fy: float, fz: float, target_boxes: Array, roll_key
 		var b: Dictionary = target_boxes[bi]
 		var s := Shapes.samples(b, fx, fy, rules)
 		var pts: PackedFloat64Array = s["pts"]
+		var wts: PackedFloat64Array = s["w"]
 		var count := pts.size() / 3
 		var pull := _c * 1.5 if bool(b.get("stamp", false)) else 0.0
 		var reached := 0
+		var seen_w := 0.0
 		var lines: Array = []
+		var cells: Array = []
 		for q in count:
 			var qx := pts[q * 3]
 			var qy := pts[q * 3 + 1]
 			var qz := pts[q * 3 + 2]
+			var cell_x := qx
+			var cell_y := qy
+			var cell_z := qz
 			if pull > 0.0:
 				var hl := sqrt((qx - fx) * (qx - fx) + (qy - fy) * (qy - fy))
 				if hl > pull:
@@ -397,11 +413,16 @@ func exposure_xyz(fx: float, fy: float, fz: float, target_boxes: Array, roll_key
 					qy = fy + (qy - fy) * k
 					qz = fz + (qz - fz) * k
 			var r := trace_xyz(fx, fy, fz, qx, qy, qz, roll_key * 1000003 + bi * 1009 + q)
-			if bool(r["clear"]):
+			var clear := bool(r["clear"])
+			if clear:
 				reached += 1
+				seen_w += wts[q]
 			if with_lines:
-				lines.append({"from": Vector3(fx, fy, fz), "to": Vector3(qx, qy, qz), "reach": bool(r["clear"]), "stop": {} if bool(r["clear"]) else r})
-		var share := float(reached) / float(count) if count > 0 else 0.0
+				lines.append({"from": Vector3(fx, fy, fz), "to": Vector3(qx, qy, qz), "reach": clear, "stop": {} if clear else r})
+			if with_cells:
+				cells.append({"x": cell_x, "y": cell_y, "z": cell_z, "zlo": (s["zlo"] as PackedFloat64Array)[q], "zhi": (s["zhi"] as PackedFloat64Array)[q],
+					"w": wts[q], "reach": clear})
+		var share := seen_w
 		var area: float = float(s["area"])
 		area_sum += area
 		seen_sum += area * share
@@ -410,6 +431,9 @@ func exposure_xyz(fx: float, fy: float, fz: float, target_boxes: Array, roll_key
 			"share": share, "rows": int(s["rows"]), "cols": int(s["cols"]), "area": area}
 		if with_lines:
 			rec["lines"] = lines
+		if with_cells:
+			rec["cells"] = cells
+			rec["col_w"] = float(s["col_w"])
 		out_boxes.append(rec)
 	return {"visible": reached_all > 0, "share": seen_sum / area_sum if area_sum > 0.0 else 0.0, "boxes": out_boxes}
 

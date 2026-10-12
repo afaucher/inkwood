@@ -21,9 +21,19 @@ extends "res://scripts/test_support/test_case.gd"
 # drew a different scene.
 #
 # The parameters are checked too: data/params/render_defaults.json, read by
-# RenderParams, must hold the prototype's own `P` defaults bit for bit. So is
+# RenderParams, must hold the prototype's own `P` defaults bit for bit -- or,
+# for a decided one, the prototype's value as its `prototype_default`. So is
 # one freehand open wall with end caps, built outside the scene, because the
 # default scene's walls never take wall_geom's caps branch.
+#
+# THE SCENE IS GENERATED TWICE. Under PARITY (RenderParams.use_prototype_defaults:
+# every decided value back to its prototype_default -- shadow strength, the wall
+# height, a house's 0.9 height ratio, no tree height scale or window) it is
+# compared with the prototype's, everything, as above. Under the GAME's values
+# (decision scenery-heights, Alex: "S1 real heights": walls 5 px, houses 0.5 x
+# house_size, trees x1.1 held to 16 to 40 px = 8 to 20 m at 2 px/m) the same seed
+# must place the same scene (counts, positions, crowns, random draws) with only
+# the heights changed, each to S1's rule applied to the prototype's own number.
 #
 # The summary is PRINTED in the format prototype_scene.js prints, so the .log
 # reads side by side with node's output.
@@ -137,6 +147,7 @@ func setup(_main) -> void:
 			exact(float(entry["prototype_default"]), fp[k], "parameters.%s.prototype_default (P.%s is the tuned %s)" % [P_DATA_KEYS[k], k, P.get(k)])
 		else:
 			exact(P.get(k), fp[k], "P.%s" % k)
+	_check_scenery_params(P, prm)
 	exact(float(P.rings), fp["rings"], "P.rings")
 	eq(P.collide, fp["collide"], "P.collide")
 	eq(P.shadowCol, Color.html(str(fp["shadowCol"])), "P.shadowCol")
@@ -149,7 +160,17 @@ func setup(_main) -> void:
 
 	# --- generate ------------------------------------------------------------------
 	var t0 := Time.get_ticks_usec()
-	var gen := SceneGen.new(float(fx["w"]), float(fx["h"]), P)
+	# the PROTOTYPE's own parameters: every decided value put back to its prototype_default (the game's P keeps the decided ones)
+	var PP := RenderParams.new()
+	PP.use_prototype_defaults()
+	exact(PP.wallH, fp["wallH"], "parity: P.wallH is the prototype's")
+	exact(PP.height, fp["height"], "parity: P.height is the prototype's")
+	exact(PP.houseSize, fp["houseSize"], "parity: P.houseSize is the prototype's")
+	eq(PP.houseHeightRatio, 0.9, "parity: a house's height ratio is the prototype's literal 0.9")
+	eq(PP.treeHeightScale, 1.0, "parity: no tree height scale")
+	eq(PP.treeHeightMin, 0.0, "parity: no tree height floor")
+	eq(PP.treeHeightMax, 0.0, "parity: no tree height ceiling")
+	var gen := SceneGen.new(float(fx["w"]), float(fx["h"]), PP)
 	gen.generate(seed_value)
 	var ms := (Time.get_ticks_usec() - t0) / 1000.0
 	exact(gen.max_cr(), fc["maxCr"], "maxCr()")
@@ -225,10 +246,13 @@ func setup(_main) -> void:
 			Geometry.resample_f64(flat, 6.0, false), false), false), 3.0, false))
 		var free := Structures.make_wall(Mulberry32.new(seed_value + 8), {"type": "free", "pts": fpts},
 			{"closed": false, "caps": true})
-		Structures.sync_struct(free, P)
+		Structures.sync_struct(free, PP)
 		_check_struct(free, fw["wall"], "free_wall")
 		free_line = ("free wall: %d pts, caps %d + %d pts, outline %d, seed %d" % [(free.pts as Array).size(),
 			(free.caps[0] as Array).size(), (free.caps[1] as Array).size(), (free.outline[0] as Array).size(), free.seed])
+
+	# --- the same scene under the GAME's values (S1): placed alike, only the heights changed -------------------------------------
+	_check_game_scene(fx, P, gen, seed_value)
 
 	if _mismatched > MAX_LISTED:
 		fail("... and %d more mismatches (%d listed above)" % [_mismatched - MAX_LISTED, MAX_LISTED])
@@ -250,6 +274,68 @@ func setup(_main) -> void:
 	print(free_line)
 	print("generated in %.0f ms; %d doubles compared within %s, %d mismatched" % [ms, _compared, str(TOLERANCE), _mismatched])
 	finish()
+
+# The scenery-heights entries of the data: each carries the decision and the prototype's value; the game's are S1's numbers.
+func _check_scenery_params(P: RenderParams, prm: Dictionary) -> void:
+	var proto := {"wall_height": 12.0, "house_height_ratio": 0.9, "tree_height_scale": 1.0, "tree_height_min_px": 0.0, "tree_height_max_px": 0.0}
+	var game := {"wall_height": 5.0, "house_height_ratio": 0.5, "tree_height_scale": 1.1, "tree_height_min_px": 16.0, "tree_height_max_px": 40.0}
+	for key: String in proto:
+		var entry: Dictionary = prm.get(key, {})
+		eq(str(entry.get("decision", "")), "scenery-heights", "parameters.%s names its decision" % key)
+		check(str(entry.get("alex_words", "")) != "", "parameters.%s carries Alex's words" % key)
+		eq(float(entry.get("prototype_default", NAN)), float(proto[key]), "parameters.%s.prototype_default is the prototype's" % key)
+		eq(float(entry.get("default", NAN)), float(game[key]), "parameters.%s.default is S1's" % key)
+	eq(P.wallH, 5.0, "the game's wall height is S1's 5 px (2.5 m at 2 px/m)")
+	eq(P.houseHeightRatio, 0.5, "the game's house height is 0.5 x house_size (7 m at 2 px/m)")
+	eq(P.treeHeightScale, 1.1, "the game's trees are x1.1")
+	eq(P.treeHeightMin, 16.0, "the game's trees are held to 8 m ...")
+	eq(P.treeHeightMax, 40.0, "... to 20 m")
+	eq(P.height, 1.3, "the tree height multiple (and so the hedge trees) is the prototype's")
+
+# The default scene again with the game's P: the same objects in the same places (the placement reads crowns, never heights), each
+# height S1's rule on the prototype's own number. `proto` is the parity scene already built and compared.
+func _check_game_scene(fx: Dictionary, P: RenderParams, proto: SceneGen, seed_value: int) -> void:
+	var g := SceneGen.new(float(fx["w"]), float(fx["h"]), P)
+	g.generate(seed_value)
+	if not (eq(g.trees.size(), proto.trees.size(), "S1: the same tree count") and eq(g.structs.size(), proto.structs.size(), "S1: the same structure count")
+			and eq(g.props.size(), proto.props.size(), "S1: the same prop count")):
+		return
+	var lo := P.treeHeightMin
+	var hi := P.treeHeightMax
+	var clamped := 0
+	var tallest := 0.0
+	for i in g.trees.size():
+		var t: Dictionary = g.trees[i]
+		var p: Dictionary = proto.trees[i]
+		if t.x != p.x or t.y != p.y or t.r != p.r or t.seed != p.seed or t.sr != p.sr or t.hr != p.hr:
+			_mismatch("S1: tree[%d] is not placed or drawn like the prototype's" % i)
+			continue
+		var want := clampf(float(p.h) * P.treeHeightScale, lo, hi)
+		if not _close(t.h, want):
+			_mismatch("S1: tree[%d].h %s is not the prototype's %s x%s held to [%s, %s] = %s" % [i, t.h, p.h, P.treeHeightScale, lo, hi, want])
+		if want != float(p.h) * P.treeHeightScale:
+			clamped += 1
+		tallest = maxf(tallest, t.h)
+	check(tallest <= hi + 1e-9, "S1: no tree is taller than %s px (the tallest is %s)" % [hi, tallest])
+	check(clamped > 0, "S1: the window bites on some trees of the default scene (%d held)" % clamped)
+	var worst_house := 0.0
+	var worst_wall := 0.0
+	for i in g.structs.size():
+		var s: Dictionary = g.structs[i]
+		var p: Dictionary = proto.structs[i]
+		if not eq(s.kind, p.kind, "S1: struct[%d] is the same kind" % i):
+			continue
+		if s.hs != p.hs:
+			_mismatch("S1: struct[%d] has another random height factor" % i)
+		if s.kind == "wall":
+			near(s.h, P.wallH * float(s.hs), 1e-9, "S1: wall[%d].h is wall_height x its factor" % i)
+			worst_wall = maxf(worst_wall, s.h)
+		else:
+			near(s.h, P.houseSize * P.houseHeightRatio * float(s.hs), 1e-9, "S1: house[%d].h is house_size x the ratio x its factor" % i)
+			worst_house = maxf(worst_house, s.h)
+	check(worst_wall <= 5.0 * 1.15 + 1e-9 and worst_wall > 0.0, "S1: the tallest wall is at most 5 px x 1.15 (%s px)" % worst_wall)
+	check(worst_house <= 14.0 * 1.15 + 1e-9 and worst_house > 0.0, "S1: the tallest house is at most 14 px x 1.15 = 16.1 px, 8 m (%s px)" % worst_house)
+	print("S1 (the game's values): %d trees, %d held by the window, tallest %s px (%s m at 2 px/m); tallest house %s px, tallest wall %s px" % [g.trees.size(), clamped, tallest, tallest / 2.0, worst_house, worst_wall])
 
 func _check_struct(s: Dictionary, e: Dictionary, label: String) -> void:
 	if not eq(s.kind, e["kind"], label + ".kind"):

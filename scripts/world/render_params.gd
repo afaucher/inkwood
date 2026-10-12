@@ -11,6 +11,12 @@ extends RefCounted
 #   P.treeSize, P.sizeVar, P.rings, P.height    parameters.canopy_size / size_variation /
 #                                                 inner_contour_rings / tree_height
 #   P.wallW, P.wallH, P.houseSize               parameters.wall_width / wall_height / house_size
+#   P.houseHeightRatio                          parameters.house_height_ratio (decision scenery-heights, S1): a house's height
+#                                                 is houseSize * this (the prototype's literal 0.9) times its own factor
+#   P.treeHeightScale, P.treeHeightMin/Max      parameters.tree_height_scale / tree_height_min_px / tree_height_max_px
+#                                                 (decision scenery-heights, S1): a tree's height times the scale, held to
+#                                                 [min, max] px (0 = no bound). The prototype's values (1, 0, 0) are each
+#                                                 entry's prototype_default; use_prototype_defaults() sets them back
 #   P.sunAz, P.elev, P.shadowStr, P.shadowCol   data/params/sun.json via scripts/world/sun.gd (Sun.current():
 #                                                 the compass bearing and the height of THE sun, one source for
 #                                                 every reader; 'fixed' is the prototype's 315 / 46) /
@@ -63,6 +69,10 @@ var grain: float
 var wallW: float
 var wallH: float
 var houseSize: float
+var houseHeightRatio: float   # a house's height = houseSize * this * hs (structures.gd sync_struct); the prototype's literal was 0.9
+var treeHeightScale: float    # a tree's height (scene_gen.gd sync_tree) is multiplied by this ...
+var treeHeightMin: float      # ... then held to [min, max] px; 0 = unbounded on that side (the prototype's)
+var treeHeightMax: float
 var L: Dictionary = {}  # paper, road, shadows, objects, grain, grid -> bool
 
 # --- prototype constants -------------------------------------------------------
@@ -111,6 +121,10 @@ func _init(path: String = DEFAULT_PATH) -> void:
 	wallW = _default(prm, "wall_width")
 	wallH = _default(prm, "wall_height")
 	houseSize = _default(prm, "house_size")
+	houseHeightRatio = _default(prm, "house_height_ratio")
+	treeHeightScale = _default(prm, "tree_height_scale")
+	treeHeightMin = _default(prm, "tree_height_min_px")
+	treeHeightMax = _default(prm, "tree_height_max_px")
 	# THE SUN is data/params/sun.json's (Sun.current(): fixed = the prototype's 315 and 46 unless a switch says clock)
 	var sun = Sun.current()
 	if not sun.ok():
@@ -171,6 +185,44 @@ func _init(path: String = DEFAULT_PATH) -> void:
 
 func ok() -> bool:
 	return errors.is_empty()
+
+# The prototype's name for each parameter that has a data key (data key -> P field). PARITY (render's -Parity, the port check) sets
+# each one whose entry carries a "prototype_default" back to it: render_defaults.json keeps the prototype's value beside a decided
+# one, so the game runs the decided value and the check against the prototype runs the prototype's.
+const PARITY_NAMES := {"brush_size": "brush", "density": "density", "canopy_size": "treeSize",
+	"size_variation": "sizeVar", "inner_contour_rings": "rings", "tree_height": "height",
+	"wall_width": "wallW", "wall_height": "wallH", "house_size": "houseSize",
+	"house_height_ratio": "houseHeightRatio", "tree_height_scale": "treeHeightScale",
+	"tree_height_min_px": "treeHeightMin", "tree_height_max_px": "treeHeightMax", "sun_direction": "sunAz",
+	"sun_elevation": "elev", "shadow_strength": "shadowStr", "line_weight": "lw", "hand_wobble": "wob",
+	"paper_grain": "grain"}
+
+# The tallest a tree can be, px: the biggest crown at the tallest height factor, scaled and held to the window. What a shadow's
+# reach is measured from (terrain_shadows.gd, chunk_scene_provider.gd): with the prototype's values it is exactly what they
+# computed before (treeSize x (1 + sizeVar) x big x height x 1.15).
+func tallest_tree_px() -> float:
+	var h := treeSize * (1.0 + sizeVar) * big_tree_scale * height * 1.15 * treeHeightScale
+	if treeHeightMax > 0.0:
+		h = minf(h, treeHeightMax)
+	return h
+
+# Sets every mapped P field whose data entry has a "prototype_default" to that value. Returns a line per change. (InkRenderer's
+# apply_prototype_defaults calls this, then does the pen.) Tree height and structure height are read by scene_gen.gd and
+# structures.gd from P, so a scene generated after this call is the prototype's own.
+func use_prototype_defaults() -> Array[String]:
+	var out: Array[String] = []
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(source_path))
+	var prm: Dictionary = (raw as Dictionary).get("parameters", {}) if raw is Dictionary else {}
+	for key: String in prm:
+		var entry: Variant = prm[key]
+		if not (entry is Dictionary and (entry as Dictionary).has("prototype_default") and PARITY_NAMES.has(key)):
+			continue
+		var v: Variant = entry["prototype_default"]
+		var field: String = PARITY_NAMES[key]
+		var was: Variant = get(field)
+		set(field, int(v) if field == "rings" else float(v))
+		out.append("P.%s %s -> %s (parameters.%s.prototype_default)" % [field, str(was), str(get(field)), key])
+	return out
 
 func _err(message: String) -> void:
 	errors.append(message)

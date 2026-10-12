@@ -579,6 +579,251 @@
       "alpha": 0.88,
       "_proposed": true,
       "_reason": "PROPOSED (Track TR, tracers): the other side's accent (slate blue) at the ring alpha step 0.88; see tracer.side_a"
+    },
+    "gf.dust.0.0": {
+      "base": "dirt",
+      "toward": "paper",
+      "t": 0.45,
+      "alpha": 0.3,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): dust: the dirt ink lightened toward the paper (a lightness step off the paper), the wash of an impact on earth and of a wood hit's dust; stage 0 of 3 (fresh, middle, old), tone 0 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dust.0.1": {
+      "base": "dirt",
+      "toward": "paper",
+      "t": 0.45,
+      "alpha": 0.42,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): dust: the dirt ink lightened toward the paper (a lightness step off the paper), the wash of an impact on earth and of a wood hit's dust; stage 0 of 3 (fresh, middle, old), tone 1 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dust.0.2": {
+      "base": "dirt",
+      "toward": "paper",
+      "t": 0.45,
+      "alpha": 0.54,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): dust: the dirt ink lightened toward the paper (a lightness step off the paper), the wash of an impact on earth and of a wood hit's dust; stage 0 of 3 (fresh, middle, old), tone 2 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dust.1.0": {
+      "base": "dirt",
+      "toward": "paper",
+      "t": 0.45,
+      "alpha": 0.24,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): dust: the dirt ink lightened toward the paper (a lightness step off the paper), the wash of an impact on earth and of a wood hit's dust; stage 1 of 3 (fresh, middle, old), tone 0 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dust.1.1": {
+      "base": "dirt",
+      "toward": "paper",
+      "t": 0.45,
+      "alpha": 0.34,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): dust: the dirt ink lightened toward the paper (a lightness step off the paper), the wash of an impact on earth and of a wood hit's dust; stage 1 of 3 (fresh, middle, old), tone 1 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dust.1.2": {
+      "base": "dirt",
+      "toward": "paper",
+      "t": 0.45,
+      "alpha": 0.44,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): dust: the dirt ink lightened toward the paper (a lightness step off the paper), the wash of an impact on earth and of a wood hit's dust; stage 1 of 3 (fresh, middle, old), tone 2 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dust.2.0": {
+      "base": "dirt",
+      "toward": "paper",
+      "t": 0.45,
+      "alpha": 0.16,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): dust: the dirt ink lightened toward the paper (a lightness step off the paper), the wash of an impact on earth and of a wood hit's dust; stage 2 of 3 (fresh, middle, old), tone 0 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dust.2.1": {
+      "base": "dirt",
+      "toward": "paper",
+      "t": 0.45,
+      "alpha": 0.24,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): dust: the dirt ink lightened toward the paper (a lightness step off the paper), the wash of an impact on earth and of a wood hit's dust; stage 2 of 3 (fresh, middle, old), tone 1 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dust.2.2": {
+      "base": "dirt",
+      "toward": "paper",
+      "t": 0.45,
+      "alpha": 0.32,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): dust: the dirt ink lightened toward the paper (a lightness step off the paper), the wash of an impact on earth and of a wood hit's dust; stage 2 of 3 (fresh, middle, old), tone 2 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.stone.0.0": {
+      "base": "flash",
+      "toward": "dirt",
+      "t": 0.15,
+      "alpha": 0.34,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): stone dust: the knock-out step eased toward dirt, paler than earth's, the wash of an impact on stone; stage 0 of 3 (fresh, middle, old), tone 0 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.stone.0.1": {
+      "base": "flash",
+      "toward": "dirt",
+      "t": 0.15,
+      "alpha": 0.48,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): stone dust: the knock-out step eased toward dirt, paler than earth's, the wash of an impact on stone; stage 0 of 3 (fresh, middle, old), tone 1 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.stone.0.2": {
+      "base": "flash",
+      "toward": "dirt",
+      "t": 0.15,
+      "alpha": 0.62,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): stone dust: the knock-out step eased toward dirt, paler than earth's, the wash of an impact on stone; stage 0 of 3 (fresh, middle, old), tone 2 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.stone.1.0": {
+      "base": "flash",
+      "toward": "dirt",
+      "t": 0.15,
+      "alpha": 0.28,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): stone dust: the knock-out step eased toward dirt, paler than earth's, the wash of an impact on stone; stage 1 of 3 (fresh, middle, old), tone 0 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.stone.1.1": {
+      "base": "flash",
+      "toward": "dirt",
+      "t": 0.15,
+      "alpha": 0.4,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): stone dust: the knock-out step eased toward dirt, paler than earth's, the wash of an impact on stone; stage 1 of 3 (fresh, middle, old), tone 1 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.stone.1.2": {
+      "base": "flash",
+      "toward": "dirt",
+      "t": 0.15,
+      "alpha": 0.5,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): stone dust: the knock-out step eased toward dirt, paler than earth's, the wash of an impact on stone; stage 1 of 3 (fresh, middle, old), tone 2 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.stone.2.0": {
+      "base": "flash",
+      "toward": "dirt",
+      "t": 0.15,
+      "alpha": 0.18,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): stone dust: the knock-out step eased toward dirt, paler than earth's, the wash of an impact on stone; stage 2 of 3 (fresh, middle, old), tone 0 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.stone.2.1": {
+      "base": "flash",
+      "toward": "dirt",
+      "t": 0.15,
+      "alpha": 0.26,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): stone dust: the knock-out step eased toward dirt, paler than earth's, the wash of an impact on stone; stage 2 of 3 (fresh, middle, old), tone 1 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.stone.2.2": {
+      "base": "flash",
+      "toward": "dirt",
+      "t": 0.15,
+      "alpha": 0.34,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): stone dust: the knock-out step eased toward dirt, paler than earth's, the wash of an impact on stone; stage 2 of 3 (fresh, middle, old), tone 2 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dark.0.0": {
+      "base": "ink",
+      "toward": "dirt",
+      "t": 0.35,
+      "alpha": 0.34,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): a metal hit's dark puff: the ink eased toward dirt, the darkest wash of the three; stage 0 of 3 (fresh, middle, old), tone 0 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dark.0.1": {
+      "base": "ink",
+      "toward": "dirt",
+      "t": 0.35,
+      "alpha": 0.48,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): a metal hit's dark puff: the ink eased toward dirt, the darkest wash of the three; stage 0 of 3 (fresh, middle, old), tone 1 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dark.0.2": {
+      "base": "ink",
+      "toward": "dirt",
+      "t": 0.35,
+      "alpha": 0.62,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): a metal hit's dark puff: the ink eased toward dirt, the darkest wash of the three; stage 0 of 3 (fresh, middle, old), tone 2 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dark.1.0": {
+      "base": "ink",
+      "toward": "dirt",
+      "t": 0.35,
+      "alpha": 0.3,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): a metal hit's dark puff: the ink eased toward dirt, the darkest wash of the three; stage 1 of 3 (fresh, middle, old), tone 0 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dark.1.1": {
+      "base": "ink",
+      "toward": "dirt",
+      "t": 0.35,
+      "alpha": 0.42,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): a metal hit's dark puff: the ink eased toward dirt, the darkest wash of the three; stage 1 of 3 (fresh, middle, old), tone 1 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dark.1.2": {
+      "base": "ink",
+      "toward": "dirt",
+      "t": 0.35,
+      "alpha": 0.52,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): a metal hit's dark puff: the ink eased toward dirt, the darkest wash of the three; stage 1 of 3 (fresh, middle, old), tone 2 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dark.2.0": {
+      "base": "ink",
+      "toward": "dirt",
+      "t": 0.35,
+      "alpha": 0.2,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): a metal hit's dark puff: the ink eased toward dirt, the darkest wash of the three; stage 2 of 3 (fresh, middle, old), tone 0 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dark.2.1": {
+      "base": "ink",
+      "toward": "dirt",
+      "t": 0.35,
+      "alpha": 0.28,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): a metal hit's dark puff: the ink eased toward dirt, the darkest wash of the three; stage 2 of 3 (fresh, middle, old), tone 1 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.dark.2.2": {
+      "base": "ink",
+      "toward": "dirt",
+      "t": 0.35,
+      "alpha": 0.36,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF's gunfire board, variants/gunfire/families.json roles; family G3 chosen by Alex, decision gunfire-looks): a metal hit's dark puff: the ink eased toward dirt, the darkest wash of the three; stage 2 of 3 (fresh, middle, old), tone 2 of 3 (thin, medium, thick), as the W1 smoke's roles (smoke.w.*): lightness is a ramp off the paper, no new hue"
+    },
+    "gf.splash.soft": {
+      "base": "flash",
+      "alpha": 0.55,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF, family G3): the pale soft disc and ring of a round in water, the knock-out step at alpha 0.55; no smoke, no hue"
+    },
+    "gf.leaf": {
+      "base": "object_fill",
+      "alpha": 0.96,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF, family G3): a leaf or splinter of a tree or a house hit, the object fill at alpha 0.96 with an ink edge"
+    },
+    "gf.chip": {
+      "base": "rock_fill",
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF, family G3): a chip of stone, the rock fill with an ink edge"
+    },
+    "gf.scorch": {
+      "base": "ink",
+      "alpha": 0.2,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF, family G3): the faint scorch a medium round leaves on the ground, ink at alpha 0.2 (it fades in and lasts 90 s)"
+    },
+    "gf.scuff": {
+      "base": "flash",
+      "alpha": 0.5,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder GF, family G3): the scuff a round leaves on stone, the knock-out step at alpha 0.5"
     }
   },
   "common": {
@@ -21009,7 +21254,7 @@
     }
   },
   "tracers": {
-    "_about": "MACHINE-GUN TRACERS (Track TR, 2026-10-11). Alex 2026-10-11 (the second playtest): 'We should show tracers for machine guns.' and, confirming the scope, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. ALL VALUES ARE PROPOSED VALUE RECORDS except where a record names the decision (the SCOPE, machine guns only, is Alex's, decision tracers-mg; the weapon list that scope picks out, the look and every number are the builder's proposals). A 'fire' event (scripts/sim/combat.gd, one per roll) from a weapon in `weapons` draws a tracer from its hardpoint toward the target, as scripts/fx/fx_tracer.gd: a hit ends on the target, a miss passes beside it and carries on a little; it lives a short time on the playback clock; visual only and deterministic from the event. The look is one of `options` (T1..T5, the board is variants/tracers/); `working_default.tracers` names the one the game runs: Alex picked T5, an ink streak with hit and miss marks (decision tracers-look); T5's numbers are still proposed. Colours are roles (data/fx/fx.json roles tracer.* and the ink roles): no new hue, no glow. Nothing in the code keys on a weapon's class or kind: ADDING A WEAPON (the tank's 'turret_gun', say) IS A DATA EDIT, one id in `weapons`.",
+    "_about": "MACHINE-GUN TRACERS (Track TR, 2026-10-11). Alex 2026-10-11 (the second playtest): 'We should show tracers for machine guns.' and, confirming the scope, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. ALL VALUES ARE PROPOSED VALUE RECORDS except where a record names the decision (the SCOPE, machine guns only, is Alex's, decision tracers-mg; the weapon list that scope picks out, the look and every number are the builder's proposals). A 'fire' event (scripts/sim/combat.gd, one per roll) from a weapon in `weapons` draws a tracer from its hardpoint toward the target, as scripts/fx/fx_tracer.gd: a hit ends on the target, a miss passes beside it and carries on a little; it lives a short time on the playback clock; visual only and deterministic from the event. The look is one of `options` (T1..T5, the board is variants/tracers/); `working_default.tracers` names the one the game runs: Alex picked T5, an ink streak with hit and miss marks (decision tracers-look); T5's numbers are still proposed. Colours are roles (data/fx/fx.json roles tracer.* and the ink roles): no new hue, no glow. Nothing in the code keys on a weapon's class or kind. WHICH WEAPONS DRAW A TRACER is the ROUND's tracer flag now (builder G3, 2026-10-12, decision round-model: data/sim/rounds.json rounds.*.tracer, the weapon's round named in data/units/*.json weapons[].round); this section no longer lists weapon ids (the list was wing_guns, nose_gun, dorsal_turret, tail_turret, rear_gunner, quad_mg, deck_mg: exactly the weapons that fire the 'bullet' round, which is the only round with tracer true). ADDING A WEAPON (the tank's 'turret_gun', say) IS A DATA EDIT: set `tracer` true on its round (or give it the bullet round).",
     "enabled": {
       "value": true,
       "_proposed": true,
@@ -21019,20 +21264,7 @@
       "value": "machine_guns_only",
       "decision": "tracers-mg",
       "_decided": "Alex 2026-10-11 (the second playtest): 'We should show tracers for machine guns.' and, confirming the scope, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'",
-      "_reason": "Alex's scope, decision tracers-mg: machine guns only for now; other direct-fire weapons (the tank's gun) may be revisited. Which weapon ids count as machine guns is the list below, PROPOSED"
-    },
-    "weapons": {
-      "value": [
-        "wing_guns",
-        "nose_gun",
-        "dorsal_turret",
-        "tail_turret",
-        "rear_gunner",
-        "quad_mg",
-        "deck_mg"
-      ],
-      "_proposed": true,
-      "_reason": "PROPOSED list of the weapon ids (data/units/*.json weapons[].id) that draw a tracer, picking out the machine guns for Alex's scope (decision tracers-mg: Alex 2026-10-11 (the second playtest): 'We should show tracers for machine guns.' and, confirming the scope, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'). wing_guns: the light fighter's twin wing guns (two hardpoints, two tracers); nose_gun, dorsal_turret, tail_turret: the bomber's flexible nose gun and turrets; rear_gunner: the heavy fighter's flexible rear gun; quad_mg: the mobile AA's quad machine-gun mount and deck_mg: the P1 cutter's (the patrol boat's) deck machine guns (decision weapon-kinds, 2026-10-11, Alex: 'Flak would be shells shot that then explode. Machine guns would be bullets which don't.', and on the mapping 'the mobile AA's quad mount and the cutter's guns are machine guns, the cruiser's AA is flak': '5 good'; both were the one id aa_guns, with the flak's upward cone, before). NOT listed: flak, light_flak and ship_flak (the battery's guns and the cruiser's flak: bursts, decision flak-look F2; ship_flak is the cruiser's, decision weapon-kinds), nose_cannon (the heavy fighter's cannon: 2 pips, not a machine gun), turret_gun (the tank's light gun: the case Alex says may be revisited; to add it, add \"turret_gun\" here and nothing else), the cruiser's main guns and the bombs (shell_fire / bomb events, not 'fire' events). The sim's weapon records have no class field; the code matches the id alone"
+      "_reason": "Alex's scope, decision tracers-mg: machine guns only for now; other direct-fire weapons (the tank's gun) may be revisited. Which weapons count as machine guns is the tracer flag of the rounds they fire (data/sim/rounds.json), PROPOSED"
     },
     "fog": {
       "shown_when": {
@@ -21623,7 +21855,7 @@
     },
     "differences_kept": {
       "value": [
-        "A plane's damage trail, its fall trail and a mid-air burst do not climb (rise_mps 0): the smoke is laid along a path at the plane's altitude, where the wind is already 1.6 times the ground's, and a climb of 4 m/s would lift an old puff by 100 m in its life (data/units/*.json damage_smoke.rise_mps holds the reason). The weakest reason: Alex may want them alike.",
+        "A plane's mid-air explosion (its smoke burst and its plume) does not climb (rise_mps 0 in the midair groups of the crash options): it is one blast at the plane's altitude, thrown outward and held by drag. Its reason used to be 'shared with the plane's own trail'; that trail CLIMBS now (Alex, decision smoke-consistency, 2026-10-12, asked 'should planes' trails rise like ground smoke': 'Yes to both'), so this is the one plane smoke left that does not. OPEN for Alex, not changed: a one-value edit (crash options midair smoke_burst and plume rise_mps, kept equal by test_smoke_consistency).",
         "Flak (F2) is drawn in ink washes (flak.wash.*), not W1: Alex's flak-look choice, a dark ragged powder burst; it rises 0.8 m/s (small, at altitude).",
         "The forest fire's columns are in MAP metres and climb 24 m/s slowing (188 m in 12 s): a tree is map scenery drawn at the map's scale and a burning grove is a big hot source; a unit's smoke is drawn at the units' own drawn scale because the unit is.",
         "Explosions (a mid-air burst, a crash, a ruin) are sized by what blew up (the airframe, the unit, the round's blast), a damage smoke by its SOURCE: an explosion consumes the whole thing, damage smokes from one place.",
@@ -21633,7 +21865,7 @@
         "A puff made while its place was in sight stays on the map when the place later falls in fog, but a forest column is hidden at once with the fog: the field's gate is at emission (combat.fx.smoke_when_hidden), the column's is per frame. OPEN: docs/proposals/smoke-audit.md question 3."
       ],
       "_proposed": true,
-      "_reason": "the audit's KEPT rows (docs/proposals/smoke-audit.md): every place where one smoke differs from another and the difference stays, each with its reason, so that 'not identical unless there is no reason to be different' (Alex, decision smoke-consistency) can be checked against the data. PROPOSED by builder SMOKE, 2026-10-11"
+      "_reason": "the audit's KEPT rows (docs/proposals/smoke-audit.md): every place where one smoke differs from another and the difference stays, each with its reason, so that 'not identical unless there is no reason to be different' (Alex, decision smoke-consistency) can be checked against the data. PROPOSED by builder SMOKE, 2026-10-11. 2026-10-12: Alex answered the audit's question 1 ('Yes to both'): a plane's damage trail and its fall trail now climb like ground smoke (data/units/*.json damage_smoke.rise_mps 4), and the heavy fighter's and the bomber's trails keep the light fighter's source size (8 m). That difference is gone from this list"
     }
   },
   "impacts": {
@@ -21880,6 +22112,644 @@
         "_proposed": true,
         "_reason": "PROPOSED: a map tree is the feed's tree when its place is within this many metres of the feed's x_m, y_m (so the match does not depend on the id's format)"
       }
+    }
+  },
+  "gunfire": {
+    "_about": "GUNFIRE, G3 LIVE (builder G3, 2026-10-12; scripts/fx/fx_gunfire.gd draws it, scripts/ui/gunfire_feed.gd makes the records from the sim's events). ALEX (decision gunfire-looks, 2026-10-11), on variants/gunfire/: 'G3 · G3 W1 soft puffs' (G3, the W1 soft puffs: big guns' muzzle smoke and the impacts of rounds in the W1 smoke grammar, the materials told apart by lightness). Alex's earlier words: 'Fired shots should have smoke for large rounds (tanks, artillery and ship cannons). Landed shots should have an impact even if they don't destroy you.' and 'a round hitting water would splash, not explode with smoke' (decision impact-by-round-and-target). WHAT IS DRAWN: a MUZZLE (a soft white flash and W1 smoke puffs at the gun, drifting with the wind) for a weapon whose round is in `muzzle.round_classes`, sized by the round's CALIBRE (data/sim/rounds.json); an IMPACT for a round in `impact.round_classes` that lands without destroying, sized by the round's calibre and shaped by the MATERIAL it lands on (the unit's `material` for a hit, what is under the point for a miss): earth and wood and stone as dust (the dirt ink lightened toward the paper, stone paler), metal as a dark puff with spark ticks, water as a pale ring and an ink ripple and NO smoke. Machine-gun bullets keep their tracers (T5), flak its burst (F2), shells and bombs the B3 blast and the water splash (decided), so those classes are not listed. The recipes, the class sizes and the puff sets are the board's family G3 as Alex chose it (his choice is the family; every number inside stays PROPOSED by builder GF, 2026-10-11); the rest (which rounds, the geometry of a muzzle, where a miss lands) is PROPOSED by builder G3. Colours are roles (this file's `roles` gf.*): lightness is a ramp off the paper, no new hue.",
+    "enabled": {
+      "value": true,
+      "decision": "gunfire-looks",
+      "_reason": "the chosen looks are live. false draws no muzzle smoke and no impact (the feed makes no records), and the game is as it was"
+    },
+    "family": {
+      "value": "G3",
+      "decision": "gunfire-looks",
+      "_reason": "ALEX (decision gunfire-looks, 2026-10-11), on variants/gunfire/: 'G3 · G3 W1 soft puffs' (G3, the W1 soft puffs: big guns' muzzle smoke and the impacts of rounds in the W1 smoke grammar, the materials told apart by lightness)"
+    },
+    "muzzle": {
+      "round_classes": {
+        "value": [
+          "cannon_round",
+          "flak_shell",
+          "shell"
+        ],
+        "_proposed": true,
+        "_reason": "which rounds' guns make muzzle smoke: the tank's gun and the nose cannon (cannon rounds), the battery's flak and light flak and the cruiser's ship flak (flak shells) and the cruiser's Main Guns (shells). Machine guns make none (their look is the tracer, T5). PROPOSED by the lead's brief to builder G3, 2026-10-12, from Alex's 'smoke for large rounds (tanks, artillery and ship cannons)'"
+      },
+      "shown_when": {
+        "value": "shooter_seen",
+        "_proposed": true,
+        "_reason": "a muzzle is drawn when the player can see the SHOOTER (an unseen enemy's smoke would give its place away: the tracers' rule, fx.json tracers.fog); 'always' ignores the fog. PROPOSED"
+      },
+      "weapons": {
+        "value": {
+          "turret_gun": {
+            "aim": "heading",
+            "tip_m": 4.8
+          },
+          "nose_cannon": {
+            "aim": "heading",
+            "tip_m": 0.5
+          },
+          "flak": {
+            "aim": "target",
+            "tip_m": 1.5
+          },
+          "light_flak": {
+            "aim": "target",
+            "tip_m": 1.0
+          },
+          "ship_flak": {
+            "aim": "target",
+            "tip_m": 1.0
+          }
+        },
+        "_proposed": true,
+        "_reason": "WHERE EACH WEAPON'S MUZZLE IS, by weapon id. `aim`: 'heading' (the gun points along the hull: a tank's gun is drawn fixed along its hull, a nose cannon fires where the nose points) or 'target' (a flak gun points at what it fires on); `tip_m`: metres from the weapon's hardpoint (data/units/*.json, the fire event's x and y) to the muzzle, along that direction, in the unit's own metres (the drawn scale applies at draw time, as the tracers' muzzles do). The tank's 4.8 m is its drawn gun's tip (5.2 m from the hull centre, unit_marker_art.gd genTank, measured 2026-10-12) less the turret's 0.4 m. A weapon that is not here (and whose round makes a muzzle) takes aim 'target' and tip 0. PROPOSED"
+      },
+      "shell_barrels": {
+        "value": {
+          "fore": [
+            {
+              "fwd_m": 54.6,
+              "lat_m": -0.475
+            },
+            {
+              "fwd_m": 54.6,
+              "lat_m": 0.475
+            },
+            {
+              "fwd_m": 45.5,
+              "lat_m": -0.475
+            },
+            {
+              "fwd_m": 45.5,
+              "lat_m": 0.475
+            }
+          ],
+          "aft": [
+            {
+              "fwd_m": -36.8,
+              "lat_m": 0.475
+            },
+            {
+              "fwd_m": -36.8,
+              "lat_m": -0.475
+            },
+            {
+              "fwd_m": -45.9,
+              "lat_m": 0.475
+            },
+            {
+              "fwd_m": -45.9,
+              "lat_m": -0.475
+            }
+          ],
+          "up_m": 8.0
+        },
+        "_proposed": true,
+        "_reason": "THE CRUISER'S BARREL TIPS for the Main Guns' muzzle puffs, in the hull's own axes (metres ahead of the centre, metres to the right): the two twin turrets forward and the two aft of the drawn cruiser (scripts/ui/unit_marker_art_ship.gd, the board's _cruiser_barrels, measured 2026-10-12). Shell k of a salvo leaves barrel k of the end that faces the aim (the fore barrels when the aim is within 90 degrees of the bow, else the aft ones), 0.2 s after the one before (data/sim/guns.json salvo_interval_s); `up_m` is the barrels' height above the deck's base for the wind (the board's 8 m). PROPOSED"
+      }
+    },
+    "impact": {
+      "round_classes": {
+        "value": [
+          "cannon_round"
+        ],
+        "_proposed": true,
+        "_reason": "which rounds make a G3 impact when they land without destroying: the cannon rounds (the tank's gun, the nose cannon). NOT machine-gun bullets (they keep T5: a hit's ink burst and a tracer's dot or tick), NOT flak (F2 bursts in the air), NOT shells and bombs (B3 and the water splash, decided, keep their impacts). PROPOSED by the lead's brief to builder G3, 2026-10-12"
+      },
+      "shown_when": {
+        "value": "either_seen",
+        "_proposed": true,
+        "_reason": "an impact is drawn when the player can see the shooter OR the target (you see your own tank hit by a gun in the fog, and your shot land among targets you cannot see yet): 'shooter_seen' and 'always' are the other settings. PROPOSED"
+      },
+      "flight_mps": {
+        "value": 700.0,
+        "_proposed": true,
+        "_reason": "a round's speed, only to put its impact a moment after its muzzle (distance over this; a tank round at 350 m lands 0.5 s after the flash). The target's place is taken at that moment. Visual only; the sim's hit is instant. The board's number (variants/gunfire/board.json held_constant). PROPOSED"
+      },
+      "hit_spread_frac": {
+        "value": 0.2,
+        "_proposed": true,
+        "_reason": "a hit lands inside a disc of this fraction of the target's drawn size round its centre, picked by the event (so two hits on one tank do not stack): 1.2 m on a 6 m tank, 8 m on the 40 m bridge. The tracers' rule (fx.json tracers.aim.hit_spread is 0.3). PROPOSED"
+      },
+      "miss": {
+        "aside_m": {
+          "value": [
+            4.0,
+            16.0
+          ],
+          "_proposed": true,
+          "_reason": "a round that misses lands this far BESIDE the target's centre (drawn metres, a side picked by the event), between the two: the way a tracer's miss passes beside its target (fx.json tracers.aim). The board's numbers (variants/gunfire/board.json held_constant: 'seeded 4 to 16 m aside'). Visual only, seeded from the event and never the combat dice. PROPOSED"
+        },
+        "along_m": {
+          "value": [
+            -10.0,
+            30.0
+          ],
+          "_proposed": true,
+          "_reason": "...and this far along the line of fire past the target's centre (negative: short of it), as a tracer's miss carries on a little past (fx.json tracers.aim.miss_overshoot). The board's numbers (-10 to +30 m). PROPOSED"
+        },
+        "clear_target_frac": {
+          "value": 0.6,
+          "_proposed": true,
+          "_reason": "a miss lands at least this fraction of the target's drawn size beside its centre, so it clears the airframe of a 20 m bomber (12 m) as well as a 6 m tank (3.6 m, under the 4 m floor). PROPOSED"
+        },
+        "air_targets": {
+          "value": "ground_below",
+          "choices": [
+            "ground_below",
+            "none"
+          ],
+          "_proposed": true,
+          "_reason": "a miss at a target in the AIR (the nose cannon at a plane): 'ground_below' draws the impact on the ground or the water under the miss point (the lead's brief: the same rule for every straight round); 'none' draws nothing (the round flew on into the air, and the sim gives it no landing place until the lines of fire's stage 2). PROPOSED"
+        }
+      }
+    },
+    "limits": {
+      "max_records": {
+        "value": 256,
+        "_proposed": true,
+        "_reason": "the book keeps at most this many muzzle and impact records (the oldest go first); two tanks and a battery firing for a long turn make a few dozen, a scorch lasts 90 s. PROPOSED"
+      }
+    },
+    "classes": {
+      "value": {
+        "gun": {
+          "small": {
+            "r_m": 1.7,
+            "min_px": 5.0,
+            "life": 0.7
+          },
+          "medium": {
+            "r_m": 2.4,
+            "min_px": 6.5,
+            "life": 1.0
+          },
+          "large": {
+            "r_m": 6.5,
+            "min_px": 13.0,
+            "life": 1.5
+          }
+        },
+        "round": {
+          "bullet": {
+            "r_m": 0.7,
+            "min_px": 3.0,
+            "life": 0.6
+          },
+          "small": {
+            "r_m": 1.7,
+            "min_px": 5.0,
+            "life": 0.8
+          },
+          "medium": {
+            "r_m": 2.8,
+            "min_px": 7.0,
+            "life": 1.0
+          },
+          "large": {
+            "r_m": 6.5,
+            "min_px": 13.0,
+            "life": 1.5
+          }
+        }
+      },
+      "decision": "gunfire-looks",
+      "_reason": "THE SIZES (the board's class tables): a muzzle's flash radius r_m (drawn metres; min_px keeps it visible at the planning zoom where a tank is about 8 px; life multiplies a part's life) by the GUN's calibre, an impact's radius by the ROUND's class (a bullet, else its calibre). Gun small 1.7 m, medium 2.4 m, large 6.5 m; impact bullet 0.7, small 1.7, medium 2.8, large 6.5 m. ALEX (decision gunfire-looks, 2026-10-11), on variants/gunfire/: 'G3 · G3 W1 soft puffs' (G3, the W1 soft puffs: big guns' muzzle smoke and the impacts of rounds in the W1 smoke grammar, the materials told apart by lightness). The numbers stay PROPOSED (builder GF)"
+    },
+    "materials": {
+      "value": {
+        "earth": {
+          "size_mult": 1.0,
+          "look": "earth",
+          "note": "dry land, roads, fields, sandbags and earthworks: dust and a small scorch"
+        },
+        "water": {
+          "size_mult": 1.35,
+          "look": "water",
+          "note": "any depth: a splash, rings on the water, NO smoke"
+        },
+        "stone": {
+          "size_mult": 1.0,
+          "look": "stone",
+          "note": "the bridge, walls, rubble, compound buildings: dust and chips"
+        },
+        "metal": {
+          "size_mult": 0.85,
+          "look": "metal",
+          "note": "armour and hulls (tank, mobile AA, ships), aircraft, the tower's lattice: sparks and a dark puff"
+        },
+        "wood": {
+          "size_mult": 0.9,
+          "look": "wood",
+          "note": "trees (splinters and leaves), houses and the barge (splinters and dust, no leaves)"
+        }
+      },
+      "decision": "gunfire-looks",
+      "_reason": "HOW EACH MATERIAL OF THE ONE VOCABULARY (data/sim/rounds.json) ANSWERS A ROUND: `look` names the impact recipe, `size_mult` scales the round's radius (a splash column is bigger than a dust puff from the same round). The board's table with its 'ground' renamed 'earth'. ALEX (decision gunfire-looks, 2026-10-11), on variants/gunfire/: 'G3 · G3 W1 soft puffs' (G3, the W1 soft puffs: big guns' muzzle smoke and the impacts of rounds in the W1 smoke grammar, the materials told apart by lightness)"
+    },
+    "puffs": {
+      "value": {
+        "w1_white": {
+          "form": "soft",
+          "base": "W1",
+          "roles": [
+            "smoke.w.white.0",
+            "smoke.w.white.1",
+            "smoke.w.white.2",
+            "smoke.w.lgrey.0",
+            "smoke.w.lgrey.1",
+            "smoke.w.lgrey.2",
+            "smoke.w.grey.0",
+            "smoke.w.grey.1",
+            "smoke.w.grey.2"
+          ]
+        },
+        "w1_dust": {
+          "form": "soft",
+          "base": "W1",
+          "ramp": "gf.dust"
+        },
+        "w1_stone": {
+          "form": "soft",
+          "base": "W1",
+          "ramp": "gf.stone"
+        },
+        "w1_dark": {
+          "form": "soft",
+          "base": "W1",
+          "ramp": "gf.dark"
+        }
+      },
+      "decision": "gunfire-looks",
+      "_reason": "THE BAKED PUFF SETS the recipes name: 'soft' is the W1 grammar (translucent stepped washes, no outline: fx_puff.gd, base W1 with its roles swapped); w1_white uses W1's own roles, w1_dust, w1_stone and w1_dark the gf.* ramps of this file's roles. ALEX (decision gunfire-looks, 2026-10-11), on variants/gunfire/: 'G3 · G3 W1 soft puffs' (G3, the W1 soft puffs: big guns' muzzle smoke and the impacts of rounds in the W1 smoke grammar, the materials told apart by lightness)"
+    },
+    "recipes": {
+      "value": {
+        "muzzle": [
+          {
+            "type": "flash",
+            "form": "cone",
+            "r": 1.1,
+            "life_s": 0.1,
+            "spikes": 5,
+            "inner": 0.7,
+            "var": 0.2,
+            "cone_deg": 42,
+            "fill": "burst.core",
+            "edge": "",
+            "fwd": 0.3
+          },
+          {
+            "type": "puffs",
+            "set": "w1_white",
+            "n": {
+              "small": 2,
+              "medium": 3,
+              "large": 5
+            },
+            "r": 0.6,
+            "life_s": {
+              "small": 5.0,
+              "medium": 8.0,
+              "large": 14.0
+            },
+            "grow": [
+              0.85,
+              1.9
+            ],
+            "grow_tau": 0.2,
+            "hold": 0.15,
+            "fade_power": 1.6,
+            "tone": 2,
+            "throw": 3.0,
+            "throw_tau": 0.5,
+            "interval_s": 0.06,
+            "fwd": 0.9,
+            "side": 0.55,
+            "rise_mps": 0.6,
+            "wind": 1.0,
+            "shadow": true
+          }
+        ],
+        "impact": {
+          "earth": [
+            {
+              "type": "flash",
+              "form": "disc",
+              "r": 0.8,
+              "life_s": 0.08,
+              "fill": "burst.core",
+              "edge": "",
+              "grow": [
+                0.5,
+                1.0
+              ],
+              "classes": [
+                "small",
+                "medium",
+                "large"
+              ]
+            },
+            {
+              "type": "puffs",
+              "set": "w1_dust",
+              "n": {
+                "bullet": 1,
+                "small": 2,
+                "medium": 3,
+                "large": 5
+              },
+              "r": 0.8,
+              "life_s": {
+                "bullet": 1.5,
+                "small": 3.5,
+                "medium": 5.5,
+                "large": 10.0
+              },
+              "grow": [
+                0.7,
+                1.9
+              ],
+              "grow_tau": 0.18,
+              "hold": 0.2,
+              "fade_power": 1.5,
+              "tone": 1,
+              "throw": 1.9,
+              "throw_tau": 0.35,
+              "interval_s": 0.04,
+              "rise_mps": 0.7,
+              "wind": 1.0,
+              "spread": 0.8,
+              "shadow": true
+            },
+            {
+              "type": "scorch",
+              "layer": "ground",
+              "classes": [
+                "small",
+                "medium"
+              ],
+              "r": 0.8,
+              "wash_role": "gf.scorch",
+              "dots": 0,
+              "hatch": 0,
+              "fade_in_s": 0.5,
+              "life_s": 90.0
+            }
+          ],
+          "water": [
+            {
+              "type": "disc",
+              "layer": "ground",
+              "r0": 0.2,
+              "r1": 1.5,
+              "fill": "gf.splash.soft",
+              "edge": "",
+              "life_s": 0.7,
+              "ring_only": false
+            },
+            {
+              "type": "rings",
+              "layer": "ground",
+              "n": {
+                "bullet": 1,
+                "small": 2,
+                "medium": 3,
+                "large": 4
+              },
+              "r0": 0.3,
+              "r1": 2.8,
+              "w_px": 1.0,
+              "role": "ink.ring",
+              "life_s": 1.8,
+              "stagger_s": 0.15
+            },
+            {
+              "type": "rings",
+              "layer": "ground",
+              "n": 1,
+              "r0": 0.4,
+              "r1": 2.2,
+              "w_px": 2.6,
+              "role": "gf.splash.soft",
+              "life_s": 0.9
+            }
+          ],
+          "stone": [
+            {
+              "type": "flash",
+              "form": "disc",
+              "r": 0.8,
+              "life_s": 0.08,
+              "fill": "burst.core",
+              "edge": "",
+              "grow": [
+                0.5,
+                1.0
+              ],
+              "classes": [
+                "small",
+                "medium",
+                "large"
+              ]
+            },
+            {
+              "type": "puffs",
+              "set": "w1_stone",
+              "n": {
+                "bullet": 1,
+                "small": 2,
+                "medium": 3,
+                "large": 5
+              },
+              "r": 0.8,
+              "life_s": {
+                "bullet": 1.5,
+                "small": 3.5,
+                "medium": 5.5,
+                "large": 10.0
+              },
+              "grow": [
+                0.7,
+                1.9
+              ],
+              "grow_tau": 0.18,
+              "hold": 0.2,
+              "fade_power": 1.5,
+              "tone": 1,
+              "throw": 1.9,
+              "throw_tau": 0.35,
+              "interval_s": 0.04,
+              "rise_mps": 0.7,
+              "wind": 1.0,
+              "spread": 0.8,
+              "shadow": true
+            },
+            {
+              "type": "chips",
+              "n": {
+                "bullet": 2,
+                "small": 4,
+                "medium": 6,
+                "large": 11
+              },
+              "len": 0.32,
+              "r1": 2.2,
+              "role": "gf.chip",
+              "edge": "ink",
+              "life_s": 0.8,
+              "fill": true
+            },
+            {
+              "type": "scorch",
+              "layer": "ground",
+              "classes": [
+                "small",
+                "medium"
+              ],
+              "r": 0.7,
+              "wash_role": "gf.scuff",
+              "dots": 0,
+              "hatch": 0,
+              "fade_in_s": 0.3,
+              "life_s": 90.0
+            }
+          ],
+          "metal": [
+            {
+              "type": "flash",
+              "form": "disc",
+              "r": 0.8,
+              "life_s": 0.09,
+              "fill": "burst.core",
+              "edge": "",
+              "grow": [
+                0.5,
+                1.0
+              ]
+            },
+            {
+              "type": "strokes",
+              "n": {
+                "bullet": 4,
+                "small": 7,
+                "medium": 10,
+                "large": 16
+              },
+              "spread_deg": 360,
+              "r0": 0.5,
+              "r1": [
+                1.5,
+                2.6
+              ],
+              "w_px": 1.0,
+              "role": "ink",
+              "life_s": 0.2
+            },
+            {
+              "type": "puffs",
+              "set": "w1_dark",
+              "n": {
+                "bullet": 1,
+                "small": 1,
+                "medium": 2,
+                "large": 4
+              },
+              "r": 0.75,
+              "life_s": {
+                "bullet": 1.5,
+                "small": 3.5,
+                "medium": 5.5,
+                "large": 10.0
+              },
+              "grow": [
+                0.7,
+                1.8
+              ],
+              "grow_tau": 0.18,
+              "hold": 0.2,
+              "fade_power": 1.5,
+              "tone": 2,
+              "throw": 1.4,
+              "throw_tau": 0.35,
+              "interval_s": 0.05,
+              "rise_mps": 0.8,
+              "wind": 1.0,
+              "spread": 0.6,
+              "shadow": true
+            }
+          ],
+          "wood": [
+            {
+              "type": "puffs",
+              "set": "w1_dust",
+              "n": {
+                "bullet": 1,
+                "small": 1,
+                "medium": 2,
+                "large": 4
+              },
+              "r": 0.65,
+              "life_s": {
+                "bullet": 1.2,
+                "small": 2.5,
+                "medium": 4.0,
+                "large": 8.0
+              },
+              "grow": [
+                0.7,
+                1.8
+              ],
+              "grow_tau": 0.18,
+              "hold": 0.2,
+              "fade_power": 1.5,
+              "tone": 0,
+              "throw": 1.2,
+              "throw_tau": 0.35,
+              "interval_s": 0.05,
+              "rise_mps": 0.7,
+              "wind": 1.0,
+              "spread": 0.6
+            },
+            {
+              "type": "chips",
+              "n": {
+                "bullet": 2,
+                "small": 4,
+                "medium": 7,
+                "large": 12
+              },
+              "len": 0.4,
+              "r1": 2.2,
+              "role": "gf.leaf",
+              "edge": "ink",
+              "life_s": 0.9,
+              "fill": true,
+              "thin": true
+            },
+            {
+              "type": "leaves",
+              "n": {
+                "bullet": 3,
+                "small": 6,
+                "medium": 10,
+                "large": 18
+              },
+              "size": 0.2,
+              "r1": 2.4,
+              "fill": "gf.leaf",
+              "edge": "ink",
+              "life_s": 2.2,
+              "drift": 1.0
+            }
+          ]
+        }
+      },
+      "decision": "gunfire-looks",
+      "_reason": "THE LOOKS OF FAMILY G3, the parts a muzzle and each material's impact are made of (flash, puffs, rings, chips, strokes, leaves, scorch, disc; scripts/fx/fx_gunfire.gd knows how to draw each). Water: a soft pale disc, ink rings and a pale ring, NO smoke. ALEX (decision gunfire-looks, 2026-10-11), on variants/gunfire/: 'G3 · G3 W1 soft puffs' (G3, the W1 soft puffs: big guns' muzzle smoke and the impacts of rounds in the W1 smoke grammar, the materials told apart by lightness). Every number inside stays PROPOSED (builder GF)"
     }
   }
 }

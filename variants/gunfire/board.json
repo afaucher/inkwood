@@ -1969,6 +1969,6 @@
     "The cost of a shot in canvas operations is in each family's parameters (cost_ops): G1 is the most (a stipple cloud of 80 to 210 dots a muzzle), G2 and G3 a handful of sprites, G4 the least."
   ],
   "integration": "scripts/fx/fx_gunfire.gd is the effect code (a Book of muzzle and impact records, a Painter), written to become the game's, as fx_tracer.gd is. To build a pick: move the chosen family, the class tables and the material table into data/fx/fx.json as value records; give every weapon a `fires` round and gun class (decision round-model); call add_muzzle from CombatFeed on a cannon's `fire` event, a flak gun's and a Main Guns `shell_fire`/shell_impact release; call add_impact on a hit (the target's material), on a shell_impact (the material under it) and, once the sim carries a landing point, on a miss; mount a ground pass and a shadow pass under the unit markers and the air pass over them (as the board's GfRig does) with the effects layer's wind. A shell in water would no longer call bomb_impact.",
-  "chosen": null,
-  "chosen_by": null
+  "chosen": "G3",
+  "chosen_by": "Alex, 2026-10-11: 'G3 W1 soft puffs' (decision gunfire-looks); live 2026-10-12 (data/fx/fx.json gunfire, scripts/ui/gunfire_feed.gd; the sizes, the recipes and the material table moved there, with the board's 'ground' renamed 'earth')"
 }

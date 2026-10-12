@@ -10,6 +10,7 @@
   "health": { "value": 8, "_proposed": true, "_reason": "pips the bombs must take (3 for a hit within 12 m, 2 within 25 m, 1 within 45 m: data/sim/bombs.json). 8 pips is three direct hits, or a dozen near misses. A bomber's stick of four at the ideal release angle does 7.9 pips on average from the low band (the tower dies to the first stick 62 percent of the time, 1.4 drops on average), 4.8 from medium (2.2 drops; dead within the bomber's three drops 98 percent of the time) and 1.8 from high (5.3 drops; 19 percent): the tuning table, scripts/test_support/strike_tuning.gd B" },
   "sight_range_m": { "value": 500, "_proposed": true, "_reason": "a tower with a lookout on it sees a fighter a few hundred metres out; the enemy AI counts what its units see (scripts/sim/ai_sense.gd), so this is how far the tower warns the patrol" },
   "drawing": { "silhouette": "radio_tower" },
+  "material": { "value": "metal", "_proposed": true, "_reason": "PROPOSED by builder G3 (2026-10-12; the board's table, variants/gunfire/board.json material_table, which Alex's decisions damage-looks, 'the model makes sense', and gunfire-looks, G3, put to use): a lattice mast (the effects draw its ruin as a falling steel mast). Decides what a round that lands on it does (data/fx/fx.json gunfire): metal." },
   "damage_smoke": {
     "enabled": { "value": true, "_proposed": true, "_reason": "the equipment at the foot of the mast burns when the tower is hit" },
     "source_m": { "value": 3, "_proposed": true, "_reason": "the hut and the equipment at the foot of the mast, not the 12 m footprint (the mast itself is a thin line)" },
@@ -21,7 +22,7 @@
     "boxes": [
         {
           "part": "body",
-          "material": "armour",
+          "material": "metal",
           "kind": "box",
           "stamp": { "value": false, "_proposed": true, "_reason": "a target, not scenery: other lines are not blocked by it" },
           "standable": { "value": false, "_proposed": true, "_reason": "nothing stands on it" },

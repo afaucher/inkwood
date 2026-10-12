@@ -9,9 +9,6 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| Lines of fire, stage 2 (line-of-fire): odds by visible share, range and size; misses landing; the combat hook behind the switch; the low bridge; proofs: cover map, old against new | lead session (builder LOF2) | scripts/sim/line_of_fire*.gd, the combat hook in scripts/sim/combat*.gd, data/sim/line_of_fire.json, the bridge's shape and drawn height (data/units/bridge.json shape, data/world/bridges.json), tests | 2026-10-12 |
-| Scenery heights S1 live (scenery-heights) | lead session (builder SH) | data/params/render_defaults.json (wall and house heights), the tree height window in scripts/world/scene_gen.gd / structures.gd, data/terrain/terrain.json's stale note, the port check's parity defaults, tests | 2026-10-12 |
-| Gunfire G3 live (gunfire-looks) with the round model (round-model) and a material per unit (damage-looks) | lead session (builder G3) | new data/sim/rounds.json; weapons' round ids in data/units/*.json; a material per unit; scripts/fx/fx_gunfire.gd made live and its hook in fx_layer.gd/fx_field.gd/combat_feed.gd; data/fx/fx.json gunfire and tracers keys; tests | 2026-10-12 |
 
 ## Next, free to take
 
@@ -60,6 +57,13 @@ Decisions and open questions live in the Decision Ledger
 
 ## Recently landed
 
+- 2026-10-12: gunfire G3 live (decision gunfire-looks): big guns' muzzle smoke and rounds' impacts by material in the W1
+  grammar; misses are visual-only beside the target until lines of fire are on. The round model (`data/sim/rounds.json`,
+  decision round-model): every weapon names its round; tracers come from the round. A material per unit (damage-looks).
+  Planes' smoke trails climb (smoke-consistency). Scenery at real heights, S1 (scenery-heights; the prototype's heights
+  kept for the port check). Lines of fire, stage 2, behind `data/sim/line_of_fire.json` enabled (still FALSE): odds from
+  the visible share and the round's spread, a hidden target held, misses landing with their material, the low bridge
+  with 1 m parapets; with it off, eight recorded games give byte-identical events. Proofs in tmp/lof2/.
 - 2026-10-12: lines of fire, stage 1 (decision line-of-fire): a height grid (1 m cells: top height and material, per chunk,
   from the seed) and the line check (`LineOfFire.trace`, `exposure`; canopies thin; tanks as hull and turret boxes), not
   used by combat yet (`data/sim/line_of_fire.json` enabled false). Proofs in tmp/lof/ (`scripts/app/lof_shot.gd`). Stage 2

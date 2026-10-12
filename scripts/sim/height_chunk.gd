@@ -66,13 +66,15 @@ func top(ix: int, iy: int) -> float:
 			return o
 	return t
 
-# The effective material byte at a local cell: the stamp's where the stamp is the higher top, else the map's.
+# The effective material byte at a local cell: the stamp's where the stamp is the higher top, or as high and WRITTEN (om is never 0 where a
+# stamp wrote: stone, sandbags and the deck flag are all non-zero), else the map's. The tie matters for a deck level with the banks
+# (the low bridge, decision line-of-fire, builder LOF2): its cells are stone and a deck at the same height as the water or the ground.
 func material_byte(ix: int, iy: int) -> int:
 	var t: float = uh if uniform else h[iy * n + ix]
 	var mat: int = um if uniform else m[iy * n + ix]
 	if has_ov:
 		var o := oh[iy * n + ix]
-		if o > t:
+		if o > t or (o == t and om[iy * n + ix] != 0):
 			return om[iy * n + ix]
 	return mat
 

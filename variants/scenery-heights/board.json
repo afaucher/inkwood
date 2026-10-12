@@ -550,6 +550,7 @@
   "palette_check": "Heights add no colour: every shadow is the one steel tint at the same strength, a shadow over a lit roof the roof-shaded chip. Taller scenery puts more of the ground in shadow (the mean lightness of the closest-zoom frames is in each option), a change in the SHARE of the ground in shadow, not in the lightness ramp. The chart's bars use the object, roof, wall and rock fills. Material stays linework: sprites and the shadow-side pen are identical in every option.",
   "frames": "frames.json (every frame, native 1280 x 720)",
   "sheet": "board.png (1:1 crops of every frame, the heights chart, the numbers table, the notes, the palette strip)",
-  "chosen": null,
-  "chosen_by": null
+  "chosen": "s1",
+  "chosen_by": "Alex (\"S1 real heights\", 2026-10-12; live: render_defaults.json wall_height, house_height_ratio, tree_height_scale / _min_px / _max_px, each with its prototype_default)",
+  "after_the_pick": "The board scripts are RETIRED: scenery_heights_patch.gd refuses to apply once the heights are data (S1 is the game now), so a re-run would draw S1 under the label S0. The frames and sheet are the record. To see the prototype's heights again, render with --parity (render.ps1 -Scene <seed> -Parity) or RenderParams.use_prototype_defaults()."
 }

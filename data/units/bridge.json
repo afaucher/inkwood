@@ -10,6 +10,7 @@
   "health": { "value": 14, "decision": "bridge-durability", "_proposed": true, "_reason": "ALEX (decision bridge-durability, 2026-10-11), asked whether tank guns may damage a bridge: 'it should take a lot. Like you would have to sit there and shell it for awhile exposing yourself.' So a tank's gun CAN bring a bridge down (1 pip a hit), and it takes a long, exposed time. THE NUMBER 14 IS PROPOSED (Track CA; was 10, the bombs' figure). MEASURED with the real combat (scripts/test_support/bridge_tuning.gd, 120 seeds): one tank's turret gun, stationary anywhere inside its 350 m effective range, takes 0.73 pips a turn, so 14 pips is a MEDIAN OF 20 TURNS of steady fire (10th to 90th percentile 13 to 23; the old 10 pips was 14 [10..17]) -- 100 seconds sitting within 350 m of the bridge, in sight and in range of whatever defends it. The lead's proposed target was about 15 to 20 turns. WHAT IT DOES TO THE REST (the same script): BOMBS (3 / 2 / 1 pips at 12 / 25 / 45 m, a stick of 4, a load of 3 sticks): no single stick can do it (the most is 12), a bomber at the LOW band on the ideal release needs 2 sticks (mean 2.1), at medium 3 to 4 (3.4: a whole load, if every stick is good), at high 9; THE CRUISER (6 shells of 4 / 3 / 2 pips at 6 / 12 / 20 m, data/sim/guns.json): a FRESH direct salvo cannot (the most it did in 400 seeds was 13 pips at 1200 m, 7 at 3000 m), one ranged in for 10 s cannot either bar 1 percent, one ranged in for the full 20 s does it 35 percent of the time at 1200 m (1 percent at 3000 m), the next one, with a salvo already on the bridge, 81 percent (7 percent at 3000 m), the one after 99 percent (43 percent at 3000 m): a bridge shelled by guns that have found their range goes in two or three salvos. Only 25 pips or more would be proof against a fully ranged salvo (the most 6 shells can do is 24), and that is 34 turns for a tank and nearly a full load for a low bomber" },
   "sight_range_m": { "value": 0, "_proposed": true, "_reason": "a bridge sees nothing: it has no crew (the enemy AI counts what its units see, and a bridge warns no one)" },
   "drawing": { "silhouette": "bridge" },
+  "material": { "value": "stone", "_proposed": true, "_reason": "PROPOSED by builder G3 (2026-10-12; the board's table, variants/gunfire/board.json material_table, which Alex's decisions damage-looks, 'the model makes sense', and gunfire-looks, G3, put to use): a stone arch, deck and piers. Decides what a round that lands on it does (data/fx/fx.json gunfire): stone." },
   "damage_smoke": {
     "enabled": { "value": false, "_proposed": true, "_reason": "NO SMOKE: a stone bridge does not burn (Alex, playtest 3, on the 40 m white disc: 'what is that smoke, it looks broken!?', then, on the bridge's damage looks: 'Right now bridges don't have anything, that is fine.'). A per-unit switch, so the effects feed has no special case for the bridge. Dust at each hit, cracks and a ruin when it falls are open (decision playtest-3 bridge_smoke)" },
     "source_m": { "value": 0, "_proposed": true, "_reason": "none: it does not smoke (enabled is false); a number is still required of every unit" },
@@ -17,20 +18,46 @@
     "rise_mps": { "value": 0, "_proposed": true, "_reason": "none: it does not smoke" }
   },
   "shape": {
-    "_about": "One box: the deck, stamped into the height grid as stone that other units STAND ON (a tank on the bridge stands at the deck's top, 6.5 m, not at the river's 0 m). The deck's height is data/world/bridges.json arch.crown_h and test_line_of_fire holds the two equal. The arches under the deck are not modelled: 2.5D has one top height per cell, so the deck is solid to the water (a line along the river under the arches is blocked; the lead's note). Every number PROPOSED.",
+    "_about": "THE LOW BRIDGE (Alex, decision line-of-fire: '(c) A low bridge: the deck level with the banks, with 1 m parapets, and the drawing's shadow lowered to match.'). Three boxes, all stamped into the height grid while the bridge stands: the DECK, level with the banks (the banks and the water's surface are 0 m in the grid, so the deck's top is 0 and a tank on it stands at 0 m) -- standable, and no target (data/sim/line_of_fire.json targets.not_targets names 'deck': a level surface has nothing to hit) -- and two PARAPETS, 1 m of stone along the deck's two sides, which are what a line of fire meets and what the bridge is as a target. The deck's top is data/world/bridges.json arch.crown_h and the parapets' height arch.parapet_h; test_line_of_fire_combat holds both equal. The arches under the deck are not modelled (2.5D has one top height per cell). The box positions and sizes are PROPOSED by builder LOF2 from the drawing (deck_width_m 16, parapet_w 1 to 1.2, the unit's 40 m); the heights are Alex's.",
     "boxes": [
         {
           "part": "deck",
           "material": "stone",
           "kind": "box",
-          "stamp": { "value": true, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): the deck is solid cover for a line below its top, and the surface a tank on the bridge stands on" },
-          "standable": { "value": true, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): a unit on the bridge stands at the deck's top" },
+          "stamp": { "value": true, "_proposed": true, "_reason": "PROPOSED by builder LOF2 (decision line-of-fire): the deck cells are marked as the deck a unit stands on (stand_z) and are stone to a line that goes below the surface" },
+          "standable": { "value": true, "_proposed": true, "_reason": "PROPOSED by builder LOF2: a unit on the bridge stands at the deck's top, which is the banks' level" },
           "forward_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit" },
           "right_m": { "value": 0, "_proposed": true, "_reason": "centred on the unit's axis" },
-          "length_m": { "value": 40, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 40 m, the unit's size_m (26 m of river plus an abutment of 6 m each side)" },
-          "width_m": { "value": 16, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 16 m, data/world/bridges.json deck_width_m" },
-          "bottom_m": { "value": 0, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): from the water's surface" },
-          "top_m": { "value": 6.5, "_proposed": true, "_reason": "PROPOSED by builder LOF1 (2026-10-11, decision line-of-fire): 6.5 m, data/world/bridges.json arch.crown_h (the art's deck above the water)" }
+          "length_m": { "value": 40, "_proposed": true, "_reason": "40 m, the unit's size_m (26 m of river plus an abutment of 6 m each side)" },
+          "width_m": { "value": 16, "_proposed": true, "_reason": "16 m, data/world/bridges.json deck_width_m" },
+          "bottom_m": { "value": -0.5, "_proposed": true, "_reason": "PROPOSED by builder LOF2: the slab's underside, half a metre below the deck's top (a box needs a thickness)" },
+          "top_m": { "value": 0.0, "decision": "line-of-fire", "_reason": "Alex: the deck level with the banks. 0 m, data/world/bridges.json arch.crown_h" }
+        },
+        {
+          "part": "parapet",
+          "material": "stone",
+          "kind": "box",
+          "stamp": { "value": true, "_proposed": true, "_reason": "PROPOSED by builder LOF2: the parapet is solid cover for a line below its top" },
+          "standable": { "value": false, "_proposed": true, "_reason": "a unit does not stand on a parapet" },
+          "forward_m": { "value": 0, "_proposed": true, "_reason": "along the whole deck" },
+          "right_m": { "value": -7.5, "_proposed": true, "_reason": "PROPOSED by builder LOF2: the left parapet, its middle 7.5 m from the axis (half the 16 m deck less half a metre: the drawing's parapet is 1 to 1.2 m wide, flush with the deck's edge)" },
+          "length_m": { "value": 40, "_proposed": true, "_reason": "the full 40 m, as the deck" },
+          "width_m": { "value": 1.0, "_proposed": true, "_reason": "1 m thick (bridges.json parapet_w 1.0 to 1.2); a 1 m cell grid holds it as one or two cells wide depending on the road's heading" },
+          "bottom_m": { "value": 0.0, "_proposed": true, "_reason": "from the deck's top" },
+          "top_m": { "value": 1.0, "decision": "line-of-fire", "_reason": "Alex: 1 m parapets. data/world/bridges.json arch.parapet_h" }
+        },
+        {
+          "part": "parapet",
+          "material": "stone",
+          "kind": "box",
+          "stamp": { "value": true, "_proposed": true, "_reason": "as the left parapet" },
+          "standable": { "value": false, "_proposed": true, "_reason": "a unit does not stand on a parapet" },
+          "forward_m": { "value": 0, "_proposed": true, "_reason": "along the whole deck" },
+          "right_m": { "value": 7.5, "_proposed": true, "_reason": "PROPOSED by builder LOF2: the right parapet, the mirror of the left" },
+          "length_m": { "value": 40, "_proposed": true, "_reason": "the full 40 m, as the deck" },
+          "width_m": { "value": 1.0, "_proposed": true, "_reason": "1 m thick" },
+          "bottom_m": { "value": 0.0, "_proposed": true, "_reason": "from the deck's top" },
+          "top_m": { "value": 1.0, "decision": "line-of-fire", "_reason": "Alex: 1 m parapets. data/world/bridges.json arch.parapet_h" }
         }
     ]
   },

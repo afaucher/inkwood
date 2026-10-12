@@ -160,6 +160,7 @@ const GroundRules = preload("res://scripts/sim/ground_rules.gd")
 const FireRules = preload("res://scripts/sim/fire_rules.gd")
 const FireState = preload("res://scripts/sim/fire.gd")
 const Wind = preload("res://scripts/sim/wind.gd")
+const CombatLines = preload("res://scripts/sim/combat_lines.gd")
 const JsMath = preload("res://scripts/core/js_math.gd")
 
 const PHASE_PLANNING := "planning"
@@ -216,6 +217,8 @@ var wind: Wind = null
 var _fan_cache: Dictionary = {}   # key -> PackedVector2Array: the ruled fans asked for lately (_ruled_outline)
 
 var _combat_resolver: CombatResolver
+# THE LINES OF FIRE (set_line_of_fire): null while they are off, which is the default.
+var line_of_fire: RefCounted = null
 
 func _init(turn_path: String = SimRules.TURN_PATH, altitude_path: String = SimRules.ALTITUDE_PATH, unit_dir: String = UnitDef.UNITS_DIR, combat_path: String = CombatRules.PATH, bombs_path: String = BombRules.PATH, sea_path: String = SeaRules.PATH, guns_path: String = GunRules.PATH) -> void:
 	rules = SimRules.new(turn_path, altitude_path)
@@ -341,6 +344,16 @@ func enable_fire(trees: Object, rules_path: String = FireRules.PATH) -> bool:
 	fire.source = trees
 	fire.wind = wind
 	return true
+
+# --- The lines of fire (decision line-of-fire, stage 2; builder LOF2) ---------------------------------------------------------
+
+# Give combat the lines of fire (a CombatLines over a HeightGrid, scripts/sim/combat_lines.gd; null takes them away). With none, combat is what it
+# always was. A scenario gives them when data/sim/line_of_fire.json says `enabled` (SandboxScenario.populate); a test or a proof gives them by hand.
+func set_line_of_fire(l: RefCounted) -> void:
+	line_of_fire = l
+
+func has_line_of_fire() -> bool:
+	return line_of_fire != null
 
 # --- The coastal wind (decision coastal-wind) -------------------------------------------------------------------------------
 
@@ -1208,6 +1221,9 @@ func resolve() -> Dictionary:
 	for id: String in units:
 		_apply_drop_limits(units[id], histories[id], 1)
 	_combat_resolver.ships_sink = water_depth.is_valid()   # (a destroyed sea unit sinks where there is water: _fall_step)
+	_combat_resolver.lines = line_of_fire
+	if line_of_fire != null:
+		(line_of_fire as CombatLines).sync(units)   # the batteries' sandbags and the bridge's parapets, as they stand at the turn's start
 	var fight := _combat_resolver.run(units, histories, turn, rng_seed, rules.turn_seconds,
 		func(uid: String, t: float) -> Dictionary: return sample(uid, t, "history"),
 		func(band: String) -> float: return band_height(band), bombs_in_flight, shells_in_flight,

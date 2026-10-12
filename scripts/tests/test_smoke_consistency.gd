@@ -5,15 +5,16 @@ extends "res://scripts/test_support/test_case.gd"
 # Every number tested is PROPOSED data (data/units/*.json damage_smoke, data/fx/fx.json smoke_model and impacts) or the sim's own.
 #
 #   1. THE DATA      every unit says what it smokes with: a source of at most 8 m and smaller than the unit itself (never sized by size_m), the stone
-#                    bridge smokes not at all (a per-unit switch, not a case in code), a ground or sea unit climbs at the smoulder's rate of the
-#                    ruins and wrecks, a plane's trail does not (and says why), a plume climbs like the burst thrown with it
+#                    bridge smokes not at all (a per-unit switch, not a case in code), every unit that smokes climbs at the smoulder's rate of the
+#                    ruins and wrecks (a plane's trail too: Alex, 2026-10-12, "Yes to both"), a plume climbs like the burst thrown with it
 #   2. THE PUFFS     from a source of 3 m a damaged tank's puffs are at most 0.96 x 3 m in radius (a 40 m bridge's old puffs were 13 m and more), leave
 #                    the source behind the centre, climb, and lean further downwind than a puff that does not (the wind picks up with height)
 #   3. THE LAYERS    the effects layer's air pass (all smoke) is mounted between the surface units' markers and the aircraft's: over a tank, the
 #                    bridge, a boat and their shadows, under every plane; the smoke's own ground shadow stays under the units; fx.json
 #                    smoke_model.layer 'under_all' brings the old order back
 #   4. THE FEED      through the real effects layer: a damaged tank and a damaged fighter smoke, the bridge hit as hard makes none; the tank's puffs
-#                    climb and are small, the fighter's do not climb
+#                    climb and are small, the fighter's climb at the same rate and are the engine's size (the heavy fighter's and the bomber's source
+#                    stay the light fighter's 8 m, Alex "Yes to both")
 #   5. WATER         a bomb or a shell that lands in water makes a splash and no flash, smoke, clods or crater; on land it does as it did; out of
 #                    sight nothing at all; the switch's 'burst' setting treats water as land
 
@@ -87,14 +88,18 @@ func _data() -> void:
 		check(src > 0.0 and src <= SOURCE_MAX_M + 1e-9, "1. %s: the source is small, at most %s m (%s m)" % [id, str(SOURCE_MAX_M), str(src)])
 		check(src < d.size_m, "1. %s: the source (%s m) is smaller than the unit (%s m): its puffs are not sized by its length" % [id, str(src), str(d.size_m)])
 		check(absf(float(ds["source_back_m"])) <= d.size_m * 0.5, "1. %s: the source sits on the unit (%s m behind a centre %s m from either end)" % [id, str(ds["source_back_m"]), str(d.size_m * 0.5)])
+		# ONE RATE FOR ALL SMOKE (Alex, decision smoke-consistency, 2026-10-12, asked whether planes' trails should rise like ground smoke: "Yes to both")
+		near(float(ds["rise_mps"]), ruin_rise, 1e-9, "1. %s climbs at the smoulder's rate of the ruins and wrecks (%s m/s), a plane's trail too" % [id, str(ruin_rise)])
 		if d.domain == "air":
-			near(float(ds["rise_mps"]), 0.0, 1e-9, "1. %s: a plane's trail does not climb (it is laid at its altitude along its path)" % id)
-		else:
-			near(float(ds["rise_mps"]), ruin_rise, 1e-9, "1. %s climbs at the smoulder's rate of the ruins and wrecks (%s m/s)" % [id, str(ruin_rise)])
+			eq(str(((JSON.parse_string(FileAccess.get_file_as_string(UnitDef.path_for(id))) as Dictionary)["damage_smoke"] as Dictionary)["rise_mps"].get("decision", "")), "smoke-consistency", "1. %s: the plane's climb names Alex's decision" % id)
 		var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(UnitDef.path_for(id)))
 		var rec: Dictionary = ((raw as Dictionary)["damage_smoke"] as Dictionary)
 		for k: String in ["enabled", "source_m", "source_back_m", "rise_mps"]:
 			check(str((rec[k] as Dictionary).get("_reason", "")).length() > 20, "1. %s damage_smoke.%s carries its reason" % [id, k])
+	# the heavy fighter's and the bomber's trails stay at the light fighter's source (Alex, 2026-10-12: "Yes to both")
+	if _units.has("light_fighter") and _units.has("heavy_fighter") and _units.has("bomber"):
+		for id: String in ["heavy_fighter", "bomber"]:
+			near(float((_units[id] as UnitDef).damage_smoke["source_m"]), float((_units["light_fighter"] as UnitDef).damage_smoke["source_m"]), 1e-9, "1. the %s's trail keeps the light fighter's source size (Alex: 'Yes to both')" % id)
 	# a plume climbs like the burst thrown with it (the active options and every other: the data holds the pair)
 	for kind: String in ["crash", "bomb", "ruin"]:
 		var names: Array = (fxd.raw[kind]["options"] as Dictionary).keys()
@@ -254,17 +259,17 @@ func _feed(w: World) -> void:
 		var tank_max := 0.0
 		var fighter_max := 0.0
 		var tank_climbs := true
-		var fighter_climbs := false
+		var fighter_climbs := true
 		for p: Dictionary in by_unit[TANK]:
 			tank_max = maxf(tank_max, float(p["r_m"]))
 			tank_climbs = tank_climbs and float(p.get("rise", 0.0)) > 0.0
 		for p: Dictionary in by_unit[FIGHTER]:
 			fighter_max = maxf(fighter_max, float(p["r_m"]))
-			fighter_climbs = fighter_climbs or p.has("rise")
+			fighter_climbs = fighter_climbs and absf(float(p.get("rise", 0.0)) - float((_units["light_fighter"] as UnitDef).damage_smoke["rise_mps"])) < 1e-9
 		check(tank_max <= 0.96 * tank_src + 1e-6, "4. the tank's puffs are sized by its 3 m source, not its 6 m length (%.2f m at most)" % tank_max)
 		check(fighter_max <= 0.96 * fighter_src + 1e-6 and fighter_max > tank_max, "4. the fighter's by its 8 m engine, so they are bigger than the tank's (%.2f m)" % fighter_max)
 		check(tank_climbs, "4. the tank's puffs climb")
-		check(not fighter_climbs, "4. the fighter's trail does not (a reason in the data)")
+		check(fighter_climbs, "4. the fighter's trail climbs at its rise_mps, the ground smoke's rate (Alex: planes' trails rise like ground smoke)")
 	_ran["feed"] = true
 	ui.free()
 

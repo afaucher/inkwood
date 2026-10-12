@@ -179,7 +179,7 @@ func _draw_boxes(boxes: Array, line_color: Color) -> void:
 		var z0 := float(b["z0"])
 		var z1 := float(b["z1"])
 		var col := Color(0.4, 0.45, 0.55, 0.75) if str(b["part"]) != "turret" else Color(0.3, 0.33, 0.42, 0.85)
-		if str(b["material_name"]) == "aircraft":
+		if str(b["part"]) == "body" and float(b["z0"]) > 10.0:   # a plane's box (its base is its band's height)
 			col = Color(0.55, 0.55, 0.6, 0.8)
 		if kind == "ring":
 			# the centre line through a ring: two bags walls

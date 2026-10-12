@@ -117,9 +117,19 @@ func make_prop(rng: Mulberry32, x: float, y: float) -> Dictionary:
 
 # function syncTree(t), the geometry half:
 #   t.r=P.treeSize*(1+P.sizeVar*t.sr)*(t.big?1.45:1); t.h=t.r*P.height*(.85+.3*t.hr);
+# THE TREE HEIGHT WINDOW (decision scenery-heights, S1; Alex: "S1 real heights"): the height is then multiplied by
+# P.treeHeightScale and held to [P.treeHeightMin, P.treeHeightMax] px (0 = no bound on that side). The prototype's values
+# (1, 0, 0) leave t.h exactly the prototype's; the port check runs with them (RenderParams.use_prototype_defaults). A height
+# is read by the shadows (and the trees' draw order) only: the crown, the collision radius and every random draw are not.
 func sync_tree(t: Dictionary) -> void:
 	t.r = P.treeSize * (1.0 + P.sizeVar * t.sr) * (P.big_tree_scale if t.big else 1.0)
 	t.h = t.r * P.height * (0.85 + 0.3 * t.hr)
+	if P.treeHeightScale != 1.0:
+		t.h = t.h * P.treeHeightScale
+	if P.treeHeightMin > 0.0:
+		t.h = maxf(t.h, P.treeHeightMin)
+	if P.treeHeightMax > 0.0:
+		t.h = minf(t.h, P.treeHeightMax)
 
 # const cr=o=>o.kind==="tree"?o.r*.72:o.s*1.25;  -- an object's collision radius.
 func cr(o: Dictionary) -> float:
