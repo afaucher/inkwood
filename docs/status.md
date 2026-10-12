@@ -40,6 +40,9 @@ Decisions and open questions live in the Decision Ledger
 
 ## Later (planned, not fleshed out)
 
+- **Wear patterns for everything** (decision damage-looks, Alex: 'I don't want to do wear patterns yet for everything. Add it
+  to the list for the future.'): what stays visible as a thing loses pips (cracks, holes, engine smoke), per material.
+- **Houses and walls taking damage** (decision line-of-fire: 'Later').
 - **The forest fire's look board** (decision forest-fire, deferred: Alex, "It's fine as is for now"): a burning grove
   and a burnt-out trunk. Today's stand-in is W1 puffs per burning tree, bending downwind, and charred trunks; it reads
   partly like white trees. Options when it comes back: a long thin plume, a low grey haze, inked hatching, W1 as today.

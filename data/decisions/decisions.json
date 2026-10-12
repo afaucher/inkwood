@@ -2016,10 +2016,10 @@
         "revisit": "other direct-fire weapons, like the tank's gun"
       },
       "applied_to": [
-        "data/fx/fx.json tracers.weapons (wing_guns, nose_gun, dorsal_turret, tail_turret, rear_gunner, aa_guns; PROPOSED list)"
+        "data/fx/fx.json tracers.weapons (wing_guns, nose_gun, dorsal_turret, tail_turret, rear_gunner, quad_mg, deck_mg; PROPOSED list; the last two were aa_guns until decision weapon-kinds, 2026-10-11)"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex: 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. The tracers' look is still open (variants/tracers/). PROPOSED: aa_guns is also the cruiser's and the mobile AA's gun, so they draw tracers instead of flak puffs; a tracer shows only when its shooter is seen."
+      "notes": "Alex: 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. The tracers' look is still open (variants/tracers/). PROPOSED: aa_guns is also the cruiser's and the mobile AA's gun, so they draw tracers instead of flak puffs; a tracer shows only when its shooter is seen. (Superseded by decision weapon-kinds, 2026-10-11: aa_guns is split into quad_mg and deck_mg, which draw tracers, and ship_flak, the cruiser's, which draws bursts.)"
     },
     {
       "id": "tracers-look",
@@ -2186,9 +2186,19 @@
         "flak": "exploding shells, an upward cone, best directly overhead, drawn as bursts",
         "machine_gun": "bullets, around and lower, drawn as tracers",
         "mapping_proposed": "PROPOSED, awaiting Alex: the mobile AA's quad mount and the cutter's guns are machine guns; the cruiser's AA is flak",
-        "mapping": "the mobile AA's quad mount and the cutter's guns are machine guns (tracers, around and lower); the cruiser's AA is flak (bursts, up) (Alex: 'good')"
+        "mapping": "the mobile AA's quad mount and the cutter's guns are machine guns (tracers, around and lower); the cruiser's AA is flak (bursts, up) (Alex: 'good')",
+        "weapon_ids": "PROPOSED names: quad_mg (the mobile AA), deck_mg (the cutter) and ship_flak (the cruiser), for the one shared id aa_guns; the tracer list in data/fx/fx.json holds quad_mg and deck_mg, ship_flak draws the battery's bursts (F2)",
+        "machine_gun_cone": "PROPOSED numbers: all around, from the horizon (0 degrees) to 50 degrees up (elevation_deg 25, half_height_deg 25); the lower edge is the horizon, not below it, so a machine gun still cannot hit what is on the ground (a lower edge below the horizon would let them, a rule nobody has decided). A plane straight over a mount is out of the cone: a blind disc of 197 m under a low plane, 667 m under a medium one",
+        "machine_gun_odds": "PROPOSED: the range, base odds, rolls a second and tracking of the former aa_guns, unchanged (quad_mg 600 m, deck_mg 320 m, 0.07 a roll, 2 rolls a second a mount, 60 deg/s), so the cone is the only change",
+        "flak_cone": "ship_flak keeps the former cone, 2 degrees to straight up, flat odds; 'best directly overhead' is coverage (the only AA weapon on the water that covers it), not a higher chance there"
       },
-      "applied_to": [],
+      "applied_to": [
+        "data/units/mobile_aa.json (weapon quad_mg)",
+        "data/units/patrol_boat.json (weapon deck_mg)",
+        "data/units/cruiser.json (weapon ship_flak)",
+        "data/fx/fx.json tracers.weapons (aa_guns replaced by quad_mg and deck_mg)",
+        "scripts/tests/test_mission2_units.gd, test_water_units.gd, test_cruiser.gd, test_tracers.gd, test_unit_defs.gd"
+      ],
       "status": "chosen by Alex",
       "notes": "Alex: 'So, I think the question is what is the weapon. Flak would be shells shot that then explode. Machine guns would be bullets which don't. But Flak is pointed up and machine guns are around and less up. So flak guns have better coverage in the area directly above them.' Today all three (cruiser, mobile AA, patrol boat) share one 'aa_guns' weapon with the flak's upward cone, and it draws tracers. Then, on the proposed mapping: '5 good'. On a 'fires' field for every weapon: '6 good but we need more here. Let's discuss.'"
     },
@@ -2256,12 +2266,12 @@
       "id": "damage-looks",
       "area": "Effects, Units",
       "question": "How does every unit, prop and structure show its damage, and how do we make sure each gets one decided?",
-      "chosen": null,
+      "chosen": "the model: everything names a material with default looks per stage (the hit, wear, the end, what lasts); a test that fails when something has none; docs. Wear patterns are NOT done yet for everything: later",
       "parameters": {
         "bridge_now": "no damage indicator for now (Alex: fine)"
       },
-      "status": "open (to discuss)",
-      "notes": "On the bridge's smoke question: 'A damaged bridge. Let's think more generally. How does each unit/prop/structure manage its damage indicators? Right now bridges don't have anything, that is fine. But let's figure out what might be appropriate defaults and how we can make sure everything gets something decided? The latter could be in code or docs or skills, etc.'"
+      "status": "chosen by Alex (the model); wear later",
+      "notes": "On the bridge's smoke question: 'A damaged bridge. Let's think more generally. How does each unit/prop/structure manage its damage indicators? Right now bridges don't have anything, that is fine. But let's figure out what might be appropriate defaults and how we can make sure everything gets something decided? The latter could be in code or docs or skills, etc.' On the proposal (docs/proposals/damage-rounds-cover.md): '1 damage - I don't want to do wear patterns yet for everything. Add it to the list for the future. But the model makes sense.'"
     },
     {
       "date": "2026-10-11",
@@ -2299,12 +2309,12 @@
       "id": "round-model",
       "area": "Combat, Effects",
       "question": "What does a weapon fire, and which of the round's properties matter (a 'fires' field: machine gun, cannon, flak, shell)?",
-      "chosen": null,
+      "chosen": "a round per weapon with class, calibre, explosive, path, tracer and blast; a round x material table for impacts; armour and penetration later",
       "parameters": {
         "direction": "a 'fires' field on every weapon: good (Alex)"
       },
-      "status": "open (to discuss)",
-      "notes": "Alex: '6 good but we need more here. Let's discuss.'"
+      "status": "chosen by Alex (for now)",
+      "notes": "Alex: '6 good but we need more here. Let's discuss.' On the proposed properties: '2 rounds - for now'."
     },
     {
       "date": "2026-10-11",
@@ -2329,10 +2339,13 @@
       "question": "Does cover block shots: (a) a cover factor, (b) real lines of fire against every blocker's height, (c) the fog's line of sight?",
       "chosen": null,
       "parameters": {
-        "to_discuss": "(b)"
+        "to_discuss": "(b)",
+        "trees": "thin: a chance per canopy to stop a round (Alex)",
+        "hull_down": "yes: two layers, hull and turret (Alex)",
+        "houses_walls_damage": "later (Alex)"
       },
       "status": "open (to discuss)",
-      "notes": "Alex: '9 I want to discuss b'. And on tank accuracy falling with range and rising with target size: '11, yes but directly impacts 9'."
+      "notes": "Alex: '9 I want to discuss b'. And on tank accuracy falling with range and rising with target size: '11, yes but directly impacts 9'. On the questions: '3 let's discuss this model in more detail? Are we doing ray casting? How do we do the height calculation?' / '4 thin' / '5 yes, two layers, hull and turret.' / '6 Later' / '7 what line rule?'"
     },
     {
       "date": "2026-10-11",
