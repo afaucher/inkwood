@@ -51,8 +51,9 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    lets not propose them again"). The "3 lines crossed" Alex saw in the fourth playtest are most likely it: 7 ink
    strokes round a dot on a unit when it is hit (`scripts/ui/hit_marks.gd`), 3.2 s and held while paused, on top
    of G3's own impact. Turn it off (`ui.json combat.hit_mark.enabled` false) and fix the tests that count it.
-   Open for Alex: the other ink marks he chose himself, the T5 tracers' hit dot and miss tick and the Main Guns'
-   target X, stay until he says otherwise.
+   The T5 tracers lose their hit dot and miss tick too (Alex: "The tracer itself is fine. The dot and miss tick
+   are not."): `fx.json tracers.options.T5.marks` hit_dot_px and miss_tick_px 0. Not yet asked: the Main Guns'
+   target X while planning.
 
 ## B. Needs a decision (with a recommendation)
 
