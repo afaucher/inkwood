@@ -22,6 +22,19 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    `test_damage_coverage` that fails when anything has none; an "Adding a unit" checklist in
    `docs/operating.md` and a Damage section in the Style guide.
 
+4. **The fourth playtest's asks** (playtest-4, Alex's words in its notes; build 2026-10-12.145115):
+   - Hold the bridge: the cruiser starts pointing east-west, along the coast; the enemy tanks start outside
+     line of sight.
+   - Ships (any unit) fire without moving: a **hold** step that keeps the unit's point and counts as planned,
+     so a special can be set on it.
+   - The orders card shows only the actions that apply: no Dive or Climb for ships and tanks.
+   - The tank's gun becomes its special, quick to fire again (about a 1 turn reload).
+   - Labels: every number carries its unit ("12 m/s", not "12"); surface units drop the altitude (A2).
+   - Views: show specials too; a filter (a funnel icon) picks what the three views show, and the map when
+     the arcs are on; a small scale bar with one distance label.
+   - Controls: holding Space readies you, 1 s if every unit has actions, 2 s otherwise; selecting an
+     already-selected unit or target deselects it.
+
 ## B. Needs a decision (with a recommendation)
 
 1. **The ship's gun range** (Alex: "might be too long. Let's look at it?"). Today the Main Guns reach
@@ -53,6 +66,11 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
     against a sea to -70 m, the battery's flak muzzles (3 and 6 m) against its art (1.35 to 4.2 m), the shell
     arc drawn up to 360 m. Rec: one pass, each as a data fix.
 
+11. **Rivers** (playtest-4): "pretty straight right now". Rec: a board of river shapes (meanders, a
+    fork, an oxbow) with the terrain variety board (D6).
+12. **The tank's gun as a special** (playtest-4): does the tank still fire on its own when no special is set,
+    or only when ordered? Rec: only when ordered, since that is what makes it a special; the 1 turn reload
+    keeps it busy.
 ## C. Bugs and engineering debt
 
 1. **Line of sight's cost**: a viewshed sweep costs 6-12 ms for a plane and 36-65 ms for a ground unit

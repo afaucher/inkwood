@@ -2530,6 +2530,34 @@
       "parameters": {},
       "status": "open",
       "notes": "Alex: 'I'm wondering if big slow ordinance should have a tail. Just like planes.'"
+    },
+    {
+      "id": "playtest-4",
+      "date": "2026-10-12",
+      "area": "Missions, Interface, Units, Controls",
+      "question": "Alex's notes from the fourth playtest (build 2026-10-12.145115)",
+      "board": "none (said in chat)",
+      "options": [],
+      "chosen": "the asks below, into docs/backlog.md for the next session",
+      "parameters": {
+        "bridge_ship_heading": "Hold the bridge: the cruiser starts pointing east-west, along the coast",
+        "bridge_tanks_out_of_sight": "Hold the bridge: the enemy tanks start outside line of sight",
+        "rivers": "rivers more interesting; they are pretty straight now",
+        "los_on": "line of sight on by default",
+        "fire_without_moving": "ships fire even if they don't move; maybe a 'hold' action that keeps the point and counts as an action, so the step looks planned",
+        "orders_actions": "the orders card shows only the actions that apply: no Dive or Climb for ships and tanks",
+        "tank_gun_special": "tank weapons are their special, able to fire quickly, maybe a 1 turn reload",
+        "labels_units": "every number carries a unit (m/s); do surface units need altitude (decided: omit for now, labels-by-type)",
+        "views_filter": "the views show specials too; a filter (funnel) icon picks what shows, for all three views, and the map when arcs are on",
+        "views_scale": "the views get a small scale: one bar, one label for the distance it represents",
+        "space_ready": "holding Space readies you: 1 s if every unit has actions, 2 s otherwise",
+        "reselect_deselects": "selecting an already-selected unit (a player unit or a target) deselects it"
+      },
+      "applied_to": [
+        "docs/backlog.md"
+      ],
+      "status": "chosen by Alex; to build",
+      "notes": "Alex: 'Playtest Feedback. Mission: The ship should start pointing East West instead of North South to align with the coast. The tanks should start out outside LOS. I think our maps might be more interesting if our rivers were more interesting. They are pretty strait right now. Lets turn LOS on by default. Ships should be able to fire even if they don't move. Right now you have to place a point before hitting special. * Maybe a 'hold' action which keeps the point there. It counts as an action so that step looks planned. Lets cleanup the orders menu * Dive and Climb don't apply for ships and tanks, just don't show them unless those actions apply. Tanks * Tank weapons should be their special. They should have the ability to fire pretty quick, maybe 1 turn reload. * Enemy takes are labelled 0 m - 0 which is not informative. First, everything should have a unit so the latter is m/s? Then do they need altitude? Views: We should be able to show special here as well. I am thinking maybe there is a filter icon (the funnel?) that lets you pick what shows and applies to all three graphs. It could apply to the map view as well if arcs are on. Controls - Lets have holding space for 1s ready you up if all units have actions or 2s otherwise. Selecting a unit you already have selected either a player unit or a target should deselect them. Our views screen needs a small scale, just a single bar with a single label for distance it represents in that view.'"
     }
   ]
 }
