@@ -2638,6 +2638,25 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex: 'Generally I like the look of the soft pufts as a default impact style'"
+    },
+    {
+      "id": "plan-indicators-bold",
+      "date": "2026-10-13",
+      "area": "Interface",
+      "question": "How bold are the plan indicators on the map (the planned path, its nodes, the other units' plans)?",
+      "board": "none yet (a board of weights to make)",
+      "options": [],
+      "chosen": "much bolder: the map has too much visual noise to see thin dashed lines and tiny dots",
+      "parameters": {
+        "today": "data/ui/ui.json planner: path_line_px 1.6 dashed 6 on 5 off; step_dot_px 3.0; carry_line_px 1.0; the other units' plans others_line_px 1.0, others_dot_px 1.9 at others_alpha 0.55; the range of motion's rim 0.9",
+        "board": "PROPOSED: three to five weights side by side on a busy map (forest, village, smoke, at the start zoom and close in): wider lines (2x to 3x), solid against dashed, a paper halo under the ink so it reads over hatching, bigger nodes; the other units' plans one step quieter than the selected one",
+        "rule": "lines and nodes, not symbol marks (decision no-ink-marks)"
+      },
+      "applied_to": [
+        "docs/backlog.md"
+      ],
+      "status": "chosen by Alex; the weights on a board",
+      "notes": "Alex: 'We need to make the plan indicators on the map much bolder to be visible. There is too much visual noise to see a thin dashed lines and tiny dots.'"
     }
   ]
 }

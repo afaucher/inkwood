@@ -1,6 +1,6 @@
 # Inkwood backlog (for the next session's prioritisation)
 
-Everything open as of 2026-10-12, gathered so Alex can evaluate and order it. Each item names its decision
+Everything open as of 2026-10-13, gathered so Alex can evaluate and order it; to be taken on Wednesday 2026-10-14 (Alex). Each item names its decision
 in `data/decisions/decisions.json` where there is one. "Rec" is the lead's recommendation, PROPOSED.
 What is in flight right now lives in `docs/status.md`; what is decided lives in the Decision Ledger.
 
@@ -55,6 +55,12 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    are not."): `fx.json tracers.options.T5.marks` hit_dot_px and miss_tick_px 0. The Main Guns' fire mark
    goes too (D8).
 
+8. **Bolder plan indicators** (plan-indicators-bold, Alex 2026-10-13: "much bolder to be visible. There is too
+   much visual noise to see a thin dashed lines and tiny dots"). Today (`ui.json planner`): the path 1.6 px dashed
+   6 on 5 off, nodes 3 px, the other units' plans 1.0 px lines and 1.9 px dots at 0.55 alpha, the range's rim
+   0.9 px. A board of weights on a busy map (forest, village, smoke; the start zoom and close in): 2x to 3x lines,
+   solid against dashed, a paper halo under the ink, bigger nodes; the other units' plans a step quieter.
+
 ## B. Needs a decision (with a recommendation)
 
 1. **The ship's gun range** (Alex: "might be too long. Let's look at it?"). Today the Main Guns reach
@@ -101,6 +107,23 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
     in the soft puffs (Alex 2026-10-13, soft-puffs-default: "I like the look of the soft puffs as a default
     impact style"): a pale puff of spray, no ink rings, sized by the round's calibre at the map's true scale; a
     small board of sizes before it lands.
+14. **The military complex's fit** (Alex 2026-10-13, after Suppress: "the building we designed doesn't quite
+    match the style of the houses in color scheme and it doesn't quite fit into the sandbag complex we built for
+    it. The alignment doesn't match and the size doesn't quite match either. Lets figure out how to improve our
+    complex design to be more consistent and more natural looking."). A study first (why the colours, the angle
+    and the size disagree), then a board of complex designs beside the village's houses. Findings: below when the
+    study lands.
+15. **The fog's edge** (Alex 2026-10-13: "How expensive would it be to smooth the edge of the fog of war? It
+    currently looks pretty blocky."). Found (read-only study): with sight circles (today's default) the mask is
+    exact per screen pixel; the blockiness is the inked edge's wobble, a value noise that is flat at every
+    lattice point, so a big circle comes out as straight runs with a kink every ~55 px
+    (`scripts/render/fog_composite.gdshader`, `fog.json edge.inked.wobble_px 2.5, wobble_per_px 0.018`), plus a
+    hard 1 px cut and hatch ticks of random length. Fix, at no measurable frame cost: a smoother noise (gradient
+    noise or a second octave) and a cut softened over 2-3 px (a new `edge.inked.cut_soft_px`). With lines of sight
+    on (A1) the edge is ALSO stepped by the rays (the nearest ray is picked, about 8 m apart at 800 m, at half the
+    screen's resolution: `fog_los_shape.gdshader`); interpolating between the two nearest rays is nearly free,
+    more rays or a full-resolution mask cost 2x the sweep or ~8x the distance pass. Rec: the two free fixes with
+    A1, shown on a small board.
 
 ## C. Bugs and engineering debt
 
