@@ -3,6 +3,7 @@
 !/.godot/extension_list.cfg
 !/.godot/global_script_class_cache.cfg
 !/.godot/uid_cache.bin
+*.uid
 
 # Build output AND dependencies. build/deps holds the pinned Godot engine and
 # its export templates (see godot.manifest / godot_env.sh) -- ~200 MB that is
