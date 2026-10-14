@@ -2611,7 +2611,7 @@
       "chosen": "no: Alex does not like ink-mark indicators; they are not proposed again (no board options, no working defaults)",
       "parameters": {
         "hit_mark": "the old hit mark (7 ink strokes round a dot on a unit when it is hit; scripts/ui/hit_marks.gd, data/ui/ui.json combat.hit_mark, Track U2's proposal) goes: combat.hit_mark.enabled false. PROPOSED by the lead as the case this rule settles; G3's impact is the hit",
-        "still_on_screen": "the Main Guns' fire mark, a ring with an X at the target while planning (ui.json guns.marks): not yet asked",
+        "still_on_screen": "none of Alex's own picks left: the Main Guns' fire mark (a ring at the scatter's two sigma with an X at the target and a dashed line from the step's node, ui.json guns.marks, motion_planner.gd _draw_fire_marks) is to be replaced (Alex); a board of options without symbol marks",
         "tracer_marks": "the T5 tracers keep their streak; the hit dot and the miss tick go (Alex): fx.json tracers.options.T5.marks hit_dot_px and miss_tick_px 0 (the code draws neither at 0)"
       },
       "applied_to": [
@@ -2619,7 +2619,7 @@
         "docs/operating.md"
       ],
       "status": "chosen by Alex",
-      "notes": "Alex, told the three crossed lines he saw were most likely the hit mark: 'Generally I don't like the lnk mark indicators, lets not propose them again' Then, Alex, asked whether the T5 tracers' hit dot and miss tick go too: 'The tracer itself is fine.  The dot and miss tick are not.'"
+      "notes": "Alex, told the three crossed lines he saw were most likely the hit mark: 'Generally I don't like the lnk mark indicators, lets not propose them again' Then, Alex, asked whether the T5 tracers' hit dot and miss tick go too: 'The tracer itself is fine.  The dot and miss tick are not.' Then, Alex, on the Main Guns' fire mark (a ring with an X at the target while planning): 'The main guns fire mark is not, we need a better option'"
     }
   ]
 }

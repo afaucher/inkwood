@@ -52,8 +52,8 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    strokes round a dot on a unit when it is hit (`scripts/ui/hit_marks.gd`), 3.2 s and held while paused, on top
    of G3's own impact. Turn it off (`ui.json combat.hit_mark.enabled` false) and fix the tests that count it.
    The T5 tracers lose their hit dot and miss tick too (Alex: "The tracer itself is fine. The dot and miss tick
-   are not."): `fx.json tracers.options.T5.marks` hit_dot_px and miss_tick_px 0. Not yet asked: the Main Guns'
-   target X while planning.
+   are not."): `fx.json tracers.options.T5.marks` hit_dot_px and miss_tick_px 0. The Main Guns' fire mark
+   goes too (D8).
 
 ## B. Needs a decision (with a recommendation)
 
@@ -127,6 +127,12 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
 5. Wreck litter: sunken boats and planes in the water as scenery (wreck-litter).
 6. Terrain variety: beaches, coastal cliffs, marsh, rock, orchards, wood density (water-layer).
 7. The forest fire's look (forest-fire; the fire session deferred it).
+8. **The Main Guns' fire mark** (no-ink-marks, Alex 2026-10-13: "The main guns fire mark is not, we need a better
+   option"). Today, while planning, a step with fire on draws a dashed line from its node to the target, a ring at
+   the shells' two-sigma scatter and an X at the target (`motion_planner.gd _draw_fire_marks`, `ui.json guns.marks`).
+   A board of options with no symbol marks (PROPOSED directions: the scatter as a soft wash in the motion range's
+   wash-and-rim grammar; the shells' arc from the ship to the target; the landing area drawn as the splash or dust
+   it will raise, faint), beside the target selection's own mark so the two do not double up.
 
 ## E. Later (planned, not fleshed out)
 
