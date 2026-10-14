@@ -39,7 +39,8 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    barrel's tip; the turret turns to its bearing and fires only once it has it; a recoil, the whole tank
    rocking back or only the turret (a small board). The turret's turn delays the shot IN THE SIM (a traverse
    rate; Alex: "so the timing is variable during the turn"); the tank's gun becomes its special at the
-   same time (A4).
+   same time (A4). The same turret feedback applies to the ship (Alex): the cruiser's turrets turn to
+   their bearing before the salvo, smoke from the barrels' tips, a recoil.
 
 ## B. Needs a decision (with a recommendation)
 

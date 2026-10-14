@@ -2573,13 +2573,14 @@
       "parameters": {
         "muzzle": "at the barrel tip",
         "turret": "turns to the bearing first, then fires; the turn delays the shot IN THE SIM (a traverse rate), so the shot's timing varies within the turn (Alex)",
-        "recoil": "open: whole tank rocks back, or only the turret"
+        "recoil": "open: whole tank rocks back, or only the turret",
+        "ships": "the turret feedback applies to the ship too (Alex): its turrets turn to the bearing (the turn delaying the salvo in the sim), the muzzle smoke from the barrels' tips, a recoil"
       },
       "applied_to": [
         "docs/backlog.md"
       ],
       "status": "chosen by Alex; to build next; the recoil look open",
-      "notes": "Alex: 'Also note that next we add just a little more visual feedback to the tanks. The tank smoke on firing should come from the barrel tip. The turret should rotate and only once it gets a bearing fire. The turret or the whole tank should have some visual feedback. Either the whole tank rocks back or just the turret.' Asked whether the turret's turn is only drawn or delays the shot in the sim: 'It should delay the shot in the game so the timing is variable during the turn.'"
+      "notes": "Alex: 'Also note that next we add just a little more visual feedback to the tanks. The tank smoke on firing should come from the barrel tip. The turret should rotate and only once it gets a bearing fire. The turret or the whole tank should have some visual feedback. Either the whole tank rocks back or just the turret.' Asked whether the turret's turn is only drawn or delays the shot in the sim: 'It should delay the shot in the game so the timing is variable during the turn.' Then: 'The turret feedback should also apply to the ship.'"
     }
   ]
 }
