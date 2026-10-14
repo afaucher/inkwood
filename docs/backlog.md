@@ -47,6 +47,13 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    the MotionPlanner before the marker layer, so every marker (the bridge is one) draws over it. The same cause hid
    the cruiser's range of motion under its own hull. Fix: the planner and the bomb aim above the markers.
 
+7. **The old hit mark goes** (no-ink-marks, Alex 2026-10-13: "Generally I don't like the ink mark indicators,
+   lets not propose them again"). The "3 lines crossed" Alex saw in the fourth playtest are most likely it: 7 ink
+   strokes round a dot on a unit when it is hit (`scripts/ui/hit_marks.gd`), 3.2 s and held while paused, on top
+   of G3's own impact. Turn it off (`ui.json combat.hit_mark.enabled` false) and fix the tests that count it.
+   Open for Alex: the other ink marks he chose himself, the T5 tracers' hit dot and miss tick and the Main Guns'
+   target X, stay until he says otherwise.
+
 ## B. Needs a decision (with a recommendation)
 
 1. **The ship's gun range** (Alex: "might be too long. Let's look at it?"). Today the Main Guns reach
@@ -108,14 +115,6 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    ring's gap are not modelled.
 5. **Board images in git's history** (about 520 MB before they were untracked). Removing them means
    rewriting history and a force-push over every session's work: only on Alex's word.
-6. **The crossed-line marks seen in the fourth playtest** (Alex 2026-10-13: "a few more linework 'X's", then
-   "3 lines crossed over each other, not 2 like an X"). Most likely the HIT MARK (`scripts/ui/hit_marks.gd`,
-   `ui.json combat.hit_mark`, Track U2's proposal from the first fight): 7 ink strokes round a dot, spaced
-   evenly, drawn on a unit each time it is hit; it lasts 3.2 s and holds while the playback is paused, so at a
-   tank's size it reads as three crossed lines. Since G3 a cannon hit also draws its own impact (a dark puff and
-   ink sparks for 0.2 s), so a hit is marked twice. The planner's clamp X Alex removed is still off. Rec: let
-   G3's impact be the hit and turn the old mark off (`combat.hit_mark.enabled`, a data switch), or keep it only
-   for machine-gun hits, which have no impact of their own.
 
 ## D. Looks still open (boards)
 

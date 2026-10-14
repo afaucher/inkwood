@@ -2599,6 +2599,25 @@
       ],
       "status": "chosen by Alex; to build",
       "notes": "Alex: 'Now when driving over the bridge with the tank, the movement indicator disappears below the bridge. I think we always want it to show on top for the player.'"
+    },
+    {
+      "id": "no-ink-marks",
+      "date": "2026-10-13",
+      "area": "Style, Interface, Effects",
+      "question": "Should feedback be shown with ink-mark indicators (small drawn symbols: the hit asterisk, X's, cross-ticks)?",
+      "board": "none (said in chat, after the fourth playtest)",
+      "options": [],
+      "chosen": "no: Alex does not like ink-mark indicators; they are not proposed again (no board options, no working defaults)",
+      "parameters": {
+        "hit_mark": "the old hit mark (7 ink strokes round a dot on a unit when it is hit; scripts/ui/hit_marks.gd, data/ui/ui.json combat.hit_mark, Track U2's proposal) goes: combat.hit_mark.enabled false. PROPOSED by the lead as the case this rule settles; G3's impact is the hit",
+        "still_on_screen": "ink marks Alex chose himself stay until he says otherwise: the T5 tracers' hit dot and miss tick (decision tracers-look), the Main Guns' fire mark, a ring with an X at the target while planning (ui.json guns.marks)"
+      },
+      "applied_to": [
+        "docs/backlog.md",
+        "docs/operating.md"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex, told the three crossed lines he saw were most likely the hit mark: 'Generally I don't like the lnk mark indicators, lets not propose them again'"
     }
   ]
 }
