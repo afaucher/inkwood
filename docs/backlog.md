@@ -110,9 +110,28 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
 14. **The military complex's fit** (Alex 2026-10-13, after Suppress: "the building we designed doesn't quite
     match the style of the houses in color scheme and it doesn't quite fit into the sandbag complex we built for
     it. The alignment doesn't match and the size doesn't quite match either. Lets figure out how to improve our
-    complex design to be more consistent and more natural looking."). A study first (why the colours, the angle
-    and the size disagree), then a board of complex designs beside the village's houses. Findings: below when the
-    study lands.
+    complex design to be more consistent and more natural looking."). Found (read-only study, nothing run;
+    "the sandbag complex" read as the walled compound the village bakes round the site):
+    - **Two systems, not linked.** The compound is map scenery (`scripts/world/world_layout.gd`, `village.gd`,
+      `structures.gd make_fort`): a rounded 8 m rampart about 100 x 55-60 m, turned to the street's axis plus a
+      seeded tilt of up to 0.12 rad, a divider wall, the site in the middle of the right cell. The complex is a unit
+      marker (`data/units/military_complex.json`, `unit_marker_art_static.gd` from line 697) placed by
+      `suppress.json` at the site with a fixed `heading` 0.
+    - **Angle:** the compound's `rot` is never read by the scenario, so the complex sits at 0 to 14 degrees off
+      the walls by seed; its gate faces west by accident and the rampart has no gate at all.
+    - **Size:** the complex is 80 x 60 m (fence 72 x 52); the cell's clear inside is about 48-62 x 47-52 m, so
+      the fence and buildings cross the walls on both axes. It was only ever judged on blank paper
+      (`variants/military-complex/`); no test or board checks the fit. At zooms below 0.39 the marker also grows
+      past the map's scale (the planes' size rule; `map_scale_factor` 0.5 holds only at 2 px/m and 36 px planes).
+    - **Colour:** the roofs use the houses' palette entries (roof_lit, the same shaded mix), but the rest speaks
+      another language: corrugated ribs for thatch, a dirt-wash yard, a pale concrete apron, a thin wire fence
+      inside a thick stippled rampart, and its shadow from the markers' pass, not the map's.
+    - Alex chose only the look (A, the hangar yard, decision complex-look); the footprint, the fence and the
+      placement were a builder's proposal.
+    Rec: the complex takes the compound's cell as its footprint and its angle (the layout hands the scenario the
+    cell's size and `rot`), draws at the map's scale at every zoom like the bridge, drops its own fence for the
+    rampart (a gate cut in the rampart), and its buildings use the houses' linework; a board of two or three
+    layouts drawn IN the village, beside its houses.
 15. **The fog's edge** (Alex 2026-10-13: "How expensive would it be to smooth the edge of the fog of war? It
     currently looks pretty blocky."). Found (read-only study): with sight circles (today's default) the mask is
     exact per screen pixel; the blockiness is the inked edge's wobble, a value noise that is flat at every
