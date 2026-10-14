@@ -33,13 +33,28 @@ ready-up are modelled on Alex's Robo Rally clone `goto` (also a sibling).
    accents; lightness is a ramp off paper; material is linework. No hex
    literal in draw code once the style layer exists -- colours are roles in
    data. See `docs/proposals/palette-architecture.md`.
-7. **Read `docs/operating.md` and `docs/status.md` before starting work.** The
+7. **Read `docs/operating.md` and `docs/status.md` before starting work (lead sessions only).** The
    first is how the work is run: recording a decision in all three places
    (`decisions.json`, the design doc's log, the Decision Ledger artifact),
    boards shown at full resolution, the lead and its Sonnet builders, reusing
    work, interrupts stopping builders, several agents in one tree, never running
    `build.ps1` while Alex may be playing. The second says what is in flight:
    **claim a track there before you start one**, and stay inside its folders.
+   Subagents/builders must receive everything they need in their brief instead
+   of re-reading these lead docs.
+8. **Never poll with `sleep`, background tasks, or shell loops.** Every tool
+   turn re-reads the entire conversation history (~400k+ tokens). Launching a
+   process in the background and repeatedly running `sleep 5`, `sleep 20`,
+   `Monitor`, or bash loops to check logs burns tens of thousands of tokens per
+   tick just to check if something is done. Always execute commands **synchronously
+   in the foreground** and let tools block:
+   - For test gates: run `.\tools\gate.ps1` (or `.\test_runner.ps1`). It blocks,
+     manages parallel processes internally, and reports in ONE tool call.
+   - For windowed shots/boards: run `.\tools\shot.ps1 -Script <path> -Out <dir> [-Sheet]`.
+     It blocks, manages timeouts and PID cleanup internally, and reports in ONE tool call.
+   - For scripts waiting on child processes: let the script wait internally using
+     `$proc.WaitForExit()`, `proc.wait()`, or pipes. Never return to the agent turn
+     loop just to sleep.
 
 ## What exists and what does not
 
@@ -212,28 +227,36 @@ mixed-warfare): water is generated per seed (`scripts/world/water_gen.gd`,
 Work on a track stays inside the folders it owns and reads other tracks' data
 and public APIs, not their code.
 
-## Running tests
+## Running tests and the gate
 
-Tests live in `scripts/tests/*.gd`, one file per test, and are run by name:
+Tests live in `scripts/tests/*.gd`, one file per test:
 
-```powershell
-.\test_runner.ps1 -TestName test_smoke
-```
+- **Run the gate (parallel, one tool call):**
+  ```powershell
+  .\tools\gate.ps1                                   # full test suite (test_smoke first)
+  .\tools\gate.ps1 -Tests test_fire,test_wind        # specific tests
+  .\tools\gate.ps1 -Only 'fire|wind'                 # regex filter
+  .\tools\gate.ps1 -Root ..\inkwood_wt               # in a clean worktree
+  ```
+  `tools/gate.ps1` runs `test_smoke` first, resolves the engine and imports once,
+  launches tests in parallel with `INKWOOD_STEAM=off`, enforces a timeout per test,
+  checks both marker and exit code, and prints a single summary line plus error
+  excerpts for failing tests in **one tool call**. It blocks synchronously — **never
+  launch it in the background or poll with sleep**.
 
-```bash
-./test_runner.sh test_smoke
-```
+- **Run a single test:**
+  ```powershell
+  .\test_runner.ps1 -TestName test_smoke
+  ```
+  ```bash
+  ./test_runner.sh test_smoke
+  ```
 
-- The engine is a dependency of the repo, not of the machine: `godot.manifest`
-  pins 4.7-stable and `godot_env.ps1` / `godot_env.sh` install exactly that
-  build into `build/deps/` (nothing outside the repo is read or written; a Godot
-  on PATH is never reused). `editor.ps1` / `editor.sh` open the editor in it --
-  use those, never double-click `project.godot`.
 - **Pass marker:** `>>> [TEST PASSED] <name> <<<`. The runner requires both
   exit code 0 and the marker.
 - **Read `test_logs/<name>.log` and `.err.log`**, not the runner's stdout: the
   real message for a parse error appears only in the `.err.log`.
-- **Pass `--fixed-fps 60` on direct runs** (the runner already does); without it
+- **Pass `--fixed-fps 60` on direct runs** (the runner and gate already do); without it
   headless Godot sleeps to hold 60 Hz.
 - **Writing a test:** subclass `res://scripts/test_support/test_case.gd`,
   implement `setup(main)`, assert with `check/eq/near`, call `finish()`. Use
@@ -243,6 +266,36 @@ Tests live in `scripts/tests/*.gd`, one file per test, and are run by name:
   any failure.
 - `INKWOOD_STEAM=off` skips Steam entirely for a run that must not touch the
   client; every `DebugSettings` knob is settable as `INKWOOD_<KEY>`.
+
+## Efficient execution: how to wait on results (never sleep-poll)
+
+In Claude Code, every tool call re-reads the entire conversation history (~400k+
+tokens at cache-read rates). An agent that runs `(launch in bg) -> sleep 5 -> check
+log -> sleep 5 -> check log` over 20 iterations burns over 800,000 tokens doing
+zero work.
+
+1. **Foreground synchronous execution:** Shell tools wait for commands to
+   complete. Always run commands in the foreground and let them block. A full
+   gate or shot run takes 10–30 seconds, well within the tool call timeout.
+2. **Never poll logs with `sleep` or loops:**
+   - **WRONG:** `(Godot ... > log 2>&1 &)` followed by `sleep 5`, `sleep 20`, or
+     bash `for i in $(seq 1 40); do sleep 5; done`.
+   - **RIGHT:** Run the tool directly in the foreground, or use `tools/shot.ps1`
+     or `tools/gate.ps1`.
+3. **Windowed shots / board frames:**
+   ```powershell
+   .\tools\shot.ps1 -Script scripts\ui\ship_shot.gd -Out tmp\ships [-Sheet]
+   ```
+   Runs windowed with Steam off, waits for completion, stops child processes
+   cleanly by PID on timeout, reports only error lines, and lists all fresh PNGs
+   (with an optional full-resolution contact sheet via `-Sheet`) in **one tool call**.
+4. **Internal waiting only:** If a script must coordinate multiple processes,
+   let the script do the waiting natively inside the host process (e.g.
+   `$proc.WaitForExit()`, `proc.wait()`, or bash `wait`). Never return control to
+   the LLM agent turn loop just to wait or sleep.
+5. **Subagents:** When launching an `Agent` or `Task`, do not repeatedly poll
+   with `Monitor` or sleep commands. The system notifies the lead session when
+   the subagent finishes.
 
 ## The port check
 
@@ -293,6 +346,7 @@ scripts/
   tests/              one file per test; the gate runs every .gd in here
   test_support/       shared helpers -- NOT run as tests
 data/                 parameters, unit definitions, decisions (JSON; read at runtime)
+tools/                fast dev helpers: gate.ps1 (parallel gate), shot.ps1 (windowed shots + contact sheets)
 variants/             variant board output, one folder per decision
 docs/                 design doc snapshot
 reference/            the prototype HTML and the port-check fixture (never shipped)

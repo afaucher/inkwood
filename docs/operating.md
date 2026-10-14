@@ -91,19 +91,20 @@ agent starting on Inkwood reads both, then `docs/status.md` for what is in fligh
 
 ## Running things
 
-- **The gate**: every test in `scripts/tests/`, each through `test_runner.ps1`; read
-  `test_logs/<name>.log` for `>>> [TEST PASSED] <name> <<<`, never the runner's
-  stdout, AND check the runner's exit code is 0: a crash while quitting leaves the
-  marker in the log and fails build.ps1 (test_fire_track, 2026-10-11: it passed every
-  marker-only gate and failed the build twice). `Start-Process -PassThru` does not report
-  the exit code dependably; have each run write `$LASTEXITCODE` to a file. A parallel loop of runners (5 to 6 at a time) runs the whole gate in a
-  few minutes; networked tests own fixed ports (CLAUDE.md), so one run at a time.
+- **The gate**: run `.\tools\gate.ps1` (or `.\tools\gate.ps1 -Tests <list>` / `-Only <pattern>`).
+  It runs `test_smoke` first, launches tests in parallel with `INKWOOD_STEAM=off`, checks both
+  the pass marker in `test_logs/<name>.log` and the exit code 0, and reports a one-line summary
+  plus error excerpts for any failures in **one tool call**. It blocks synchronously — **never
+  launch it in the background, never write custom parallel loops, and never poll with `sleep`**.
+  To validate a track alone in a separate checkout, pass `-Root ..\inkwood_wt`.
 - **build.ps1 stops any running copy of the game by name** (`Stop-Process -Name
   Inkwood`) before exporting. Alex may be playtesting: ask before running it. Do
   not change the build scripts (Alex: "Don't touch the build").
 - **Never kill Godot by image name**; stop only the processes you started (by PID).
-- **Windowed shots** go to `tmp/<track>/` at native size; send Alex the one or two
-  that show the point (SendUserFile), not the whole folder.
+- **Windowed shots**: run `.\tools\shot.ps1 -Script <res://...> -Out tmp/<track> [-Sheet]`.
+  It runs windowed with Steam off, waits for completion, stops hung runs by PID tree, and reports
+  fresh PNGs and error lines in one call. Use `-Sheet` to generate a full-resolution contact
+  sheet. Send Alex the one or two that show the point (SendUserFile), not the whole folder.
 - **Third-party reference art** (Hannes Breuer's) stays local in `reference/style/`
   (gitignored) and is never uploaded to a shared doc.
 
