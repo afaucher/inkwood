@@ -98,7 +98,9 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
     13 m before that scale); a tank or nose-cannon round in water draws G3's pale ring and ripple (Alex's G3).
     The only board with choices is the Gunfire Board's row i, "a shell in the river", one look per family
     (G1 to G4; https://claude.ai/artifact/KVvixkLBkFiq4mqEL4Dgba). Rec: one splash for everything in water,
-    G3's, sized by the round's calibre and at the map's true scale; a small board of sizes before it lands.
+    in the soft puffs (Alex 2026-10-13, soft-puffs-default: "I like the look of the soft puffs as a default
+    impact style"): a pale puff of spray, no ink rings, sized by the round's calibre at the map's true scale; a
+    small board of sizes before it lands.
 
 ## C. Bugs and engineering debt
 

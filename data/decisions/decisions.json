@@ -2620,6 +2620,24 @@
       ],
       "status": "chosen by Alex",
       "notes": "Alex, told the three crossed lines he saw were most likely the hit mark: 'Generally I don't like the lnk mark indicators, lets not propose them again' Then, Alex, asked whether the T5 tracers' hit dot and miss tick go too: 'The tracer itself is fine.  The dot and miss tick are not.' Then, Alex, on the Main Guns' fire mark (a ring with an X at the target while planning): 'The main guns fire mark is not, we need a better option'"
+    },
+    {
+      "id": "soft-puffs-default",
+      "date": "2026-10-13",
+      "area": "Style, Effects",
+      "question": "What is the default look of an impact?",
+      "board": "variants/gunfire/ (G3, chosen 2026-10-11, decision gunfire-looks)",
+      "options": [],
+      "chosen": "the soft puffs (G3, the W1 soft puffs) are the default impact style",
+      "parameters": {
+        "applies_to": "PROPOSED reading: every impact without a look of its own starts from the soft puffs, and boards for new impacts (the water splash, B13; the Main Guns' landing, D8) lead with them; looks Alex picked separately (B3 for bombs on land, F2 for flak) stay until he says otherwise",
+        "water": "PROPOSED: the water splash in the same grammar, a pale soft puff of spray rather than ink rings, sized by the round"
+      },
+      "applied_to": [
+        "docs/backlog.md"
+      ],
+      "status": "chosen by Alex",
+      "notes": "Alex: 'Generally I like the look of the soft pufts as a default impact style'"
     }
   ]
 }
