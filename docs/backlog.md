@@ -35,6 +35,12 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    - Controls: holding Space readies you, 1 s if every unit has actions, 2 s otherwise; selecting an
      already-selected unit or target deselects it.
 
+5. **The tank's firing feedback, NEXT** (tank-fire-feedback, Alex 2026-10-13): the muzzle smoke from the
+   barrel's tip; the turret turns to its bearing and fires only once it has it; a recoil, the whole tank
+   rocking back or only the turret (a small board). Open with it: is the turret's turn only drawn, or does
+   it delay the shot in the sim (a traverse rate)? Rec: in the sim, so a target swinging round a tank's
+   flank costs it time; the tank's gun becomes its special at the same time (A4).
+
 ## B. Needs a decision (with a recommendation)
 
 1. **The ship's gun range** (Alex: "might be too long. Let's look at it?"). Today the Main Guns reach

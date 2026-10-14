@@ -2558,6 +2558,28 @@
       ],
       "status": "chosen by Alex; to build",
       "notes": "Alex: 'Playtest Feedback. Mission: The ship should start pointing East West instead of North South to align with the coast. The tanks should start out outside LOS. I think our maps might be more interesting if our rivers were more interesting. They are pretty strait right now. Lets turn LOS on by default. Ships should be able to fire even if they don't move. Right now you have to place a point before hitting special. * Maybe a 'hold' action which keeps the point there. It counts as an action so that step looks planned. Lets cleanup the orders menu * Dive and Climb don't apply for ships and tanks, just don't show them unless those actions apply. Tanks * Tank weapons should be their special. They should have the ability to fire pretty quick, maybe 1 turn reload. * Enemy takes are labelled 0 m - 0 which is not informative. First, everything should have a unit so the latter is m/s? Then do they need altitude? Views: We should be able to show special here as well. I am thinking maybe there is a filter icon (the funnel?) that lets you pick what shows and applies to all three graphs. It could apply to the map view as well if arcs are on. Controls - Lets have holding space for 1s ready you up if all units have actions or 2s otherwise. Selecting a unit you already have selected either a player unit or a target should deselect them. Our views screen needs a small scale, just a single bar with a single label for distance it represents in that view.'"
+    },
+    {
+      "id": "tank-fire-feedback",
+      "date": "2026-10-13",
+      "area": "Units, Effects",
+      "question": "How does a tank show that it fires?",
+      "board": "none yet (the recoil look needs one)",
+      "options": [
+        "the whole tank rocks back",
+        "only the turret recoils"
+      ],
+      "chosen": "next: the muzzle smoke comes from the barrel's tip; the turret turns to its bearing and fires only once it has it; a recoil (the whole tank or only the turret: to choose)",
+      "parameters": {
+        "muzzle": "at the barrel tip",
+        "turret": "turns to the bearing first, then fires",
+        "recoil": "open: whole tank rocks back, or only the turret"
+      },
+      "applied_to": [
+        "docs/backlog.md"
+      ],
+      "status": "chosen by Alex; to build next; the recoil look open",
+      "notes": "Alex: 'Also note that next we add just a little more visual feedback to the tanks. The tank smoke on firing should come from the barrel tip. The turret should rotate and only once it gets a bearing fire. The turret or the whole tank should have some visual feedback. Either the whole tank rocks back or just the turret.'"
     }
   ]
 }
