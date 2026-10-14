@@ -2581,6 +2581,24 @@
       ],
       "status": "chosen by Alex; to build next; the recoil look open",
       "notes": "Alex: 'Also note that next we add just a little more visual feedback to the tanks. The tank smoke on firing should come from the barrel tip. The turret should rotate and only once it gets a bearing fire. The turret or the whole tank should have some visual feedback. Either the whole tank rocks back or just the turret.' Asked whether the turret's turn is only drawn or delays the shot in the sim: 'It should delay the shot in the game so the timing is variable during the turn.' Then: 'The turret feedback should also apply to the ship.'"
+    },
+    {
+      "id": "planner-on-top",
+      "date": "2026-10-13",
+      "area": "Interface",
+      "question": "Where does the player's movement indicator (the motion planner: the path, the nodes, the range of motion) draw against the units?",
+      "board": "none (said in chat, from the fourth playtest's build)",
+      "options": [],
+      "chosen": "always on top for the player: the planner draws over every unit's marker, so a tank's path across the bridge stays visible",
+      "parameters": {
+        "cause": "FOUND by the lead: scripts/ui/unit_ui.gd adds the MotionPlanner to the map before the UnitMarkerLayer, so every marker draws over it; the bridge is a marker (map scale), so a tank's path and nodes on the deck vanish under it. The same cause hid the cruiser's range of motion under its own hull (decision motion-range-look's notes)",
+        "fix": "PROPOSED: move the planner (and the bomb aim just under it) above the marker layer, under the overlay and the HUD; check in a build that the wash over the selected unit's own marker still reads"
+      },
+      "applied_to": [
+        "docs/backlog.md"
+      ],
+      "status": "chosen by Alex; to build",
+      "notes": "Alex: 'Now when driving over the bridge with the tank, the movement indicator disappears below the bridge. I think we always want it to show on top for the player.'"
     }
   ]
 }

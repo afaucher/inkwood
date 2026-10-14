@@ -42,6 +42,11 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    same time (A4). The same turret feedback applies to the ship (Alex): the cruiser's turrets turn to
    their bearing before the salvo, smoke from the barrels' tips, a recoil.
 
+6. **The movement indicator always on top** (planner-on-top, Alex 2026-10-13: "I think we always want it to show
+   on top for the player"). A tank's path over the bridge vanishes under the bridge: `scripts/ui/unit_ui.gd` adds
+   the MotionPlanner before the marker layer, so every marker (the bridge is one) draws over it. The same cause hid
+   the cruiser's range of motion under its own hull. Fix: the planner and the bomb aim above the markers.
+
 ## B. Needs a decision (with a recommendation)
 
 1. **The ship's gun range** (Alex: "might be too long. Let's look at it?"). Today the Main Guns reach
@@ -78,6 +83,15 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
 12. **The tank's gun as a special** (playtest-4): does the tank still fire on its own when no special is set,
     or only when ordered? Rec: only when ordered, since that is what makes it a special; the 1 turn reload
     keeps it busy.
+13. **Water splashes** (Alex 2026-10-13: "far too big and the style is inconsistent"). Three looks are live:
+    a ship or plane going under draws three ink rings (`data/world/boats.json game.sunk.splash`, never on a
+    board); a bomb or a shell landing in water borrows those same rings as a stand-in, sized 0.35 x the blast
+    and then drawn at the planes' enlarged marker scale (`fx.json impacts.water`; a bomb rings out to about
+    13 m before that scale); a tank or nose-cannon round in water draws G3's pale ring and ripple (Alex's G3).
+    The only board with choices is the Gunfire Board's row i, "a shell in the river", one look per family
+    (G1 to G4; https://claude.ai/artifact/KVvixkLBkFiq4mqEL4Dgba). Rec: one splash for everything in water,
+    G3's, sized by the round's calibre and at the map's true scale; a small board of sizes before it lands.
+
 ## C. Bugs and engineering debt
 
 1. **Line of sight's cost**: a viewshed sweep costs 6-12 ms for a plane and 36-65 ms for a ground unit
@@ -94,6 +108,12 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    ring's gap are not modelled.
 5. **Board images in git's history** (about 520 MB before they were untracked). Removing them means
    rewriting history and a force-push over every session's work: only on Alex's word.
+6. **X marks seen in the fourth playtest** (Alex 2026-10-13: "a few more linework 'X's"). The planner's
+   clamp X that Alex removed is still off (`ui.json planner.clamp_marks` false). Two X-like marks are drawn by
+   design: the Main Guns' fire mark, a ring with an X at each planned salvo's target and a dashed line to its
+   node (`motion_planner.gd _draw_fire_marks`, `ui.json guns.marks`); and the machine-gun tracers' miss tick
+   (T5: a crossbar at the end of a missed streak, `fx.json tracers.options.T5.marks`). Which one Alex saw is
+   not known yet (the mission, or a screenshot, settles it).
 
 ## D. Looks still open (boards)
 
