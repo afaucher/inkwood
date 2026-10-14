@@ -108,12 +108,14 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    ring's gap are not modelled.
 5. **Board images in git's history** (about 520 MB before they were untracked). Removing them means
    rewriting history and a force-push over every session's work: only on Alex's word.
-6. **X marks seen in the fourth playtest** (Alex 2026-10-13: "a few more linework 'X's"). The planner's
-   clamp X that Alex removed is still off (`ui.json planner.clamp_marks` false). Two X-like marks are drawn by
-   design: the Main Guns' fire mark, a ring with an X at each planned salvo's target and a dashed line to its
-   node (`motion_planner.gd _draw_fire_marks`, `ui.json guns.marks`); and the machine-gun tracers' miss tick
-   (T5: a crossbar at the end of a missed streak, `fx.json tracers.options.T5.marks`). Which one Alex saw is
-   not known yet (the mission, or a screenshot, settles it).
+6. **The crossed-line marks seen in the fourth playtest** (Alex 2026-10-13: "a few more linework 'X's", then
+   "3 lines crossed over each other, not 2 like an X"). Most likely the HIT MARK (`scripts/ui/hit_marks.gd`,
+   `ui.json combat.hit_mark`, Track U2's proposal from the first fight): 7 ink strokes round a dot, spaced
+   evenly, drawn on a unit each time it is hit; it lasts 3.2 s and holds while the playback is paused, so at a
+   tank's size it reads as three crossed lines. Since G3 a cannon hit also draws its own impact (a dark puff and
+   ink sparks for 0.2 s), so a hit is marked twice. The planner's clamp X Alex removed is still off. Rec: let
+   G3's impact be the hit and turn the old mark off (`combat.hit_mark.enabled`, a data switch), or keep it only
+   for machine-gun hits, which have no impact of their own.
 
 ## D. Looks still open (boards)
 
