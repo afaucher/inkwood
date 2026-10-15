@@ -354,7 +354,7 @@ func _shell_impact(ev: Dictionary, game_t: float) -> void:
 	var key := _shell_key(int(ev.get("step", 0)), int(ev.get("shell", 0)))
 	if _lands_in_water(pos):
 		if _may_show(shooter) and fx.has_method("water_impact"):
-			fx.water_impact(pos, game_t, blast, shooter)   # a splash: no smoke, no crater, nothing to put back for a late joiner
+			fx.water_impact(pos, game_t, blast, shooter, "shell_large")   # a splash: no smoke, no crater, nothing to put back for a late joiner
 		return
 	if _may_show(shooter):
 		if fx.has_method("bomb_impact"):
@@ -370,7 +370,7 @@ func _bomb_impact(ev: Dictionary, game_t: float) -> void:
 	var key := _bomb_key(int(ev.get("drop_index", 0)), int(ev.get("bomb", 0)))
 	if _lands_in_water(pos):
 		if _may_show(bomber) and fx.has_method("water_impact"):
-			fx.water_impact(pos, game_t, blast, bomber)   # a splash: no smoke, no crater, nothing to put back for a late joiner
+			fx.water_impact(pos, game_t, blast, bomber, "bomb")   # a splash: no smoke, no crater, nothing to put back for a late joiner
 		return
 	if _may_show(bomber):
 		if fx.has_method("bomb_impact"):

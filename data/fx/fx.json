@@ -802,6 +802,72 @@
       "_proposed": true,
       "_reason": "PROPOSED (builder GF, family G3): the pale soft disc and ring of a round in water, the knock-out step at alpha 0.55; no smoke, no hue"
     },
+    "splash.spray.0.0": {
+      "base": "flash",
+      "alpha": 0.42,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder BS, board splash, 2026-10-14; decision soft-puffs-default): the pale spray of a splash, the knock-out flash step (the lightest value on the map) with no hue, as the W1 smoke's smoke.w.white.* but a step more opaque; stage 0 of 3 (fresh, middle, old), tone 0 of 3 (thin, medium, thick): lightness is a ramp off the paper"
+    },
+    "splash.spray.0.1": {
+      "base": "flash",
+      "alpha": 0.58,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder BS, board splash, 2026-10-14; decision soft-puffs-default): the pale spray of a splash, the knock-out flash step (the lightest value on the map) with no hue, as the W1 smoke's smoke.w.white.* but a step more opaque; stage 0 of 3 (fresh, middle, old), tone 1 of 3 (thin, medium, thick): lightness is a ramp off the paper"
+    },
+    "splash.spray.0.2": {
+      "base": "flash",
+      "alpha": 0.72,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder BS, board splash, 2026-10-14; decision soft-puffs-default): the pale spray of a splash, the knock-out flash step (the lightest value on the map) with no hue, as the W1 smoke's smoke.w.white.* but a step more opaque; stage 0 of 3 (fresh, middle, old), tone 2 of 3 (thin, medium, thick): lightness is a ramp off the paper"
+    },
+    "splash.spray.1.0": {
+      "base": "flash",
+      "alpha": 0.34,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder BS, board splash, 2026-10-14; decision soft-puffs-default): the pale spray of a splash, the knock-out flash step (the lightest value on the map) with no hue, as the W1 smoke's smoke.w.white.* but a step more opaque; stage 1 of 3 (fresh, middle, old), tone 0 of 3 (thin, medium, thick): lightness is a ramp off the paper"
+    },
+    "splash.spray.1.1": {
+      "base": "flash",
+      "alpha": 0.48,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder BS, board splash, 2026-10-14; decision soft-puffs-default): the pale spray of a splash, the knock-out flash step (the lightest value on the map) with no hue, as the W1 smoke's smoke.w.white.* but a step more opaque; stage 1 of 3 (fresh, middle, old), tone 1 of 3 (thin, medium, thick): lightness is a ramp off the paper"
+    },
+    "splash.spray.1.2": {
+      "base": "flash",
+      "alpha": 0.6,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder BS, board splash, 2026-10-14; decision soft-puffs-default): the pale spray of a splash, the knock-out flash step (the lightest value on the map) with no hue, as the W1 smoke's smoke.w.white.* but a step more opaque; stage 1 of 3 (fresh, middle, old), tone 2 of 3 (thin, medium, thick): lightness is a ramp off the paper"
+    },
+    "splash.spray.2.0": {
+      "base": "flash",
+      "alpha": 0.22,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder BS, board splash, 2026-10-14; decision soft-puffs-default): the pale spray of a splash, the knock-out flash step (the lightest value on the map) with no hue, as the W1 smoke's smoke.w.white.* but a step more opaque; stage 2 of 3 (fresh, middle, old), tone 0 of 3 (thin, medium, thick): lightness is a ramp off the paper"
+    },
+    "splash.spray.2.1": {
+      "base": "flash",
+      "alpha": 0.32,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder BS, board splash, 2026-10-14; decision soft-puffs-default): the pale spray of a splash, the knock-out flash step (the lightest value on the map) with no hue, as the W1 smoke's smoke.w.white.* but a step more opaque; stage 2 of 3 (fresh, middle, old), tone 1 of 3 (thin, medium, thick): lightness is a ramp off the paper"
+    },
+    "splash.spray.2.2": {
+      "base": "flash",
+      "alpha": 0.42,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder BS, board splash, 2026-10-14; decision soft-puffs-default): the pale spray of a splash, the knock-out flash step (the lightest value on the map) with no hue, as the W1 smoke's smoke.w.white.* but a step more opaque; stage 2 of 3 (fresh, middle, old), tone 2 of 3 (thin, medium, thick): lightness is a ramp off the paper"
+    },
+    "splash.wash": {
+      "base": "flash",
+      "alpha": 0.3,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder BS, board splash S3): the pale wash on the water under a splash, the knock-out step at alpha 0.30: a wash, not an ink line"
+    },
+    "splash.ring": {
+      "base": "flash",
+      "alpha": 0.5,
+      "_proposed": true,
+      "_reason": "PROPOSED (builder BS, board splash S3): the brief pale ring on the water under a splash, the knock-out step at alpha 0.50 drawn as a soft wide band, not an ink line"
+    },
     "gf.leaf": {
       "base": "object_fill",
       "alpha": 0.96,
@@ -21932,6 +21998,648 @@
         "value": 3.0,
         "_proposed": true,
         "_reason": "the least a splash is sized by (m): the sinking splash's rings start 2 m out and end at 0.8 of this, so a small shell's blast of 6 m (x 0.35 = 2.1) would ring inward; 3 m ends at 2.4 m. PROPOSED"
+      }
+    }
+  },
+  "splash": {
+    "_about": "THE SPLASH: ONE grammar for everything that enters water (builder BS, board splash = backlog B13, 2026-10-14; scripts/fx/fx_layer.gd water_impact / splash / gunfire_impact route here, scripts/fx/fx_gunfire.gd draws it). ALEX: 'Water splashes are far too big and the style is inconsistent.' and (decision soft-puffs-default) 'Generally I like the look of the soft puffs as a default impact style'. THREE LOOKS WERE LIVE: (1) a ship or plane going under: three widening ink rings (data/world/boats.json game.sunk.splash); (2) a bomb or a shell in water: the same ink rings sized 0.35 x the blast (impacts.water splash_size_frac), drawn at the units' enlarged marker scale; (3) a tank or nose-cannon round in water: G3's pale ring and ripple (gunfire recipes impact.water). THE OPTIONS: S0 is today (all three looks, as they are; the working default until Alex picks); S1..S5 are one grammar, a pale burst of soft W1 spray puffs (no ink rings, no ink at all), sized by the ROUND (bullet, cannon_small, cannon_medium, shell_large, bomb) and by the unit for one going under, at the MAP's true scale. S1 small, S2 medium, S3 = S2 with a brief pale wash and ring on the water under it, S4 = S2 with a taller, wind-leaning column for bombs and shells, S5 = S2 drawn at the units' marker scale (the land dust's). EVERYTHING HERE IS PROPOSED (builder BS) until Alex picks from variants/splash/.",
+    "mode": {
+      "value": "S0",
+      "_proposed": true,
+      "_reason": "which splash look is live: 'S0' today's three looks, 'S1'..'S5' the one soft-puff grammar (this section's options). Alex picks from variants/splash/; until then the default stays S0. With the mode S0 a splash is drawn by the old code paths, unchanged",
+      "choices": [
+        "S0",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5"
+      ]
+    },
+    "scale": {
+      "value": "map",
+      "_proposed": true,
+      "_reason": "the scale a splash is drawn at: 'map' the map's true scale (metres on the map: a 7.5 m splash is 15 px at zoom 1.0), 'marker' the units' enlarged marker scale (the old rings were drawn there, which made them far too big; the G3 land impacts still are). PROPOSED",
+      "choices": [
+        "map",
+        "marker"
+      ]
+    },
+    "max_records": {
+      "value": 96,
+      "_proposed": true,
+      "_reason": "the splash book keeps at most this many records (the oldest go first). PROPOSED"
+    },
+    "bomb_blast_min_m": {
+      "value": 30.0,
+      "_proposed": true,
+      "_reason": "a splash made by water_impact without a round named is a bomb's when the blast is at least this many metres (a bomb's is 45 m, a shell's 20 m or less), else a shell's. The feed names the round, so this is only the fallback. PROPOSED"
+    },
+    "tag_class": {
+      "value": {
+        "bullet": "bullet",
+        "cannon_small": "small",
+        "cannon_medium": "medium",
+        "shell_large": "large",
+        "bomb": "large",
+        "unit": "large"
+      },
+      "_proposed": true,
+      "_reason": "which of the four classes (the n and the life of the recipe) each round tag takes. PROPOSED"
+    },
+    "gunfire_tag": {
+      "value": {
+        "bullet": "bullet",
+        "small": "cannon_small",
+        "medium": "cannon_medium",
+        "large": "shell_large"
+      },
+      "_proposed": true,
+      "_reason": "the round tag of a gunfire impact class (data/sim/rounds.json calibre, scripts/sim/rounds.gd impact_class): a G3 impact in water becomes a splash of this round. PROPOSED"
+    },
+    "puffs": {
+      "value": {
+        "spray": {
+          "form": "soft",
+          "base": "W1",
+          "ramp": "splash.spray"
+        }
+      },
+      "_proposed": true,
+      "_reason": "the baked puff set the recipes name: the W1 soft puff sprites with the splash.spray roles (the knock-out flash step, no hue; a step more opaque than the white smoke). PROPOSED"
+    },
+    "options": {
+      "S1": {
+        "label": "Soft spray, small",
+        "description": "S1: a small burst of pale soft spray puffs, sized by the round (a tank round 1.2 m, a shell 3 m, a bomb 4.5 m, a cutter going under 3.2 m), no rings.",
+        "sizes": {
+          "value": {
+            "bullet": {
+              "r_m": 0.45,
+              "min_px": 2.0
+            },
+            "cannon_small": {
+              "r_m": 0.8,
+              "min_px": 2.5
+            },
+            "cannon_medium": {
+              "r_m": 1.2,
+              "min_px": 3.0
+            },
+            "shell_large": {
+              "r_m": 3.0,
+              "min_px": 4.0
+            },
+            "bomb": {
+              "r_m": 4.5,
+              "min_px": 5.0
+            },
+            "unit": {
+              "frac": 0.12,
+              "max_m": 6.0,
+              "min_px": 5.0,
+              "scale": "marker"
+            }
+          },
+          "_proposed": true,
+          "_reason": "radius in metres of the splash's cloud (drawn at the MAP's scale, floored at min_px so the smallest still reads at the planning zoom, where a metre is 0.7 px) per round: bullet, cannon_small and cannon_medium (the tank's and the nose cannon's round, data/sim/rounds.json), shell_large (the cruiser's Main Guns), bomb; and for a unit going under a share (frac) of its size_m up to max_m, drawn at the MARKERS' scale (scale 'marker': it goes with the drawn hull it comes from, a 27 m cutter is drawn 2 to 4 times its map length; 'map' draws it at the map's). PROPOSED, builder BS"
+        },
+        "recipe": {
+          "value": [
+            {
+              "type": "puffs",
+              "layer": "air",
+              "set": "spray",
+              "n": {
+                "bullet": 1,
+                "small": 2,
+                "medium": 3,
+                "large": 4
+              },
+              "r": 0.7,
+              "life_s": {
+                "bullet": 1.02,
+                "small": 1.36,
+                "medium": 1.7,
+                "large": 2.72
+              },
+              "grow": [
+                0.6,
+                1.5
+              ],
+              "grow_tau": 0.12,
+              "hold": 0.12,
+              "fade_power": 1.6,
+              "tone": 1,
+              "throw": 4.0,
+              "throw_tau": 0.25,
+              "interval_s": 0.02,
+              "spread": 0.3,
+              "rise_mps": 0.4,
+              "wind": 1.0,
+              "shadow": false
+            },
+            {
+              "type": "puffs",
+              "layer": "air",
+              "set": "spray",
+              "n": {
+                "bullet": 1,
+                "small": 2,
+                "medium": 3,
+                "large": 4
+              },
+              "r": 0.55,
+              "life_s": {
+                "bullet": 0.85,
+                "small": 1.19,
+                "medium": 1.53,
+                "large": 2.38
+              },
+              "grow": [
+                0.7,
+                1.3
+              ],
+              "grow_tau": 0.1,
+              "hold": 0.15,
+              "fade_power": 1.5,
+              "tone": 2,
+              "throw": 0.0,
+              "throw_tau": 0.25,
+              "interval_s": 0.0,
+              "spread": 0.0,
+              "rise_mps": 0.4,
+              "wind": 1.0,
+              "shadow": false
+            }
+          ],
+          "_proposed": true,
+          "_reason": "the parts of a splash, in fx_gunfire.gd's own part grammar (puffs, disc, rings), baked from the W1 soft puff sprites tinted by the splash.spray roles; by round class n and life vary bullet < small < medium < large. PROPOSED, builder BS"
+        }
+      },
+      "S2": {
+        "label": "Soft spray, medium",
+        "description": "S2: a medium burst of pale soft spray puffs (a tank round 1.9 m, a shell 4.5 m, a bomb 7.5 m, a cutter going under 5.4 m), a dense heart, no rings.",
+        "sizes": {
+          "value": {
+            "bullet": {
+              "r_m": 0.7,
+              "min_px": 2.5
+            },
+            "cannon_small": {
+              "r_m": 1.2,
+              "min_px": 3.0
+            },
+            "cannon_medium": {
+              "r_m": 1.9,
+              "min_px": 3.5
+            },
+            "shell_large": {
+              "r_m": 4.5,
+              "min_px": 5.0
+            },
+            "bomb": {
+              "r_m": 7.5,
+              "min_px": 6.0
+            },
+            "unit": {
+              "frac": 0.2,
+              "max_m": 9.0,
+              "min_px": 6.0,
+              "scale": "marker"
+            }
+          },
+          "_proposed": true,
+          "_reason": "radius in metres of the splash's cloud (drawn at the MAP's scale, floored at min_px so the smallest still reads at the planning zoom, where a metre is 0.7 px) per round: bullet, cannon_small and cannon_medium (the tank's and the nose cannon's round, data/sim/rounds.json), shell_large (the cruiser's Main Guns), bomb; and for a unit going under a share (frac) of its size_m up to max_m, drawn at the MARKERS' scale (scale 'marker': it goes with the drawn hull it comes from, a 27 m cutter is drawn 2 to 4 times its map length; 'map' draws it at the map's). PROPOSED, builder BS"
+        },
+        "recipe": {
+          "value": [
+            {
+              "type": "puffs",
+              "layer": "air",
+              "set": "spray",
+              "n": {
+                "bullet": 2,
+                "small": 3,
+                "medium": 4,
+                "large": 6
+              },
+              "r": 0.7,
+              "life_s": {
+                "bullet": 1.2,
+                "small": 1.6,
+                "medium": 2.0,
+                "large": 3.2
+              },
+              "grow": [
+                0.6,
+                1.5
+              ],
+              "grow_tau": 0.12,
+              "hold": 0.12,
+              "fade_power": 1.6,
+              "tone": 1,
+              "throw": 4.0,
+              "throw_tau": 0.25,
+              "interval_s": 0.02,
+              "spread": 0.3,
+              "rise_mps": 0.4,
+              "wind": 1.0,
+              "shadow": false
+            },
+            {
+              "type": "puffs",
+              "layer": "air",
+              "set": "spray",
+              "n": 1,
+              "r": 0.55,
+              "life_s": {
+                "bullet": 1.0,
+                "small": 1.4,
+                "medium": 1.8,
+                "large": 2.8
+              },
+              "grow": [
+                0.7,
+                1.3
+              ],
+              "grow_tau": 0.1,
+              "hold": 0.15,
+              "fade_power": 1.5,
+              "tone": 2,
+              "throw": 0.0,
+              "throw_tau": 0.25,
+              "interval_s": 0.0,
+              "spread": 0.0,
+              "rise_mps": 0.4,
+              "wind": 1.0,
+              "shadow": false
+            }
+          ],
+          "_proposed": true,
+          "_reason": "the parts of a splash, in fx_gunfire.gd's own part grammar (puffs, disc, rings), baked from the W1 soft puff sprites tinted by the splash.spray roles; by round class n and life vary bullet < small < medium < large. PROPOSED, builder BS"
+        }
+      },
+      "S3": {
+        "label": "Soft spray with a pale wash",
+        "description": "S3: S2 with a brief pale wash and a pale ring spreading on the water under the spray (a wash, not an ink line).",
+        "sizes": {
+          "value": {
+            "bullet": {
+              "r_m": 0.7,
+              "min_px": 2.5
+            },
+            "cannon_small": {
+              "r_m": 1.2,
+              "min_px": 3.0
+            },
+            "cannon_medium": {
+              "r_m": 1.9,
+              "min_px": 3.5
+            },
+            "shell_large": {
+              "r_m": 4.5,
+              "min_px": 5.0
+            },
+            "bomb": {
+              "r_m": 7.5,
+              "min_px": 6.0
+            },
+            "unit": {
+              "frac": 0.2,
+              "max_m": 9.0,
+              "min_px": 6.0,
+              "scale": "marker"
+            }
+          },
+          "_proposed": true,
+          "_reason": "radius in metres of the splash's cloud (drawn at the MAP's scale, floored at min_px so the smallest still reads at the planning zoom, where a metre is 0.7 px) per round: bullet, cannon_small and cannon_medium (the tank's and the nose cannon's round, data/sim/rounds.json), shell_large (the cruiser's Main Guns), bomb; and for a unit going under a share (frac) of its size_m up to max_m, drawn at the MARKERS' scale (scale 'marker': it goes with the drawn hull it comes from, a 27 m cutter is drawn 2 to 4 times its map length; 'map' draws it at the map's). PROPOSED, builder BS"
+        },
+        "recipe": {
+          "value": [
+            {
+              "type": "disc",
+              "layer": "ground",
+              "r0": 0.25,
+              "r1": 1.7,
+              "fill": "splash.wash",
+              "edge": "",
+              "life_s": 1.1
+            },
+            {
+              "type": "rings",
+              "layer": "ground",
+              "n": 1,
+              "r0": 0.4,
+              "r1": 2.0,
+              "w_px": 2.4,
+              "role": "splash.ring",
+              "life_s": 1.2,
+              "squash": 1.0
+            },
+            {
+              "type": "puffs",
+              "layer": "air",
+              "set": "spray",
+              "n": {
+                "bullet": 2,
+                "small": 3,
+                "medium": 4,
+                "large": 6
+              },
+              "r": 0.7,
+              "life_s": {
+                "bullet": 1.2,
+                "small": 1.6,
+                "medium": 2.0,
+                "large": 3.2
+              },
+              "grow": [
+                0.6,
+                1.5
+              ],
+              "grow_tau": 0.12,
+              "hold": 0.12,
+              "fade_power": 1.6,
+              "tone": 1,
+              "throw": 4.0,
+              "throw_tau": 0.25,
+              "interval_s": 0.02,
+              "spread": 0.3,
+              "rise_mps": 0.4,
+              "wind": 1.0,
+              "shadow": false
+            },
+            {
+              "type": "puffs",
+              "layer": "air",
+              "set": "spray",
+              "n": 1,
+              "r": 0.55,
+              "life_s": {
+                "bullet": 1.0,
+                "small": 1.4,
+                "medium": 1.8,
+                "large": 2.8
+              },
+              "grow": [
+                0.7,
+                1.3
+              ],
+              "grow_tau": 0.1,
+              "hold": 0.15,
+              "fade_power": 1.5,
+              "tone": 2,
+              "throw": 0.0,
+              "throw_tau": 0.25,
+              "interval_s": 0.0,
+              "spread": 0.0,
+              "rise_mps": 0.4,
+              "wind": 1.0,
+              "shadow": false
+            }
+          ],
+          "_proposed": true,
+          "_reason": "the parts of a splash, in fx_gunfire.gd's own part grammar (puffs, disc, rings), baked from the W1 soft puff sprites tinted by the splash.spray roles; by round class n and life vary bullet < small < medium < large. PROPOSED, builder BS"
+        }
+      },
+      "S4": {
+        "label": "Soft spray, tall column for bombs and shells",
+        "description": "S4: S2, and for bombs and shells a taller column of puffs that climbs, leans away downwind as the other smoke does and casts its shadow on the water, which is how a tall thing reads from above (the tank's and the cannon's round as S2).",
+        "sizes": {
+          "value": {
+            "bullet": {
+              "r_m": 0.7,
+              "min_px": 2.5
+            },
+            "cannon_small": {
+              "r_m": 1.2,
+              "min_px": 3.0
+            },
+            "cannon_medium": {
+              "r_m": 1.9,
+              "min_px": 3.5
+            },
+            "shell_large": {
+              "r_m": 4.5,
+              "min_px": 5.0
+            },
+            "bomb": {
+              "r_m": 7.5,
+              "min_px": 6.0
+            },
+            "unit": {
+              "frac": 0.2,
+              "max_m": 9.0,
+              "min_px": 6.0,
+              "scale": "marker"
+            }
+          },
+          "_proposed": true,
+          "_reason": "radius in metres of the splash's cloud (drawn at the MAP's scale, floored at min_px so the smallest still reads at the planning zoom, where a metre is 0.7 px) per round: bullet, cannon_small and cannon_medium (the tank's and the nose cannon's round, data/sim/rounds.json), shell_large (the cruiser's Main Guns), bomb; and for a unit going under a share (frac) of its size_m up to max_m, drawn at the MARKERS' scale (scale 'marker': it goes with the drawn hull it comes from, a 27 m cutter is drawn 2 to 4 times its map length; 'map' draws it at the map's). PROPOSED, builder BS"
+        },
+        "recipe": {
+          "value": [
+            {
+              "type": "puffs",
+              "layer": "air",
+              "set": "spray",
+              "n": {
+                "bullet": 2,
+                "small": 3,
+                "medium": 4,
+                "large": 6
+              },
+              "r": 0.7,
+              "life_s": {
+                "bullet": 1.2,
+                "small": 1.6,
+                "medium": 2.0,
+                "large": 3.2
+              },
+              "grow": [
+                0.6,
+                1.5
+              ],
+              "grow_tau": 0.12,
+              "hold": 0.12,
+              "fade_power": 1.6,
+              "tone": 1,
+              "throw": 4.0,
+              "throw_tau": 0.25,
+              "interval_s": 0.02,
+              "spread": 0.3,
+              "rise_mps": 0.4,
+              "wind": 1.0,
+              "shadow": false
+            },
+            {
+              "type": "puffs",
+              "layer": "air",
+              "set": "spray",
+              "n": 1,
+              "r": 0.55,
+              "life_s": {
+                "bullet": 1.0,
+                "small": 1.4,
+                "medium": 1.8,
+                "large": 2.8
+              },
+              "grow": [
+                0.7,
+                1.3
+              ],
+              "grow_tau": 0.1,
+              "hold": 0.15,
+              "fade_power": 1.5,
+              "tone": 2,
+              "throw": 0.0,
+              "throw_tau": 0.25,
+              "interval_s": 0.0,
+              "spread": 0.0,
+              "rise_mps": 0.4,
+              "wind": 1.0,
+              "shadow": false
+            },
+            {
+              "type": "puffs",
+              "layer": "air",
+              "set": "spray",
+              "tags": [
+                "shell_large",
+                "bomb"
+              ],
+              "n": 8,
+              "r": 0.6,
+              "life_s": 5.0,
+              "grow": [
+                1.0,
+                2.6
+              ],
+              "grow_tau": 0.25,
+              "hold": 0.25,
+              "fade_power": 1.4,
+              "tone": 2,
+              "throw": 0.3,
+              "throw_tau": 0.3,
+              "interval_s": 0.1,
+              "spread": 0.1,
+              "rise_mps": 12.0,
+              "wind": 1.0,
+              "shadow": true
+            }
+          ],
+          "_proposed": true,
+          "_reason": "the parts of a splash, in fx_gunfire.gd's own part grammar (puffs, disc, rings), baked from the W1 soft puff sprites tinted by the splash.spray roles; by round class n and life vary bullet < small < medium < large. PROPOSED, builder BS"
+        }
+      },
+      "S5": {
+        "label": "Soft spray, medium, at the markers' scale",
+        "description": "S5: S2's sizes and puffs drawn at the units' marker scale, the scale the G3 land dust is drawn at (about twice the map's in Hold the bridge): the splash and the dust beside it then match.",
+        "sizes": {
+          "value": {
+            "bullet": {
+              "r_m": 0.7,
+              "min_px": 2.5
+            },
+            "cannon_small": {
+              "r_m": 1.2,
+              "min_px": 3.0
+            },
+            "cannon_medium": {
+              "r_m": 1.9,
+              "min_px": 3.5
+            },
+            "shell_large": {
+              "r_m": 4.5,
+              "min_px": 5.0
+            },
+            "bomb": {
+              "r_m": 7.5,
+              "min_px": 6.0
+            },
+            "unit": {
+              "frac": 0.2,
+              "max_m": 9.0,
+              "min_px": 6.0,
+              "scale": "marker"
+            }
+          },
+          "_proposed": true,
+          "_reason": "radius in metres of the splash's cloud (drawn at the MAP's scale, floored at min_px so the smallest still reads at the planning zoom, where a metre is 0.7 px) per round: bullet, cannon_small and cannon_medium (the tank's and the nose cannon's round, data/sim/rounds.json), shell_large (the cruiser's Main Guns), bomb; and for a unit going under a share (frac) of its size_m up to max_m, drawn at the MARKERS' scale (scale 'marker': it goes with the drawn hull it comes from, a 27 m cutter is drawn 2 to 4 times its map length; 'map' draws it at the map's). PROPOSED, builder BS"
+        },
+        "recipe": {
+          "value": [
+            {
+              "type": "puffs",
+              "layer": "air",
+              "set": "spray",
+              "n": {
+                "bullet": 2,
+                "small": 3,
+                "medium": 4,
+                "large": 6
+              },
+              "r": 0.7,
+              "life_s": {
+                "bullet": 1.2,
+                "small": 1.6,
+                "medium": 2.0,
+                "large": 3.2
+              },
+              "grow": [
+                0.6,
+                1.5
+              ],
+              "grow_tau": 0.12,
+              "hold": 0.12,
+              "fade_power": 1.6,
+              "tone": 1,
+              "throw": 4.0,
+              "throw_tau": 0.25,
+              "interval_s": 0.02,
+              "spread": 0.3,
+              "rise_mps": 0.4,
+              "wind": 1.0,
+              "shadow": false
+            },
+            {
+              "type": "puffs",
+              "layer": "air",
+              "set": "spray",
+              "n": 1,
+              "r": 0.55,
+              "life_s": {
+                "bullet": 1.0,
+                "small": 1.4,
+                "medium": 1.8,
+                "large": 2.8
+              },
+              "grow": [
+                0.7,
+                1.3
+              ],
+              "grow_tau": 0.1,
+              "hold": 0.15,
+              "fade_power": 1.5,
+              "tone": 2,
+              "throw": 0.0,
+              "throw_tau": 0.25,
+              "interval_s": 0.0,
+              "spread": 0.0,
+              "rise_mps": 0.4,
+              "wind": 1.0,
+              "shadow": false
+            }
+          ],
+          "_proposed": true,
+          "_reason": "the parts of a splash, in fx_gunfire.gd's own part grammar (puffs, disc, rings), baked from the W1 soft puff sprites tinted by the splash.spray roles; by round class n and life vary bullet < small < medium < large. PROPOSED, builder BS"
+        },
+        "scale": {
+          "value": "marker",
+          "_proposed": true,
+          "_reason": "this option's own draw scale, in place of the section's: 'marker' draws it at the units' marker scale, as the G3 land dust is. PROPOSED, builder BS"
+        }
       }
     }
   },

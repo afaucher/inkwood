@@ -1,0 +1,128 @@
+{
+  "id": "splash",
+  "date": "2026-10-14",
+  "area": "FX",
+  "backlog": "B13",
+  "question": "How does a splash look, once, for everything that enters water? Alex: 'Water splashes are far too big and the style is inconsistent.' And, as a rule (decision soft-puffs-default): 'Generally I like the look of the soft puffs as a default impact style'.",
+  "source": "scripts/fx/fx_board_splash.gd: the real map (seed 55, Hold the bridge's river at the bridge and its sea) under the real FxLayer; every splash made by the layer's own entry points (gunfire_impact, water_impact, splash + down_flash), the land impact of the same round beside it the game's own (G3 earth dust, B3 blast); ONLY fx.json splash.mode changes between the options",
+  "seed": 55,
+  "held_constant": {
+    "map": "seed 55 (data/scenarios/bridge.json): the river at the bridge (3845, 714), 26 m wide, flowing east; the sea the cruiser sails in at (4540, 3430), 25 m deep",
+    "rounds": "a tank round (cannon_medium), a cruiser shell (shell_large, blast 20 m), a bomb (blast 45 m), a 27 m cutter going under; all land together; the land counterpart about 58 m away across the bank, on an open field (river scene only)",
+    "zooms": "1.0 (2 px/m) and the planning zoom 0.35 (0.7 px/m)",
+    "unit_going_under": "the cutter's splash is sized by the unit (20% of its 27 m, 5.4 m) and drawn at the markers' scale with its hull; the game's own down flash (the white disc and ink stipple) is drawn as it always is and is not part of this board",
+    "phases": "peak (+0.35 s) and late (+1.6 s)",
+    "scale": "the splash is drawn at the MAP's scale (a metre of map is a metre of splash); the units, the G3 land dust and the cutter's splash are at the markers' scale (a tank is drawn 24 px at zoom 1.0, twice its map length). fx.json splash.scale 'marker' (S5 sets it for itself) puts the splashes at the markers' scale too",
+    "wind": "a 15:00 sea breeze toward the south (the gunfire board's), so spray and columns lean south",
+    "decisions_in_force": "soft puffs as the default impact style (soft-puffs-default); no ink-mark indicators (no-ink-marks); gunfire family G3 (gunfire-looks); the land impacts are as decided (G3 dust for rounds, the B3 blast for shells and bombs); shadow strength 0.44"
+  },
+  "options": [
+    {
+      "id": "S0",
+      "label": "Today: ink rings (units, bombs, shells) and G3's pale ring (tank rounds)",
+      "look": "ink rings",
+      "description": "TODAY, as a reference: a unit going under is three widening ink rings (data/world/boats.json game.sunk.splash); a bomb or a shell in water the same ink rings sized 0.35 x its blast (fx.json impacts.water) at the units' enlarged marker scale; a tank or nose-cannon round in water G3's pale disc, ring and ink ripple.",
+      "selects": {
+        "fx.json splash.mode": "S0"
+      }
+    },
+    {
+      "id": "S1",
+      "label": "Soft spray, small",
+      "look": "soft puffs",
+      "description": "S1: a small burst of pale soft spray puffs, sized by the round (a tank round 1.2 m, a shell 3 m, a bomb 4.5 m, a cutter going under 3.2 m), no rings.",
+      "selects": {
+        "fx.json splash.mode": "S1"
+      },
+      "size_table_radius_m": {
+        "bullet": "0.45 m",
+        "cannon_small": "0.80 m",
+        "cannon_medium": "1.20 m",
+        "shell_large": "3.00 m",
+        "bomb": "4.50 m",
+        "unit going under": "12% of its size_m, at most 6 m (a 27 m cutter 3.2 m), at the units' scale"
+      },
+      "size_table_note": "PROPOSED. Radius of the spray cloud in metres of the MAP (a metre is 2 px at zoom 1.0, 0.7 px at the planning zoom 0.35, where each is floored at 2 to 6 px so it still reads)."
+    },
+    {
+      "id": "S2",
+      "label": "Soft spray, medium",
+      "look": "soft puffs",
+      "description": "S2: a medium burst of pale soft spray puffs (a tank round 1.9 m, a shell 4.5 m, a bomb 7.5 m, a cutter going under 5.4 m), a dense heart, no rings.",
+      "selects": {
+        "fx.json splash.mode": "S2"
+      },
+      "size_table_radius_m": {
+        "bullet": "0.70 m",
+        "cannon_small": "1.20 m",
+        "cannon_medium": "1.90 m",
+        "shell_large": "4.50 m",
+        "bomb": "7.50 m",
+        "unit going under": "20% of its size_m, at most 9 m (a 27 m cutter 5.4 m), at the units' scale"
+      },
+      "size_table_note": "PROPOSED. Radius of the spray cloud in metres of the MAP (a metre is 2 px at zoom 1.0, 0.7 px at the planning zoom 0.35, where each is floored at 2 to 6 px so it still reads)."
+    },
+    {
+      "id": "S3",
+      "label": "Soft spray with a pale wash and ring on the water",
+      "look": "soft puffs + wash",
+      "description": "S3: S2 with a brief pale wash and a pale ring spreading on the water under the spray (a wash, not an ink line).",
+      "selects": {
+        "fx.json splash.mode": "S3"
+      },
+      "size_table_radius_m": {
+        "bullet": "0.70 m",
+        "cannon_small": "1.20 m",
+        "cannon_medium": "1.90 m",
+        "shell_large": "4.50 m",
+        "bomb": "7.50 m",
+        "unit going under": "20% of its size_m, at most 9 m (a 27 m cutter 5.4 m), at the units' scale"
+      },
+      "size_table_note": "PROPOSED. Radius of the spray cloud in metres of the MAP (a metre is 2 px at zoom 1.0, 0.7 px at the planning zoom 0.35, where each is floored at 2 to 6 px so it still reads)."
+    },
+    {
+      "id": "S4",
+      "label": "Soft spray, a tall column for bombs and shells",
+      "look": "soft puffs + column",
+      "description": "S4: S2, and for bombs and shells a taller column of puffs that climbs, leans away downwind as the other smoke does and casts its shadow on the water, which is how a tall thing reads from above (the tank's and the cannon's round as S2).",
+      "selects": {
+        "fx.json splash.mode": "S4"
+      },
+      "size_table_radius_m": {
+        "bullet": "0.70 m",
+        "cannon_small": "1.20 m",
+        "cannon_medium": "1.90 m",
+        "shell_large": "4.50 m",
+        "bomb": "7.50 m",
+        "unit going under": "20% of its size_m, at most 9 m (a 27 m cutter 5.4 m), at the units' scale"
+      },
+      "size_table_note": "PROPOSED. Radius of the spray cloud in metres of the MAP (a metre is 2 px at zoom 1.0, 0.7 px at the planning zoom 0.35, where each is floored at 2 to 6 px so it still reads)."
+    },
+    {
+      "id": "S5",
+      "label": "Soft spray, medium, at the markers' scale (the land dust's)",
+      "look": "soft puffs, marker scale",
+      "description": "S5: S2's sizes and puffs drawn at the units' marker scale, the scale the G3 land dust is drawn at (about twice the map's in Hold the bridge): the splash and the dust beside it then match.",
+      "selects": {
+        "fx.json splash.mode": "S5"
+      },
+      "size_table_radius_m": {
+        "bullet": "0.70 m",
+        "cannon_small": "1.20 m",
+        "cannon_medium": "1.90 m",
+        "shell_large": "4.50 m",
+        "bomb": "7.50 m",
+        "unit going under": "20% of its size_m, at most 9 m (a 27 m cutter 5.4 m), at the units' scale"
+      },
+      "size_table_note": "PROPOSED. Radius of the spray cloud in metres of the MAP (a metre is 2 px at zoom 1.0, 0.7 px at the planning zoom 0.35, where each is floored at 2 to 6 px so it still reads). S5 draws the same table at the units' marker scale (in Hold the bridge about 2 x the map's at zoom 1.0)."
+    }
+  ],
+  "recommendation": {
+    "value": "S2",
+    "_proposed": true,
+    "_reason": "PROPOSED by builder BS: S2 keeps one grammar for everything in water (the same pale puffs for a tank round, a shell, a bomb and a sinking hull, sized by the round), at the map's true scale it is a fraction of today's rings, and it still reads at the planning zoom. S1 is the quietest but a tank round at zoom 0.35 is a few pixels; S3 adds the wash and the ring, which is a second thing to read for little; S4's column is the nicest for a bomb but shells and bombs are rare and Alex asked first for 'smaller and consistent'. S5 is the question to settle beside it: the same puffs at the markers' scale, which is the scale the G3 land dust is drawn at, so a round on water and a round on land match; if S2 reads too small next to the dust, S5 (or splash.scale 'marker') is the answer."
+  },
+  "how_to_switch": "data/fx/fx.json splash.mode (value 'S0' to 'S5'); splash.scale 'map' or 'marker'. Today's default stays S0 until Alex picks.",
+  "chosen": null,
+  "chosen_by": null
+}

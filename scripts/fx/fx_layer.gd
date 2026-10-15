@@ -155,6 +155,12 @@ var wind: Object = null
 var gunfire: FxGunfire.Book = null
 var gunfire_painter: FxGunfire.Painter = null
 var _gunfire_cfg: Dictionary = {}
+# THE SPLASH (builder BS, board splash; fx.json `splash`): one soft-puff grammar for everything that enters water, drawn by the gunfire painter from a book of its own, at the
+# map's scale. Mode "S0" (the working default until Alex picks) keeps today's three looks and the book stays empty.
+var splash_book: FxGunfire.Book = null
+var splash_painter: FxGunfire.Painter = null
+var _splash_sec: Dictionary = {}
+var _splash_mode: String = "S0"
 var mapping: UiMapping = null
 
 var true_scale: float = 1.0          # the plane's drawn px per metre / the mapping's, set by the host
@@ -203,6 +209,13 @@ func _build() -> void:
 		gunfire.select((_gunfire_cfg["families"] as Dictionary).keys()[0])
 		gunfire.max_records = int(((_gunfire_cfg["game"] as Dictionary).get("limits", {}) as Dictionary).get("max_records", 0))
 		gunfire_painter = FxGunfire.Painter.new(style, data)
+	_splash_sec = data.splash_section()
+	var splash_cfg := FxGunfire.splash_cfg(_splash_sec)
+	if not splash_cfg.is_empty():
+		splash_book = FxGunfire.Book.new(splash_cfg)
+		splash_book.max_records = int(_splash_sec.get("max_records", 96))
+		splash_painter = FxGunfire.Painter.new(style, data)
+		set_splash_mode(data.splash_mode())
 	ground_node = _make_pass("ground")
 	var sg := FxShadowPass.new()
 	sg.name = "Shadows"
@@ -236,6 +249,8 @@ func setup(host_mapping: Variant, world_seed: int = -1) -> void:
 		field.world_seed = style.scene_seed
 	if gunfire != null:
 		gunfire.world_seed = field.world_seed
+	if splash_book != null:
+		splash_book.world_seed = field.world_seed
 
 func set_mapping(host_mapping: Variant) -> void:
 	mapping = UiMapping.from(host_mapping) as UiMapping
@@ -293,10 +308,78 @@ func impact_look(water_depth_m: float) -> String:
 
 # A round lands in water (a bomb, a shell): the sinking splash's rings, sized by the round's blast, and nothing else -- no flash, no smoke, no clods,
 # no crater. PROPOSED stand-in for the gunfire board's impact looks.
-func water_impact(ground_pos: Vector2, t: float, blast_m: float, unit_id: String = "") -> void:
+func water_impact(ground_pos: Vector2, t: float, blast_m: float, unit_id: String = "", round_tag: String = "") -> void:
 	_build()
+	if splash_soft():
+		# the one soft-puff grammar (builder BS): sized by the ROUND, at the map's scale. The feed names the round ("bomb", "shell_large"); without one the blast tells.
+		var tag := round_tag
+		if tag == "":
+			tag = "bomb" if blast_m >= float(_splash_sec.get("bomb_blast_min_m", 30.0)) else "shell_large"
+		_add_splash_record(unit_id, ground_pos, t, tag, 0.0)
+		return
 	var w := data.impact_water()
 	field.add_splash(unit_id, ground_pos, t, maxf(blast_m * float(w["splash_size_frac"]), float(w["splash_min_size_m"])))
+
+# --- The splash (builder BS, board splash; fx.json `splash`) --------------------------------------------------------------------------
+
+# The live splash mode ("S0" today's looks, "S1".."S4" the soft-puff options) and whether the soft grammar is on.
+func splash_mode() -> String:
+	_build()
+	return _splash_mode
+
+func splash_soft() -> bool:
+	_build()
+	return splash_book != null and _splash_mode != "S0"
+
+# Chooses the splash look (the data key fx.json splash.mode); an unknown name is S0. Records already in the book are redrawn in the new look.
+func set_splash_mode(mode: String) -> void:
+	if splash_book == null:
+		_splash_mode = "S0"
+		return
+	if mode != "S0" and not ((splash_book.cfg.get("families", {}) as Dictionary).has(mode) and splash_book.select(mode)):
+		mode = "S0"
+	_splash_mode = mode
+	if splash_painter != null:
+		splash_painter.release()
+	if _built and ground_node != null:
+		queue_redraws()
+
+# The scale a splash is drawn at: the map's own (1.0) or the units' marker scale (fx.json splash.scale).
+func splash_draw_scale() -> float:
+	return true_scale if _splash_scale_mode() == "marker" else 1.0
+
+# "map" or "marker": the live option's own `scale` (S5), else the section's.
+func _splash_scale_mode() -> String:
+	var opt: Dictionary = (_splash_sec.get("options", {}) as Dictionary).get(_splash_mode, {})
+	return str(opt.get("scale", _splash_sec.get("scale", "map")))
+
+# One splash record: `tag` is the round (data splash.tag_class names its class), `unit_size_m` > 0 a unit going under (the size is a share of it).
+func _add_splash_record(unit_id: String, pos: Vector2, t: float, tag: String, unit_size_m: float, shot_id: String = "") -> bool:
+	var opt: Dictionary = (_splash_sec.get("options", {}) as Dictionary).get(_splash_mode, {})
+	var sizes: Dictionary = opt.get("sizes", {})
+	var sz: Dictionary = sizes.get(tag, sizes.get("shell_large", {}))
+	var r_m := float(sz.get("r_m", 3.0))
+	if unit_size_m > 0.0:
+		r_m = minf(unit_size_m * float(sz.get("frac", 0.2)), float(sz.get("max_m", 9.0)))
+	var cls := str((_splash_sec.get("tag_class", {}) as Dictionary).get(tag, "large"))
+	if shot_id == "":
+		shot_id = "%s/%s/%d/%.0f/%.0f/%d" % [unit_id, tag, int(round(t * 1000.0)), pos.x, pos.y, splash_book.records.size()]
+	splash_book.world_seed = field.world_seed
+	var extra := {"r_m": r_m, "min_px": float(sz.get("min_px", 4.0)), "tag": tag}
+	if unit_size_m > 0.0 and str(sz.get("scale", "marker")) == "marker" and _splash_scale_mode() != "marker":
+		extra["marker"] = true   # a unit's splash goes with its drawn hull (data splash sizes.unit.scale)
+	var ok := splash_book.add_impact(shot_id, cls, "water", pos, t, 0.0, 0.0, Vector2.ZERO, extra)
+	queue_redraws()
+	return ok
+
+# A round that lands in water, by the G3 impact class (bullet, small, medium, large), becomes a splash of its round when the soft grammar is on. Returns true when it did
+# (the caller then draws no G3 water impact).
+func _splash_from_gunfire(shot_id: String, round_class: String, pos: Vector2, t: float, off: Vector2) -> bool:
+	if not splash_soft():
+		return false
+	var tag := str((_splash_sec.get("gunfire_tag", {}) as Dictionary).get(round_class, "cannon_medium"))
+	_add_splash_record("", pos + off * true_scale, t, tag, 0.0, shot_id)   # where the feed's water test put it (the miss offset is in the unit's own, marker-scale metres)
+	return true
 
 # --- Gunfire (builder G3, decision gunfire-looks) -------------------------------------------------------------------------------
 
@@ -320,6 +403,8 @@ func gunfire_impact(shot_id: String, round_class: String, material: String, pos:
 	_build()
 	if not gunfire_enabled():
 		return false
+	if material == "water" and _splash_from_gunfire(shot_id, round_class, pos, t, off):
+		return true   # (builder BS) in water a G3 impact is the splash grammar's: the same soft puffs for every round
 	gunfire.world_seed = field.world_seed
 	return gunfire.add_impact(shot_id, round_class, material, pos, t, dir, height_m, off)
 
@@ -342,7 +427,7 @@ func queue_redraws() -> void:
 
 func _process(_delta: float) -> void:
 	# a camera that moves or zooms is followed with no call, as the markers are
-	if mapping != null and mapping.is_live() and (_anything() or _tracers_live() or _gunfire_live()):
+	if mapping != null and mapping.is_live() and (_anything() or _tracers_live() or _gunfire_live() or _splash_live()):
 		queue_redraws()
 
 func _tracers_live() -> bool:   # (Track TR) a tracer in flight moves with the camera too
@@ -350,6 +435,9 @@ func _tracers_live() -> bool:   # (Track TR) a tracer in flight moves with the c
 
 func _gunfire_live() -> bool:   # (builder G3) a muzzle's smoke or an impact in its life moves with the camera too
 	return gunfire != null and gunfire.live_count(now) > 0
+
+func _splash_live() -> bool:   # (builder BS) a soft splash in its life moves with the camera too
+	return splash_book != null and splash_book.live_count(now) > 0
 
 func _anything() -> bool:
 	return fire.active() or not (field.puffs.is_empty() and field.bursts.is_empty() and field.scars.is_empty() and field.debris.is_empty() and field.riders.is_empty() \
@@ -418,6 +506,9 @@ func down_flash(unit_id: String, world_pos: Vector2, t: float, size_m: float) ->
 # The splash where a unit goes under the water: rings in the ink (PROPOSED look, data/world/boats.json game.sunk.splash).
 func splash(unit_id: String, world_pos: Vector2, t: float, size_m: float) -> void:
 	_build()
+	if splash_soft():
+		_add_splash_record(unit_id, world_pos, t, "unit", size_m)   # a bigger version of the same soft puffs, sized by the unit (builder BS)
+		return
 	field.add_splash(unit_id, world_pos, t, size_m)
 
 # MACHINE-GUN TRACERS (Track TR, 2026-10-11, PROPOSED; fx.json tracers, scripts/fx/fx_tracer.gd). The feed asks tracer_weapon(weapon) of a
@@ -459,6 +550,8 @@ func set_wind(w: Object) -> void:
 	fire.set_wind(w)
 	if gunfire != null:
 		gunfire.set_wind(w)
+	if splash_book != null:
+		splash_book.set_wind(w)
 	queue_redraws()
 
 # The game ends or restarts: every puff, burst, piece and scar goes. The baked art stays
@@ -469,6 +562,8 @@ func clear() -> void:
 	fire.clear()
 	if gunfire != null:
 		gunfire.clear()
+	if splash_book != null:
+		splash_book.clear()
 	now = 0.0
 	queue_redraws()
 
@@ -481,11 +576,14 @@ func release_art() -> void:
 	_ruin_sets.clear()
 	if gunfire_painter != null:
 		gunfire_painter.release()
+	if splash_painter != null:
+		splash_painter.release()
 
 func stats() -> Dictionary:
 	var c := field.counts()
 	c["fire_trees"] = fire.tree_count() if fire != null else 0
 	c["gunfire"] = gunfire.records.size() if gunfire != null else 0
+	c["splash_soft"] = splash_book.records.size() if splash_book != null else 0
 	c["baked_sets"] = _puff_sets.size() + _burst_sets.size() + _parts_sets.size() + _bomb_sets.size() + _drop_sets.size() + _ruin_sets.size()
 	c["bakes"] = _bakes
 	c["bake_ms"] = _bake_ms
@@ -631,15 +729,18 @@ func draw_pass(item: CanvasItem, kind: String) -> void:
 		"ground":
 			_draw_ground(item, view)
 			_draw_gunfire(item, "ground")
+			_draw_splash_soft(item, "ground")
 		"shadows":
 			if show_shadows:
 				_draw_shadows(item, view)
 				fire.draw_shadows(self, item, view)
 				_draw_gunfire(item, "shadows")
+				_draw_splash_soft(item, "shadows")   # (builder BS) only a part that says shadow: true casts one: S4's column
 		"air":
 			_draw_air(item, view)
 			fire.draw_air(self, item, view)
 			_draw_gunfire(item, "air")
+			_draw_splash_soft(item, "air")
 		"top":
 			_draw_top(item, view)
 	item.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -649,6 +750,13 @@ func _draw_gunfire(item: CanvasItem, which: String) -> void:
 	if gunfire == null or gunfire_painter == null or gunfire.records.is_empty():
 		return
 	gunfire_painter.draw(item, gunfire, mapping, true_scale, now, Rect2(Vector2.ZERO, get_viewport_rect().size), which)
+
+# The soft splashes of one pass (builder BS): the same painter as the gunfire's, from the splash book, at the splash scale (the map's). No shadow pass: spray casts none.
+func _draw_splash_soft(item: CanvasItem, which: String) -> void:
+	if splash_book == null or splash_painter == null or splash_book.records.is_empty() or _splash_mode == "S0":
+		return
+	splash_painter.marker_k = true_scale
+	splash_painter.draw(item, splash_book, mapping, splash_draw_scale(), now, Rect2(Vector2.ZERO, get_viewport_rect().size), which)
 
 # Draws `tex` with its `origin` at `pos`, rotated and scaled, tinted.
 func _blit(item: CanvasItem, tex: Texture2D, origin: Vector2, pos: Vector2, rot: float, sc: float, mod: Color) -> void:

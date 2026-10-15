@@ -1,0 +1,669 @@
+{
+  "id": "splash",
+  "about": "Every frame of the splash board as its own PNG at native size: <option>_<scene>_z<zoom>_<phase>.png are 1:1 crops of the game's frames (640 x 340 at zoom 1, 560 x 280 at zoom 0.35; the same crop for every option), context_* whole 1280 x 720 frames, palette_strip.png the colours. S0 is today.",
+  "frames": [
+    {
+      "file": "S0_river_z1_peak.png",
+      "option": "S0",
+      "title": "S0 - river - zoom 1 - peak",
+      "caption": "Today: ink rings (units, bombs, shells) and G3's pale ring (tank rounds). RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 1, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S0_river_z1_late.png",
+      "option": "S0",
+      "title": "S0 - river - zoom 1 - late",
+      "caption": "Today: ink rings (units, bombs, shells) and G3's pale ring (tank rounds). RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 1, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 1.0,
+      "phase": "late",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S0_river_z0.35_peak.png",
+      "option": "S0",
+      "title": "S0 - river - zoom 0.35 - peak",
+      "caption": "Today: ink rings (units, bombs, shells) and G3's pale ring (tank rounds). RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 0.35, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 0.35,
+      "phase": "peak",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S0_river_z0.35_late.png",
+      "option": "S0",
+      "title": "S0 - river - zoom 0.35 - late",
+      "caption": "Today: ink rings (units, bombs, shells) and G3's pale ring (tank rounds). RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 0.35, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 0.35,
+      "phase": "late",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S1_river_z1_peak.png",
+      "option": "S1",
+      "title": "S1 - river - zoom 1 - peak",
+      "caption": "Soft spray, small. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 1, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S1_river_z1_late.png",
+      "option": "S1",
+      "title": "S1 - river - zoom 1 - late",
+      "caption": "Soft spray, small. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 1, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 1.0,
+      "phase": "late",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S1_river_z0.35_peak.png",
+      "option": "S1",
+      "title": "S1 - river - zoom 0.35 - peak",
+      "caption": "Soft spray, small. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 0.35, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 0.35,
+      "phase": "peak",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S1_river_z0.35_late.png",
+      "option": "S1",
+      "title": "S1 - river - zoom 0.35 - late",
+      "caption": "Soft spray, small. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 0.35, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 0.35,
+      "phase": "late",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S2_river_z1_peak.png",
+      "option": "S2",
+      "title": "S2 - river - zoom 1 - peak",
+      "caption": "Soft spray, medium. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 1, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S2_river_z1_late.png",
+      "option": "S2",
+      "title": "S2 - river - zoom 1 - late",
+      "caption": "Soft spray, medium. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 1, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 1.0,
+      "phase": "late",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S2_river_z0.35_peak.png",
+      "option": "S2",
+      "title": "S2 - river - zoom 0.35 - peak",
+      "caption": "Soft spray, medium. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 0.35, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 0.35,
+      "phase": "peak",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S2_river_z0.35_late.png",
+      "option": "S2",
+      "title": "S2 - river - zoom 0.35 - late",
+      "caption": "Soft spray, medium. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 0.35, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 0.35,
+      "phase": "late",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S3_river_z1_peak.png",
+      "option": "S3",
+      "title": "S3 - river - zoom 1 - peak",
+      "caption": "Soft spray with a pale wash and ring on the water. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 1, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S3_river_z1_late.png",
+      "option": "S3",
+      "title": "S3 - river - zoom 1 - late",
+      "caption": "Soft spray with a pale wash and ring on the water. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 1, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 1.0,
+      "phase": "late",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S3_river_z0.35_peak.png",
+      "option": "S3",
+      "title": "S3 - river - zoom 0.35 - peak",
+      "caption": "Soft spray with a pale wash and ring on the water. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 0.35, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 0.35,
+      "phase": "peak",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S3_river_z0.35_late.png",
+      "option": "S3",
+      "title": "S3 - river - zoom 0.35 - late",
+      "caption": "Soft spray with a pale wash and ring on the water. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 0.35, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 0.35,
+      "phase": "late",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S4_river_z1_peak.png",
+      "option": "S4",
+      "title": "S4 - river - zoom 1 - peak",
+      "caption": "Soft spray, a tall column for bombs and shells. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 1, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S4_river_z1_late.png",
+      "option": "S4",
+      "title": "S4 - river - zoom 1 - late",
+      "caption": "Soft spray, a tall column for bombs and shells. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 1, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 1.0,
+      "phase": "late",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S4_river_z0.35_peak.png",
+      "option": "S4",
+      "title": "S4 - river - zoom 0.35 - peak",
+      "caption": "Soft spray, a tall column for bombs and shells. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 0.35, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 0.35,
+      "phase": "peak",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S4_river_z0.35_late.png",
+      "option": "S4",
+      "title": "S4 - river - zoom 0.35 - late",
+      "caption": "Soft spray, a tall column for bombs and shells. RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 0.35, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 0.35,
+      "phase": "late",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S5_river_z1_peak.png",
+      "option": "S5",
+      "title": "S5 - river - zoom 1 - peak",
+      "caption": "Soft spray, medium, at the markers' scale (the land dust's). RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 1, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S5_river_z1_late.png",
+      "option": "S5",
+      "title": "S5 - river - zoom 1 - late",
+      "caption": "Soft spray, medium, at the markers' scale (the land dust's). RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 1, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 1.0,
+      "phase": "late",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S5_river_z0.35_peak.png",
+      "option": "S5",
+      "title": "S5 - river - zoom 0.35 - peak",
+      "caption": "Soft spray, medium, at the markers' scale (the land dust's). RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 0.35, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 0.35,
+      "phase": "peak",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S5_river_z0.35_late.png",
+      "option": "S5",
+      "title": "S5 - river - zoom 0.35 - late",
+      "caption": "Soft spray, medium, at the markers' scale (the land dust's). RIVER: left to right on the water a tank round, a cruiser shell, a bomb; the same three rounds on the field across the bank; two tanks for size, zoom 0.35, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "river",
+      "zoom": 0.35,
+      "phase": "late",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S0_sea_z1_peak.png",
+      "option": "S0",
+      "title": "S0 - sea - zoom 1 - peak",
+      "caption": "Today: ink rings (units, bombs, shells) and G3's pale ring (tank rounds). SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 1, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S0_sea_z1_late.png",
+      "option": "S0",
+      "title": "S0 - sea - zoom 1 - late",
+      "caption": "Today: ink rings (units, bombs, shells) and G3's pale ring (tank rounds). SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 1, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 1.0,
+      "phase": "late",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S0_sea_z0.35_peak.png",
+      "option": "S0",
+      "title": "S0 - sea - zoom 0.35 - peak",
+      "caption": "Today: ink rings (units, bombs, shells) and G3's pale ring (tank rounds). SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 0.35, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 0.35,
+      "phase": "peak",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S0_sea_z0.35_late.png",
+      "option": "S0",
+      "title": "S0 - sea - zoom 0.35 - late",
+      "caption": "Today: ink rings (units, bombs, shells) and G3's pale ring (tank rounds). SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 0.35, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 0.35,
+      "phase": "late",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S1_sea_z1_peak.png",
+      "option": "S1",
+      "title": "S1 - sea - zoom 1 - peak",
+      "caption": "Soft spray, small. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 1, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S1_sea_z1_late.png",
+      "option": "S1",
+      "title": "S1 - sea - zoom 1 - late",
+      "caption": "Soft spray, small. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 1, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 1.0,
+      "phase": "late",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S1_sea_z0.35_peak.png",
+      "option": "S1",
+      "title": "S1 - sea - zoom 0.35 - peak",
+      "caption": "Soft spray, small. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 0.35, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 0.35,
+      "phase": "peak",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S1_sea_z0.35_late.png",
+      "option": "S1",
+      "title": "S1 - sea - zoom 0.35 - late",
+      "caption": "Soft spray, small. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 0.35, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 0.35,
+      "phase": "late",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S2_sea_z1_peak.png",
+      "option": "S2",
+      "title": "S2 - sea - zoom 1 - peak",
+      "caption": "Soft spray, medium. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 1, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S2_sea_z1_late.png",
+      "option": "S2",
+      "title": "S2 - sea - zoom 1 - late",
+      "caption": "Soft spray, medium. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 1, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 1.0,
+      "phase": "late",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S2_sea_z0.35_peak.png",
+      "option": "S2",
+      "title": "S2 - sea - zoom 0.35 - peak",
+      "caption": "Soft spray, medium. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 0.35, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 0.35,
+      "phase": "peak",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S2_sea_z0.35_late.png",
+      "option": "S2",
+      "title": "S2 - sea - zoom 0.35 - late",
+      "caption": "Soft spray, medium. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 0.35, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 0.35,
+      "phase": "late",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S3_sea_z1_peak.png",
+      "option": "S3",
+      "title": "S3 - sea - zoom 1 - peak",
+      "caption": "Soft spray with a pale wash and ring on the water. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 1, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S3_sea_z1_late.png",
+      "option": "S3",
+      "title": "S3 - sea - zoom 1 - late",
+      "caption": "Soft spray with a pale wash and ring on the water. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 1, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 1.0,
+      "phase": "late",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S3_sea_z0.35_peak.png",
+      "option": "S3",
+      "title": "S3 - sea - zoom 0.35 - peak",
+      "caption": "Soft spray with a pale wash and ring on the water. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 0.35, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 0.35,
+      "phase": "peak",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S3_sea_z0.35_late.png",
+      "option": "S3",
+      "title": "S3 - sea - zoom 0.35 - late",
+      "caption": "Soft spray with a pale wash and ring on the water. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 0.35, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 0.35,
+      "phase": "late",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S4_sea_z1_peak.png",
+      "option": "S4",
+      "title": "S4 - sea - zoom 1 - peak",
+      "caption": "Soft spray, a tall column for bombs and shells. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 1, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S4_sea_z1_late.png",
+      "option": "S4",
+      "title": "S4 - sea - zoom 1 - late",
+      "caption": "Soft spray, a tall column for bombs and shells. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 1, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 1.0,
+      "phase": "late",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S4_sea_z0.35_peak.png",
+      "option": "S4",
+      "title": "S4 - sea - zoom 0.35 - peak",
+      "caption": "Soft spray, a tall column for bombs and shells. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 0.35, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 0.35,
+      "phase": "peak",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S4_sea_z0.35_late.png",
+      "option": "S4",
+      "title": "S4 - sea - zoom 0.35 - late",
+      "caption": "Soft spray, a tall column for bombs and shells. SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 0.35, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 0.35,
+      "phase": "late",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S5_sea_z1_peak.png",
+      "option": "S5",
+      "title": "S5 - sea - zoom 1 - peak",
+      "caption": "Soft spray, medium, at the markers' scale (the land dust's). SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 1, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S5_sea_z1_late.png",
+      "option": "S5",
+      "title": "S5 - sea - zoom 1 - late",
+      "caption": "Soft spray, medium, at the markers' scale (the land dust's). SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 1, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 1.0,
+      "phase": "late",
+      "size": [
+        640,
+        340
+      ]
+    },
+    {
+      "file": "S5_sea_z0.35_peak.png",
+      "option": "S5",
+      "title": "S5 - sea - zoom 0.35 - peak",
+      "caption": "Soft spray, medium, at the markers' scale (the land dust's). SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 0.35, at its peak, 0.35 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 0.35,
+      "phase": "peak",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "S5_sea_z0.35_late.png",
+      "option": "S5",
+      "title": "S5 - sea - zoom 0.35 - late",
+      "caption": "Soft spray, medium, at the markers' scale (the land dust's). SEA: left to right a tank round, a cruiser shell, a bomb, a 27 m cutter going under (with the game's down flash), zoom 0.35, late in its life, 1.6 s after it lands. 1:1 crop of the game's frame.",
+      "scene": "sea",
+      "zoom": 0.35,
+      "phase": "late",
+      "size": [
+        560,
+        280
+      ]
+    },
+    {
+      "file": "context_S0_river_z1.0.png",
+      "option": "S0",
+      "title": "S0 - the whole frame, river, zoom 1.0",
+      "caption": "A whole 1280 x 720 frame of the river at zoom 1.0, 0.35 s after the rounds land: the map, the tanks and the splashes together.",
+      "scene": "context_river",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "context_S2_river_z1.0.png",
+      "option": "S2",
+      "title": "S2 - the whole frame, river, zoom 1.0",
+      "caption": "A whole 1280 x 720 frame of the river at zoom 1.0, 0.35 s after the rounds land: the map, the tanks and the splashes together.",
+      "scene": "context_river",
+      "zoom": 1.0,
+      "phase": "peak",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "palette_strip.png",
+      "option": "all",
+      "title": "The palette beside the water",
+      "caption": "Paper, ink, the flash step, the shadow tint and the water, then the nine spray roles laid over the water, then the wash and the ring of S3. One palette: lightness is a ramp off the paper, no new hue.",
+      "scene": "palette",
+      "zoom": 0.0,
+      "phase": "",
+      "size": [
+        960,
+        150
+      ]
+    }
+  ]
+}

@@ -61,6 +61,21 @@ static func cfg_from_data(fxd: FxData) -> Dictionary:
 	return {"classes": g.get("classes", {}), "materials": g.get("materials", {}), "puffs": g.get("puffs", {}), "game": g,
 		"families": {str(g.get("family", "G3")): {"muzzle": recipes.get("muzzle", []), "impact": recipes.get("impact", {})}}}
 
+# THE SPLASH's configuration (builder BS, board splash; data/fx/fx.json `splash`, UNWRAPPED by FxData.splash_section()), in the shape the Book reads: one family per option
+# (S1..S4) whose `impact.water` is the option's recipe, one class table (the recipe's n and life vary by class; every record carries its own r_m and min_px from the option's
+# sizes), the puff sets, and `game` = the whole section. {} when there is none.
+static func splash_cfg(sec: Dictionary) -> Dictionary:
+	if sec.is_empty() or not (sec.get("options") is Dictionary):
+		return {}
+	var fams := {}
+	for id: String in (sec["options"] as Dictionary):
+		var o: Dictionary = (sec["options"] as Dictionary)[id]
+		fams[id] = {"muzzle": [], "impact": {"water": o.get("recipe", [])}}
+	var cls := {}
+	for c: String in CLASS_ORDER:
+		cls[c] = {"r_m": 1.0, "min_px": 3.0, "life": 1.0}
+	return {"classes": {"gun": cls, "round": cls}, "materials": {"water": {"size_mult": 1.0, "look": "water"}}, "puffs": sec.get("puffs", {}), "game": sec, "families": fams}
+
 static func load_cfg(path: String = FAMILIES_PATH) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		push_error("FxGunfire: %s does not exist" % path)
@@ -197,13 +212,18 @@ class Book extends RefCounted:
 	# A round lands without destroying: `round_cls` (bullet, small, medium, large), `material` (ground, water, stone, metal, wood), `pos` world m.
 	# `off`: a world offset from `pos`, metres in the unit's own scale (the drawn scale applies at draw time): where inside a hull a hit lands, how far
 	# beside a target a miss does.
-	func add_impact(shot_id: String, round_cls: String, material: String, pos: Vector2, t: float, dir: float = 0.0, height_m: float = 0.0, off: Vector2 = Vector2.ZERO) -> bool:
+	# `extra` (builder BS, the splash): keys merged into the record -- `r_m` and `min_px` (this record's own size, in place of its class's) and `tag` (the round it was made by,
+	# which a recipe part's `tags` list picks on).
+	func add_impact(shot_id: String, round_cls: String, material: String, pos: Vector2, t: float, dir: float = 0.0, height_m: float = 0.0, off: Vector2 = Vector2.ZERO, extra: Dictionary = {}) -> bool:
 		if fam.is_empty() or _seen.has("i|" + shot_id):
 			return false
 		_seen["i|" + shot_id] = true
 		_next += 1
-		records.append({"id": _next, "kind": "impact", "shot": shot_id, "cls": round_cls, "centre": pos, "dir": dir, "fwd_m": 0.0, "lat_m": 0.0, "t0": t,
-			"h": height_m, "seed": FxBake.seed_of(world_seed, shot_id, int(round(t * 1000.0))), "mat": material, "off": off})
+		var rec := {"id": _next, "kind": "impact", "shot": shot_id, "cls": round_cls, "centre": pos, "dir": dir, "fwd_m": 0.0, "lat_m": 0.0, "t0": t,
+			"h": height_m, "seed": FxBake.seed_of(world_seed, shot_id, int(round(t * 1000.0))), "mat": material, "off": off}
+		for k: String in extra:
+			rec[k] = extra[k]
+		records.append(rec)
 		_trim()
 		return true
 
@@ -251,6 +271,8 @@ class Book extends RefCounted:
 		var e := 0.0
 		for p: Dictionary in parts_of(rec):
 			if p.has("classes") and not (cls in (p["classes"] as Array)):
+				continue
+			if p.has("tags") and not (str(rec.get("tag", "")) in (p["tags"] as Array)):
 				continue
 			e = maxf(e, float(p.get("delay_s", 0.0)) + part_life(p, cls, ct) + float(p.get("stagger_s", 0.0)) * maxf(cv(p.get("n", 1), cls, 1.0) - 1.0, 0.0)
 				+ float(p.get("interval_s", 0.0)) * maxf(cv(p.get("n", 1), cls, 1.0) - 1.0, 0.0))
@@ -312,6 +334,7 @@ class Painter extends RefCounted:
 	var c: Vector2               # its screen position
 	var dir_s: float = 0.0       # the firing / incoming direction as a screen angle
 	var age0: float = 0.0
+	var marker_k: float = 1.0    # the units' marker scale over the map's (FxLayer.true_scale), for the records that say "marker" (a unit's splash)
 
 	func _init(st: FxStyle, fx_data: FxData) -> void:
 		style = st
@@ -357,7 +380,10 @@ class Painter extends RefCounted:
 			return false
 		ppm = mapping.px_per_m(wpos) * ts
 		var mult := book.size_mult(str(r["mat"])) if str(r["kind"]) == "impact" else 1.0
-		R = maxf(float(ct.get("r_m", 1.0)) * mult * ppm, float(ct.get("min_px", 4.0)) * sqrt(mult))
+		var rm := float(r.get("r_m", ct.get("r_m", 1.0)))   # a record may carry its own size (the splash's)
+		if bool(r.get("marker", false)):
+			rm *= marker_k   # ...and the splash of a unit going under is the unit's: drawn at the markers' scale like the hull it comes from
+		R = maxf(rm * mult * ppm, float(r.get("min_px", ct.get("min_px", 4.0))) * sqrt(mult))
 		dir_s = mapping.screen_angle(wpos, dir_w)
 		age0 = now - float(r["t0"])
 		return true
@@ -369,6 +395,8 @@ class Painter extends RefCounted:
 			var p: Dictionary = parts[i]
 			if p.has("classes") and not (cls in (p["classes"] as Array)):
 				continue
+			if p.has("tags") and not (str(rec.get("tag", "")) in (p["tags"] as Array)):
+				continue   # (builder BS) a part for some rounds only: the splash's column is a bomb's and a shell's
 			var lay := str(p.get("layer", "air"))
 			var is_puff := str(p["type"]) == "puffs"
 			if layer == "shadows":

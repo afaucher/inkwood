@@ -130,6 +130,24 @@ func impact_look(water_depth_m: float) -> String:
 		return "splash"
 	return "burst"
 
+# THE SPLASH (builder BS, board splash; fx.json `splash`), UNWRAPPED: {mode, scale, max_records, options: {S1.. : {label, sizes, recipe}}, ...}. {} when the file
+# has none (the layer then keeps today's rings, mode S0).
+func splash_section() -> Dictionary:
+	var sec: Variant = raw.get("splash")
+	if sec is Dictionary:
+		var s: Variant = unwrap(sec)
+		if s is Dictionary:
+			return s
+	return {}
+
+# The live splash mode: "S0" (today's three looks) or one of the section's options. An unknown name reads as S0.
+func splash_mode() -> String:
+	var s := splash_section()
+	var m := str(s.get("mode", "S0"))
+	if m != "S0" and not (s.get("options", {}) as Dictionary).has(m):
+		return "S0"
+	return m
+
 func fire_oklch() -> Array:
 	var acc: Variant = raw.get("accents")
 	if acc is Dictionary and (acc as Dictionary).get("fire") is Dictionary:
