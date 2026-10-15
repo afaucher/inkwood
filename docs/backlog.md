@@ -60,6 +60,17 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    6 on 5 off, nodes 3 px, the other units' plans 1.0 px lines and 1.9 px dots at 0.55 alpha, the range's rim
    0.9 px. A board of weights on a busy map (forest, village, smoke; the start zoom and close in): 2x to 3x lines,
    solid against dashed, a paper halo under the ink, bigger nodes; the other units' plans a step quieter.
+9. **The tank's gun fires only when ordered** (tank-gun-orders, Alex 2026-10-14). With A4 the gun becomes the
+   tank's special: it fires only on a step where the special is set, at the chosen target, then reloads (about
+   1 turn); a tank without orders does not shoot. The turret turns when ordered (A5).
+10. **Tracers for direct-fire cannons** (tracers-cannons): the tank gun's and the nose cannon's rounds get the
+    streak (`data/sim/rounds.json` tracer true); bombs, shells and flak keep their own marks.
+11. **The night spread across the day** (night-spread): every start hour's shadows differ; only midnight
+    reaches the 2x cap (`scripts/world/sun.gd`, `data/params/sun.json`).
+12. **Mid-air explosion smoke climbs** (airburst-smoke-climb): like every other smoke, with the wind.
+13. **The heights, one data pass** (heights-pass): (a) eye height per unit, the tower from its top; (b) altitude
+    labels from the ground under the plane; (c) a deeper water step for the deep sea; (d) the battery's flak
+    muzzles matched to its art; (e) the shell arc at a believable height. Values PROPOSED, listed for Alex after.
 
 ## B. Needs a decision (with a recommendation)
 
@@ -68,35 +79,22 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    2 turns. Against a tank's 350 m and flak's ~900 m, 3 km is most of a map section. Rec: a short study
    (what each range does to Hold the bridge's play, what a turn of flight time feels like) before
    choosing a number.
-2. **Tracers beyond machine guns** (tracers-mg, Alex reconsidering: "putting tracers on everything or at
-   least where there's not already an indicator like bombs"). Today only bullets draw tracers; cannon
-   rounds show a muzzle puff and an impact but nothing in flight. Rec: tracers for every direct-fire round
-   without another in-flight mark (the tank gun, the nose cannon), not for bombs or shells.
+2. **Tracers beyond machine guns**: DECIDED by Alex 2026-10-14, see A10 (tracers-cannons).
 3. **Tails for big, slow ordnance** (Alex: "should big slow ordinance have a tail. Just like planes").
    Shells and bombs in flight are specks today. Rec: a short ink ribbon behind shells and falling bombs,
    the planes' ribbon grammar, on a board.
-4. **Night shadows**: with the night folded onto the day, any start from 20:30 to 03:30 gets the longest
-   shadows (the 2x cap). Rec: spread the night so every hour differs and only midnight reaches the cap.
-5. **A special for the tank** (13): aimed fire at a chosen target, now that lines of fire exist. Rec: yes,
-   after lines of fire are on.
-6. **The views card on small windows** (14): at 1280 x 720 with three units it is left out. Rec: fine for
-   now.
+4. **Night shadows**: DECIDED by Alex 2026-10-14, see A11 (night-spread).
+5. **A special for the tank**: DECIDED by Alex 2026-10-14, see A9 (tank-gun-orders).
+6. **The views card on small windows**: DECIDED by Alex 2026-10-14, left as it is (views-small-windows).
 7. **Trees' screening strength** (line-of-fire): 35% per canopy makes most off-road ground "partly
    screened". Rec: playtest with lines of fire on first.
 8. **Bridge durability with the low bridge**: only the parapets can be hit now, so Hold the bridge's
    "the bridge falls" loss almost never happens. Rec: decide after a playtest with lines of fire on.
-9. **Mid-air explosion smoke** (smoke audit question 6): it still does not climb like the other smoke.
-   Rec: make it climb.
-10. **The heights misfits** (`docs/proposals/shot-heights.md`): eye heights per domain (the 25 m tower sees
-    from 2.5 m), the altitude bands absolute while shadows and fog use the ground, deep water drawn at -30 m
-    against a sea to -70 m, the battery's flak muzzles (3 and 6 m) against its art (1.35 to 4.2 m), the shell
-    arc drawn up to 360 m. Rec: one pass, each as a data fix.
-
+9. **Mid-air explosion smoke**: DECIDED by Alex 2026-10-14, see A12 (airburst-smoke-climb).
+10. **The heights misfits**: DECIDED by Alex 2026-10-14, see A13 (heights-pass).
 11. **Rivers** (playtest-4): "pretty straight right now". Rec: a board of river shapes (meanders, a
     fork, an oxbow) with the terrain variety board (D6).
-12. **The tank's gun as a special** (playtest-4): does the tank still fire on its own when no special is set,
-    or only when ordered? Rec: only when ordered, since that is what makes it a special; the 1 turn reload
-    keeps it busy.
+12. **The tank's gun as a special**: DECIDED by Alex 2026-10-14, see A9 (tank-gun-orders).
 13. **Water splashes** (Alex 2026-10-13: "far too big and the style is inconsistent"). Three looks are live:
     a ship or plane going under draws three ink rings (`data/world/boats.json game.sunk.splash`, never on a
     board); a bomb or a shell landing in water borrows those same rings as a stand-in, sized 0.35 x the blast

@@ -2657,6 +2657,133 @@
       ],
       "status": "chosen by Alex; the weights on a board",
       "notes": "Alex: 'We need to make the plan indicators on the map much bolder to be visible. There is too much visual noise to see a thin dashed lines and tiny dots.'"
+    },
+    {
+      "id": "tank-gun-orders",
+      "date": "2026-10-14",
+      "area": "Units, Combat",
+      "question": "Once the tank's gun is its special, does it still fire on its own when no special is set?",
+      "board": "none (a choice in chat, 2026-10-14)",
+      "options": [
+        "only when ordered",
+        "auto-fire plus an aimed special",
+        "auto-fire only when idle"
+      ],
+      "chosen": "only when ordered",
+      "parameters": {
+        "rule": "the tank fires only on a step where its special is set, at the chosen target, then reloads (about 1 turn, playtest-4); a tank without orders does not shoot",
+        "turret": "the turret turns to the bearing when ordered, the turn delaying the shot (tank-fire-feedback)",
+        "supersedes": "backlog B5 (a special for the tank) and B12"
+      },
+      "applied_to": [
+        "docs/backlog.md A4, A5"
+      ],
+      "status": "chosen by Alex; to build",
+      "notes": "Alex picked 'Only when ordered' (the lead's recommendation) from three options asked in chat."
+    },
+    {
+      "id": "tracers-cannons",
+      "date": "2026-10-14",
+      "area": "Effects",
+      "question": "Do rounds other than machine-gun bullets draw tracers?",
+      "board": "none (a choice in chat, 2026-10-14)",
+      "options": [
+        "direct-fire cannons too",
+        "everything that fires",
+        "machine guns only"
+      ],
+      "chosen": "direct-fire cannons too: the tank gun and the nose cannon get the streak; bombs, shells and flak keep their own marks",
+      "parameters": {
+        "how": "data/sim/rounds.json tracer true on the cannon rounds the tank gun and the nose cannon fire; the streak only (no dot, no miss tick: no-ink-marks)",
+        "revisits": "tracers-mg"
+      },
+      "applied_to": [
+        "docs/backlog.md B2"
+      ],
+      "status": "chosen by Alex; to build",
+      "notes": "Alex picked 'Direct-fire cannons too' (the lead's recommendation). Earlier: 'putting tracers on everything or at least where there's not already an indicator like bombs'."
+    },
+    {
+      "id": "night-spread",
+      "date": "2026-10-14",
+      "area": "Style, Terrain",
+      "question": "How do night start hours map onto the day's shadows?",
+      "board": "none (a choice in chat, 2026-10-14)",
+      "options": [
+        "spread the night",
+        "keep the fold",
+        "night plays as midday"
+      ],
+      "chosen": "spread the night: every hour differs and only midnight reaches the longest (capped) shadows",
+      "parameters": {
+        "revisits": "sun-time (the fold)",
+        "note": "evenings read like late afternoon, the small hours like early morning; data/params/sun.json, scripts/world/sun.gd"
+      },
+      "applied_to": [
+        "docs/backlog.md B4"
+      ],
+      "status": "chosen by Alex; to build",
+      "notes": "Alex picked 'Spread the night' (the lead's recommendation)."
+    },
+    {
+      "id": "airburst-smoke-climb",
+      "date": "2026-10-14",
+      "area": "Effects",
+      "question": "Does the smoke of a plane exploding in mid-air climb like the other smoke?",
+      "board": "none (a choice in chat, 2026-10-14)",
+      "options": [
+        "make it climb",
+        "leave it hanging"
+      ],
+      "chosen": "make it climb: it rises and drifts with the wind like every other smoke, in the soft-puff grammar",
+      "parameters": {
+        "follows": "smoke-consistency (the smoke audit's question 6)"
+      },
+      "applied_to": [
+        "docs/backlog.md B9"
+      ],
+      "status": "chosen by Alex; to build",
+      "notes": "Alex picked 'Make it climb' (the lead's recommendation)."
+    },
+    {
+      "id": "heights-pass",
+      "date": "2026-10-14",
+      "area": "World, Combat",
+      "question": "Fix the heights that do not agree (docs/proposals/shot-heights.md)?",
+      "board": "none (a choice in chat, 2026-10-14)",
+      "options": [
+        "all five in one pass",
+        "only what lines of fire need",
+        "leave them"
+      ],
+      "chosen": "all five in one pass",
+      "parameters": {
+        "items": "(a) eye height per unit (the tower sees from its top); (b) altitude labels counted from the ground under the plane, as shadows and fog are; (c) a deeper water step for the deep sea; (d) the AA battery's flak muzzles matched to its art; (e) the shell arc drawn at a believable height. Each change listed for Alex after (PROPOSED values)"
+      },
+      "applied_to": [
+        "docs/backlog.md B10"
+      ],
+      "status": "chosen by Alex; to build",
+      "notes": "Alex picked 'Fix all five in one pass' (the lead's recommendation)."
+    },
+    {
+      "id": "views-small-windows",
+      "date": "2026-10-14",
+      "area": "Interface",
+      "question": "The views section is left out at 1280 x 720 with three units: change it?",
+      "board": "none (a choice in chat, 2026-10-14)",
+      "options": [
+        "leave it for now",
+        "shrink it to fit",
+        "collapsible sections"
+      ],
+      "chosen": "leave it for now",
+      "parameters": {},
+      "applied_to": [
+        "docs/backlog.md B6"
+      ],
+      "status": "chosen by Alex; nothing to build",
+      "notes": "Alex picked 'Leave it for now' (the lead's recommendation)."
     }
   ]
 }
