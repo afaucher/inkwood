@@ -1,0 +1,154 @@
+{
+  "id": "guns-mark",
+  "date": "2026-10-14",
+  "area": "UI",
+  "question": "How is a planned Main Guns fire drawn on the map? Alex: 'The main guns fire mark is not, we need a better option.' (decision no-ink-marks: 'Generally I don't like the ink mark indicators, lets not propose them again', so no option is a small drawn symbol.)",
+  "source": "scripts/ui/boards/plan_guns_board_shot.gd on scripts/ui/boards/plan_rig.gd: the running sandbox over Hold the bridge (data/scenarios/bridge.json, seed 55, fog off), the game's own planner (scripts/ui/motion_planner.gd _draw_fire_marks, scripts/ui/gun_marks.gd), photographed once per option with ONLY data/ui/ui.json guns.marks.mode changed",
+  "seed": 55,
+  "held_constant": {
+    "scenes": "coast (a point on the coast ~800 m from the cruiser, the whole shot at zoom 0.35, the target end and the ship's end at zoom 1), bridge (a point by the bridge, 2.7 km from the ship, target end at zoom 1 and 0.35), water (a point in the river by the bridge, zoom 1 and 0.35), tank (a tank's gun, a direct shot)",
+    "facts": {
+      "bridge": {
+        "range_m": 2869.0,
+        "spread_m": 62.3,
+        "target": [
+          3820.0,
+          544.0
+        ],
+        "on_water": false
+      },
+      "water": {
+        "range_m": 2682.0,
+        "spread_m": 53.7,
+        "target": [
+          3915.0,
+          714.0
+        ],
+        "on_water": true
+      },
+      "coast": {
+        "range_m": 700.0,
+        "spread_m": 22.8,
+        "target": [
+          4349.0,
+          2648.0
+        ],
+        "on_water": false
+      }
+    },
+    "target_selection": "drawn in every frame (scripts/ui/target_art.gd: a ring with a dot for a point, brackets for a unit); no option draws on it",
+    "plan_weight": "planner.weight.preset P2 in every frame, G0 included, so the plan line and its nodes are the plan-weight board's P2 and the two boards agree (the 'today' of G0 is its marks, not the plan's weight)",
+    "crops": "the same crop for every option of a scene and view"
+  },
+  "options": [
+    {
+      "id": "g0",
+      "label": "G0 · Today",
+      "description": "The reference: a dashed line from the node, a ring at the shells' two-sigma scatter, a small shell beside the node and an X at the target.",
+      "guns.marks.mode": "G0",
+      "values": {},
+      "proposed": true
+    },
+    {
+      "id": "g1",
+      "label": "G1 · Scatter wash, quiet line",
+      "description": "The scatter as a soft wash under one thin rim (the range of motion's grammar), the one-sigma core a shade deeper, a quiet solid line from the node. No X, no shell.",
+      "guns.marks.mode": "G1",
+      "values": {
+        "line_px": 2.0,
+        "halo_px": 1.2,
+        "line_alpha": 0.6,
+        "wash_role": "fan_wash",
+        "rim_role": "fan_rim",
+        "rim_px": 1.8,
+        "direct_r_px": 7.0
+      },
+      "proposed": true
+    },
+    {
+      "id": "g2",
+      "label": "G2 · The shells' arc",
+      "description": "The trajectory: a light curve from the ship, tapering up in weight and tone to the target and ending in the scatter wash. No X, no shell.",
+      "guns.marks.mode": "G2",
+      "values": {
+        "from_px": 1.2,
+        "to_px": 3.4,
+        "from_alpha": 0.25,
+        "to_alpha": 0.8,
+        "halo_px": 1.2,
+        "bulge": 0.12,
+        "enter": 0.5,
+        "wash_role": "fan_wash",
+        "rim_role": "fan_rim",
+        "rim_px": 1.8,
+        "direct_r_px": 7.0
+      },
+      "proposed": true
+    },
+    {
+      "id": "g3",
+      "label": "G3 · Previewed puffs",
+      "description": "The landing area as faint soft puffs, one per shell: dust on land, spray on water. No line, no ring, no X.",
+      "guns.marks.mode": "G3",
+      "values": {
+        "count": 6.0,
+        "spread_k": 0.8,
+        "puff_r_m": 11.0,
+        "puff_min_px": 7.0,
+        "alpha_k": 1.0,
+        "outline_k": 0.7,
+        "outline_px": 1.5,
+        "lobe_amp": 0.09,
+        "layers": [
+          1.0,
+          0.72,
+          0.46
+        ],
+        "direct_r_px": 7.0
+      },
+      "proposed": true
+    },
+    {
+      "id": "g4",
+      "label": "G4 · Arc, wash and puffs (proposed best)",
+      "description": "The arc, the scatter wash and a few faint puffs in it: where it comes from, how wide it falls and what it will raise.",
+      "guns.marks.mode": "G4",
+      "values": {
+        "from_px": 1.2,
+        "to_px": 3.0,
+        "from_alpha": 0.22,
+        "to_alpha": 0.7,
+        "halo_px": 1.2,
+        "bulge": 0.12,
+        "enter": 0.5,
+        "wash_role": "fan_wash",
+        "rim_role": "fan_rim",
+        "rim_px": 1.8,
+        "direct_r_px": 7.0,
+        "count": 5.0,
+        "spread_k": 0.7,
+        "puff_r_m": 9.0,
+        "puff_min_px": 6.0,
+        "alpha_k": 0.85,
+        "outline_k": 0.5,
+        "outline_px": 1.3,
+        "lobe_amp": 0.09,
+        "layers": [
+          1.0,
+          0.72,
+          0.46
+        ]
+      },
+      "proposed": true
+    }
+  ],
+  "palette_check": {
+    "hue": "No option adds a hue: the line, the arc and the rims are INK at an alpha (hover_ink, fan_rim 50%); the wash is the range of motion's (fan_wash, ink 14%); the paper halo is path_halo (paper 85%); the puffs are the gunfire board's G3 dust (the dirt ink lightened toward the paper, gun_puff_dust) and a pale paper disc for spray (gun_puff_water), their outline ink 55% x outline_k. The side colour appears only in the unit markers.",
+    "lightness": "A ramp off the paper: arc 22 to 80% ink, wash 14% (28% at the core), rim 50%, dust 42% of a lightened dirt, spray 70% of paper.",
+    "material": "linework and soft tone: a line, a curve, a rim, a wash, scalloped puffs; no symbol."
+  },
+  "recommendation_proposed": "PROPOSED by builder BP (Alex decides): G4, the arc, the scatter wash and a few faint puffs. The arc says where it comes from and that it is an artillery lob, not a flat shot; the wash says how wide it falls (and is the same grammar as the range of motion, so it reads as 'the area' at once); the puffs say what it will raise, dust or spray, so the player sees the land or the river they are shelling. If that is too much on a busy map, G1 is the quietest that still shows the scatter (a wash and a line), and G3 the most distinctive but with no line from the ship.",
+  "how_to_switch": "set guns.marks.mode in data/ui/ui.json to G0, G1, G2, G3 or G4",
+  "chosen": null,
+  "chosen_by": null
+}

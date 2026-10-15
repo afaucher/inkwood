@@ -9,10 +9,6 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| BP: boards, plan weight (A8) and the Main Guns fire mark (D8) | lead + Sonnet builder BP | scripts/ui/motion_planner.gd, scripts/ui/boards/plan_*, variants/plan-weight, variants/guns-mark; data/ui/ui.json planner.* and guns.marks by targeted edits | 2026-10-14 |
-| BR: board, the recoil (A5) | lead + Sonnet builder BR | scripts/ui/unit_marker*.gd, scripts/ui/boards/recoil_*, variants/recoil; data/units/tank.json, cruiser.json drawing keys | 2026-10-14 |
-| BS: board, the water splash (B13) | lead + Sonnet builder BS | scripts/fx/*, scripts/ui/combat_feed.gd, gunfire_feed.gd, scripts/fx/boards or scripts/ui/boards/splash_*, variants/splash; data/fx/fx.json, data/world/boats.json game.sunk.splash | 2026-10-14 |
-| BF: board, the fog edge (B15) | lead + Sonnet builder BF | scripts/render/fog_*, scripts/render/boards/fog_edge_*, variants/fog-edge; data/view/fog.json | 2026-10-14 |
 
 ## Next, free to take
 

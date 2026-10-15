@@ -155,6 +155,8 @@ const BombSource = preload("res://scripts/ui/bomb_source.gd")
 const GunSource = preload("res://scripts/ui/gun_source.gd")
 const UiLabels = preload("res://scripts/ui/ui_labels.gd")
 const UiTarget = preload("res://scripts/ui/ui_target.gd")
+const PlanWeight = preload("res://scripts/ui/plan_weight.gd")
+const GunMarks = preload("res://scripts/ui/gun_marks.gd")
 
 var world: World = null
 var mapping: UiMapping = null
@@ -209,6 +211,9 @@ const _CURSORS := {
 	"drag": Input.CURSOR_DRAG, "move": Input.CURSOR_MOVE, "can_drop": Input.CURSOR_CAN_DROP,
 }
 const HOVER_EFFECTS := ["grow", "ring", "halo", "magnet", "label"]
+var _plan_weight: PlanWeight = null    # the weight preset (planner.weight), made on first use
+var curve_draws := 0                    # plan curves drawn to their end, and fire marks drawn to theirs (the tests of the plan-weight and guns-mark data switches)
+var fire_mark_draws := 0
 var _paths: Dictionary = {}         # unit id -> Array of [PackedVector2Array world pts, planned: bool]
 var _own_art: Dictionary = {}       # unit id -> Art: only used when there is no marker layer to borrow from
 
@@ -1487,7 +1492,7 @@ func _draw_fan_mode(poly: PackedVector2Array, mode: String) -> bool:
 			var wash := style.color(style.text(cfg + "fill_role"))
 			for part: PackedVector2Array in parts:
 				draw_colored_polygon(part, wash)
-			UiInk.ink_line(self, poly, true, style.color(style.text(cfg + "rim_role")), style.num(cfg + "rim_px"), 31, 0.4)
+			UiInk.ink_line(self, poly, true, style.color(style.text(cfg + "rim_role")), _pw().num_or("fan_rim_px", style.num(cfg + "rim_px")), 31, 0.4)   # (the weight preset's rim scales with the path)
 		"stipple":
 			var dot := style.color(style.text(cfg + "dot_role"))
 			var r := style.num(cfg + "dot_px")
@@ -1617,20 +1622,68 @@ func _fan_hatch(poly: PackedVector2Array, parts: Array, spacing: float, angle: f
 	return out
 
 # `quiet`: another unit's plan (data planner.others_*): thinner line, smaller dots.
+# THE WEIGHT (board plan-weight, Alex's decision plan-indicators-bold; data planner.weight.preset, scripts/ui/plan_weight.gd): the
+# preset's numbers stand in for the plain ones where it names them (P0 names none: today's look). Three passes so a halo never lies over a
+# neighbouring segment's ink: the paper halos of every line, then the lines, then the nodes (an ink disc, with a paper rim when the preset
+# has one; the selected step's node is the selection's own disc and takes no rim).
 func _draw_curve(id: String, alpha: float, quiet: bool = false) -> void:
+	var pw := _pw()
 	var solid := _fade(style.color("path"), alpha)
 	var carry := _fade(style.color("path_carry"), alpha)
-	var w: float = style.num("planner.others_line_px") if quiet else style.num("planner.path_line_px")
-	var wc: float = style.num("planner.others_carry_line_px") if quiet else style.num("planner.carry_line_px")
-	var dot: float = style.num("planner.others_dot_px") if quiet else style.num("planner.step_dot_px")
-	for seg: Array in path_world(id):
-		var pts := _to_screen(seg[0])
-		if bool(seg[1]):
+	var halo_c := _fade(style.color("path_halo"), alpha)
+	var w: float = pw.num("others_line_px") if quiet else pw.num("path_line_px")
+	var wc: float = pw.num("others_carry_line_px") if quiet else pw.num("carry_line_px")
+	var dot: float = pw.num("others_dot_px") if quiet else pw.num("step_dot_px")
+	var halo: float = pw.num_or("others_halo_px" if quiet else "halo_px", 0.0)
+	var halo_k: float = pw.num_or("others_carry_halo_px" if quiet else "carry_halo_px", 0.0)
+	var rim: float = pw.num_or("others_node_rim_px", pw.num_or("node_rim_px", 0.0) * 0.6) if quiet else pw.num_or("node_rim_px", 0.0)
+	var ring_w: float = pw.num_or("others_carry_node_line_px" if quiet else "carry_node_line_px", 1.0)
+	var dashed: bool = pw.flag("others_carry_dashed" if quiet else "carry_dashed", true)
+	var dash: float = pw.num("dash_px")
+	var gap: float = pw.num("gap_px")
+	var focus := -1 if quiet else focus_step(id)
+	var segs: Array = path_world(id)
+	var screen: Array = []
+	for seg: Array in segs:
+		screen.append(_to_screen(seg[0]))
+	if halo > 0.0 or halo_k > 0.0:
+		for i in segs.size():
+			var pts: PackedVector2Array = screen[i]
+			if bool((segs[i] as Array)[1]):
+				if halo > 0.0:
+					draw_polyline(pts, halo_c, w + 2.0 * halo, true)
+			elif halo_k > 0.0:
+				if dashed:
+					UiInk.dashed(self, pts, halo_c, wc + 2.0 * halo_k, dash, gap)
+				else:
+					draw_polyline(pts, halo_c, wc + 2.0 * halo_k, true)
+	for i in segs.size():
+		var pts: PackedVector2Array = screen[i]
+		if bool((segs[i] as Array)[1]):
 			draw_polyline(pts, solid, w, true)
-			draw_circle(pts[pts.size() - 1], dot, solid, true, -1.0, true)
+		elif dashed:
+			UiInk.dashed(self, pts, carry, wc, dash, gap)
 		else:
-			UiInk.dashed(self, pts, carry, wc, style.num("planner.dash_px"), style.num("planner.gap_px"))
-			draw_circle(pts[pts.size() - 1], dot * 0.8, carry, false, 1.0, true)
+			draw_polyline(pts, carry, wc, true)
+	for i in segs.size():
+		var pts: PackedVector2Array = screen[i]
+		var end: Vector2 = pts[pts.size() - 1]
+		if bool((segs[i] as Array)[1]):
+			if rim > 0.0 and i != focus:
+				draw_circle(end, dot + rim, halo_c, true, -1.0, true)
+			draw_circle(end, dot, solid, true, -1.0, true)
+		else:
+			if rim > 0.0:
+				draw_circle(end, dot * 0.8, halo_c, false, ring_w + 2.0 * rim, true)
+			draw_circle(end, dot * 0.8, carry, false, ring_w, true)
+	curve_draws += 1
+
+# The weight preset (scripts/ui/plan_weight.gd), read again at every use so a board or a knob can change planner.weight.preset live.
+func _pw() -> PlanWeight:
+	if _plan_weight == null:
+		_plan_weight = PlanWeight.new(style)
+	_plan_weight.refresh()
+	return _plan_weight
 
 # The lettering at every step's ghost, as lines (empty for a step with none): the speed the step ends at ("120 m/s", data
 # planner.speed_labels) over its height ("400 m", labels.enabled) -- the same two lines for a planned step and a carry-on one,
@@ -1806,11 +1859,11 @@ func _hv_dot(c: Vector2, r: float) -> void:
 func _hv_grow(c: Vector2, a: float, state: String) -> void:
 	var ink: Color = style.color("hover_ink")
 	var paper: Color = style.color("hover_paper")
-	var dot: float = style.num("planner.step_dot_px")
+	var dot: float = _pw().num("step_dot_px")
 	var r: float
 	match state:
 		"near":
-			r = lerpf(dot, style.num("planner.hover.grow.near_px"), a)
+			r = lerpf(dot, maxf(style.num("planner.hover.grow.near_px"), dot + 2.0), a)   # (a heavier weight preset has a node bigger than the near size: it still grows)
 		"range":
 			r = style.num("planner.hover.grow.range_px")
 		_:
@@ -1841,14 +1894,14 @@ func _hv_ring(c: Vector2, a: float, state: String) -> void:
 		var pp := style.color("hover_paper")
 		draw_polyline(pts, Color(pp.r, pp.g, pp.b, pp.a * 0.55 * (0.4 + 0.6 * a)), style.num(cfg + "near_line_px") + 2.2, true)
 		UiInk.dashed(self, pts, col, style.num(cfg + "near_line_px"), style.num(cfg + "dash_px"), style.num(cfg + "dash_px"))
-		_hv_dot(c, style.num("planner.step_dot_px") + 0.8 * a)
+		_hv_dot(c, _pw().num("step_dot_px") + 0.8 * a)
 		return
 	var w: float = style.num(cfg + "range_line_px")
 	draw_arc(c, radius, 0.0, TAU, 64, style.color("hover_paper"), w + 2.0, true)
 	draw_arc(c, radius, 0.0, TAU, 64, ink, w, true)
 	var gap: float = style.num(cfg + "second_gap_px")
 	draw_arc(c, radius + gap, 0.0, TAU, 64, Color(ink.r, ink.g, ink.b, ink.a * 0.55), 0.7, true)
-	_hv_dot(c, style.num("planner.step_dot_px") + 1.6)
+	_hv_dot(c, _pw().num("step_dot_px") + 1.6)
 	if state == "drag":
 		var tick: float = style.num(cfg + "tick_px")
 		var r2 := radius + gap
@@ -1860,7 +1913,7 @@ func _hv_ring(c: Vector2, a: float, state: String) -> void:
 # own small ring over it.
 func _hv_halo(c: Vector2, a: float, state: String) -> void:
 	var ink: Color = style.color("hover_ink")
-	_hv_dot(c, style.num("planner.step_dot_px") + (0.8 * a if state == "near" else 1.4))
+	_hv_dot(c, _pw().num("step_dot_px") + (0.8 * a if state == "near" else 1.4))
 	if state != "near":
 		var rp: float = style.num("planner.hover.halo.ring_px")
 		draw_arc(c, rp, 0.0, TAU, 32, ink, 1.3, true)
@@ -1880,7 +1933,7 @@ func _hv_magnet(c: Vector2, a: float, state: String) -> void:
 		var pp := style.color("hover_paper")
 		draw_line(p, c, Color(pp.r, pp.g, pp.b, pp.a * 0.55 * (0.4 + 0.6 * a)), w * 0.8 + 2.0, true)
 		UiInk.dashed(self, PackedVector2Array([p, c]), col, w * 0.8, dash, dash)
-		_hv_dot(c, style.num("planner.step_dot_px") + 0.6 * a)
+		_hv_dot(c, _pw().num("step_dot_px") + 0.6 * a)
 		return
 	var d := p.distance_to(c)
 	if d > snap + 0.5:
@@ -1889,7 +1942,7 @@ func _hv_magnet(c: Vector2, a: float, state: String) -> void:
 		draw_line(p, to, ink, w, true)
 	draw_arc(c, snap, 0.0, TAU, 40, style.color("hover_paper"), 3.2, true)
 	draw_arc(c, snap, 0.0, TAU, 40, ink, 1.5, true)
-	_hv_dot(c, style.num("planner.step_dot_px") + 1.2)
+	_hv_dot(c, _pw().num("step_dot_px") + 1.2)
 	draw_circle(p, style.num("planner.hover.magnet.dot_px"), ink, true, -1.0, true)
 	if state == "drag":
 		draw_circle(c, 2.0, _hv_accent(), true, -1.0, true)
@@ -2234,12 +2287,21 @@ func _draw_fire_marks(id: String) -> void:
 	var off: float = style.num("planner.select.node_px") + style.num("planner.select.drop_mark.offset_px")
 	var w: float = style.num("planner.select.drop_mark.line_px")
 	var halo: float = style.num("planner.select.drop_mark.halo_px")
+	var marks_mode := GunMarks.mode_of(style)
 	for k in guns.fire_steps(id):
 		var n := node_screen(k, id)
 		if not n.is_finite():
 			continue
-		UiInk.shell_glyph(self, n + style.shadow_dir() * off, s, ink, paper, w, halo)
 		var tgt := step_target(k, id)
+		if marks_mode != "G0":
+			# The board guns-mark's looks (data guns.marks.mode; scripts/ui/gun_marks.gd): no shell icon, no X, the target selection keeps its own mark.
+			if tgt.is_empty() or not (tgt["point"] as Vector2).is_finite():
+				continue
+			var finfo := fire_info(k)
+			if GunMarks.draw_step(self, k, n, tgt["point"], float(finfo.get("spread_m", 0.0)), bool(finfo.get("direct", false)), 0.45 if fire_blocked(k, id) else 1.0) == 1:
+				fire_mark_draws += 1
+			continue
+		UiInk.shell_glyph(self, n + style.shadow_dir() * off, s, ink, paper, w, halo)
 		if tgt.is_empty() or not (tgt["point"] as Vector2).is_finite():
 			continue
 		var blocked := fire_blocked(k, id)

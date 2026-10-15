@@ -1,0 +1,498 @@
+{
+  "id": "guns-mark",
+  "about": "Every frame of the guns-mark board as its own PNG at native size: <option>_<scene>_z<zoom>[_ship].png are 1:1 crops of the game's own frames (the same crop for every option of a scene and view), context_coast_z0.35.png the whole 1280 x 720 frame of G0.",
+  "frames": [
+    {
+      "file": "g0_bridge_z1.0.png",
+      "option": "g0",
+      "title": "G0 · Today  ·  bridge  ·  zoom 1.0",
+      "caption": "The reference: a dashed line from the node, a ring at the shells' two-sigma scatter, a small shell beside the node and an X at the target. Scene 'bridge': the cruiser's Main Guns on a point on the road beyond the bridge, 2.9 km away (the mission's real shot, the spread at its widest); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "bridge",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g1_bridge_z1.0.png",
+      "option": "g1",
+      "title": "G1 · Scatter wash, quiet line  ·  bridge  ·  zoom 1.0",
+      "caption": "The scatter as a soft wash under one thin rim (the range of motion's grammar), the one-sigma core a shade deeper, a quiet solid line from the node. No X, no shell. Scene 'bridge': the cruiser's Main Guns on a point on the road beyond the bridge, 2.9 km away (the mission's real shot, the spread at its widest); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "bridge",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g2_bridge_z1.0.png",
+      "option": "g2",
+      "title": "G2 · The shells' arc  ·  bridge  ·  zoom 1.0",
+      "caption": "The trajectory: a light curve from the ship, tapering up in weight and tone to the target and ending in the scatter wash. No X, no shell. Scene 'bridge': the cruiser's Main Guns on a point on the road beyond the bridge, 2.9 km away (the mission's real shot, the spread at its widest); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "bridge",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g3_bridge_z1.0.png",
+      "option": "g3",
+      "title": "G3 · Previewed puffs  ·  bridge  ·  zoom 1.0",
+      "caption": "The landing area as faint soft puffs, one per shell: dust on land, spray on water. No line, no ring, no X. Scene 'bridge': the cruiser's Main Guns on a point on the road beyond the bridge, 2.9 km away (the mission's real shot, the spread at its widest); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "bridge",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g4_bridge_z1.0.png",
+      "option": "g4",
+      "title": "G4 · Arc, wash and puffs (proposed best)  ·  bridge  ·  zoom 1.0",
+      "caption": "The arc, the scatter wash and a few faint puffs in it: where it comes from, how wide it falls and what it will raise. Scene 'bridge': the cruiser's Main Guns on a point on the road beyond the bridge, 2.9 km away (the mission's real shot, the spread at its widest); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "bridge",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g0_bridge_z0.35.png",
+      "option": "g0",
+      "title": "G0 · Today  ·  bridge  ·  zoom 0.35",
+      "caption": "The reference: a dashed line from the node, a ring at the shells' two-sigma scatter, a small shell beside the node and an X at the target. Scene 'bridge': the cruiser's Main Guns on a point on the road beyond the bridge, 2.9 km away (the mission's real shot, the spread at its widest); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "bridge",
+      "zoom": 0.35,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g1_bridge_z0.35.png",
+      "option": "g1",
+      "title": "G1 · Scatter wash, quiet line  ·  bridge  ·  zoom 0.35",
+      "caption": "The scatter as a soft wash under one thin rim (the range of motion's grammar), the one-sigma core a shade deeper, a quiet solid line from the node. No X, no shell. Scene 'bridge': the cruiser's Main Guns on a point on the road beyond the bridge, 2.9 km away (the mission's real shot, the spread at its widest); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "bridge",
+      "zoom": 0.35,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g2_bridge_z0.35.png",
+      "option": "g2",
+      "title": "G2 · The shells' arc  ·  bridge  ·  zoom 0.35",
+      "caption": "The trajectory: a light curve from the ship, tapering up in weight and tone to the target and ending in the scatter wash. No X, no shell. Scene 'bridge': the cruiser's Main Guns on a point on the road beyond the bridge, 2.9 km away (the mission's real shot, the spread at its widest); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "bridge",
+      "zoom": 0.35,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g3_bridge_z0.35.png",
+      "option": "g3",
+      "title": "G3 · Previewed puffs  ·  bridge  ·  zoom 0.35",
+      "caption": "The landing area as faint soft puffs, one per shell: dust on land, spray on water. No line, no ring, no X. Scene 'bridge': the cruiser's Main Guns on a point on the road beyond the bridge, 2.9 km away (the mission's real shot, the spread at its widest); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "bridge",
+      "zoom": 0.35,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g4_bridge_z0.35.png",
+      "option": "g4",
+      "title": "G4 · Arc, wash and puffs (proposed best)  ·  bridge  ·  zoom 0.35",
+      "caption": "The arc, the scatter wash and a few faint puffs in it: where it comes from, how wide it falls and what it will raise. Scene 'bridge': the cruiser's Main Guns on a point on the road beyond the bridge, 2.9 km away (the mission's real shot, the spread at its widest); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "bridge",
+      "zoom": 0.35,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g0_water_z1.0.png",
+      "option": "g0",
+      "title": "G0 · Today  ·  water  ·  zoom 1.0",
+      "caption": "The reference: a dashed line from the node, a ring at the shells' two-sigma scatter, a small shell beside the node and an X at the target. Scene 'water': the cruiser's Main Guns on a point in the river by the bridge (the shells will raise spray); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "water",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g1_water_z1.0.png",
+      "option": "g1",
+      "title": "G1 · Scatter wash, quiet line  ·  water  ·  zoom 1.0",
+      "caption": "The scatter as a soft wash under one thin rim (the range of motion's grammar), the one-sigma core a shade deeper, a quiet solid line from the node. No X, no shell. Scene 'water': the cruiser's Main Guns on a point in the river by the bridge (the shells will raise spray); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "water",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g2_water_z1.0.png",
+      "option": "g2",
+      "title": "G2 · The shells' arc  ·  water  ·  zoom 1.0",
+      "caption": "The trajectory: a light curve from the ship, tapering up in weight and tone to the target and ending in the scatter wash. No X, no shell. Scene 'water': the cruiser's Main Guns on a point in the river by the bridge (the shells will raise spray); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "water",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g3_water_z1.0.png",
+      "option": "g3",
+      "title": "G3 · Previewed puffs  ·  water  ·  zoom 1.0",
+      "caption": "The landing area as faint soft puffs, one per shell: dust on land, spray on water. No line, no ring, no X. Scene 'water': the cruiser's Main Guns on a point in the river by the bridge (the shells will raise spray); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "water",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g4_water_z1.0.png",
+      "option": "g4",
+      "title": "G4 · Arc, wash and puffs (proposed best)  ·  water  ·  zoom 1.0",
+      "caption": "The arc, the scatter wash and a few faint puffs in it: where it comes from, how wide it falls and what it will raise. Scene 'water': the cruiser's Main Guns on a point in the river by the bridge (the shells will raise spray); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "water",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g0_water_z0.35.png",
+      "option": "g0",
+      "title": "G0 · Today  ·  water  ·  zoom 0.35",
+      "caption": "The reference: a dashed line from the node, a ring at the shells' two-sigma scatter, a small shell beside the node and an X at the target. Scene 'water': the cruiser's Main Guns on a point in the river by the bridge (the shells will raise spray); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "water",
+      "zoom": 0.35,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g1_water_z0.35.png",
+      "option": "g1",
+      "title": "G1 · Scatter wash, quiet line  ·  water  ·  zoom 0.35",
+      "caption": "The scatter as a soft wash under one thin rim (the range of motion's grammar), the one-sigma core a shade deeper, a quiet solid line from the node. No X, no shell. Scene 'water': the cruiser's Main Guns on a point in the river by the bridge (the shells will raise spray); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "water",
+      "zoom": 0.35,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g2_water_z0.35.png",
+      "option": "g2",
+      "title": "G2 · The shells' arc  ·  water  ·  zoom 0.35",
+      "caption": "The trajectory: a light curve from the ship, tapering up in weight and tone to the target and ending in the scatter wash. No X, no shell. Scene 'water': the cruiser's Main Guns on a point in the river by the bridge (the shells will raise spray); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "water",
+      "zoom": 0.35,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g3_water_z0.35.png",
+      "option": "g3",
+      "title": "G3 · Previewed puffs  ·  water  ·  zoom 0.35",
+      "caption": "The landing area as faint soft puffs, one per shell: dust on land, spray on water. No line, no ring, no X. Scene 'water': the cruiser's Main Guns on a point in the river by the bridge (the shells will raise spray); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "water",
+      "zoom": 0.35,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g4_water_z0.35.png",
+      "option": "g4",
+      "title": "G4 · Arc, wash and puffs (proposed best)  ·  water  ·  zoom 0.35",
+      "caption": "The arc, the scatter wash and a few faint puffs in it: where it comes from, how wide it falls and what it will raise. Scene 'water': the cruiser's Main Guns on a point in the river by the bridge (the shells will raise spray); the target end. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "water",
+      "zoom": 0.35,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g0_coast_z0.35.png",
+      "option": "g0",
+      "title": "G0 · Today  ·  coast  ·  zoom 0.35",
+      "caption": "The reference: a dashed line from the node, a ring at the shells' two-sigma scatter, a small shell beside the node and an X at the target. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 0.35,
+      "size": [
+        700,
+        640
+      ]
+    },
+    {
+      "file": "context_coast_z0.35.png",
+      "option": "g0",
+      "title": "context: the coast shot at the start zoom, today's marks, the whole frame",
+      "caption": "The whole 1280 x 720 frame (G0).",
+      "scene": "coast",
+      "zoom": 0.35,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "g1_coast_z0.35.png",
+      "option": "g1",
+      "title": "G1 · Scatter wash, quiet line  ·  coast  ·  zoom 0.35",
+      "caption": "The scatter as a soft wash under one thin rim (the range of motion's grammar), the one-sigma core a shade deeper, a quiet solid line from the node. No X, no shell. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 0.35,
+      "size": [
+        700,
+        640
+      ]
+    },
+    {
+      "file": "g2_coast_z0.35.png",
+      "option": "g2",
+      "title": "G2 · The shells' arc  ·  coast  ·  zoom 0.35",
+      "caption": "The trajectory: a light curve from the ship, tapering up in weight and tone to the target and ending in the scatter wash. No X, no shell. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 0.35,
+      "size": [
+        700,
+        640
+      ]
+    },
+    {
+      "file": "g3_coast_z0.35.png",
+      "option": "g3",
+      "title": "G3 · Previewed puffs  ·  coast  ·  zoom 0.35",
+      "caption": "The landing area as faint soft puffs, one per shell: dust on land, spray on water. No line, no ring, no X. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 0.35,
+      "size": [
+        700,
+        640
+      ]
+    },
+    {
+      "file": "g4_coast_z0.35.png",
+      "option": "g4",
+      "title": "G4 · Arc, wash and puffs (proposed best)  ·  coast  ·  zoom 0.35",
+      "caption": "The arc, the scatter wash and a few faint puffs in it: where it comes from, how wide it falls and what it will raise. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 0.35,
+      "size": [
+        700,
+        640
+      ]
+    },
+    {
+      "file": "g0_coast_z1.0.png",
+      "option": "g0",
+      "title": "G0 · Today  ·  coast  ·  zoom 1.0",
+      "caption": "The reference: a dashed line from the node, a ring at the shells' two-sigma scatter, a small shell beside the node and an X at the target. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g1_coast_z1.0.png",
+      "option": "g1",
+      "title": "G1 · Scatter wash, quiet line  ·  coast  ·  zoom 1.0",
+      "caption": "The scatter as a soft wash under one thin rim (the range of motion's grammar), the one-sigma core a shade deeper, a quiet solid line from the node. No X, no shell. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g2_coast_z1.0.png",
+      "option": "g2",
+      "title": "G2 · The shells' arc  ·  coast  ·  zoom 1.0",
+      "caption": "The trajectory: a light curve from the ship, tapering up in weight and tone to the target and ending in the scatter wash. No X, no shell. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g3_coast_z1.0.png",
+      "option": "g3",
+      "title": "G3 · Previewed puffs  ·  coast  ·  zoom 1.0",
+      "caption": "The landing area as faint soft puffs, one per shell: dust on land, spray on water. No line, no ring, no X. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g4_coast_z1.0.png",
+      "option": "g4",
+      "title": "G4 · Arc, wash and puffs (proposed best)  ·  coast  ·  zoom 1.0",
+      "caption": "The arc, the scatter wash and a few faint puffs in it: where it comes from, how wide it falls and what it will raise. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g0_coast_z1.0_ship.png",
+      "option": "g0",
+      "title": "G0 · Today  ·  coast  ·  zoom 1.0 (the ship's end)",
+      "caption": "The reference: a dashed line from the node, a ring at the shells' two-sigma scatter, a small shell beside the node and an X at the target. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g1_coast_z1.0_ship.png",
+      "option": "g1",
+      "title": "G1 · Scatter wash, quiet line  ·  coast  ·  zoom 1.0 (the ship's end)",
+      "caption": "The scatter as a soft wash under one thin rim (the range of motion's grammar), the one-sigma core a shade deeper, a quiet solid line from the node. No X, no shell. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g2_coast_z1.0_ship.png",
+      "option": "g2",
+      "title": "G2 · The shells' arc  ·  coast  ·  zoom 1.0 (the ship's end)",
+      "caption": "The trajectory: a light curve from the ship, tapering up in weight and tone to the target and ending in the scatter wash. No X, no shell. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g3_coast_z1.0_ship.png",
+      "option": "g3",
+      "title": "G3 · Previewed puffs  ·  coast  ·  zoom 1.0 (the ship's end)",
+      "caption": "The landing area as faint soft puffs, one per shell: dust on land, spray on water. No line, no ring, no X. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g4_coast_z1.0_ship.png",
+      "option": "g4",
+      "title": "G4 · Arc, wash and puffs (proposed best)  ·  coast  ·  zoom 1.0 (the ship's end)",
+      "caption": "The arc, the scatter wash and a few faint puffs in it: where it comes from, how wide it falls and what it will raise. Scene 'coast': the cruiser's Main Guns on a point on the coast about 800 m away (a tank beside it spots it); the whole shot at the start zoom, then the target end and the ship's end at zoom 1. 1:1 crop of the game's own frame, the target selection drawn.",
+      "scene": "coast",
+      "zoom": 1.0,
+      "size": [
+        560,
+        380
+      ]
+    },
+    {
+      "file": "g0_tank_z1.0.png",
+      "option": "g0",
+      "title": "G0 · Today  ·  tank  ·  zoom 1.0",
+      "caption": "The reference: a dashed line from the node, a ring at the shells' two-sigma scatter, a small shell beside the node and an X at the target. Scene 'tank': a tank's gun ordered at an enemy tank 120 m up the road: a direct shot, one aimed round, no scatter. 1:1 crop of the game's own frame.",
+      "scene": "tank",
+      "zoom": 1.0,
+      "size": [
+        520,
+        400
+      ]
+    },
+    {
+      "file": "g1_tank_z1.0.png",
+      "option": "g1",
+      "title": "G1 · Scatter wash, quiet line  ·  tank  ·  zoom 1.0",
+      "caption": "The scatter as a soft wash under one thin rim (the range of motion's grammar), the one-sigma core a shade deeper, a quiet solid line from the node. No X, no shell. Scene 'tank': a tank's gun ordered at an enemy tank 120 m up the road: a direct shot, one aimed round, no scatter. 1:1 crop of the game's own frame.",
+      "scene": "tank",
+      "zoom": 1.0,
+      "size": [
+        520,
+        400
+      ]
+    },
+    {
+      "file": "g2_tank_z1.0.png",
+      "option": "g2",
+      "title": "G2 · The shells' arc  ·  tank  ·  zoom 1.0",
+      "caption": "The trajectory: a light curve from the ship, tapering up in weight and tone to the target and ending in the scatter wash. No X, no shell. Scene 'tank': a tank's gun ordered at an enemy tank 120 m up the road: a direct shot, one aimed round, no scatter. 1:1 crop of the game's own frame.",
+      "scene": "tank",
+      "zoom": 1.0,
+      "size": [
+        520,
+        400
+      ]
+    },
+    {
+      "file": "g3_tank_z1.0.png",
+      "option": "g3",
+      "title": "G3 · Previewed puffs  ·  tank  ·  zoom 1.0",
+      "caption": "The landing area as faint soft puffs, one per shell: dust on land, spray on water. No line, no ring, no X. Scene 'tank': a tank's gun ordered at an enemy tank 120 m up the road: a direct shot, one aimed round, no scatter. 1:1 crop of the game's own frame.",
+      "scene": "tank",
+      "zoom": 1.0,
+      "size": [
+        520,
+        400
+      ]
+    },
+    {
+      "file": "g4_tank_z1.0.png",
+      "option": "g4",
+      "title": "G4 · Arc, wash and puffs (proposed best)  ·  tank  ·  zoom 1.0",
+      "caption": "The arc, the scatter wash and a few faint puffs in it: where it comes from, how wide it falls and what it will raise. Scene 'tank': a tank's gun ordered at an enemy tank 120 m up the road: a direct shot, one aimed round, no scatter. 1:1 crop of the game's own frame.",
+      "scene": "tank",
+      "zoom": 1.0,
+      "size": [
+        520,
+        400
+      ]
+    }
+  ]
+}

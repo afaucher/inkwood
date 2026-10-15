@@ -202,7 +202,7 @@ func _check_plan_readers() -> void:
 	# drawing only behind plan_shown (test_ui_guns).
 	# motion_range_board_shot.gd (builder BM): a windowed board over four PLAYER units of one side (a light fighter, the bomber, a tank, the
 	# cruiser) that it plans and plays itself; it measures the fan's size from the planner's own outline and the envelope.
-	var allowed := ["motion_planner.gd", "roster.gd", "node_hover_board_shot.gd", "bomb_source.gd", "gun_source.gd", "bomb_aim_board_shot.gd", "bomb_ui_shot.gd", "motion_range_board_shot.gd"]
+	var allowed := ["motion_planner.gd", "roster.gd", "node_hover_board_shot.gd", "bomb_source.gd", "gun_source.gd", "bomb_aim_board_shot.gd", "bomb_ui_shot.gd", "motion_range_board_shot.gd", "plan_weight_board_shot.gd", "plan_guns_board_shot.gd"]
 	var checked := 0
 	for root: String in ["res://scripts/ui", "res://scripts/fx"]:
 		for f: String in _gd_files(root):

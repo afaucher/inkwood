@@ -1,0 +1,135 @@
+{
+  "id": "plan-weight",
+  "date": "2026-10-14",
+  "area": "UI",
+  "question": "How bold are the plan indicators on the map (the selected unit's path, its carry-on path, the step nodes, the other units' plans and the range of motion's rim)? Alex (decision plan-indicators-bold): 'We need to make the plan indicators on the map much bolder to be visible. There is too much visual noise to see a thin dashed lines and tiny dots.' DECIDED: much bolder; the weights are picked here.",
+  "source": "scripts/ui/boards/plan_weight_board_shot.gd on scripts/ui/boards/plan_rig.gd: the running sandbox over Hold the bridge (data/scenarios/bridge.json, seed 55, fog off), the game's own planner (scripts/ui/motion_planner.gd _draw_curve), photographed once per option with ONLY data/ui/ui.json planner.weight.preset changed",
+  "seed": 55,
+  "held_constant": {
+    "scenes": "road (the selected tank's 2-step plan on the road through the woods, a second tank's plan), carry (one step planned, the second flies on; the second tank flies on), village (the road through the village), forest (the same in thick woods), smoke (a grove burning beside the path)",
+    "zooms": "zoom 1.0 (2 px per metre) and the start zoom 0.35 (data/view/camera.json zoom.start)",
+    "crops": "the same crop for every option of a scene, centred on the middle of the selected tank's plan: (520, 300) at zoom 1, (400, 240) at 0.35",
+    "in_force": "planner on top of the unit markers (decision planner-on-top); wash_rim range of motion (decision motion-range-look); shadow strength 0.44; pen shadow_side; sides brick red and slate blue",
+    "others_rule": "in every option the other units' plans are one clear step quieter than the selected unit's: thinner, smaller nodes, 55% alpha"
+  },
+  "options": [
+    {
+      "id": "p0",
+      "label": "P0 · Today",
+      "description": "The reference: the selected path 1.6 px, its carry-on 1.0 px dashed, nodes 3 px, the others' plans 1.0 px with 1.9 px nodes, the range of motion's rim 0.9 px.",
+      "planner.weight.preset": "P0",
+      "values": {},
+      "proposed": true
+    },
+    {
+      "id": "p1",
+      "label": "P1 · 2x, still dashed",
+      "description": "Every weight doubled: path 3.2 px, carry-on 2.0 px still dashed, nodes 6 px, the others 2.0 px and 3.8 px nodes, rim 1.8 px. No halo.",
+      "planner.weight.preset": "P1",
+      "values": {
+        "path_line_px": 3.2,
+        "carry_line_px": 2.0,
+        "dash_px": 12.0,
+        "gap_px": 10.0,
+        "step_dot_px": 6.0,
+        "others_line_px": 2.0,
+        "others_carry_line_px": 1.6,
+        "others_dot_px": 3.8,
+        "fan_rim_px": 1.8,
+        "carry_dashed": true,
+        "others_carry_dashed": true
+      },
+      "proposed": true
+    },
+    {
+      "id": "p2",
+      "label": "P2 · 2x, solid, paper halo",
+      "description": "2x and a paper halo under every ink line so it reads over hatching and forest: path 3.2 px, carry-on solid 2.2 px, nodes 6 px with a paper rim, the others 2.0 px with a lighter halo, rim 1.8 px.",
+      "planner.weight.preset": "P2",
+      "values": {
+        "path_line_px": 3.2,
+        "carry_line_px": 2.2,
+        "dash_px": 10.0,
+        "gap_px": 8.0,
+        "step_dot_px": 6.0,
+        "halo_px": 1.8,
+        "carry_halo_px": 1.4,
+        "node_rim_px": 1.8,
+        "carry_node_line_px": 1.8,
+        "others_line_px": 2.0,
+        "others_carry_line_px": 1.6,
+        "others_dot_px": 3.8,
+        "others_halo_px": 1.2,
+        "others_node_rim_px": 1.2,
+        "others_carry_node_line_px": 1.4,
+        "fan_rim_px": 1.8,
+        "carry_dashed": false,
+        "others_carry_dashed": true
+      },
+      "proposed": true
+    },
+    {
+      "id": "p3",
+      "label": "P3 · 3x, solid, halo, big nodes",
+      "description": "3x with the halo: path 4.8 px, carry-on solid 3.2 px, nodes as ink discs 7.5 px with a 2.4 px paper rim, the others 3.0 px with 5 px nodes, rim 2.7 px.",
+      "planner.weight.preset": "P3",
+      "values": {
+        "path_line_px": 4.8,
+        "carry_line_px": 3.2,
+        "dash_px": 14.0,
+        "gap_px": 11.0,
+        "step_dot_px": 7.5,
+        "halo_px": 2.4,
+        "carry_halo_px": 1.8,
+        "node_rim_px": 2.4,
+        "carry_node_line_px": 2.6,
+        "others_line_px": 3.0,
+        "others_carry_line_px": 2.2,
+        "others_dot_px": 5.0,
+        "others_halo_px": 1.6,
+        "others_node_rim_px": 1.6,
+        "others_carry_node_line_px": 2.0,
+        "fan_rim_px": 2.7,
+        "carry_dashed": false,
+        "others_carry_dashed": true
+      },
+      "proposed": true
+    },
+    {
+      "id": "p4",
+      "label": "P4 · Bold solid path, quiet dashed carry",
+      "description": "The path 4.0 px solid with a halo, the carry-on a quieter 2.0 px dash with a light halo, nodes 6.5 px discs with a paper rim, the others 2.4 px, rim 2.2 px.",
+      "planner.weight.preset": "P4",
+      "values": {
+        "path_line_px": 4.0,
+        "carry_line_px": 2.0,
+        "dash_px": 10.0,
+        "gap_px": 8.0,
+        "step_dot_px": 6.5,
+        "halo_px": 2.0,
+        "carry_halo_px": 1.2,
+        "node_rim_px": 2.0,
+        "carry_node_line_px": 1.8,
+        "others_line_px": 2.4,
+        "others_carry_line_px": 1.6,
+        "others_dot_px": 4.2,
+        "others_halo_px": 1.2,
+        "others_node_rim_px": 1.2,
+        "others_carry_node_line_px": 1.4,
+        "fan_rim_px": 2.2,
+        "carry_dashed": true,
+        "others_carry_dashed": true
+      },
+      "proposed": true
+    }
+  ],
+  "palette_check": {
+    "hue": "No option adds a hue: the plan is INK (the role path at 90%, path_carry at 50%) and the halo and node rim PAPER (the new role path_halo, paper at 85%). The side colour appears only in the unit's own marker, ribbon and ghost.",
+    "lightness": "A ramp off the paper: halo paper 85%, path ink 90%, carry-on ink 50%, the others' plans ink x 55%, the range of motion's wash 14% and rim 50%.",
+    "material": "linework: a line, a disc, a paper halo. No hex in draw code (the roles are in data/ui/ui.json roles)."
+  },
+  "recommendation_proposed": "PROPOSED by builder BP (Alex decides): P2, 2x solid with the paper halo (P4 if the carry-on should keep reading as a dash, flying on). The halo is what carries the plan over trees, houses and smoke; thickness alone (P1) is still a dark line lost among tree shadows. P3 is the boldest that still reads as a line, but its 7.5 px discs crowd a tank's two steps (25 m apart, 17 px at the start zoom). Honest limit: at the start zoom 0.35 a tank's whole plan is about 30 px, so beyond P2 the selection disc and the labels, not the weight, are what is seen; a tank's step is short.",
+  "how_to_switch": "set planner.weight.preset in data/ui/ui.json to P0, P1, P2, P3 or P4; the range of motion's rim, the nodes and the hover dots follow it",
+  "chosen": null,
+  "chosen_by": null
+}

@@ -1,0 +1,594 @@
+{
+  "id": "plan-weight",
+  "about": "Every frame of the plan-weight board as its own PNG at native size: <option>_<scene>_z<zoom>.png are 1:1 crops of the game's own frames (520 x 300 at zoom 1, 400 x 240 at 0.35, the same crop for every option of a scene), context_<scene>_z0.35.png whole 1280 x 720 frames of P0.",
+  "frames": [
+    {
+      "file": "p0_road_z1.0.png",
+      "option": "p0",
+      "title": "P0 · Today  ·  road  ·  zoom 1.0",
+      "caption": "The reference: the selected path 1.6 px, its carry-on 1.0 px dashed, nodes 3 px, the others' plans 1.0 px with 1.9 px nodes, the range of motion's rim 0.9 px.. Scene 'road': the selected tank's 2-step plan on the road by the bridge, a second tank's 2-step plan beside it (the quieter one). 1:1 crop of the game's own frame.",
+      "scene": "road",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p1_road_z1.0.png",
+      "option": "p1",
+      "title": "P1 · 2x, still dashed  ·  road  ·  zoom 1.0",
+      "caption": "Every weight doubled: path 3.2 px, carry-on 2.0 px still dashed, nodes 6 px, the others 2.0 px and 3.8 px nodes, rim 1.8 px. No halo.. Scene 'road': the selected tank's 2-step plan on the road by the bridge, a second tank's 2-step plan beside it (the quieter one). 1:1 crop of the game's own frame.",
+      "scene": "road",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p2_road_z1.0.png",
+      "option": "p2",
+      "title": "P2 · 2x, solid, paper halo  ·  road  ·  zoom 1.0",
+      "caption": "2x and a paper halo under every ink line so it reads over hatching and forest: path 3.2 px, carry-on solid 2.2 px, nodes 6 px with a paper rim, the others 2.0 px with a lighter halo, rim 1.8 px.. Scene 'road': the selected tank's 2-step plan on the road by the bridge, a second tank's 2-step plan beside it (the quieter one). 1:1 crop of the game's own frame.",
+      "scene": "road",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p3_road_z1.0.png",
+      "option": "p3",
+      "title": "P3 · 3x, solid, halo, big nodes  ·  road  ·  zoom 1.0",
+      "caption": "3x with the halo: path 4.8 px, carry-on solid 3.2 px, nodes as ink discs 7.5 px with a 2.4 px paper rim, the others 3.0 px with 5 px nodes, rim 2.7 px.. Scene 'road': the selected tank's 2-step plan on the road by the bridge, a second tank's 2-step plan beside it (the quieter one). 1:1 crop of the game's own frame.",
+      "scene": "road",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p4_road_z1.0.png",
+      "option": "p4",
+      "title": "P4 · Bold solid path, quiet dashed carry  ·  road  ·  zoom 1.0",
+      "caption": "The path 4.0 px solid with a halo, the carry-on a quieter 2.0 px dash with a light halo, nodes 6.5 px discs with a paper rim, the others 2.4 px, rim 2.2 px.. Scene 'road': the selected tank's 2-step plan on the road by the bridge, a second tank's 2-step plan beside it (the quieter one). 1:1 crop of the game's own frame.",
+      "scene": "road",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p0_road_z0.35.png",
+      "option": "p0",
+      "title": "P0 · Today  ·  road  ·  zoom 0.35",
+      "caption": "The reference: the selected path 1.6 px, its carry-on 1.0 px dashed, nodes 3 px, the others' plans 1.0 px with 1.9 px nodes, the range of motion's rim 0.9 px.. Scene 'road': the selected tank's 2-step plan on the road by the bridge, a second tank's 2-step plan beside it (the quieter one). 1:1 crop of the game's own frame.",
+      "scene": "road",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "context_road_z0.35.png",
+      "option": "p0",
+      "title": "context: road at the start zoom, today's weights, the whole frame",
+      "caption": "The whole 1280 x 720 frame at the start zoom (0.35), P0.",
+      "scene": "road",
+      "zoom": 0.35,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "p1_road_z0.35.png",
+      "option": "p1",
+      "title": "P1 · 2x, still dashed  ·  road  ·  zoom 0.35",
+      "caption": "Every weight doubled: path 3.2 px, carry-on 2.0 px still dashed, nodes 6 px, the others 2.0 px and 3.8 px nodes, rim 1.8 px. No halo.. Scene 'road': the selected tank's 2-step plan on the road by the bridge, a second tank's 2-step plan beside it (the quieter one). 1:1 crop of the game's own frame.",
+      "scene": "road",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p2_road_z0.35.png",
+      "option": "p2",
+      "title": "P2 · 2x, solid, paper halo  ·  road  ·  zoom 0.35",
+      "caption": "2x and a paper halo under every ink line so it reads over hatching and forest: path 3.2 px, carry-on solid 2.2 px, nodes 6 px with a paper rim, the others 2.0 px with a lighter halo, rim 1.8 px.. Scene 'road': the selected tank's 2-step plan on the road by the bridge, a second tank's 2-step plan beside it (the quieter one). 1:1 crop of the game's own frame.",
+      "scene": "road",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p3_road_z0.35.png",
+      "option": "p3",
+      "title": "P3 · 3x, solid, halo, big nodes  ·  road  ·  zoom 0.35",
+      "caption": "3x with the halo: path 4.8 px, carry-on solid 3.2 px, nodes as ink discs 7.5 px with a 2.4 px paper rim, the others 3.0 px with 5 px nodes, rim 2.7 px.. Scene 'road': the selected tank's 2-step plan on the road by the bridge, a second tank's 2-step plan beside it (the quieter one). 1:1 crop of the game's own frame.",
+      "scene": "road",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p4_road_z0.35.png",
+      "option": "p4",
+      "title": "P4 · Bold solid path, quiet dashed carry  ·  road  ·  zoom 0.35",
+      "caption": "The path 4.0 px solid with a halo, the carry-on a quieter 2.0 px dash with a light halo, nodes 6.5 px discs with a paper rim, the others 2.4 px, rim 2.2 px.. Scene 'road': the selected tank's 2-step plan on the road by the bridge, a second tank's 2-step plan beside it (the quieter one). 1:1 crop of the game's own frame.",
+      "scene": "road",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p0_carry_z1.0.png",
+      "option": "p0",
+      "title": "P0 · Today  ·  carry  ·  zoom 1.0",
+      "caption": "The reference: the selected path 1.6 px, its carry-on 1.0 px dashed, nodes 3 px, the others' plans 1.0 px with 1.9 px nodes, the range of motion's rim 0.9 px.. Scene 'carry': the selected tank with one step planned and its second step flying on (the carry-on path), the second tank with no plan (it flies on, dashed). 1:1 crop of the game's own frame.",
+      "scene": "carry",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p1_carry_z1.0.png",
+      "option": "p1",
+      "title": "P1 · 2x, still dashed  ·  carry  ·  zoom 1.0",
+      "caption": "Every weight doubled: path 3.2 px, carry-on 2.0 px still dashed, nodes 6 px, the others 2.0 px and 3.8 px nodes, rim 1.8 px. No halo.. Scene 'carry': the selected tank with one step planned and its second step flying on (the carry-on path), the second tank with no plan (it flies on, dashed). 1:1 crop of the game's own frame.",
+      "scene": "carry",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p2_carry_z1.0.png",
+      "option": "p2",
+      "title": "P2 · 2x, solid, paper halo  ·  carry  ·  zoom 1.0",
+      "caption": "2x and a paper halo under every ink line so it reads over hatching and forest: path 3.2 px, carry-on solid 2.2 px, nodes 6 px with a paper rim, the others 2.0 px with a lighter halo, rim 1.8 px.. Scene 'carry': the selected tank with one step planned and its second step flying on (the carry-on path), the second tank with no plan (it flies on, dashed). 1:1 crop of the game's own frame.",
+      "scene": "carry",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p3_carry_z1.0.png",
+      "option": "p3",
+      "title": "P3 · 3x, solid, halo, big nodes  ·  carry  ·  zoom 1.0",
+      "caption": "3x with the halo: path 4.8 px, carry-on solid 3.2 px, nodes as ink discs 7.5 px with a 2.4 px paper rim, the others 3.0 px with 5 px nodes, rim 2.7 px.. Scene 'carry': the selected tank with one step planned and its second step flying on (the carry-on path), the second tank with no plan (it flies on, dashed). 1:1 crop of the game's own frame.",
+      "scene": "carry",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p4_carry_z1.0.png",
+      "option": "p4",
+      "title": "P4 · Bold solid path, quiet dashed carry  ·  carry  ·  zoom 1.0",
+      "caption": "The path 4.0 px solid with a halo, the carry-on a quieter 2.0 px dash with a light halo, nodes 6.5 px discs with a paper rim, the others 2.4 px, rim 2.2 px.. Scene 'carry': the selected tank with one step planned and its second step flying on (the carry-on path), the second tank with no plan (it flies on, dashed). 1:1 crop of the game's own frame.",
+      "scene": "carry",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p0_village_z1.0.png",
+      "option": "p0",
+      "title": "P0 · Today  ·  village  ·  zoom 1.0",
+      "caption": "The reference: the selected path 1.6 px, its carry-on 1.0 px dashed, nodes 3 px, the others' plans 1.0 px with 1.9 px nodes, the range of motion's rim 0.9 px.. Scene 'village': the same two tanks on the road through the village (houses, fields, trees). 1:1 crop of the game's own frame.",
+      "scene": "village",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p1_village_z1.0.png",
+      "option": "p1",
+      "title": "P1 · 2x, still dashed  ·  village  ·  zoom 1.0",
+      "caption": "Every weight doubled: path 3.2 px, carry-on 2.0 px still dashed, nodes 6 px, the others 2.0 px and 3.8 px nodes, rim 1.8 px. No halo.. Scene 'village': the same two tanks on the road through the village (houses, fields, trees). 1:1 crop of the game's own frame.",
+      "scene": "village",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p2_village_z1.0.png",
+      "option": "p2",
+      "title": "P2 · 2x, solid, paper halo  ·  village  ·  zoom 1.0",
+      "caption": "2x and a paper halo under every ink line so it reads over hatching and forest: path 3.2 px, carry-on solid 2.2 px, nodes 6 px with a paper rim, the others 2.0 px with a lighter halo, rim 1.8 px.. Scene 'village': the same two tanks on the road through the village (houses, fields, trees). 1:1 crop of the game's own frame.",
+      "scene": "village",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p3_village_z1.0.png",
+      "option": "p3",
+      "title": "P3 · 3x, solid, halo, big nodes  ·  village  ·  zoom 1.0",
+      "caption": "3x with the halo: path 4.8 px, carry-on solid 3.2 px, nodes as ink discs 7.5 px with a 2.4 px paper rim, the others 3.0 px with 5 px nodes, rim 2.7 px.. Scene 'village': the same two tanks on the road through the village (houses, fields, trees). 1:1 crop of the game's own frame.",
+      "scene": "village",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p4_village_z1.0.png",
+      "option": "p4",
+      "title": "P4 · Bold solid path, quiet dashed carry  ·  village  ·  zoom 1.0",
+      "caption": "The path 4.0 px solid with a halo, the carry-on a quieter 2.0 px dash with a light halo, nodes 6.5 px discs with a paper rim, the others 2.4 px, rim 2.2 px.. Scene 'village': the same two tanks on the road through the village (houses, fields, trees). 1:1 crop of the game's own frame.",
+      "scene": "village",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p0_village_z0.35.png",
+      "option": "p0",
+      "title": "P0 · Today  ·  village  ·  zoom 0.35",
+      "caption": "The reference: the selected path 1.6 px, its carry-on 1.0 px dashed, nodes 3 px, the others' plans 1.0 px with 1.9 px nodes, the range of motion's rim 0.9 px.. Scene 'village': the same two tanks on the road through the village (houses, fields, trees). 1:1 crop of the game's own frame.",
+      "scene": "village",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "context_village_z0.35.png",
+      "option": "p0",
+      "title": "context: village at the start zoom, today's weights, the whole frame",
+      "caption": "The whole 1280 x 720 frame at the start zoom (0.35), P0.",
+      "scene": "village",
+      "zoom": 0.35,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "p1_village_z0.35.png",
+      "option": "p1",
+      "title": "P1 · 2x, still dashed  ·  village  ·  zoom 0.35",
+      "caption": "Every weight doubled: path 3.2 px, carry-on 2.0 px still dashed, nodes 6 px, the others 2.0 px and 3.8 px nodes, rim 1.8 px. No halo.. Scene 'village': the same two tanks on the road through the village (houses, fields, trees). 1:1 crop of the game's own frame.",
+      "scene": "village",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p2_village_z0.35.png",
+      "option": "p2",
+      "title": "P2 · 2x, solid, paper halo  ·  village  ·  zoom 0.35",
+      "caption": "2x and a paper halo under every ink line so it reads over hatching and forest: path 3.2 px, carry-on solid 2.2 px, nodes 6 px with a paper rim, the others 2.0 px with a lighter halo, rim 1.8 px.. Scene 'village': the same two tanks on the road through the village (houses, fields, trees). 1:1 crop of the game's own frame.",
+      "scene": "village",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p3_village_z0.35.png",
+      "option": "p3",
+      "title": "P3 · 3x, solid, halo, big nodes  ·  village  ·  zoom 0.35",
+      "caption": "3x with the halo: path 4.8 px, carry-on solid 3.2 px, nodes as ink discs 7.5 px with a 2.4 px paper rim, the others 3.0 px with 5 px nodes, rim 2.7 px.. Scene 'village': the same two tanks on the road through the village (houses, fields, trees). 1:1 crop of the game's own frame.",
+      "scene": "village",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p4_village_z0.35.png",
+      "option": "p4",
+      "title": "P4 · Bold solid path, quiet dashed carry  ·  village  ·  zoom 0.35",
+      "caption": "The path 4.0 px solid with a halo, the carry-on a quieter 2.0 px dash with a light halo, nodes 6.5 px discs with a paper rim, the others 2.4 px, rim 2.2 px.. Scene 'village': the same two tanks on the road through the village (houses, fields, trees). 1:1 crop of the game's own frame.",
+      "scene": "village",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p0_forest_z1.0.png",
+      "option": "p0",
+      "title": "P0 · Today  ·  forest  ·  zoom 1.0",
+      "caption": "The reference: the selected path 1.6 px, its carry-on 1.0 px dashed, nodes 3 px, the others' plans 1.0 px with 1.9 px nodes, the range of motion's rim 0.9 px.. Scene 'forest': the same two tanks with their plans over the woods (trees and their shadows). 1:1 crop of the game's own frame.",
+      "scene": "forest",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p1_forest_z1.0.png",
+      "option": "p1",
+      "title": "P1 · 2x, still dashed  ·  forest  ·  zoom 1.0",
+      "caption": "Every weight doubled: path 3.2 px, carry-on 2.0 px still dashed, nodes 6 px, the others 2.0 px and 3.8 px nodes, rim 1.8 px. No halo.. Scene 'forest': the same two tanks with their plans over the woods (trees and their shadows). 1:1 crop of the game's own frame.",
+      "scene": "forest",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p2_forest_z1.0.png",
+      "option": "p2",
+      "title": "P2 · 2x, solid, paper halo  ·  forest  ·  zoom 1.0",
+      "caption": "2x and a paper halo under every ink line so it reads over hatching and forest: path 3.2 px, carry-on solid 2.2 px, nodes 6 px with a paper rim, the others 2.0 px with a lighter halo, rim 1.8 px.. Scene 'forest': the same two tanks with their plans over the woods (trees and their shadows). 1:1 crop of the game's own frame.",
+      "scene": "forest",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p3_forest_z1.0.png",
+      "option": "p3",
+      "title": "P3 · 3x, solid, halo, big nodes  ·  forest  ·  zoom 1.0",
+      "caption": "3x with the halo: path 4.8 px, carry-on solid 3.2 px, nodes as ink discs 7.5 px with a 2.4 px paper rim, the others 3.0 px with 5 px nodes, rim 2.7 px.. Scene 'forest': the same two tanks with their plans over the woods (trees and their shadows). 1:1 crop of the game's own frame.",
+      "scene": "forest",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p4_forest_z1.0.png",
+      "option": "p4",
+      "title": "P4 · Bold solid path, quiet dashed carry  ·  forest  ·  zoom 1.0",
+      "caption": "The path 4.0 px solid with a halo, the carry-on a quieter 2.0 px dash with a light halo, nodes 6.5 px discs with a paper rim, the others 2.4 px, rim 2.2 px.. Scene 'forest': the same two tanks with their plans over the woods (trees and their shadows). 1:1 crop of the game's own frame.",
+      "scene": "forest",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p0_forest_z0.35.png",
+      "option": "p0",
+      "title": "P0 · Today  ·  forest  ·  zoom 0.35",
+      "caption": "The reference: the selected path 1.6 px, its carry-on 1.0 px dashed, nodes 3 px, the others' plans 1.0 px with 1.9 px nodes, the range of motion's rim 0.9 px.. Scene 'forest': the same two tanks with their plans over the woods (trees and their shadows). 1:1 crop of the game's own frame.",
+      "scene": "forest",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "context_forest_z0.35.png",
+      "option": "p0",
+      "title": "context: forest at the start zoom, today's weights, the whole frame",
+      "caption": "The whole 1280 x 720 frame at the start zoom (0.35), P0.",
+      "scene": "forest",
+      "zoom": 0.35,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "p1_forest_z0.35.png",
+      "option": "p1",
+      "title": "P1 · 2x, still dashed  ·  forest  ·  zoom 0.35",
+      "caption": "Every weight doubled: path 3.2 px, carry-on 2.0 px still dashed, nodes 6 px, the others 2.0 px and 3.8 px nodes, rim 1.8 px. No halo.. Scene 'forest': the same two tanks with their plans over the woods (trees and their shadows). 1:1 crop of the game's own frame.",
+      "scene": "forest",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p2_forest_z0.35.png",
+      "option": "p2",
+      "title": "P2 · 2x, solid, paper halo  ·  forest  ·  zoom 0.35",
+      "caption": "2x and a paper halo under every ink line so it reads over hatching and forest: path 3.2 px, carry-on solid 2.2 px, nodes 6 px with a paper rim, the others 2.0 px with a lighter halo, rim 1.8 px.. Scene 'forest': the same two tanks with their plans over the woods (trees and their shadows). 1:1 crop of the game's own frame.",
+      "scene": "forest",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p3_forest_z0.35.png",
+      "option": "p3",
+      "title": "P3 · 3x, solid, halo, big nodes  ·  forest  ·  zoom 0.35",
+      "caption": "3x with the halo: path 4.8 px, carry-on solid 3.2 px, nodes as ink discs 7.5 px with a 2.4 px paper rim, the others 3.0 px with 5 px nodes, rim 2.7 px.. Scene 'forest': the same two tanks with their plans over the woods (trees and their shadows). 1:1 crop of the game's own frame.",
+      "scene": "forest",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p4_forest_z0.35.png",
+      "option": "p4",
+      "title": "P4 · Bold solid path, quiet dashed carry  ·  forest  ·  zoom 0.35",
+      "caption": "The path 4.0 px solid with a halo, the carry-on a quieter 2.0 px dash with a light halo, nodes 6.5 px discs with a paper rim, the others 2.4 px, rim 2.2 px.. Scene 'forest': the same two tanks with their plans over the woods (trees and their shadows). 1:1 crop of the game's own frame.",
+      "scene": "forest",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p0_smoke_z1.0.png",
+      "option": "p0",
+      "title": "P0 · Today  ·  smoke  ·  zoom 1.0",
+      "caption": "The reference: the selected path 1.6 px, its carry-on 1.0 px dashed, nodes 3 px, the others' plans 1.0 px with 1.9 px nodes, the range of motion's rim 0.9 px.. Scene 'smoke': the same, with a grove burning beside the path (the forest fire's smoke). 1:1 crop of the game's own frame.",
+      "scene": "smoke",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p1_smoke_z1.0.png",
+      "option": "p1",
+      "title": "P1 · 2x, still dashed  ·  smoke  ·  zoom 1.0",
+      "caption": "Every weight doubled: path 3.2 px, carry-on 2.0 px still dashed, nodes 6 px, the others 2.0 px and 3.8 px nodes, rim 1.8 px. No halo.. Scene 'smoke': the same, with a grove burning beside the path (the forest fire's smoke). 1:1 crop of the game's own frame.",
+      "scene": "smoke",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p2_smoke_z1.0.png",
+      "option": "p2",
+      "title": "P2 · 2x, solid, paper halo  ·  smoke  ·  zoom 1.0",
+      "caption": "2x and a paper halo under every ink line so it reads over hatching and forest: path 3.2 px, carry-on solid 2.2 px, nodes 6 px with a paper rim, the others 2.0 px with a lighter halo, rim 1.8 px.. Scene 'smoke': the same, with a grove burning beside the path (the forest fire's smoke). 1:1 crop of the game's own frame.",
+      "scene": "smoke",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p3_smoke_z1.0.png",
+      "option": "p3",
+      "title": "P3 · 3x, solid, halo, big nodes  ·  smoke  ·  zoom 1.0",
+      "caption": "3x with the halo: path 4.8 px, carry-on solid 3.2 px, nodes as ink discs 7.5 px with a 2.4 px paper rim, the others 3.0 px with 5 px nodes, rim 2.7 px.. Scene 'smoke': the same, with a grove burning beside the path (the forest fire's smoke). 1:1 crop of the game's own frame.",
+      "scene": "smoke",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p4_smoke_z1.0.png",
+      "option": "p4",
+      "title": "P4 · Bold solid path, quiet dashed carry  ·  smoke  ·  zoom 1.0",
+      "caption": "The path 4.0 px solid with a halo, the carry-on a quieter 2.0 px dash with a light halo, nodes 6.5 px discs with a paper rim, the others 2.4 px, rim 2.2 px.. Scene 'smoke': the same, with a grove burning beside the path (the forest fire's smoke). 1:1 crop of the game's own frame.",
+      "scene": "smoke",
+      "zoom": 1.0,
+      "size": [
+        520,
+        300
+      ]
+    },
+    {
+      "file": "p0_smoke_z0.35.png",
+      "option": "p0",
+      "title": "P0 · Today  ·  smoke  ·  zoom 0.35",
+      "caption": "The reference: the selected path 1.6 px, its carry-on 1.0 px dashed, nodes 3 px, the others' plans 1.0 px with 1.9 px nodes, the range of motion's rim 0.9 px.. Scene 'smoke': the same, with a grove burning beside the path (the forest fire's smoke). 1:1 crop of the game's own frame.",
+      "scene": "smoke",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "context_smoke_z0.35.png",
+      "option": "p0",
+      "title": "context: smoke at the start zoom, today's weights, the whole frame",
+      "caption": "The whole 1280 x 720 frame at the start zoom (0.35), P0.",
+      "scene": "smoke",
+      "zoom": 0.35,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "p1_smoke_z0.35.png",
+      "option": "p1",
+      "title": "P1 · 2x, still dashed  ·  smoke  ·  zoom 0.35",
+      "caption": "Every weight doubled: path 3.2 px, carry-on 2.0 px still dashed, nodes 6 px, the others 2.0 px and 3.8 px nodes, rim 1.8 px. No halo.. Scene 'smoke': the same, with a grove burning beside the path (the forest fire's smoke). 1:1 crop of the game's own frame.",
+      "scene": "smoke",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p2_smoke_z0.35.png",
+      "option": "p2",
+      "title": "P2 · 2x, solid, paper halo  ·  smoke  ·  zoom 0.35",
+      "caption": "2x and a paper halo under every ink line so it reads over hatching and forest: path 3.2 px, carry-on solid 2.2 px, nodes 6 px with a paper rim, the others 2.0 px with a lighter halo, rim 1.8 px.. Scene 'smoke': the same, with a grove burning beside the path (the forest fire's smoke). 1:1 crop of the game's own frame.",
+      "scene": "smoke",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p3_smoke_z0.35.png",
+      "option": "p3",
+      "title": "P3 · 3x, solid, halo, big nodes  ·  smoke  ·  zoom 0.35",
+      "caption": "3x with the halo: path 4.8 px, carry-on solid 3.2 px, nodes as ink discs 7.5 px with a 2.4 px paper rim, the others 3.0 px with 5 px nodes, rim 2.7 px.. Scene 'smoke': the same, with a grove burning beside the path (the forest fire's smoke). 1:1 crop of the game's own frame.",
+      "scene": "smoke",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    },
+    {
+      "file": "p4_smoke_z0.35.png",
+      "option": "p4",
+      "title": "P4 · Bold solid path, quiet dashed carry  ·  smoke  ·  zoom 0.35",
+      "caption": "The path 4.0 px solid with a halo, the carry-on a quieter 2.0 px dash with a light halo, nodes 6.5 px discs with a paper rim, the others 2.4 px, rim 2.2 px.. Scene 'smoke': the same, with a grove burning beside the path (the forest fire's smoke). 1:1 crop of the game's own frame.",
+      "scene": "smoke",
+      "zoom": 0.35,
+      "size": [
+        400,
+        240
+      ]
+    }
+  ]
+}
