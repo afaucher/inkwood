@@ -6378,9 +6378,9 @@
               "_reason": "the smoke tone: heavy (2) is thick, so it casts a shadow"
             },
             "rise_mps": {
-              "value": 0.0,
+              "value": 4.0,
               "_proposed": true,
-              "_reason": "how fast it rises, m/s (a ground burst climbs; in the air it only hangs)"
+              "_reason": "PROPOSED (builder IF, 2026-10-14; decision airburst-smoke-climb, Alex: 'make it climb: it rises and drifts with the wind like every other smoke'): the burst's cloud climbs and leans downwind like every other smoke, at the smolder's rate of this option (4.0 m/s: a damaged plane's trail, the wrecks and the ruins climb at it too). It was 0, hanging where it was thrown (what the wording below said, which is superseded: 'in the air it only hangs')."
             },
             "ground_shadow": {
               "value": true,
@@ -6466,9 +6466,9 @@
               "_reason": "from the medium tone up"
             },
             "rise_mps": {
-              "value": 0.0,
+              "value": 4.0,
               "_proposed": true,
-              "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). A mid-air burst's rise is 0 (the smoke is already in the sky, like a damaged plane's trail), so its plume's is too. PROPOSED"
+              "_reason": "PROPOSED (builder IF, 2026-10-14; decision airburst-smoke-climb): the plume climbs with the burst thrown with it, the same rate (4.0 m/s), as it does everywhere else (decision smoke-consistency). It was 0, with the burst."
             }
           },
           "debris": {
@@ -7514,9 +7514,9 @@
               "_reason": "the smoke tone: heavy (2) is thick, so it casts a shadow"
             },
             "rise_mps": {
-              "value": 0.0,
+              "value": 4.0,
               "_proposed": true,
-              "_reason": "how fast it rises, m/s (a ground burst climbs; in the air it only hangs)"
+              "_reason": "PROPOSED (builder IF, 2026-10-14; decision airburst-smoke-climb, Alex: 'make it climb: it rises and drifts with the wind like every other smoke'): the burst's cloud climbs and leans downwind like every other smoke, at the smolder's rate of this option (4.0 m/s: a damaged plane's trail, the wrecks and the ruins climb at it too). It was 0, hanging where it was thrown (what the wording below said, which is superseded: 'in the air it only hangs')."
             },
             "ground_shadow": {
               "value": true,
@@ -7602,9 +7602,9 @@
               "_reason": "from the medium tone up"
             },
             "rise_mps": {
-              "value": 0.0,
+              "value": 4.0,
               "_proposed": true,
-              "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). A mid-air burst's rise is 0 (the smoke is already in the sky, like a damaged plane's trail), so its plume's is too. PROPOSED"
+              "_reason": "PROPOSED (builder IF, 2026-10-14; decision airburst-smoke-climb): the plume climbs with the burst thrown with it, the same rate (4.0 m/s), as it does everywhere else (decision smoke-consistency). It was 0, with the burst."
             }
           },
           "debris": {
@@ -8481,9 +8481,9 @@
               "_reason": "the smoke tone: heavy (2) is thick, so it casts a shadow"
             },
             "rise_mps": {
-              "value": 0.0,
+              "value": 4.0,
               "_proposed": true,
-              "_reason": "how fast it rises, m/s (a ground burst climbs; in the air it only hangs)"
+              "_reason": "PROPOSED (builder IF, 2026-10-14; decision airburst-smoke-climb, Alex: 'make it climb: it rises and drifts with the wind like every other smoke'): the burst's cloud climbs and leans downwind like every other smoke, at the smolder's rate of this option (4.0 m/s: a damaged plane's trail, the wrecks and the ruins climb at it too). It was 0, hanging where it was thrown (what the wording below said, which is superseded: 'in the air it only hangs')."
             },
             "ground_shadow": {
               "value": true,
@@ -8569,9 +8569,9 @@
               "_reason": "from the medium tone up"
             },
             "rise_mps": {
-              "value": 0.0,
+              "value": 4.0,
               "_proposed": true,
-              "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). A mid-air burst's rise is 0 (the smoke is already in the sky, like a damaged plane's trail), so its plume's is too. PROPOSED"
+              "_reason": "PROPOSED (builder IF, 2026-10-14; decision airburst-smoke-climb): the plume climbs with the burst thrown with it, the same rate (4.0 m/s), as it does everywhere else (decision smoke-consistency). It was 0, with the burst."
             }
           },
           "debris": {
@@ -9358,9 +9358,9 @@
               "_reason": "the smoke tone: heavy (2) is thick, so it casts a shadow"
             },
             "rise_mps": {
-              "value": 0.0,
+              "value": 3.0,
               "_proposed": true,
-              "_reason": "how fast it rises, m/s (a ground burst climbs; in the air it only hangs)"
+              "_reason": "PROPOSED (builder IF, 2026-10-14; decision airburst-smoke-climb, Alex: 'make it climb: it rises and drifts with the wind like every other smoke'): the burst's cloud climbs and leans downwind like every other smoke, at the smolder's rate of this option (3.0 m/s: a damaged plane's trail, the wrecks and the ruins climb at it too). It was 0, hanging where it was thrown (what the wording below said, which is superseded: 'in the air it only hangs')."
             },
             "ground_shadow": {
               "value": true,
@@ -9446,9 +9446,9 @@
               "_reason": "from the medium tone up"
             },
             "rise_mps": {
-              "value": 0.0,
+              "value": 3.0,
               "_proposed": true,
-              "_reason": "the plume is the cloud the blast leaves hanging, and it climbs and leans downwind like the burst thrown with it (builder SMOKE, decision smoke-consistency: 'not identical unless there is no reason to be different'; it did not rise at all before, so a column of smolder next to it climbed away from a plume that sat still). A mid-air burst's rise is 0 (the smoke is already in the sky, like a damaged plane's trail), so its plume's is too. PROPOSED"
+              "_reason": "PROPOSED (builder IF, 2026-10-14; decision airburst-smoke-climb): the plume climbs with the burst thrown with it, the same rate (3.0 m/s), as it does everywhere else (decision smoke-consistency). It was 0, with the burst."
             }
           },
           "debris": {
@@ -21302,6 +21302,45 @@
         "_reason": "PROPOSED (Track TR): the book keeps at most this many tracers (the oldest go first); at two rolls a second a weapon, a long dogfight is a few dozen live at a time"
       }
     },
+    "round_scale": {
+      "_about": "PROPOSED (builder IF, 2026-10-14, decision tracers-cannons: the tank gun and the nose cannon draw the T5 streak too). The streak is drawn wider and longer for a heavier round, as a factor on the option's widths.width_px and streak.streak_m, keyed by the round id of data/sim/rounds.json (a round with no entry here draws the option as it is). The numbers are the builder's guess to look at in a build; the streak only, no mark at its end (decision no-ink-marks).",
+      "bullet": {
+        "width_k": {
+          "value": 1.0,
+          "_proposed": true,
+          "_reason": "PROPOSED (builder IF): width factor for the machine gun bullet: the streak as drawn (the factor is 1 by definition)"
+        },
+        "length_k": {
+          "value": 1.0,
+          "_proposed": true,
+          "_reason": "PROPOSED (builder IF): length factor for the machine gun bullet: the streak as drawn (the factor is 1 by definition)"
+        }
+      },
+      "cannon_small": {
+        "width_k": {
+          "value": 1.35,
+          "_proposed": true,
+          "_reason": "PROPOSED (builder IF): width factor for the fighters' nose cannon round: a little heavier and longer than a bullet"
+        },
+        "length_k": {
+          "value": 1.4,
+          "_proposed": true,
+          "_reason": "PROPOSED (builder IF): length factor for the fighters' nose cannon round: a little heavier and longer than a bullet"
+        }
+      },
+      "cannon_medium": {
+        "width_k": {
+          "value": 1.7,
+          "_proposed": true,
+          "_reason": "PROPOSED (builder IF): width factor for the tank gun's round: heavier and longer again"
+        },
+        "length_k": {
+          "value": 1.8,
+          "_proposed": true,
+          "_reason": "PROPOSED (builder IF): length factor for the tank gun's round: heavier and longer again"
+        }
+      }
+    },
     "options": {
       "T1": {
         "_label": "T1 · Ink dashes",
@@ -21824,14 +21863,14 @@
         },
         "marks": {
           "hit_dot_px": {
-            "value": 4.0,
+            "value": 0.0,
             "_proposed": true,
-            "_reason": "PROPOSED (Track TR): a hit's dot radius where the round ended, screen px"
+            "_reason": "PROPOSED (Track TR): a hit's dot radius where the round ended, screen px. 0 = none: decision no-ink-marks (Alex: 'The tracer itself is fine. The dot and miss tick are not.'); was 4.0"
           },
           "miss_tick_px": {
-            "value": 7.0,
+            "value": 0.0,
             "_proposed": true,
-            "_reason": "PROPOSED (Track TR): a miss's tick, half its length, screen px"
+            "_reason": "PROPOSED (Track TR): a miss's tick, half its length, screen px. 0 = none: decision no-ink-marks (Alex, as the hit dot); was 7.0"
           },
           "miss_tick_w_px": {
             "value": 2.2,
@@ -21855,7 +21894,6 @@
     },
     "differences_kept": {
       "value": [
-        "A plane's mid-air explosion (its smoke burst and its plume) does not climb (rise_mps 0 in the midair groups of the crash options): it is one blast at the plane's altitude, thrown outward and held by drag. Its reason used to be 'shared with the plane's own trail'; that trail CLIMBS now (Alex, decision smoke-consistency, 2026-10-12, asked 'should planes' trails rise like ground smoke': 'Yes to both'), so this is the one plane smoke left that does not. OPEN for Alex, not changed: a one-value edit (crash options midair smoke_burst and plume rise_mps, kept equal by test_smoke_consistency).",
         "Flak (F2) is drawn in ink washes (flak.wash.*), not W1: Alex's flak-look choice, a dark ragged powder burst; it rises 0.8 m/s (small, at altitude).",
         "The forest fire's columns are in MAP metres and climb 24 m/s slowing (188 m in 12 s): a tree is map scenery drawn at the map's scale and a burning grove is a big hot source; a unit's smoke is drawn at the units' own drawn scale because the unit is.",
         "Explosions (a mid-air burst, a crash, a ruin) are sized by what blew up (the airframe, the unit, the round's blast), a damage smoke by its SOURCE: an explosion consumes the whole thing, damage smokes from one place.",
@@ -21865,7 +21903,7 @@
         "A puff made while its place was in sight stays on the map when the place later falls in fog, but a forest column is hidden at once with the fog: the field's gate is at emission (combat.fx.smoke_when_hidden), the column's is per frame. OPEN: docs/proposals/smoke-audit.md question 3."
       ],
       "_proposed": true,
-      "_reason": "the audit's KEPT rows (docs/proposals/smoke-audit.md): every place where one smoke differs from another and the difference stays, each with its reason, so that 'not identical unless there is no reason to be different' (Alex, decision smoke-consistency) can be checked against the data. PROPOSED by builder SMOKE, 2026-10-11. 2026-10-12: Alex answered the audit's question 1 ('Yes to both'): a plane's damage trail and its fall trail now climb like ground smoke (data/units/*.json damage_smoke.rise_mps 4), and the heavy fighter's and the bomber's trails keep the light fighter's source size (8 m). That difference is gone from this list"
+      "_reason": "the audit's KEPT rows (docs/proposals/smoke-audit.md): every place where one smoke differs from another and the difference stays, each with its reason, so that 'not identical unless there is no reason to be different' (Alex, decision smoke-consistency) can be checked against the data. PROPOSED by builder SMOKE, 2026-10-11. 2026-10-12: Alex answered the audit's question 1 ('Yes to both'): a plane's damage trail and its fall trail now climb like ground smoke (data/units/*.json damage_smoke.rise_mps 4), and the heavy fighter's and the bomber's trails keep the light fighter's source size (8 m). That difference is gone from this list. 2026-10-14: the mid-air explosion's smoke is gone from it too (decision airburst-smoke-climb, Alex: 'make it climb: it rises and drifts with the wind like every other smoke, in the soft-puff grammar'): a plane's mid-air burst and its plume now rise at the smolder's rate (crash options midair smoke_burst and plume rise_mps, PROPOSED, builder IF), so every smoke in the game climbs (flak's 0.8 m/s and the forest fire's own model stay among the differences kept above)"
     }
   },
   "impacts": {

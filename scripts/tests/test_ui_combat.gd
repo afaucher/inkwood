@@ -7,8 +7,8 @@ extends "res://scripts/test_support/test_case.gd"
 # (data/ui/ui.json combat.*) or the sim's own.
 #
 #   1. MOUNT: the pieces sit in the right order (the effects' ground, shadow and air passes under
-#      the planner; the cone overlay's interior, then the wingtip trails, just under the markers;
-#      the effects' bursts and the overlay above them) and the cone overlay's "Marks" child over
+#      the markers; the cone overlay's interior, then the wingtip trails, just under the markers;
+#      the effects' bursts above them, then the planner (always on top: decision planner-on-top), then the overlay) and the cone overlay's "Marks" child over
 #      the markers; the effects layer has the world's seed and the data's working-default options
 #   2. THE RANGE FACTOR on the cone overlay is combat.gd's own, with the rules' own overshoot
 #   3. AN EXPLODED PLANE: its marker is there before down_at and gone from it, and after the turn
@@ -72,7 +72,7 @@ func setup(_main) -> void:
 	if not check(_st.ok(), "the UI style data loads: %s" % str(_st.errors)):
 		finish()
 		return
-	_saved = {"k": _st.num("marker.true_scale"), "speed": _st.num("marker.playback_speed")}
+	_saved = {"k": _st.num("marker.true_scale"), "speed": _st.num("marker.playback_speed"), "hit_mark": _st.flag("combat.hit_mark.enabled")}
 	for fate: String in ["exploded", "out_of_control"]:
 		_seeds[fate] = CombatWorlds.find_seed(fate)
 		check(int(_seeds[fate]) > 0, "a seed sends the victim down '%s'" % fate)
@@ -126,14 +126,15 @@ func _mount() -> void:
 	check(_st.flag("marker.trails.under_smoke"), "the data puts the ribbon under the smoke (proposed default)")
 	check(idx.call(ui.trails) >= 0 and idx.call(ui.trails) < idx.call(ui.fx), "the wingtip ribbon is UNDER the effects layer (the smoke is over it)")
 	check(idx.call(ui.fx) < idx.call(ui.planner), "the effects' ground, shadow and air passes are under the planner")
-	check(idx.call(ui.planner) < idx.call(ui.cones), "the cone overlay (its interior) is over the planner")
+	check(idx.call(ui.cones) < idx.call(ui.planner), "the cone overlay (its interior) is under the planner (the movement indicator is always on top: decision planner-on-top)")
 	check(idx.call(ui.cones) < idx.call(ui.marker_layer) and idx.call(ui.marker_layer) - idx.call(ui.cones) == 1, "the cones are just under the markers")
 	check(idx.call(ui.marker_layer) < idx.call(ui.fx_above), "the effects' bursts are over the planes")
-	check(idx.call(ui.fx_above) < idx.call(ui.overlay), "...and under the overlay (the health arc)")
+	check(idx.call(ui.fx_above) < idx.call(ui.planner) and idx.call(ui.marker_layer) < idx.call(ui.planner), "...and the planner is over both (decision planner-on-top)")
+	check(idx.call(ui.planner) < idx.call(ui.overlay), "...and under the overlay (the health arc)")
 	# The other order: the ribbon over the smoke, just under the planes (after the cones).
 	_st.ui["marker"]["trails"]["under_smoke"] = false
 	ui.apply_trail_order()
-	check(idx.call(ui.fx) < idx.call(ui.planner) and idx.call(ui.planner) < idx.call(ui.cones) and idx.call(ui.cones) < idx.call(ui.trails) and idx.call(ui.trails) < idx.call(ui.marker_layer) and idx.call(ui.marker_layer) - idx.call(ui.trails) == 1,
+	check(idx.call(ui.fx) < idx.call(ui.cones) and idx.call(ui.cones) < idx.call(ui.trails) and idx.call(ui.trails) < idx.call(ui.marker_layer) and idx.call(ui.marker_layer) - idx.call(ui.trails) == 1,
 		"under_smoke false: the ribbon is over the smoke, after the cones, just under the planes")
 	_st.ui["marker"]["trails"]["under_smoke"] = true
 	ui.apply_trail_order()
@@ -452,6 +453,9 @@ func _feed_fog() -> void:
 # --- 6: the ink on a hit --------------------------------------------------------------------------------
 
 func _hit_ink() -> void:
+	# The old hit mark is OFF in the data (decision no-ink-marks: Alex does not like ink-mark indicators); the mechanism is still checked, switched on here.
+	check(not bool(_saved["hit_mark"]), "combat.hit_mark.enabled is false in the data (decision no-ink-marks)")
+	_st.ui["combat"]["hit_mark"]["enabled"] = true
 	var w := CombatWorlds.world(int(_seeds["hit"]), 8)
 	var ui: UnitUI = _ui_on(w)[0]
 	var layer = ui.marker_layer
@@ -529,7 +533,7 @@ func _hit_ink() -> void:
 	hm.clear()
 	hm.add_hit("bomber", 9.0, 1)
 	eq(hm.marks.size(), 0, "combat.hit_mark.enabled false: no ink")
-	_st.ui["combat"]["hit_mark"]["enabled"] = true
+	_st.ui["combat"]["hit_mark"]["enabled"] = bool(_saved["hit_mark"])
 	# Tracers: off by default; switched on, a miss runs on past the target.
 	check(not _st.flag("combat.tracers.enabled"), "tracers are off in the data")
 	hm.add_shot({"x": 0.0, "y": 0.0, "tx": 100.0, "ty": 0.0, "hit": true}, 1.0)

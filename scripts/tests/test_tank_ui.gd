@@ -8,7 +8,7 @@ extends "res://scripts/test_support/test_case.gd"
 #                     and the gun nose up, and a footprint for the shadow; the same on a second build (the seed rule)
 #   2. THE MARKER     a marker for every tank, on the surface: its shadow is cast by its height (the style guide: "give it a height, and let
 #                     the shadow pass draw its shadow"; ui.json marker.cast_height_m, behind marker.cast_shadow_on), its label reads
-#                     "0 m · 8" (height and speed, the same text as a plane's), and it follows the playback
+#                     "8 m/s" (its speed alone, no altitude: decisions labels-by-type and playtest-4), and it follows the playback
 #   3. THE ROSTER     a row for each player tank: "Tank", its speed on the surface band, 2 steps a turn, six pips; the second line
 #                     "Tank · 8 m/s · surface"; every string the tank brings to the screen is in the readable lettering
 #   4. THE CONES      the selected tank's gun cone (all round, a level ring) draws without an error: a pie that closes on itself
@@ -97,10 +97,10 @@ func _screen() -> void:
 	eq(mk.size_m, 6.0, "2. 6 m")
 	eq(mk.base_scale, 1.0, "2. at the planes' scale (the unit's own multiplier is 1)")
 	eq(mk.draw_scale, 1.0, "2. ... drawn at it")
-	eq(ml.unit_label("t1"), "0 m · 8", "2. the label reads height and speed, the same words as a plane's: '0 m · 8'")
+	eq(ml.unit_label("t1"), "8 m/s", "2. the label reads its speed alone, with its unit and no altitude: '8 m/s' (decisions labels-by-type, playtest-4)")
 	check(ml.label_shown("t1"), "2. ... and shows at the planning zoom")
-	eq(ml.unit_label("e1"), "0 m · 0", "2. an enemy tank in sight is labelled too")
-	eq(ml.unit_label("p1"), "400 m · 100", "2. (a plane's label is as it was)")
+	eq(ml.unit_label("e1"), "0 m/s", "2. an enemy tank in sight is labelled too")
+	eq(ml.unit_label("p1"), "400 m · 100 m/s", "2. (a plane's label has its altitude and the speed's unit)")
 	# THE SHADOW (Style guide > Light and shadow: one sun, north-west, elevation 46 degrees, every shadow as long as its object's height / tan 46,
 	# falling south-east; the lead's rule, 2026-10-11, PROPOSED, data switch ui.json marker.cast_shadow_on): a tank on the ground is not
 	# a plane with an altitude gap (that is 0 at the surface) but a thing 2.0 m high (marker.cast_height_m.tank), so its footprint's shadow
@@ -202,7 +202,7 @@ func _screen() -> void:
 	var lines := "\n".join(texts)
 	check(lines.contains("Tank"), "3. the roster says 'Tank'")
 	check(texts.any(func(t: String) -> bool: return t.begins_with("Tank") and t.contains("surface")), "3. the second line carries its speed and band")
-	check(texts.has("0 m · 8"), "2. the map carries the tank's label")
+	check(texts.has("8 m/s"), "2. the map carries the tank's label")
 	var min_px := _st.min_px()
 	var small: Array = []
 	for e: Dictionary in UiInk.drawn:
@@ -224,7 +224,7 @@ func _screen() -> void:
 	ml.set_playback_time(2.5)
 	var mid_pose: Dictionary = ml.pose_of("t1")
 	check(Vector2(float(mid_pose["x"]), float(mid_pose["y"])).distance_to(Vector2(1500.0, 2400.0)) > 5.0, "5. the marker followed the history (%.1f m from the start at 2.5 s)" % Vector2(float(mid_pose["x"]), float(mid_pose["y"])).distance_to(Vector2(1500.0, 2400.0)))
-	eq(ml.unit_label("t1").begins_with("0 m · "), true, "5. its label follows (%s)" % ml.unit_label("t1"))
+	eq(ml.unit_label("t1").ends_with(" m/s") and not ml.unit_label("t1").contains(" m · "), true, "5. its label follows (%s)" % ml.unit_label("t1"))
 	ml.stop_playback()
 	# 6. THE FALL: tank e1 destroyed
 	var e1: Object = w.units["e1"]

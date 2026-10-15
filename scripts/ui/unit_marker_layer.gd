@@ -483,18 +483,20 @@ func unit_height_m(id: String) -> float:
 		return fall_height_above_ground(pose) if falling else height_above_ground(pose)
 	return UiLabels.height_of(style, world, pose_of(id), ground)
 
-# The label under a unit's marker, "" for a unit that has none (not in the world): "400 m · 100"; a static unit
-# "0 m". The same text whoever's the unit is: an enemy's current state is visible state.
+# The label under a unit's marker, "" for a unit that has none (not in the world, or a static ground unit): an aircraft "400 m · 100 m/s", a ship or a
+# tank its speed alone "12 m/s" (decisions labels-by-type, playtest-4; ui_labels.gd). The same text whoever's the unit is: an enemy's current state is
+# visible state.
 func unit_label(id: String) -> String:
 	var u = world.units.get(id)
 	if u == null:
 		return ""
-	return UiLabels.unit_text(style, unit_height_m(id), float(pose_of(id).get("speed", 0.0)), u.def.is_static())
+	var h := unit_height_m(id)
+	return UiLabels.unit_text(style, h, float(pose_of(id).get("speed", 0.0)), u.def.is_static(), str(u.def.domain) == "air", h < -0.001)
 
 # Whether the unit's label is drawn: the marker is on the map (so in sight) and the scale is not the far zoom's.
 func label_shown(id: String) -> bool:
 	var m: UnitMarker = markers.get(id)
-	return m != null and m.visible and UiLabels.shown(style, m.screen_ppm)
+	return m != null and m.visible and UiLabels.shown(style, m.screen_ppm) and unit_label(id) != ""
 
 # --- Marks: side roundels, the selection ring, the leader line ------------------------
 

@@ -61,7 +61,7 @@ extends Node
 # setup() mounts and feeds all of it:
 #   bombs      BombSource (bomb_source.gd): the one place the interface asks the World about bombs
 #              (bombs_left, drop_cone, drop_spread), shared by the planner, the card and the roster
-#   bomb_aim   BombAim (bomb_aim.gd), just under the planner: the selected bomber's BOMB CONE, aim, expected
+#   bomb_aim   BombAim (bomb_aim.gd), just under the planner (both ABOVE the markers, under the overlay: decision planner-on-top): the selected bomber's BOMB CONE, aim, expected
 #              spread and release for the step the card is about (planner.bomb_marks()), in the look data
 #              bombs.aim.mode names (variants/bomb-aim/); its "Marks" child draws the crosshair and the aim
 #              handle's hover over the planes
@@ -167,7 +167,7 @@ extends Node
 #                                 here but in the marker layer's smoke slot, over the surface units and
 #                                 their shadows and under the aircraft (builder SMOKE, decision
 #                                 smoke-consistency; fx.json smoke_model.layer)
-#     planner                     (as before)
+#     planner                     (moved: above everything below it, under the overlay; with the bomb aim just under it)
 #     cones                       ConeOverlay: the SELECTED unit's cones as a colour wash (its
 #                                 interior here, under the planes; its "Marks" child, the rim and
 #                                 the hardpoints, above them); range_factor is combat.gd's own
@@ -235,6 +235,7 @@ const UiTarget = preload("res://scripts/ui/ui_target.gd")
 const TargetMarks = preload("res://scripts/ui/target_marks.gd")
 const CombatFeed = preload("res://scripts/ui/combat_feed.gd")
 const ResultCard = preload("res://scripts/ui/result_card.gd")
+const ReadyHold = preload("res://scripts/ui/ready_hold.gd")
 const FxLayer = preload("res://scripts/fx/fx_layer.gd")
 const Combat = preload("res://scripts/sim/combat.gd")
 
@@ -270,6 +271,8 @@ var target: UiTarget = null
 var target_marks: TargetMarks = null
 var feed: CombatFeed = null
 var result_card: ResultCard = null
+# HOLD SPACE TO READY (decision playtest-4): the hold's state and its wash along the orders card's Ready button (ready_hold.gd), a child of the card.
+var ready_hold: ReadyHold = null
 # Player id -> display name (Track A: WorldSync.name_of). The default returns the id.
 var player_name: Callable = func(id: String) -> String: return id
 
@@ -351,6 +354,11 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	overlay = Node2D.new()
 	overlay.name = "Overlay"
 	map_parent.add_child(overlay)
+	# THE MOVEMENT INDICATOR ALWAYS ON TOP (decision planner-on-top, Alex: "we always want it to show on top for the player"): the bomb aim, then the
+	# planner, go above every marker (the bridge is one: a tank's path across it vanished), the cones and the effects layer's bursts, still under
+	# the overlay (health arcs, hit marks, target marks) and the HUD. The effects layer keeps its place under the markers.
+	map_parent.move_child(bomb_aim, overlay.get_index() - 1)
+	map_parent.move_child(planner, overlay.get_index() - 1)
 	health_arc = HealthArc.new()
 	overlay.add_child(health_arc)
 	health_arc.setup(world, marker_layer, selection, style, health)
@@ -371,6 +379,13 @@ func setup(w: World, host_mapping: Variant, player: String = "local", map_parent
 	hud.add_child(orders)
 	orders.setup(world, planner, selection, local_player, style)
 	orders.ready_action = press_ready
+	# Holding Space (keys.ready_hold) readies the local player: 1 s if every unit has actions, 2 s otherwise; the progress is a wash on the Ready button.
+	ready_hold = ReadyHold.new()
+	orders.add_child(ready_hold)
+	ready_hold.setup(style, orders, world, local_player)
+	ready_hold.all_planned = all_units_planned
+	ready_hold.allowed = func() -> bool: return not input_locked()
+	ready_hold.completed.connect(press_ready)
 	orders.playback = marker_layer
 	# The pointer over the special's button outlines the selected step's bomb cone on the map (Track B; bombs.pin.cone).
 	orders.hover_changed.connect(func(button: String) -> void: planner.set_drop_hover(button == "drop"))
@@ -556,6 +571,29 @@ func press_ready() -> void:
 	if all and auto_resolve:
 		world.resolve()   # turn_resolved -> the marker layer plays it
 
+# Whether every unit of the local player's that is up has actions: a step planned (a static unit takes no orders and is left out). Decides how long
+# holding Space takes to ready (ui.json orders.ready_hold: Alex's 1 s when it is true, 2 s when not).
+func all_units_planned() -> bool:
+	for id: String in world.units:
+		var u = world.units[id]
+		if u.controller != World.CONTROLLER_PLAYER or bool(u.down) or u.def.is_static():
+			continue
+		if planner.planned_count(id) <= 0:
+			return false
+	return true
+
+# The Space bar (keys.ready_hold) went down or came up: starts or cancels the hold. True when a press started one (or one runs).
+func ready_hold_key(pressed: bool) -> bool:
+	if ready_hold == null:
+		return false
+	if pressed:
+		return ready_hold.begin()
+	ready_hold.release()
+	return false
+
+func _is_hold_key(k: InputEventKey) -> bool:
+	return k.keycode == OS.find_keycode_from_string(style.text("keys.ready_hold"))
+
 func _on_playback_finished(turn_no: int) -> void:
 	# Whatever the clock never reached (an event at the turn's very end) fires now,
 	# the clock reads the turn's length once, and the shown health is the unit's own again.
@@ -631,10 +669,12 @@ func poll_playback() -> void:
 	_fire_events_until(t)
 	playback_frame.emit(t, marker_layer.playback_turn)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if world != null:
 		poll_playback()
 		_sync_fx()
+		if ready_hold != null:
+			ready_hold.tick(delta)
 
 # The effects layer's two per-frame inputs: the drawn scale (marker.true_scale) and the game time
 # (the playback's while one runs, else the start of the turn being planned). The layer is only
@@ -898,6 +938,9 @@ func _to_map(viewport_pt: Vector2) -> Vector2:
 func _input(event: InputEvent) -> void:
 	if world == null or planner == null:
 		return
+	# The Space bar coming up ends a hold wherever the pointer is and whatever else is going on (a hold is cancelled, never left running).
+	if event is InputEventKey and not (event as InputEventKey).pressed and _is_hold_key(event as InputEventKey):
+		ready_hold_key(false)
 	if input_locked():
 		planner.clear_pointer()
 		_rc_down = false
@@ -937,6 +980,9 @@ func _notification(what: int) -> void:
 	# The pointer left the window: nothing is hovered.
 	if what == NOTIFICATION_WM_MOUSE_EXIT and planner != null:
 		planner.clear_pointer()
+	# The window lost the focus with Space down: the key-up will not come, so the hold stops here.
+	if (what == NOTIFICATION_WM_WINDOW_FOCUS_OUT or what == NOTIFICATION_APPLICATION_FOCUS_OUT) and ready_hold != null:
+		ready_hold.release()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if world == null:
@@ -952,6 +998,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and planner.is_dragging():
 		map_drag(_to_map((event as InputEventMouseMotion).position))
 		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and _is_hold_key(event as InputEventKey):
+		# HOLD SPACE TO READY (decision playtest-4): the press starts a hold, the key-up (_input) cancels it; the key repeat of a hold is swallowed
+		var hk := event as InputEventKey
+		if hk.pressed and not hk.echo:
+			if ready_hold_key(true):
+				get_viewport().set_input_as_handled()
+		elif hk.pressed and ready_hold != null and (ready_hold.holding or ready_hold.is_spent()):
+			get_viewport().set_input_as_handled()
 	elif event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo:
 		if _key(event as InputEventKey):
 			get_viewport().set_input_as_handled()

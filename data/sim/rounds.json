@@ -40,7 +40,7 @@
       "calibre": { "value": "small", "_proposed": true, "_reason": "the board's mapping (variants/gunfire/families.json rounds nose_cannon: small): a plane's cannon is lighter than a tank's gun, its muzzle smoke 1.7 m"  },
       "explosive": { "value": true, "_proposed": true, "_reason": "the proposal: a cannon fires high explosive ('cannon HE': a strike of sparks and dust on landing)" },
       "path": { "value": "straight", "_proposed": true, "_reason": "fired along the nose, level" },
-      "tracer": { "value": false, "decision": "tracers-mg", "_reason": "ALEX (decision tracers-mg): 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. Machine guns only for now, so a cannon round has none; the flag is the switch" },
+      "tracer": { "value": true, "decision": "tracers-cannons", "_reason": "ALEX (decision tracers-cannons, 2026-10-14): tracers for the direct-fire cannons too, the tank's gun and the fighters' nose cannon (it was off under decision tracers-mg, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'). The streak's width and length for this round are data/fx/fx.json tracers.round_scale (PROPOSED)" },
       "blast": { "value": "none", "_proposed": true, "_reason": "no area table: a hit takes the weapon's damage_pips from its target and nothing else (data/units/heavy_fighter.json nose_cannon). The pointer would be {file, path} to one" }
     },
     "cannon_medium": {
@@ -49,7 +49,7 @@
       "calibre": { "value": "medium", "_proposed": true, "_reason": "the board's mapping (turret_gun: medium): the muzzle puff 2.4 m, the impact 2.8 m" },
       "explosive": { "value": true, "_proposed": true, "_reason": "the proposal: cannon HE" },
       "path": { "value": "straight", "_proposed": true, "_reason": "a flat-trajectory gun at 350 m; an arc is not drawn" },
-      "tracer": { "value": false, "decision": "tracers-mg", "_reason": "ALEX (decision tracers-mg): 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'. To revisit the tank: set this true and nothing else" },
+      "tracer": { "value": true, "decision": "tracers-cannons", "_reason": "ALEX (decision tracers-cannons, 2026-10-14): tracers for the direct-fire cannons too, the tank's gun (it was off under decision tracers-mg, 'Tracers for mg only for now, we may want to revisit for other direct fire weapons like the tank'). The streak's width and length for this round are data/fx/fx.json tracers.round_scale (PROPOSED)" },
       "blast": { "value": "none", "_proposed": true, "_reason": "no area table: a hit takes the weapon's damage_pips (1) from its target" }
     },
     "flak_small": {

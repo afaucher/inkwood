@@ -1,5 +1,6 @@
 extends "res://scripts/test_support/test_case.gd"
 
+# TRACERS (decision tracers-cannons, 2026-10-14: the tank's gun and the nose cannon draw the streak too; no dot or tick at its end: no-ink-marks).
 # MACHINE-GUN TRACERS (Track TR, 2026-10-11; the scope, machine guns only, is Alex's: decision tracers-mg; so is the look, T5: decision
 # tracers-look; the weapon list and every number are still the builder's proposals). Headless: the records and the data, and the draw routine run to its end under a canvas.
 #
@@ -31,7 +32,9 @@ const SEED := 20261009
 # decision weapon-kinds (Alex, 2026-10-11): what a weapon fires decides its look. quad_mg (the mobile AA's quad mount) and deck_mg (the cutter's
 # guns) are machine guns; ship_flak (the cruiser's AA) is flak, a burst. They were one id, aa_guns.
 const MG_WEAPONS := ["wing_guns", "nose_gun", "dorsal_turret", "tail_turret", "rear_gunner", "quad_mg", "deck_mg"]
-const NOT_TRACER := ["flak", "light_flak", "ship_flak", "nose_cannon", "turret_gun"]
+const NOT_TRACER := ["flak", "light_flak", "ship_flak"]
+# decision tracers-cannons (Alex, 2026-10-14): direct-fire cannons draw the streak too (the tank's gun, the heavy fighter's nose cannon).
+const CANNON_WEAPONS := ["nose_cannon", "turret_gun"]
 
 # The effects layer as the feed sees it: the real tracer list from the data, the calls recorded.
 class _FakeFx extends RefCounted:
@@ -195,17 +198,19 @@ func _check_data() -> void:
 	check(rm.ok(), "the round model loads: %s" % str(rm.errors))
 	for rid: String in rm.round_ids():
 		var tr_rec: Dictionary = (((JSON.parse_string(FileAccess.get_file_as_string(Rounds.PATH)) as Dictionary)["rounds"] as Dictionary)[rid] as Dictionary)["tracer"]
-		check(str(tr_rec.get("decision", "")) == "tracers-mg" or str(tr_rec.get("_reason", "")).contains("Tracers for mg only for now"), "round %s: its tracer flag quotes Alex's scope (decision tracers-mg)" % rid)
-		eq(rm.round_of(rid).tracer, rid == "bullet", "round %s: only the bullet draws a tracer (machine guns only, for now)" % rid)
+		var cannon_round := rid == "cannon_small" or rid == "cannon_medium"
+		check(str(tr_rec.get("decision", "")) == ("tracers-cannons" if cannon_round else "tracers-mg") or str(tr_rec.get("_reason", "")).contains("Tracers for mg only for now"), "round %s: its tracer flag quotes Alex's decision (tracers-mg, or tracers-cannons for a cannon round)" % rid)
+		eq(rm.round_of(rid).tracer, rid == "bullet" or cannon_round, "round %s: the bullet and the cannon rounds draw a tracer; bombs, shells and flak do not" % rid)
 	var book := _book()
 	check(book.enabled(), "tracers are on in the working data")
 	var weapons: Array = rm.tracer_weapons()
 	var sorted_w := weapons.duplicate()
 	sorted_w.sort()
 	var want := MG_WEAPONS.duplicate()
+	want.append_array(CANNON_WEAPONS)
 	want.sort()
-	eq(sorted_w, want, "the machine guns (and only they) draw tracers: the same weapons as the old list")
-	for w: String in MG_WEAPONS:
+	eq(sorted_w, want, "the machine guns and the two direct-fire cannons (and only they) draw tracers")
+	for w: String in MG_WEAPONS + CANNON_WEAPONS:
 		check(book.is_weapon(w), "'%s' draws a tracer through the book" % w)
 	for w: String in NOT_TRACER:
 		check(not book.is_weapon(w), "'%s' draws no tracer" % w)
@@ -215,15 +220,22 @@ func _check_data() -> void:
 	for w: String in NOT_TRACER:
 		check(w in have, "'%s' (no tracer) exists on some unit too: the test is about a real weapon (data/units)" % w)
 	check(not ("aa_guns" in have) and not ("aa_guns" in weapons), "the old shared id aa_guns is gone from the units and from the list (weapon-kinds)")
-	# nothing in the code keys on a class or kind: giving the tank's round a tracer is one flag in rounds.json
+	# nothing in the code keys on a class or kind: a round's tracer is one flag in rounds.json
 	var b2 := _book()
-	check(not b2.is_weapon("turret_gun"), "the tank's gun is not a tracer weapon today")
+	check(b2.is_weapon("turret_gun") and b2.is_weapon("nose_cannon"), "the tank's gun and the nose cannon are tracer weapons (decision tracers-cannons)")
 	var changed: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(Rounds.PATH))
-	((changed["rounds"] as Dictionary)["cannon_medium"] as Dictionary)["tracer"]["value"] = true
+	((changed["rounds"] as Dictionary)["cannon_medium"] as Dictionary)["tracer"]["value"] = false
 	var rm2 := Rounds.new(changed, true)
-	check(rm2.ok(), "a round model with the tank's round tracing loads")
+	check(rm2.ok(), "a round model with the tank's round not tracing loads")
 	var b3 := FxTracer.Book.new(_data, rm2)
-	check(b3.is_weapon("turret_gun") and b3.is_weapon("wing_guns") and not b3.is_weapon("nose_cannon"), "...and one flag in the data makes it one (no code change), and no other cannon")
+	check(not b3.is_weapon("turret_gun") and b3.is_weapon("wing_guns") and b3.is_weapon("nose_cannon"), "...and one flag in the data takes it off (no code change), and no other cannon")
+	# the streak scales with the round (fx.json tracers.round_scale, PROPOSED): a cannon round's is wider and longer than a bullet's, a bullet's is as drawn
+	var sc_bullet := book.round_scale("wing_guns")
+	var sc_small := book.round_scale("nose_cannon")
+	var sc_med := book.round_scale("turret_gun")
+	eq(sc_bullet, Vector2.ONE, "a bullet's streak is as the option draws it")
+	check(sc_small.x > 1.0 and sc_small.y > 1.0 and sc_med.x > sc_small.x and sc_med.y > sc_small.y, "a cannon round's streak is wider and longer, the tank's more than the nose cannon's (%s, %s)" % [str(sc_small), str(sc_med)])
+	eq(book.round_scale("flak"), Vector2.ONE, "a round with no entry draws as the option does")
 	# options
 	eq(book.option_names(), ["T1", "T2", "T3", "T4", "T5"], "five proposed options")
 	check(book.cfg["options"].has(_data.working_default("tracers")), "the working default is one of them")
@@ -232,7 +244,9 @@ func _check_data() -> void:
 	eq(book.name, "T5", "...and a fresh book runs it")
 	check(wd is Dictionary and str((wd as Dictionary).get("decision", "")) == "tracers-look", "the working default names his decision tracers-look")
 	check(wd is Dictionary and str((wd as Dictionary).get("_reason", "")).contains("T5"), "...and quotes him")
-	check(book.opt.has("marks"), "T5 carries the hit and miss marks")
+	check(book.opt.has("marks"), "T5 carries the hit and miss marks block")
+	eq(FxData.f(FxData.grp(book.opt, "marks"), "hit_dot_px"), 0.0, "...with the hit dot off (decision no-ink-marks: 'The tracer itself is fine. The dot and miss tick are not.')")
+	eq(FxData.f(FxData.grp(book.opt, "marks"), "miss_tick_px"), 0.0, "...and the miss tick off")
 	var hue_free := ["ink", "paper", "flash", "side_a", "side_b", "dirt"]
 	var side_chroma: float = FxStyle.to_oklch(_style.palette["side_a"])[1]
 	for name: String in book.option_names():
@@ -300,6 +314,13 @@ func _check_which(events: Array) -> void:
 		var ev := {"type": "fire", "turn": 1, "tick": 99, "unit": "x", "weapon": w, "hardpoint": 0, "target": "y", "t": 1.0, "hit": true, "x": 0.0, "y": 0.0, "tx": 100.0, "ty": 0.0}
 		eq(FxTracer.feed_event(layer, ev, 1.0, Vector2.ZERO, 9.0, "side_a"), false, "a '%s' event is no tracer" % w)
 	eq(layer.field.tracers.records.size(), before, "...and adds none")
+	# the direct-fire cannons draw one (decision tracers-cannons), wider and longer than a bullet's
+	for w: String in CANNON_WEAPONS:
+		var cev := {"type": "fire", "turn": 1, "tick": 98, "unit": "x", "weapon": w, "hardpoint": 0, "target": "y", "t": 1.0, "hit": true, "x": 0.0, "y": 0.0, "tx": 100.0, "ty": 0.0}
+		eq(FxTracer.feed_event(layer, cev, 1.0, Vector2.ZERO, 9.0, "side_a"), true, "a '%s' event is a tracer weapon's" % w)
+	eq(layer.field.tracers.records.size(), before + CANNON_WEAPONS.size(), "...and adds one each")
+	var rec_last: Dictionary = layer.field.tracers.records[layer.field.tracers.records.size() - 1]
+	check(float(rec_last["width_k"]) > 1.0 and float(rec_last["length_k"]) > 1.0, "...its record carries the round's wider, longer streak")
 	# a layer without tracers is left alone
 	var plain := RefCounted.new()
 	eq(FxTracer.feed_event(plain, events[0], 100.0, Vector2.ZERO, 9.0, "side_a"), false, "a layer without tracers is left alone")

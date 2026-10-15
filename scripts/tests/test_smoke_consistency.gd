@@ -170,6 +170,29 @@ func _puffs() -> void:
 	for p: Dictionary in old.puffs:
 		old_max = maxf(old_max, float(p["r_m"]))
 	check(old_max > 10.0 * biggest, "2. (what the bridge used to wear: puffs of up to %.1f m, %.0f times the tank's)" % [old_max, old_max / biggest])
+	# A PLANE'S MID-AIR EXPLOSION CLIMBS (decision airburst-smoke-climb, Alex: "make it climb: it rises and drifts with the wind like every other smoke"):
+	# the burst's cloud and its plume rise at the smolder's rate (PROPOSED, fx.json crash midair rise_mps) and so lean further downwind than a hanging one.
+	var mid_climb := FxField.new(fxd)
+	mid_climb.world_seed = 7
+	mid_climb.wind = air
+	mid_climb.explode_midair("p", Vector2.ZERO, 400.0, 0.0, 9.0, 0.0)
+	var mid_rate := FxData.f(FxData.grp(FxData.grp(fxd.crash_option(fxd.working_default("crash")), "midair"), "smoke_burst"), "rise_mps")
+	check(mid_rate > 0.0, "2. the mid-air burst's smoke is data-set to climb (%s m/s)" % str(mid_rate))
+	var kinds := {}
+	var mid_all := true
+	for p: Dictionary in mid_climb.puffs:
+		if str(p["kind"]) == "burst" or str(p["kind"]) == "plume":
+			kinds[str(p["kind"])] = true
+			mid_all = mid_all and absf(float(p.get("rise", 0.0)) - mid_rate) < 1e-9
+	check(kinds.has("burst") and kinds.has("plume") and mid_all, "2. every puff of a mid-air explosion's burst and plume carries the climb (%s m/s)" % str(mid_rate))
+	var bp: Dictionary = {}
+	for p: Dictionary in mid_climb.puffs:
+		if str(p["kind"]) == "burst":
+			bp = p
+			break
+	if check(not bp.is_empty(), "2. (a burst puff to follow)"):
+		var s30 := mid_climb.puff_state(bp, float(bp["born"]) + 30.0)
+		check(float(s30["h"]) > float(bp["h"]) + 0.8 * mid_rate * 30.0, "2. the burst's cloud is higher 30 s on (%.0f m from %.0f m)" % [float(s30["h"]), float(bp["h"])])
 	_ran["puffs"] = true
 
 # --- helpers ---------------------------------------------------------------------------------------------------------------------

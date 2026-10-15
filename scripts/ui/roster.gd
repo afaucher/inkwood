@@ -224,6 +224,7 @@ func rows() -> Array[Dictionary]:
 			"down": status == "down",
 			"fate": health.shown_fate(id, playing),
 			"status": status,
+			"air": str(u.def.domain) == "air",
 			"has_plan": status == "plan",
 			"needs_orders": status == "none",
 			"group": str(_group_of.get(id, "")),
@@ -278,7 +279,7 @@ func _bombs_of(id: String, playing: bool) -> Dictionary:
 	var b := bombs.bombs_left(id)
 	return {"drops_left": bombs.shown_drops(id, playing), "drops_max": int(b["drops_max"]), "per_drop": int(b["per_drop"])}
 
-# The words of a row's third line: the fate of a down unit, "flying the turn" after planning, and NOTHING for a unit being planned
+# The words of a row's third line: the fate of a down unit, "flying the turn" after planning (an aircraft; "moving" for a ship or a tank), and NOTHING for a unit being planned
 # (with a plan or without): that is the plan glyph and the step pips (decision playtest-3).
 func status_text(row: Dictionary) -> String:
 	match str(row["status"]):
@@ -290,7 +291,8 @@ func status_text(row: Dictionary) -> String:
 				return style.text("roster.text.fate_" + fate)
 			return style.text("roster.text.down")
 		"flying":
-			return style.text("roster.text.flying")
+			# "flying the turn" is an aircraft's; a ship or a tank is "moving" (decision labels-by-type: Alex "not sure what context flying the turn comes up in")
+			return style.text("roster.text.flying" if bool(row.get("air", true)) else "roster.text.moving")
 	return ""   # (a unit with a plan, or without: the glyph and the step pips say it, no words: decision playtest-3)
 
 # A unit's name on the roster: its callsign (Alex 2026-10-09, data/names/

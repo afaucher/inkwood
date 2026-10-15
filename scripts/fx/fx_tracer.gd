@@ -1,5 +1,8 @@
 extends RefCounted
 
+# CANNONS TOO (decision tracers-cannons, Alex 2026-10-14: "direct-fire cannons too"): the tank gun's and the nose cannon's rounds have tracer true in
+# data/sim/rounds.json, so their fire events draw the streak as well (no end mark: tracers.options.T5.marks are 0, decision no-ink-marks). A heavier round's streak
+# is wider and longer by fx.json tracers.round_scale (PROPOSED), keyed by the round id.
 # MACHINE-GUN TRACERS (Track TR, 2026-10-11). Alex's note from the second playtest was "We should show tracers for machine guns"
 # (decision playtest-2); the scope is machine guns only (decision tracers-mg) and the look is his pick from variants/tracers/, T5, an
 # ink streak with a dot for a hit and a tick for a miss (decision tracers-look). STILL PROPOSED: every number of the options, in
@@ -101,6 +104,16 @@ class Book extends RefCounted:
 	func is_weapon(weapon: String) -> bool:
 		return enabled() and rounds.weapon_tracer(weapon)
 
+	# The streak's (width factor, length factor) for a weapon's round (fx.json tracers.round_scale, keyed by the round id; PROPOSED): a heavier
+	# round, a cannon's, draws a wider and longer streak (decision tracers-cannons). (1, 1) for a round with no entry.
+	func round_scale(weapon: String) -> Vector2:
+		var table: Variant = cfg.get("round_scale")
+		var rid := rounds.weapon_round(weapon)
+		if table is Dictionary and (table as Dictionary).get(rid) is Dictionary:
+			var e: Dictionary = (table as Dictionary)[rid]
+			return Vector2(float(e.get("width_k", 1.0)), float(e.get("length_k", 1.0)))
+		return Vector2.ONE
+
 	# Whether the fog lets the layer show this shot (the data's policy; the feed says what the player sees).
 	func shown(seen_shooter: bool, seen_target: bool) -> bool:
 		var mode := str(FxData.grp(cfg, "fog").get("shown_when", "shooter_seen"))
@@ -139,7 +152,9 @@ class Book extends RefCounted:
 			off = Vector2(-dir.y, dir.x) * side * mag
 			over = FxData.f(aimg, "miss_overshoot") * (0.6 + 0.8 * rng.next())
 		_next_id += 1
+		var scale := round_scale(weapon)
 		var rec := {
+			"width_k": scale.x, "length_k": scale.y,
 			"id": _next_id, "shot": shot_id, "weapon": weapon, "born": t, "life": FxData.f(FxData.grp(opt, "timing"), "life_s"),
 			"muzzle": muzzle, "centre": centre, "aim": aim, "off": off, "over": over, "hit": hit, "accent": accent,
 			"draw_k": draw_k, "seed": FxBake.seed_of(world_seed, shot_id, "dash"),
@@ -243,7 +258,7 @@ static func draw_one(item: CanvasItem, book: Book, style: RefCounted, rec: Dicti
 			_dashes(item, o, rec, st, a, dir, nrm, length, head_len, ppm, core, halo, halo_px)
 		"streak":
 			var trace := _role(style, FxData.s(FxData.grp(o, "streak"), "trace_role"), str(rec["accent"]), al)
-			_streak(item, o, a, dir, nrm, length, head_len, ppm, core, edge, trace, halo, halo_px)
+			_streak(item, o, a, dir, nrm, length, head_len, ppm, core, edge, trace, halo, halo_px, float(rec.get("width_k", 1.0)), float(rec.get("length_k", 1.0)))
 		"dots":
 			_dots(item, o, rec, st, a, dir, nrm, length, head_len, ppm, core, halo, halo_px)
 	if o.has("marks") and float(st["head"]) >= 1.0:
@@ -300,10 +315,10 @@ static func _dashes(item: CanvasItem, o: Dictionary, rec: Dictionary, st: Dictio
 
 # A bright comet flying out along the line (a tapered body, blunt head, an ink edge if the option has one), the thin line of its
 # passage left behind it.
-static func _streak(item: CanvasItem, o: Dictionary, a: Vector2, dir: Vector2, nrm: Vector2, length: float, head_len: float, ppm: float, core: Color, edge: Color, trace: Color, halo: Color, halo_px: float) -> void:
+static func _streak(item: CanvasItem, o: Dictionary, a: Vector2, dir: Vector2, nrm: Vector2, length: float, head_len: float, ppm: float, core: Color, edge: Color, trace: Color, halo: Color, halo_px: float, width_k: float = 1.0, length_k: float = 1.0) -> void:
 	var g := FxData.grp(o, "streak")
 	var wd := FxData.grp(o, "widths")
-	var seg := maxf(FxData.f(g, "streak_m") * ppm, FxData.f(g, "streak_min_px"))
+	var seg := maxf(FxData.f(g, "streak_m") * ppm, FxData.f(g, "streak_min_px")) * length_k
 	var t1 := head_len
 	var t0 := maxf(0.0, t1 - seg)
 	var trace_w := FxData.f(g, "trace_px")
@@ -326,7 +341,7 @@ static func _streak(item: CanvasItem, o: Dictionary, a: Vector2, dir: Vector2, n
 		item.draw_polyline_colors(tp, tcs, trace_w, true)
 	if t1 - t0 < 0.6:
 		return
-	var hw := FxData.f(wd, "width_px") * 0.5
+	var hw := FxData.f(wd, "width_px") * 0.5 * width_k
 	var pw := FxData.f(g, "taper_pow")
 	var n := 8
 	var left := PackedVector2Array()

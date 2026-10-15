@@ -78,7 +78,7 @@ func _data_defaults() -> void:
 	check(d.ok(), "data/params/sun.json loads: %s" % ", ".join(d.errors))
 	eq(d.mode, "clock_at_start", "the data's mode is the time-of-day sun (decision sun-time; fixed stays as a switch)")
 	eq(d.scope, "all", "the data's scope is all: every shadow follows (Alex)")
-	eq(d.night, "fold", "the data's night rule is fold (Alex)")
+	eq(d.night, "spread", "the data's night rule is the spread (Alex, decision night-spread; the fold of decision sun-time stays as a setting)")
 	eq(d.hour_source, "system", "the data's hour comes from the machine's clock at the mission's start (PROPOSED)")
 	eq(Sun.clock_reads(), 0, "reading the data without the clock did not ask for it")
 	var c: Dictionary = d.clock_numbers()
@@ -93,7 +93,9 @@ func _data_defaults() -> void:
 	var root: Dictionary = raw if raw is Dictionary else {}
 	for k: String in ["mode", "scope"]:
 		eq(str((root.get(k, {}) as Dictionary).get("decision", "")), "sun-time", "sun.json %s is Alex's (decision sun-time)" % k)
-	eq(str(((root.get("clock", {}) as Dictionary).get("night", {}) as Dictionary).get("decision", "")), "sun-time", "sun.json clock.night (fold) is Alex's")
+	eq(str(((root.get("clock", {}) as Dictionary).get("night", {}) as Dictionary).get("decision", "")), "night-spread", "sun.json clock.night (spread) is Alex's (decision night-spread)")
+	for k: String in ["evening_like_hour", "morning_like_hour", "midnight_azimuth_deg"]:
+		check(bool((((root.get("clock", {}) as Dictionary).get("spread", {}) as Dictionary).get(k, {}) as Dictionary).get("_proposed", false)), "sun.json clock.spread.%s is marked PROPOSED" % k)
 	for k: String in ["rise_azimuth_deg", "set_azimuth_deg", "max_shadow_len", "noon_elevation_deg"]:
 		check(bool(((root.get("clock", {}) as Dictionary).get(k, {}) as Dictionary).get("_proposed", false)), "sun.json clock.%s is marked PROPOSED" % k)
 	_done.append("data_defaults")
@@ -168,7 +170,7 @@ func _clock_model() -> void:
 	# EVERY HOUR, both night rules: the shadow has a southward part, so it falls BELOW its object (Alex: "to keep shadows
 	# below the objects not above"); the sun never leaves the 90 degrees north of east and west, and in fact stays within 45
 	var floor_y := cos(deg_to_rad(45.0)) - 1e-6   # (a Vector2 holds float32: its y is good to about 6e-8)
-	for rule: String in ["clamp", "fold"]:
+	for rule: String in ["clamp", "fold", "spread"]:
 		for i in 97:
 			var h := float(i) * 0.25
 			var m: Dictionary = Sun.clock_sun(c, h, rule)
@@ -226,6 +228,46 @@ func _clock_model() -> void:
 			var before: Dictionary = Sun.clock_sun(c, float(hh - 1), "fold")
 			check(absf(wrapf(float(m["azimuth_deg"]) - float(before["azimuth_deg"]), -180.0, 180.0)) > 1.0, "fold: the bearing differs between %d:00 and %d:00" % [hh - 1, hh])
 	eq(clamped, 7, "fold: 7 of the 24 hours (21:00 to 03:00) sit at the clamp, the rest are shorter")
+	# THE NIGHT SPREAD (decision night-spread, Alex: "every hour differs and only midnight reaches the longest (capped) shadows"; evenings like
+	# a late afternoon, the small hours like an early morning). PROPOSED numbers (sun.json clock.spread).
+	var cap := float(c["max_len"])
+	var lens := {}
+	for hh: int in [21, 22, 23, 0, 1, 2, 3]:
+		var m: Dictionary = Sun.clock_sun(c, float(hh), "spread")
+		lens[hh] = float(m["sun_len"])
+	var keys: Array = lens.keys()
+	for i in keys.size():
+		for j in range(i + 1, keys.size()):
+			check(absf(float(lens[keys[i]]) - float(lens[keys[j]])) > 0.01, "spread: %d:00 and %d:00 throw different shadows (%.3f and %.3f)" % [keys[i], keys[j], lens[keys[i]], lens[keys[j]]])
+	near(float(lens[0]), cap, 1e-9, "spread: midnight is at the cap")
+	for hh: int in [21, 22, 23, 1, 2, 3]:
+		check(float(lens[hh]) < cap - 0.01, "spread: %d:00 is under the cap (%.3f)" % [hh, lens[hh]])
+	# every quarter hour of the night: only midnight reaches the cap, and the shadow always falls below its object
+	var capped_hours := 0
+	for i in 97:
+		var hq := float(i) * 0.25
+		if hq >= 6.0 and hq <= 18.0:
+			continue
+		var m2: Dictionary = Sun.clock_sun(c, hq, "spread")
+		if absf(float(m2["sun_len"]) - cap) < 1e-9:
+			capped_hours += 1
+			check(hq == 0.0 or hq == 24.0, "spread: only midnight is at the cap (%.2f is)" % hq)
+	eq(capped_hours, 2, "spread: midnight (0:00, and 24:00 as the same hour) is the only night start at the cap")
+	# it rises into midnight and falls out of it; the evening begins where the day left off (18:00 is the fold's sun)
+	var prev_len := float((Sun.clock_sun(c, 18.0, "spread"))["sun_len"])
+	near(prev_len, float((Sun.clock_sun(c, 18.0, "fold"))["sun_len"]), 1e-9, "spread: 18:00 is the fold's own sun")
+	for hh in range(19, 25):
+		var l := float((Sun.clock_sun(c, float(hh), "spread"))["sun_len"])
+		check(l > prev_len, "spread: the evening's shadow lengthens to %d:00 (%.3f)" % [hh, l])
+		prev_len = l
+	for hh in range(1, 6):
+		var l2 := float((Sun.clock_sun(c, float(hh), "spread"))["sun_len"])
+		check(l2 < prev_len, "spread: the small hours' shadow shortens to %d:00 (%.3f)" % [hh, l2])
+		prev_len = l2
+	near(float((Sun.clock_sun(c, 24.0, "spread"))["sun_len"]), cap, 1e-9, "spread: 24:00 is 0:00")
+	# the daytime keeps the fold's sun, hour for hour
+	for hh in range(6, 19):
+		near(float((Sun.clock_sun(c, float(hh), "spread"))["azimuth_deg"]), float((Sun.clock_sun(c, float(hh), "fold"))["azimuth_deg"]), 1e-9, "spread: %d:00 is the fold's sun (the day is as it was)" % hh)
 	check(Sun.hour_text(9.5) == "09:30" and Sun.hour_text(24.0) == "00:00", "hour_text")
 	_done.append("clock_model")
 
@@ -262,7 +304,7 @@ func _switches() -> void:
 	# THE PLANES' ALTITUDE SHADOW IS ACCURATE (Alex: "No, make them accurate"): the gap follows the sun's length, like every
 	# shadow, and is not held at today's length. 1:00 folded is at the clamp (2.0), noon is 0.577, today's fixed sun 0.966.
 	var gap_scale: float = ui.param("aircraft_shadow_altitude_scale")
-	Sun.set_override({"mode": "clock_at_start", "hour": 1.0})
+	Sun.set_override({"mode": "clock_at_start", "hour": 1.0, "night": "fold"})
 	near(ui.plane_shadow_offset_m(100.0).length(), 100.0 * gap_scale * 2.0, 1e-6, "UiStyle: at the clamp the gap is twice the height x the rule")
 	near(fx.plane_shadow_offset_m(100.0).length(), 100.0 * gap_scale * 2.0, 1e-6, "FxStyle: the same")
 	Sun.set_override({"mode": "clock_at_start", "hour": 12.0})
@@ -298,8 +340,12 @@ func _switches() -> void:
 	eq(ts.tree_L, ts.L, "TerrainShadows by default: the trees' length is the sun's")
 	eq(ts.tree_stretch, ts.stretch, "TerrainShadows by default: the trees' stretch is the sun's")
 	# a night hour under the data's rule (fold), and under clamp
-	Sun.set_override({"mode": "clock_at_start", "hour": 2.0})
+	Sun.set_override({"mode": "clock_at_start", "hour": 2.0, "night": "fold"})
 	near(Sun.current().azimuth_deg, 45.0 - 90.0 * (2.0 / 24.0), 1e-9, "2:00 under the fold rule is 2/24 of the way along the arc")
+	Sun.set_override({"mode": "clock_at_start", "hour": 2.0})
+	eq(Sun.current().night, "spread", "the data's night rule reaches the sun")
+	near(Sun.current().sun_len(), Sun.clock_sun(Sun.current().clock_numbers(), 2.0, "spread")["sun_len"], 1e-9, "2:00 under the data's rule (the spread) is the spread's sun")
+	check(Sun.current().sun_len() < 2.0 - 0.1, "...and is no longer at the clamp (%.3f)" % Sun.current().sun_len())
 	Sun.set_override({"mode": "clock_at_start", "hour": 2.0, "night": "clamp"})
 	near(Sun.current().azimuth_deg, 45.0, 1e-9, "2:00 under the clamp rule is the 6:00 sun")
 	# cleared: the harness's sun is back
@@ -320,7 +366,7 @@ func _mission() -> void:
 	near(float(msg["hour"]), 17.123456789, 1e-12, "the mission's start message carries the clock's hour")
 	eq(msg["mode"], "clock_at_start", "... the mode")
 	eq(msg["scope"], "all", "... the scope")
-	eq(msg["night"], "fold", "... the night rule")
+	eq(msg["night"], "spread", "... the night rule")
 	eq(Sun.clock_reads(), 1, "the clock is read ONCE, at the mission's start")
 	var sun = Sun.current()
 	eq(sun.mode, "clock_at_start", "the mission's sun holds: the clock model, whatever the harness's baseline says")

@@ -23,8 +23,10 @@ const FxData = preload("res://scripts/fx/fx_data.gd")
 const GunRules = preload("res://scripts/sim/gun_rules.gd")
 const BombRules = preload("res://scripts/sim/bomb_rules.gd")
 
-# The weapons that draw a tracer today (decision tracers-mg: machine guns only), the list data/fx/fx.json tracers.weapons held until this model.
-const OLD_TRACER_LIST := ["wing_guns", "nose_gun", "dorsal_turret", "tail_turret", "rear_gunner", "quad_mg", "deck_mg"]
+# The weapons that draw a tracer today: the machine guns (decision tracers-mg, the list data/fx/fx.json tracers.weapons held until this model) and, since
+# decision tracers-cannons (Alex 2026-10-14), the direct-fire cannons (the nose cannon and the tank's gun).
+const OLD_TRACER_LIST := ["wing_guns", "nose_gun", "dorsal_turret", "tail_turret", "rear_gunner", "quad_mg", "deck_mg", "nose_cannon", "turret_gun"]
+const TRACER_ROUNDS := ["bullet", "cannon_small", "cannon_medium"]
 # What each weapon fires (PROPOSED by the brief and the gunfire board's mapping, variants/gunfire/families.json rounds).
 const WEAPON_ROUND := {
 	"wing_guns": "bullet", "nose_gun": "bullet", "dorsal_turret": "bullet", "tail_turret": "bullet", "rear_gunner": "bullet", "quad_mg": "bullet", "deck_mg": "bullet",
@@ -99,7 +101,7 @@ func _data() -> void:
 			eq(r.explosive, false, "1. %s: machine guns fire bullets 'which don't' explode (decision weapon-kinds)" % id)
 		if r.round_class == "flak_shell":
 			eq(r.explosive, true, "1. %s: flak is 'shells shot that then explode' (decision weapon-kinds)" % id)
-		eq(r.tracer, id == "bullet", "1. %s: a tracer only for the bullet (decision tracers-mg: machine guns only, for now)" % id)
+		eq(r.tracer, TRACER_ROUNDS.has(id), "1. %s: a tracer for the bullet and the two cannon rounds only (decisions tracers-mg, tracers-cannons; bombs, shells and flak keep their own marks)" % id)
 		if not r.blast.is_empty():
 			check(r.explosive, "1. %s: only an explosive round has a blast table" % id)
 			check(not _rm.blast_table(id).is_empty(), "1. %s: its blast pointer %s resolves to a table" % [id, str(r.blast)])
@@ -162,7 +164,7 @@ func _tracers() -> void:
 	var drawn := _rm.tracer_weapons()
 	var want := OLD_TRACER_LIST.duplicate()
 	want.sort()
-	eq(drawn, want, "3. exactly the machine guns draw tracers, the same weapons as the old list in fx.json")
+	eq(drawn, want, "3. exactly the machine guns and the two cannons draw tracers (decision tracers-cannons)")
 	for wid: String in WEAPON_ROUND:
 		eq(_rm.weapon_tracer(wid), OLD_TRACER_LIST.has(wid), "3. %s: tracer %s" % [wid, str(OLD_TRACER_LIST.has(wid))])
 	var fxd := FxData.new()

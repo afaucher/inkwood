@@ -309,7 +309,7 @@ func _check_lettering() -> void:
 	near(UiLabels.line_h(_st), px + _st.num("labels.line_gap_px"), 1e-9, "7. one line height for every node's lines")
 	check(UiLabels.line_h(_st) > px, "7. lines do not touch")
 	# The node lettering and the unit label say what they said (the format is the data's, only the look changed).
-	eq(ml.unit_label("p1"), "400 m · 100", "7. a unit's label is as it was")
+	eq(ml.unit_label("p1"), "400 m · 100 m/s", "7. a unit's label is as it was, with the speed's unit (decision playtest-4)")
 	_ui.planner.clear()
 	_w.plan_step("p1", 0, {"turn": 0.0, "speed": 100.0})
 	eq(_ui.planner.step_labels("p1")[0], PackedStringArray(["100 m/s", "400 m"]), "7. and a node's: two lines, the speed over the height, no step number (Track L)")

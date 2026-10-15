@@ -4,8 +4,9 @@ extends "res://scripts/test_support/test_case.gd"
 # and speed label" -- height is hard to read from above). Headless, on the real World, mounted through UnitUI:
 #
 #   1. the data: every key the labels read exists
-#   2. EVERY UNIT has a label, own or enemy: "400 m . 100" (height in metres, speed in m/s) in the data's format;
-#      a static unit (the tower, a battery) "0 m" and no speed; it follows the unit through a playback (a climb)
+#   2. EVERY UNIT has a label, own or enemy, BY ITS KIND (decisions labels-by-type, playtest-4: every number carries its unit; ships and tanks
+#      drop the altitude): an aircraft "400 m . 100 m/s"; a tank "8 m/s" (its speed alone); a static ground unit (the tower, a battery) none
+#      (PROPOSED: labels.unit_static ""); it follows the unit through a playback (a climb)
 #   3. EVERY NODE has one: TWO LINES, the speed over the height ("76 m/s" over "400 m"), no step number (Track L, 2026-10-10,
 #      Alex: "2 lines. Remove the step # as well"), the same for a planned step and a carry-on one; the band's metres, the
 #      simulation's
@@ -34,6 +35,7 @@ func setup(_main) -> void:
 	_w.add_unit({"id": "e1", "type": "heavy_fighter", "side": "axis", "controller": "ai", "x": 2300.0, "y": 2300.0, "heading": PI, "altitude_band": "low"})
 	_w.add_unit({"id": "tower", "type": "radio_tower", "side": "axis", "controller": "ai", "x": 3000.0, "y": 2500.0, "heading": 0.0})
 	_w.add_unit({"id": "aa1", "type": "anti_aircraft_battery", "side": "axis", "controller": "ai", "x": 2900.0, "y": 2400.0, "heading": 0.4})
+	_w.add_unit({"id": "et1", "type": "tank", "side": "axis", "controller": "ai", "x": 2700.0, "y": 2700.0, "heading": 0.0, "speed": 8.0})
 	if not check(_w.ok(), "the world loads: %s" % str(_w.errors)):
 		finish()
 		return
@@ -55,7 +57,7 @@ func setup(_main) -> void:
 func _check_data() -> void:
 	for n: String in ["labels.hide_below_px_per_m", "labels.below_px", "labels.halo_px", "labels.px", "labels.line_gap_px", "labels.font.weight"]:
 		check(_st.lookup(n) is float or _st.lookup(n) is int, "ui.json has a number at '%s'" % n)
-	for n: String in ["labels.unit", "labels.unit_static", "labels.node_speed", "labels.node_height", "labels.height_ref"]:
+	for n: String in ["labels.unit", "labels.unit_surface", "labels.unit_static", "labels.node_speed", "labels.node_height", "labels.height_ref"]:
 		check(_st.lookup(n) is String, "ui.json has a string at '%s'" % n)
 	check(_st.flag("labels.enabled"), "the labels are on in the data")
 	check(_st.lookup("labels.band_change_line") is bool, "the band line has its switch (proposed off)")
@@ -72,19 +74,29 @@ func _unit_want(id: String) -> String:
 	var u = _w.units[id]
 	var h := _w.band_height(str(u.altitude_band))
 	if u.def.is_static():
-		return _st.text("labels.unit_static") % roundi(h)
-	return _st.text("labels.unit") % [roundi(h), roundi(float(u.speed))]
+		return ""
+	if str(u.def.domain) != "air":
+		return _st.text("labels.unit_surface") % [roundi(float(u.speed)), _st.text("roster.speed_unit")]
+	return _st.text("labels.unit") % [roundi(h), roundi(float(u.speed)), _st.text("roster.speed_unit")]
 
 func _check_units() -> void:
 	var ml = _ui.marker_layer
-	eq(ml.unit_label("p1"), "400 m · 100", "2. a light fighter at medium, 100 m/s: height and speed, compact")
-	eq(ml.unit_label("b1"), "1000 m · 85", "2. a bomber at high, 85 m/s")
+	eq(ml.unit_label("p1"), "400 m · 100 m/s", "2. a light fighter at medium, 100 m/s: height and speed, each with its unit")
+	eq(ml.unit_label("b1"), "1000 m · 85 m/s", "2. a bomber at high, 85 m/s")
 	eq(ml.unit_label("e1"), _unit_want("e1"), "2. an ENEMY plane is labelled too (its current state is visible state)")
 	check(ml.unit_label("e1").begins_with("120 m"), "2. at low, 120 m (%s)" % ml.unit_label("e1"))
-	eq(ml.unit_label("tower"), "0 m", "2. a static unit: its height above the ground, no speed")
-	eq(ml.unit_label("aa1"), "0 m", "2. a battery too")
-	for id: String in ["p1", "b1", "e1", "tower", "aa1"]:
+	eq(ml.unit_label("et1"), "8 m/s", "2. a tank: its speed alone, with the unit; no altitude (labels-by-type)")
+	check(not ml.unit_label("et1").contains(" m · "), "2. ...no height in it, and no 'm - 0' of the playtest")
+	eq(ml.unit_label("tower"), "", "2. a static ground unit has no label (labels.unit_static is empty: PROPOSED)")
+	eq(ml.unit_label("aa1"), "", "2. a battery too")
+	for id: String in ["p1", "b1", "e1", "et1"]:
 		check(ml.label_shown(id), "2. %s's label is drawn" % id)
+	for id: String in ["tower", "aa1"]:
+		check(not ml.label_shown(id), "2. %s has no label to draw" % id)
+	# a ship under the water keeps its depth (the aircraft's format, depth then speed)
+	eq(UiLabels.unit_text(_st, -12.0, 0.0, false, false, true), "-12 m · 0 m/s", "2. a sunk ship keeps its depth label")
+	eq(UiLabels.unit_text(_st, 400.0, 100.0, false, true), "400 m · 100 m/s", "2. an aircraft: height and speed")
+	eq(UiLabels.unit_text(_st, 0.0, 12.0, false, false), "12 m/s", "2. a ship: its speed alone")
 	eq(ml.unit_label("nobody"), "", "2. no unit, no label")
 	# Not for a unit that is not on the map (out of sight, gone).
 	ml.unit_visible = func(id: String) -> bool: return id != "e1"
@@ -147,8 +159,8 @@ func _check_ground_ref() -> void:
 	var ml = _ui.marker_layer
 	ml.ground_height = func(_x: float, _y: float) -> float: return 100.0
 	_st.ui["labels"]["height_ref"] = "ground"
-	eq(ml.unit_label("p1"), "300 m · 100", "5. 'ground': the height above the terrain under it (400 over a 100 m ground)")
-	eq(ml.unit_label("tower"), "0 m", "5. a static unit stays 0 m")
+	eq(ml.unit_label("p1"), "300 m · 100 m/s", "5. 'ground': the height above the terrain under it (400 over a 100 m ground)")
+	eq(ml.unit_label("et1"), "8 m/s", "5. a tank's label has no height to change")
 	_ui.select("p1")
 	_w.plan_step("p1", 0, {"turn": 0.0, "speed": 100.0})
 	var l: PackedStringArray = _ui.planner.step_labels("p1")[0]
@@ -171,7 +183,7 @@ func _check_far_zoom() -> void:
 	check(ml.label_shown("p1"), "6. at the planning zoom (0.7 px/m) a unit's label is drawn")
 	_ui.set_mapping(Transform2D(0.0, Vector2(0.3, 0.3), 0.0, -Vector2(1300.0, 2000.0) * 0.3))
 	ml.update_poses()
-	for id: String in ["p1", "b1", "e1", "tower"]:
+	for id: String in ["p1", "b1", "e1", "et1"]:
 		check(not ml.label_shown(id), "6. at the far zoom (0.3 px/m) %s's label is hidden" % id)
 	# (the node lettering follows the same rule: ghost scale is the mapping's)
 	check(not UiLabels.shown(_st, _ui.mapping.px_per_m(Vector2(1500.0, 2400.0))), "6. and a node's, by the same rule")

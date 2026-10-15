@@ -171,6 +171,8 @@ func _check_fate_text() -> void:
 	eq(r.status_text({"status": "none", "fate": "", "planned": 0, "steps": 5}), "", "a live unit with no plan has NO words on its plan line: the glyph and the pips say it (playtest 3)")
 	eq(r.status_text({"status": "plan", "fate": "", "planned": 3, "steps": 5}), "", "a planned unit has no words either: the step pips count the steps")
 	eq(r.status_text({"status": "flying", "fate": "", "planned": 0, "steps": 5}), "flying the turn", "after planning a live unit is flying the turn")
+	eq(r.status_text({"status": "flying", "fate": "", "planned": 0, "steps": 2, "air": true}), "flying the turn", "an aircraft is flying the turn")
+	eq(r.status_text({"status": "flying", "fate": "", "planned": 0, "steps": 2, "air": false}), "moving", "a ship or a tank is 'moving' (decision labels-by-type; PROPOSED wording, data roster.text.moving)")
 	r.free()
 	var wf := _WithFate.new()
 	wf.fate = "out_of_control"
@@ -458,6 +460,13 @@ func _check_turn_and_hooks(w: World, ui: UnitUI) -> void:
 	var parent := ui.marker_layer.get_parent()
 	check(ui.overlay != null and ui.overlay.get_parent() == parent, "9. the overlay layer is in the same screen space as the markers")
 	check(ui.overlay.get_index() > ui.marker_layer.get_index(), "9. and above them")
+	# The movement indicator is on top for the player (decision planner-on-top): the planner and the bomb aim above the markers, the cones and the
+	# effects layer's bursts, under the overlay.
+	check(ui.planner.get_index() > ui.marker_layer.get_index(), "9. the planner is above the marker layer (a tank's path over the bridge shows)")
+	check(ui.planner.get_index() > ui.fx_above.get_index(), "9. ...and above the effects layer's bursts")
+	check(ui.bomb_aim.get_index() > ui.marker_layer.get_index() and ui.bomb_aim.get_index() < ui.planner.get_index(), "9. the bomb aim sits just under the planner, over the markers")
+	check(ui.planner.get_index() < ui.overlay.get_index(), "9. ...and the planner is under the overlay (health arcs, marks)")
+	check(ui.fx.get_index() < ui.marker_layer.get_index(), "9. the effects layer keeps its place under the markers")
 	check(ui.health_arc != null and ui.health_arc.get_parent() == ui.overlay, "9. the ring's health arc is its first child")
 	check(ui.hud != null and ui.hud.get_parent() != parent, "9. the HUD (roster, orders) is a layer above")
 	# The turn: p2 selected; p1 and p2 will fly on.

@@ -49,7 +49,7 @@ extends RefCounted
 const PATH := "res://data/params/sun.json"
 const MODES := ["fixed", "clock_at_start"]
 const SCOPES := ["all", "trees"]
-const NIGHTS := ["clamp", "fold"]
+const NIGHTS := ["clamp", "fold", "spread"]
 const SOURCES := ["data", "system"]
 # What the test harness's stand-in for the machine's clock says. Deliberately not an hour any test asks for.
 const TEST_CLOCK_HOUR := 3.25
@@ -57,7 +57,7 @@ const TEST_CLOCK_HOUR := 3.25
 # --- What the sun is -----------------------------------------------------------------
 var mode := "fixed"
 var scope := "all"
-var night := "fold"
+var night := "spread"
 var hour_source := "data"
 var hour_origin := ""           # who gave the hour: override, mission, harness, knob, scenario, clock or data
 var asked_hour := 12.0          # the hour the clock model was asked for (clock mode)
@@ -142,6 +142,14 @@ func _init(path: String = PATH, use_switches: bool = true, ask_clock: bool = tru
 			"az_rise": _num(c, "rise_azimuth_deg"), "az_set": _num(c, "set_azimuth_deg"),
 			"noon_elev": _num(c, "noon_elevation_deg"), "max_len": _num(c, "max_shadow_len"),
 		}
+		# THE NIGHT SPREAD (decision night-spread; the numbers are PROPOSED): the night lies between two daytime suns and a midnight one
+		var sp: Variant = c.get("spread")
+		if sp is Dictionary:
+			_clock["evening_like_hour"] = _num(sp, "evening_like_hour")
+			_clock["morning_like_hour"] = _num(sp, "morning_like_hour")
+			_clock["midnight_azimuth_deg"] = _num(sp, "midnight_azimuth_deg")
+		elif night == "spread":
+			_err("sun.json clock has no 'spread' block, and the night rule is 'spread'")
 	else:
 		_err("sun.json has no 'clock' block")
 	if use_switches:
@@ -224,8 +232,10 @@ static func clock_sun(c: Dictionary, hour: float, night_rule: String = "fold") -
 	var set_h := float(c["sunset"])
 	var h := fposmod(hour, 24.0)
 	var t := 0.0
-	if night_rule == "fold":
-		t = h / 24.0
+	if night_rule == "spread" and (h < rise or h > set_h) and c.has("evening_like_hour"):
+		return _spread_sun(c, h)
+	if night_rule == "fold" or night_rule == "spread":
+		t = h / 24.0   # (spread: the hours from sunrise to sunset are the fold's, as they were; only the night is laid out differently)
 	else:
 		t = (clampf(h, rise, set_h) - rise) / maxf(set_h - rise, 1e-6)
 	var az := fposmod(float(c["az_rise"]) + (float(c["az_set"]) - float(c["az_rise"])) * t, 360.0)
@@ -236,6 +246,43 @@ static func clock_sun(c: Dictionary, hour: float, night_rule: String = "fold") -
 	# the reader sees the elevation its length belongs to: past the clamp, the clamp's own
 	var eff := elev if raw_len <= max_len else rad_to_deg(atan(1.0 / max_len))
 	return {"azimuth_deg": az, "elevation_deg": eff, "sun_len": length, "t": t, "raw_elevation_deg": elev}
+
+# THE NIGHT SPREAD (decision night-spread, Alex 2026-10-14: "spread the night: every hour differs and only midnight reaches the longest (capped)
+# shadows"; "evenings read like late afternoon, the small hours like early morning"). An hour of the night (after sunset, before sunrise) is laid
+# between three suns, bearing and shadow length each moving in a straight line over the hours:
+#   sunset .. midnight    from the daytime sun at clock.spread.evening_like_hour (a late afternoon) to MIDNIGHT's, the bearing
+#                         clock.spread.midnight_azimuth_deg and the longest shadow there is (max_shadow_len)
+#   midnight .. sunrise   from MIDNIGHT's to the daytime sun at clock.spread.morning_like_hour (an early morning)
+# so midnight alone sits at the clamp, every other night hour is shorter and no two are alike. Pure. The hours from sunrise to sunset keep the fold's sun
+# (t = h / 24, a 42 to 60 degree sun: shadows 0.58 to 1.09 times the height), which the end suns are chosen to meet at 18:00 (and nearly at 06:00).
+static func _spread_sun(c: Dictionary, h: float) -> Dictionary:
+	var rise := float(c["sunrise"])
+	var set_h := float(c["sunset"])
+	var max_len := float(c["max_len"])
+	var mid_az := float(c["midnight_azimuth_deg"])
+	var a_az: float
+	var a_len: float
+	var b_az: float
+	var b_len: float
+	var w: float
+	if h > set_h:
+		var ev := clock_sun(c, float(c["evening_like_hour"]), "clamp")
+		a_az = float(ev["azimuth_deg"])
+		a_len = float(ev["sun_len"])
+		b_az = mid_az
+		b_len = max_len
+		w = (h - set_h) / maxf(24.0 - set_h, 1e-6)
+	else:
+		var mo := clock_sun(c, float(c["morning_like_hour"]), "clamp")
+		a_az = mid_az
+		a_len = max_len
+		b_az = float(mo["azimuth_deg"])
+		b_len = float(mo["sun_len"])
+		w = h / maxf(rise, 1e-6)
+	var az := fposmod(rad_to_deg(lerp_angle(deg_to_rad(a_az), deg_to_rad(b_az), w)), 360.0)
+	var length := lerpf(a_len, b_len, w)
+	var elev := rad_to_deg(atan(1.0 / length))
+	return {"azimuth_deg": az, "elevation_deg": elev, "sun_len": length, "t": h / 24.0, "raw_elevation_deg": elev}
 
 # Pure, from a Sun's own data: the model at `hour`, with this sun's numbers and night rule.
 func at_hour(hour: float, night_rule: String = "") -> Dictionary:

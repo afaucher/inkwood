@@ -606,14 +606,15 @@ func _strip() -> bool:
 # --- 8 -------------------------------------------------------------------------------------------------------------------------
 
 func _data_words() -> bool:
-	# No key was added (Alex: on-screen buttons first, no keyboard mapping); the existing ones are as they were.
+	# No key was added by the step selection (Alex: on-screen buttons first, no keyboard mapping); the existing ones are as they were, and the one he
+	# made an exception for since (decision playtest-4: holding Space readies, keys.ready_hold).
 	var keys: Dictionary = _st.lookup("keys")
 	var names: Array = []
 	for k: String in keys:
 		if not k.begins_with("_"):
 			names.append(k)
 	names.sort()
-	var want := ["clear", "clear_target", "climb", "dive", "drop", "next_unit", "ready", "undo"]
+	var want := ["clear", "clear_target", "climb", "dive", "drop", "next_unit", "ready", "ready_hold", "undo"]
 	eq(names, want, "8. the key bindings are the ones there were: %s" % str(names))
 	eq(_st.text("keys.drop"), "B", "8. B, left alone")
 	# The special's words are the unit's data: change them and everything that names the special follows.
