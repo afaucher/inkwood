@@ -1,0 +1,287 @@
+{
+  "id": "recoil",
+  "date": "2026-10-14",
+  "area": "UI",
+  "question": "What does the drawn tank (and the ship) do at the moment of a shot? Alex (decision tank-fire-feedback): 'The turret or the whole tank should have some visual feedback. Either the whole tank rocks back or just the turret.' and 'The turret feedback should also apply to the ship.'",
+  "source": "scripts/ui/boards/recoil_board_shot.gd: the running sandbox (scripts/app/sandbox.gd) over the real map, scenario variants/recoil/scenario.json (seed 20261009, water on, fog off), the game's own markers (scripts/ui/unit_marker.gd, scripts/ui/unit_marker_recoil.gd) playing a REAL resolved turn held and stepped to the moments around the shot, photographed once per option with ONLY data/ui/ui.json unit_art.recoil.mode changed",
+  "seed": 20261009,
+  "held_constant": {
+    "tank": "tank_1 of side_a (brick red) on the village road 53 m short of the bridge, hull standing still (a hold step), turret 40 degrees to the right of the nose, ordered 'Turret Fire' on an enemy tank 130.0 m away: the turret is on bearing at the start of the turn's second step, so the shot leaves at 2.50 s into the turn",
+    "ship": "cruiser_1 at (3594, 1300) off the east coast, nose north, standing still, all its turrets trained -80.0 degrees (to port) on an enemy tank on the shore 345.0 m away, ordered 'Main Guns Fire': a salvo of 6 shells 0.2 s apart, the first leaving at 1.25 s into the turn",
+    "moments": {
+      "tank": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "cruiser": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "_about": "seconds from the shot (the first shell of the salvo). Playback seconds are game seconds; marker.playback_speed is 1, so they are real seconds in the game"
+    },
+    "zooms": {
+      "zoom_1": "camera zoom 1.0 (units are drawn at 4 px per metre)",
+      "start_zoom": "camera zoom 0.35 (data/view/camera.json zoom.start; 1.4 px per metre)"
+    },
+    "labels": "the unit speed labels are switched off for the board (a rig action; labels.enabled): the label sits over the tank",
+    "smoke": "the G3 soft puff leaves the barrel's tip at the shot (gunfire-looks, decision soft-puffs-default); unchanged by the recoil",
+    "decisions_in_force": "shadow strength 0.44; pen 'shadow_side'; side colours brick red (allies) and slate blue (axis); soft puffs as the default impact and muzzle style"
+  },
+  "parameter": "data/ui/ui.json#unit_art.recoil.mode (none | barrel | turret | hull | turret_hull); the numbers are unit_art.recoil.<tank|ship>.modes.<mode>.<barrel|turret|hull> {m, attack_s, return_s, settle} and unit_art.recoil.<kind>.min_px. The kicks are metres of the DRAWN unit (4 px a metre at zoom 1) with a floor in screen px so that they still read at zoom 0.35",
+  "options": [
+    {
+      "name": "R0",
+      "title": "Today: nothing moves",
+      "unit_art.recoil.mode": "none",
+      "description": "Today: the turret turns, the G3 puff leaves the barrel's tip, and nothing else moves at the shot.",
+      "file": "r0_none_strip.png",
+      "proposed": true,
+      "parameters": {},
+      "measured_peak_px": {
+        "tank/z1.0": {
+          "hull": 0.0,
+          "turret": 0.0,
+          "barrel": 0.0
+        },
+        "tank/z0.35": {
+          "hull": 0.0,
+          "turret": 0.0,
+          "barrel": 0.0
+        },
+        "cruiser/z1.0": {
+          "hull": 0.0,
+          "turret": 0.0,
+          "barrel": 0.0
+        },
+        "cruiser/z0.35": {
+          "hull": 0.0,
+          "turret": 0.0,
+          "barrel": 0.0
+        }
+      }
+    },
+    {
+      "name": "R1",
+      "title": "The barrel alone slides back",
+      "unit_art.recoil.mode": "barrel",
+      "description": "The barrel alone slides back along its axis, under the mantlet (the tank) or the gun house (the ship), fast out and slower back. Tank: barrel 0.9 m (0.04 s out, 0.35 s back). Ship: barrel 1.2 m (0.06 s out, 0.7 s back). Reads as a gun, not a vehicle.",
+      "file": "r1_barrel_strip.png",
+      "proposed": true,
+      "parameters": {
+        "tank": {
+          "barrel": {
+            "m": 0.9,
+            "attack_s": 0.04,
+            "return_s": 0.35,
+            "settle": 0.0
+          }
+        },
+        "ship": {
+          "barrel": {
+            "m": 1.2,
+            "attack_s": 0.06,
+            "return_s": 0.7,
+            "settle": 0.0
+          }
+        }
+      },
+      "measured_peak_px": {
+        "tank/z1.0": {
+          "hull": 0.0,
+          "turret": 0.0,
+          "barrel": 3.59
+        },
+        "tank/z0.35": {
+          "hull": 0.0,
+          "turret": 0.0,
+          "barrel": 1.6
+        },
+        "cruiser/z1.0": {
+          "hull": 0.0,
+          "turret": 0.0,
+          "barrel": 4.75
+        },
+        "cruiser/z0.35": {
+          "hull": 0.0,
+          "turret": 0.0,
+          "barrel": 1.85
+        }
+      }
+    },
+    {
+      "name": "R2",
+      "title": "The whole turret kicks back",
+      "unit_art.recoil.mode": "turret",
+      "description": "The whole turret (the gun with it) kicks back along the barrel's axis and returns. Tank: turret 0.55 m (0.05 s out, 0.35 s back). Ship: turret 0.9 m (0.06 s out, 0.7 s back), each turret at the moment its first shell leaves.",
+      "file": "r2_turret_strip.png",
+      "proposed": true,
+      "parameters": {
+        "tank": {
+          "turret": {
+            "m": 0.55,
+            "attack_s": 0.05,
+            "return_s": 0.35,
+            "settle": 0.0
+          }
+        },
+        "ship": {
+          "turret": {
+            "m": 0.9,
+            "attack_s": 0.06,
+            "return_s": 0.7,
+            "settle": 0.0
+          }
+        }
+      },
+      "measured_peak_px": {
+        "tank/z1.0": {
+          "hull": 0.0,
+          "turret": 2.2,
+          "barrel": 0.0
+        },
+        "tank/z0.35": {
+          "hull": 0.0,
+          "turret": 1.6,
+          "barrel": 0.0
+        },
+        "cruiser/z1.0": {
+          "hull": 0.0,
+          "turret": 3.57,
+          "barrel": 0.0
+        },
+        "cruiser/z0.35": {
+          "hull": 0.0,
+          "turret": 1.58,
+          "barrel": 0.0
+        }
+      }
+    },
+    {
+      "name": "R3",
+      "title": "The whole tank rocks back",
+      "unit_art.recoil.mode": "hull",
+      "description": "The whole tank shifts against the barrel's direction (hull, turret and shadow together) and settles with one small swing past rest. Tank: hull 0.45 m (0.06 s out, 0.5 s back). Ship: hull 0.3 m (0.1 s out, 1.1 s back), a rock you can barely see, as a 120 m hull would give.",
+      "file": "r3_hull_strip.png",
+      "proposed": true,
+      "parameters": {
+        "tank": {
+          "hull": {
+            "m": 0.45,
+            "attack_s": 0.06,
+            "return_s": 0.5,
+            "settle": 0.6
+          }
+        },
+        "ship": {
+          "hull": {
+            "m": 0.3,
+            "attack_s": 0.1,
+            "return_s": 1.1,
+            "settle": 0.5
+          }
+        }
+      },
+      "measured_peak_px": {
+        "tank/z1.0": {
+          "hull": 1.75,
+          "turret": 0.0,
+          "barrel": 0.0
+        },
+        "tank/z0.35": {
+          "hull": 1.56,
+          "turret": 0.0,
+          "barrel": 0.0
+        },
+        "cruiser/z1.0": {
+          "hull": 1.6,
+          "turret": 0.0,
+          "barrel": 0.0
+        },
+        "cruiser/z0.35": {
+          "hull": 1.6,
+          "turret": 0.0,
+          "barrel": 0.0
+        }
+      }
+    },
+    {
+      "name": "R4",
+      "title": "The turret kicks, the hull rocks a little",
+      "unit_art.recoil.mode": "turret_hull",
+      "description": "R2's turret kick with a smaller hull shift: the gun jumps and the tank takes the push. Tank: turret 0.55 m (0.05 s out, 0.35 s back), hull 0.25 m (0.06 s out, 0.5 s back). Ship: turret 0.9 m (0.06 s out, 0.7 s back), hull 0.15 m (0.1 s out, 1.1 s back).",
+      "file": "r4_turret_hull_strip.png",
+      "proposed": true,
+      "parameters": {
+        "tank": {
+          "turret": {
+            "m": 0.55,
+            "attack_s": 0.05,
+            "return_s": 0.35,
+            "settle": 0.0
+          },
+          "hull": {
+            "m": 0.25,
+            "attack_s": 0.06,
+            "return_s": 0.5,
+            "settle": 0.6
+          }
+        },
+        "ship": {
+          "turret": {
+            "m": 0.9,
+            "attack_s": 0.06,
+            "return_s": 0.7,
+            "settle": 0.0
+          },
+          "hull": {
+            "m": 0.15,
+            "attack_s": 0.1,
+            "return_s": 1.1,
+            "settle": 0.5
+          }
+        }
+      },
+      "measured_peak_px": {
+        "tank/z1.0": {
+          "hull": 1.56,
+          "turret": 2.2,
+          "barrel": 0.0
+        },
+        "tank/z0.35": {
+          "hull": 1.56,
+          "turret": 1.6,
+          "barrel": 0.0
+        },
+        "cruiser/z1.0": {
+          "hull": 1.6,
+          "turret": 3.57,
+          "barrel": 0.0
+        },
+        "cruiser/z0.35": {
+          "hull": 1.6,
+          "turret": 1.58,
+          "barrel": 0.0
+        }
+      }
+    }
+  ],
+  "palette_check": {
+    "hue": "No option adds a colour: the recoil MOVES existing linework (the barrel, the turret, the hull and their shadows); no role is added, no hex is written. The palette on the page is the one the moving things are drawn in.",
+    "lightness": "Unchanged: the ramp off the paper (the art's cream fill, its shaded fill, the ink) and the shadow's 0.44 strength; a part that moves casts its shadow with it.",
+    "material": "Linework and motion. The feedback comes from the thing itself (decision no-ink-marks): no symbol is drawn."
+  },
+  "recommendation_proposed": "R2, the whole turret kicks back along the barrel (PROPOSED by builder BR; Alex decides). It is the one grammar that says the same thing for the tank and the ship: Alex's own two sentences ('just the turret', 'the turret feedback should also apply to the ship') and the thing the sim already turns, so the ship's turrets kick one after another as their shells leave and the tank's turret kicks once. It reads at both zooms (0.55 m is 2.2 px at zoom 1; the floor holds it at 1.6 px at 0.35) and moves a drawn part that already exists, so it costs no extra art and changes no outline. R1 (the barrel alone) is the most like a real gun but the smallest mark: 3.6 px on a tank at zoom 1 and about 1.6 px at 0.35, and its art carries the barrels as separate sprites. R3 (the whole tank) is the clearest on a 24 px tank but, on the ship, a 120 m hull that shifts by a pixel or two reads as a glitch (the board keeps it at 0.3 m with a long settle), so the ship would want R2 anyway. R4 is R2 with a little hull push: the one to take if R2 feels too small in play. The kicks are in data and cheap to retune; the stills are subtle by nature, and the real test is to set unit_art.recoil.mode in data/ui/ui.json and play Hold the bridge.",
+  "how_to_switch": "data/ui/ui.json unit_art.recoil.mode (default none). Then re-bake (restart): R1 makes the art carry the barrels as parts.",
+  "chosen": null,
+  "chosen_by": null
+}

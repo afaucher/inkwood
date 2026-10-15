@@ -77,6 +77,7 @@ var _marks: Node2D
 var _standout: Dictionary = {}     # UnitStandout.parse() of the data's mode
 var _standout_mode := ""
 var _lowest_air_m := -1.0          # the lowest sea-level band's height, for the fall's ground blend
+var _shots: Dictionary = {}        # unit id -> the turn's shots of its turret ([{t, salvo, interval}]), for the recoil (unit_marker_recoil.gd)
 
 func setup(w: World, host_mapping: Variant, sel: RefCounted, st: RefCounted = null) -> void:
 	style = (st if st != null else UiStyle.shared()) as UiStyle
@@ -301,6 +302,7 @@ func update_poses() -> void:
 			# ship's art height; Track M2U for the tank's and the mobile gun's, ui.json marker.cast_height_m, behind marker.cast_shadow_on).
 			off = style.shadow_dir() * style.sun_len() * cast_h * mapping.px_per_m(wp) * style.num("marker.true_scale") * m.draw_scale
 		m.set_turret(turret_of(id, u), bool(u.def.has_turret()))   # (builder ORD: the sim's turret bearing, turned by the marker)
+		m.set_shots(_shots.get(id, []), playback_t if playing else -1.0)   # (builder BR: the recoil, a function of the playback's second)
 		m.set_pose(sp, mapping.screen_angle(wp, float(pose["heading"])), mapping.px_per_m(wp), off, fall_wobble(id))
 	_marks.queue_redraw()
 	if not (_standout["ring"] as Dictionary).is_empty() or _ring_drawn:
@@ -381,8 +383,33 @@ func stop_playback() -> void:
 	playback_t = -1.0
 	update_poses()
 
-func _on_turn_resolved(turn_no: int, _histories: Dictionary, _events: Array) -> void:
+func _on_turn_resolved(turn_no: int, _histories: Dictionary, events: Array) -> void:
+	_collect_shots(events)
 	start_playback(turn_no)
+
+# THE RECOIL's shots (builder BR, board 'recoil'; scripts/ui/unit_marker_recoil.gd): the turn's ordered turret shots ("fire" events that carry a bearing) and Main Guns
+# salvos ("shell_fire") by unit, [{t, salvo (shells, 0 for one shot), interval}], handed to the markers each pose with the playback's second.
+func _collect_shots(events: Array) -> void:
+	_shots.clear()
+	for ev: Variant in events:
+		if not (ev is Dictionary):
+			continue
+		var e: Dictionary = ev
+		var kind := str(e.get("type", ""))
+		var id := str(e.get("unit", ""))
+		if (kind != "fire" and kind != "shell_fire") or not world.units.has(id) or not world.units[id].def.has_turret():
+			continue
+		if kind == "fire" and not e.has("bearing"):
+			continue
+		var rec := {"t": float(e.get("t", 0.0)), "salvo": 0, "interval": 0.2}
+		if kind == "shell_fire":
+			rec["salvo"] = int(e.get("shells", 1))
+			var spec: Object = world.guns.special(str(e.get("special", ""))) if world.get("guns") != null else null
+			if spec != null:
+				rec["interval"] = float(spec.salvo_interval_s)
+		if not _shots.has(id):
+			_shots[id] = []
+		(_shots[id] as Array).append(rec)
 
 func _process(delta: float) -> void:
 	if world == null:

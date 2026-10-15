@@ -22,6 +22,7 @@ const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const UnitStandout = preload("res://scripts/ui/unit_standout.gd")
 const UnitSunk = preload("res://scripts/ui/unit_sunk.gd")
+const Recoil = preload("res://scripts/ui/unit_marker_recoil.gd")
 
 var unit_id: String = ""
 var silhouette: String = ""
@@ -64,6 +65,14 @@ var has_turret: bool = false
 var _turret_sprites: Array = []
 var _turret_shadows: Array = []
 var plane: Sprite2D
+# THE RECOIL (builder BR, board 'recoil', 2026-10-14; Alex, decision tank-fire-feedback; data unit_art.recoil, scripts/ui/unit_marker_recoil.gd, PROPOSED): the shots of the turn
+# this unit fired (the layer gives them with the playback's second each pose; `_shot_t` < 0 when no turn plays) and the drawn barrel / turret / hull kicked back along the
+# turret's bearing at the moment of each. Mode none (the default) moves nothing.
+var _shots: Array = []
+var _shot_t: float = -1.0
+var _barrels_per_turret: int = 0
+var _barrel_sprites: Array = []
+var _barrel_shadows: Array = []
 # A SHIP's ink V wake (Track SH, the warship): a sprite under the plane's, made when the art carries one and shown while the ship is
 # under way (`underway`, set by the layer from the unit's speed: data unit_art.ship.underway_mps).
 var wake: Sprite2D = null
@@ -111,6 +120,10 @@ func setup(style: RefCounted, id: String, silhouette_id: String, size: float, si
 	shadow_parent.add_child(shadow)
 
 func _exit_tree() -> void:
+	for s: Variant in _barrel_shadows:
+		if is_instance_valid(s):
+			(s as Node).queue_free()
+	_barrel_shadows.clear()
 	for s: Variant in _turret_shadows:
 		if is_instance_valid(s):
 			(s as Node).queue_free()
@@ -193,24 +206,27 @@ func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_off
 		var sc := Vector2.ONE * (screen_ppm * k / art.ppm)
 		var sprite_rot := 0.0 if art.screen_aligned else rot   # (a static unit is baked turned)
 		var use_parts: bool = has_turret and not art.turret_parts.is_empty() and art.hull_texture != null
+		var rc: Dictionary = _recoil(sc, sprite_rot) if use_parts else {}
+		var hull_off: Vector2 = rc.get("hull", Vector2.ZERO)
 		plane.texture = art.hull_texture if use_parts else art.texture
 		plane.offset = -art.origin
+		plane.position = hull_off
 		plane.rotation = sprite_rot
 		plane.scale = sc
 		UnitSunk.apply(plane, sunk_color, sunk_amount)
-		_pose_turret_parts(use_parts, sc, sprite_rot, screen_pos, shadow_offset_px)
+		_pose_turret_parts(use_parts, sc, sprite_rot, screen_pos, shadow_offset_px, rc)
 		shadow.texture = art.hull_mask if use_parts and art.hull_mask != null else art.mask
 		shadow.offset = -art.origin
 		shadow.rotation = sprite_rot
 		shadow.scale = sc
-		shadow.position = screen_pos + shadow_offset_px
+		shadow.position = screen_pos + shadow_offset_px + hull_off
 		shadow.visible = visible and sunk_amount <= 0.0   # (under the water it casts none)
 		_pose_wake(sc, sprite_rot)
-		_pose_shadow_parts(sc, sprite_rot, screen_pos, shadow_offset_px)
+		_pose_shadow_parts(sc, sprite_rot, screen_pos, shadow_offset_px + hull_off)
 	else:
 		shadow.visible = false
 		_pose_shadow_parts(Vector2.ONE, 0.0, screen_pos, shadow_offset_px)
-		_pose_turret_parts(false, Vector2.ONE, 0.0, screen_pos, shadow_offset_px)
+		_pose_turret_parts(false, Vector2.ONE, 0.0, screen_pos, shadow_offset_px, {})
 		if wake != null:
 			wake.visible = false
 	_pose_shapes()
@@ -221,10 +237,57 @@ func set_turret(rel: float, present: bool) -> void:
 	turret_rel = rel
 	has_turret = present
 
+# The turn's shots of this unit and the second of the turn now (< 0 when no turn plays): what the recoil is a function of (UnitMarkerLayer gives them each pose).
+func set_shots(shots: Array, t: float) -> void:
+	_shots = shots
+	_shot_t = t
+
+# The kicks of the drawn barrel, turret and hull at the playback's second, in screen px: {hull: Vector2, turret: [Vector2 per part], barrel: [Vector2 per part]}, {} when
+# nothing moves (mode none, no shot, no turret). Each is back along the turret's bearing, which is where the sprite's barrel points; a part's own time is the moment ITS
+# first shell leaves (a salvo recoils turret by turret). Metres of the drawn unit, floored on screen by unit_art.recoil.<kind>.min_px.
+func _recoil(sc: Vector2, sprite_rot: float) -> Dictionary:
+	if _shot_t < 0.0 or _shots.is_empty() or not has_turret or art == null or art.turret_parts.is_empty():
+		return {}
+	var kind := "tank" if UnitMarkerArt.is_tank(silhouette) else ("ship" if UnitMarkerArt.is_ship(silhouette) else "")
+	if kind == "":
+		return {}
+	var spec: Dictionary = Recoil.spec(_style, kind)
+	if spec.is_empty():
+		return {}
+	var n := art.turret_parts.size()
+	if _barrels_per_turret <= 0:
+		_barrels_per_turret = 1
+		if kind == "ship":
+			_barrels_per_turret = maxi(UnitMarkerArt.ship_muzzles(_style, silhouette, 0.0).size() / maxi(n, 1), 1)
+	var px_m: float = sc.x * art.ppm
+	var floor_px := Recoil.min_px(_style, kind)
+	var back := -Vector2(0.0, -1.0).rotated(sprite_rot + turret_rel)   # against the barrel's direction
+	var out := {"hull": Vector2.ZERO, "turret": [], "barrel": []}
+	if spec.has("hull"):
+		var hp: Dictionary = spec["hull"]
+		out["hull"] = back * Recoil.px(hp, px_m, floor_px, Recoil.factor(_shots, _shot_t, 0, _barrels_per_turret, hp, true))
+	for i in n:
+		var tv := Vector2.ZERO
+		var bv := Vector2.ZERO
+		if spec.has("turret"):
+			var tp: Dictionary = spec["turret"]
+			tv = back * Recoil.px(tp, px_m, floor_px, Recoil.factor(_shots, _shot_t, i, _barrels_per_turret, tp))
+		if spec.has("barrel"):
+			var bp: Dictionary = spec["barrel"]
+			bv = back * Recoil.px(bp, px_m, floor_px, Recoil.factor(_shots, _shot_t, i, _barrels_per_turret, bp))
+		(out["turret"] as Array).append(tv)
+		(out["barrel"] as Array).append(bv)
+	return out
+
 # The turrets as sprites of their own (Art.turret_parts): each turned to the bearing about its pivot, which stands at its place on the hull (turned with the hull).
 # A part is drawn at its built bearing (0 forward, PI an after turret), so it turns by the difference. With `on` false (no parts, no turret) they are hidden.
-func _pose_turret_parts(on: bool, sc: Vector2, sprite_rot: float, screen_pos: Vector2, off: Vector2) -> void:
+# `rc` is the recoil (see _recoil): the hull's kick moves every part with the hull, the turret's its own sprites, the barrel's its barrel sprite (a part with a barrel_tex
+# draws it UNDER the turret, so that it slides back under the mantlet or the gun house).
+func _pose_turret_parts(on: bool, sc: Vector2, sprite_rot: float, screen_pos: Vector2, off: Vector2, rc: Dictionary = {}) -> void:
 	var parts: Array = art.turret_parts if (on and art != null) else []
+	var hull_off: Vector2 = rc.get("hull", Vector2.ZERO)
+	var turret_offs: Array = rc.get("turret", [])
+	var barrel_offs: Array = rc.get("barrel", [])
 	while _turret_sprites.size() < parts.size():
 		var spr := Sprite2D.new()
 		spr.centered = false
@@ -244,17 +307,25 @@ func _pose_turret_parts(on: bool, sc: Vector2, sprite_rot: float, screen_pos: Ve
 			spr.visible = false
 			if i < _turret_shadows.size():
 				(_turret_shadows[i] as Sprite2D).visible = false
+			if i < _barrel_sprites.size():
+				(_barrel_sprites[i] as Sprite2D).visible = false
+			if i < _barrel_shadows.size():
+				(_barrel_shadows[i] as Sprite2D).visible = false
 			continue
 		var part: Dictionary = parts[i]
 		var local := (part["pivot_m"] as Vector2) * art.ppm * sc.x
 		var rot := sprite_rot + (turret_rel - float(part["built_rel"]))
+		var base_pos := local.rotated(sprite_rot) + hull_off
+		var t_off: Vector2 = turret_offs[i] if i < turret_offs.size() else Vector2.ZERO
+		var b_off: Vector2 = barrel_offs[i] if i < barrel_offs.size() else Vector2.ZERO
 		spr.texture = part["tex"]
 		spr.offset = -(part["origin"] as Vector2)
-		spr.position = local.rotated(sprite_rot)
+		spr.position = base_pos + t_off
 		spr.rotation = rot
 		spr.scale = sc
 		spr.visible = true
 		UnitSunk.apply(spr, sunk_color, sunk_amount)
+		_pose_barrel(i, part, spr, rot, sc, base_pos + t_off + b_off, screen_pos, off)
 		if i < _turret_shadows.size():
 			var ss2 := _turret_shadows[i] as Sprite2D
 			var has_mask: bool = part.get("mask") != null
@@ -265,6 +336,45 @@ func _pose_turret_parts(on: bool, sc: Vector2, sprite_rot: float, screen_pos: Ve
 				ss2.rotation = rot
 				ss2.scale = sc
 				ss2.position = screen_pos + spr.position + off
+
+# A part's barrel as a sprite of its own, when the art carries it (Art barrel_tex; the recoil board's barrel mode): at the turret's pivot, turned with the turret, under the
+# turret's sprite, moved by the barrel's own kick. Hidden when the part has none.
+func _pose_barrel(i: int, part: Dictionary, turret_spr: Sprite2D, rot: float, sc: Vector2, pos: Vector2, screen_pos: Vector2, off: Vector2) -> void:
+	var has: bool = part.get("barrel_tex") != null
+	while _barrel_sprites.size() <= i:
+		var b := Sprite2D.new()
+		b.centered = false
+		b.name = "Barrel_%d" % _barrel_sprites.size()
+		add_child(b)
+		_barrel_sprites.append(b)
+	var spr := _barrel_sprites[i] as Sprite2D
+	if has and spr.get_index() > turret_spr.get_index():
+		move_child(spr, turret_spr.get_index())   # (under the turret)
+	spr.visible = has
+	if has:
+		spr.texture = part["barrel_tex"]
+		spr.offset = -(part["origin"] as Vector2)
+		spr.position = pos
+		spr.rotation = rot
+		spr.scale = sc
+		UnitSunk.apply(spr, sunk_color, sunk_amount)
+	while _barrel_shadows.size() <= i and _shadow_parent != null:
+		var bs := Sprite2D.new()
+		bs.centered = false
+		bs.name = "ShadowBarrel_%s_%d" % [unit_id, _barrel_shadows.size()]
+		bs.modulate = shadow.modulate
+		_shadow_parent.add_child(bs)
+		_barrel_shadows.append(bs)
+	if i < _barrel_shadows.size():
+		var bsh := _barrel_shadows[i] as Sprite2D
+		var has_mask: bool = has and part.get("barrel_mask") != null
+		bsh.visible = has_mask and visible and sunk_amount <= 0.0
+		if has_mask:
+			bsh.texture = part["barrel_mask"]
+			bsh.offset = -(part["origin"] as Vector2)
+			bsh.rotation = rot
+			bsh.scale = sc
+			bsh.position = screen_pos + pos + off
 
 # The layer tells the marker how far under the water it lies: `amount` of the way to the water's `color` (UnitSunk.wash), 0 at or above the surface.
 func set_sunk(color: Color, amount: float) -> void:

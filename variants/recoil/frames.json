@@ -1,0 +1,680 @@
+{
+  "id": "recoil",
+  "about": "The recoil board. compare_<scene>_z<zoom>.png: options as rows, the moments around the shot as columns, native size (the 0.35 grids also as _x3 loupes); <option>_<scene>_z<zoom>_strip.png: one option's moments side by side (the 0.35 strips enlarged 3x with nearest-neighbour; the plain 1:1 crops are in frames/); <option>_strip.png: all of an option's scenes and zooms in one picture; frames/<option>_<scene>_z<zoom>_t<ms>.png: every raw crop at 1:1; context_*.png: whole 1280 x 720 frames.",
+  "frames": [
+    {
+      "file": "r0_none_tank_z1.0_strip.png",
+      "option": "R0",
+      "title": "R0  ·  Tank on the village road  ·  zoom 1.0",
+      "caption": "Today: nothing moves: Tank on the village road, zoom 1.0, 6 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40); enlarged 3x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "tank",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        2434,
+        394
+      ]
+    },
+    {
+      "file": "r0_none_tank_z0.35_strip.png",
+      "option": "R0",
+      "title": "R0  ·  Tank on the village road  ·  zoom 0.35",
+      "caption": "Today: nothing moves: Tank on the village road, zoom 0.35, 6 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40); enlarged 4x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "tank",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        1774,
+        310
+      ]
+    },
+    {
+      "file": "r0_none_cruiser_z1.0_strip.png",
+      "option": "R0",
+      "title": "R0  ·  Cruiser off the east coast  ·  zoom 1.0",
+      "caption": "Today: nothing moves: Cruiser off the east coast, zoom 1.0, 8 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40, +0.60, +1.00); 1:1, native size. Crops of the game's own frames.",
+      "scene": "cruiser",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        2194,
+        654
+      ]
+    },
+    {
+      "file": "r0_none_cruiser_z0.35_strip.png",
+      "option": "R0",
+      "title": "R0  ·  Cruiser off the east coast  ·  zoom 0.35",
+      "caption": "Today: nothing moves: Cruiser off the east coast, zoom 0.35, 8 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40, +0.60, +1.00); enlarged 3x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "cruiser",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        2754,
+        724
+      ]
+    },
+    {
+      "file": "r1_barrel_tank_z1.0_strip.png",
+      "option": "R1",
+      "title": "R1  ·  Tank on the village road  ·  zoom 1.0",
+      "caption": "The barrel alone slides back: Tank on the village road, zoom 1.0, 6 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40); enlarged 3x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "tank",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        2434,
+        394
+      ]
+    },
+    {
+      "file": "r1_barrel_tank_z0.35_strip.png",
+      "option": "R1",
+      "title": "R1  ·  Tank on the village road  ·  zoom 0.35",
+      "caption": "The barrel alone slides back: Tank on the village road, zoom 0.35, 6 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40); enlarged 4x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "tank",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        1774,
+        310
+      ]
+    },
+    {
+      "file": "r1_barrel_cruiser_z1.0_strip.png",
+      "option": "R1",
+      "title": "R1  ·  Cruiser off the east coast  ·  zoom 1.0",
+      "caption": "The barrel alone slides back: Cruiser off the east coast, zoom 1.0, 8 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40, +0.60, +1.00); 1:1, native size. Crops of the game's own frames.",
+      "scene": "cruiser",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        2194,
+        654
+      ]
+    },
+    {
+      "file": "r1_barrel_cruiser_z0.35_strip.png",
+      "option": "R1",
+      "title": "R1  ·  Cruiser off the east coast  ·  zoom 0.35",
+      "caption": "The barrel alone slides back: Cruiser off the east coast, zoom 0.35, 8 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40, +0.60, +1.00); enlarged 3x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "cruiser",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        2754,
+        724
+      ]
+    },
+    {
+      "file": "r2_turret_tank_z1.0_strip.png",
+      "option": "R2",
+      "title": "R2  ·  Tank on the village road  ·  zoom 1.0",
+      "caption": "The whole turret kicks back: Tank on the village road, zoom 1.0, 6 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40); enlarged 3x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "tank",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        2434,
+        394
+      ]
+    },
+    {
+      "file": "r2_turret_tank_z0.35_strip.png",
+      "option": "R2",
+      "title": "R2  ·  Tank on the village road  ·  zoom 0.35",
+      "caption": "The whole turret kicks back: Tank on the village road, zoom 0.35, 6 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40); enlarged 4x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "tank",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        1774,
+        310
+      ]
+    },
+    {
+      "file": "r2_turret_cruiser_z1.0_strip.png",
+      "option": "R2",
+      "title": "R2  ·  Cruiser off the east coast  ·  zoom 1.0",
+      "caption": "The whole turret kicks back: Cruiser off the east coast, zoom 1.0, 8 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40, +0.60, +1.00); 1:1, native size. Crops of the game's own frames.",
+      "scene": "cruiser",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        2194,
+        654
+      ]
+    },
+    {
+      "file": "r2_turret_cruiser_z0.35_strip.png",
+      "option": "R2",
+      "title": "R2  ·  Cruiser off the east coast  ·  zoom 0.35",
+      "caption": "The whole turret kicks back: Cruiser off the east coast, zoom 0.35, 8 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40, +0.60, +1.00); enlarged 3x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "cruiser",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        2754,
+        724
+      ]
+    },
+    {
+      "file": "r3_hull_tank_z1.0_strip.png",
+      "option": "R3",
+      "title": "R3  ·  Tank on the village road  ·  zoom 1.0",
+      "caption": "The whole tank rocks back: Tank on the village road, zoom 1.0, 6 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40); enlarged 3x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "tank",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        2434,
+        394
+      ]
+    },
+    {
+      "file": "r3_hull_tank_z0.35_strip.png",
+      "option": "R3",
+      "title": "R3  ·  Tank on the village road  ·  zoom 0.35",
+      "caption": "The whole tank rocks back: Tank on the village road, zoom 0.35, 6 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40); enlarged 4x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "tank",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        1774,
+        310
+      ]
+    },
+    {
+      "file": "r3_hull_cruiser_z1.0_strip.png",
+      "option": "R3",
+      "title": "R3  ·  Cruiser off the east coast  ·  zoom 1.0",
+      "caption": "The whole tank rocks back: Cruiser off the east coast, zoom 1.0, 8 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40, +0.60, +1.00); 1:1, native size. Crops of the game's own frames.",
+      "scene": "cruiser",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        2194,
+        654
+      ]
+    },
+    {
+      "file": "r3_hull_cruiser_z0.35_strip.png",
+      "option": "R3",
+      "title": "R3  ·  Cruiser off the east coast  ·  zoom 0.35",
+      "caption": "The whole tank rocks back: Cruiser off the east coast, zoom 0.35, 8 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40, +0.60, +1.00); enlarged 3x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "cruiser",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        2754,
+        724
+      ]
+    },
+    {
+      "file": "r4_turret_hull_tank_z1.0_strip.png",
+      "option": "R4",
+      "title": "R4  ·  Tank on the village road  ·  zoom 1.0",
+      "caption": "The turret kicks, the hull rocks a little: Tank on the village road, zoom 1.0, 6 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40); enlarged 3x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "tank",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        2434,
+        394
+      ]
+    },
+    {
+      "file": "r4_turret_hull_tank_z0.35_strip.png",
+      "option": "R4",
+      "title": "R4  ·  Tank on the village road  ·  zoom 0.35",
+      "caption": "The turret kicks, the hull rocks a little: Tank on the village road, zoom 0.35, 6 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40); enlarged 4x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "tank",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        1774,
+        310
+      ]
+    },
+    {
+      "file": "r4_turret_hull_cruiser_z1.0_strip.png",
+      "option": "R4",
+      "title": "R4  ·  Cruiser off the east coast  ·  zoom 1.0",
+      "caption": "The turret kicks, the hull rocks a little: Cruiser off the east coast, zoom 1.0, 8 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40, +0.60, +1.00); 1:1, native size. Crops of the game's own frames.",
+      "scene": "cruiser",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        2194,
+        654
+      ]
+    },
+    {
+      "file": "r4_turret_hull_cruiser_z0.35_strip.png",
+      "option": "R4",
+      "title": "R4  ·  Cruiser off the east coast  ·  zoom 0.35",
+      "caption": "The turret kicks, the hull rocks a little: Cruiser off the east coast, zoom 0.35, 8 moments around the shot (-0.10, +0.00, +0.05, +0.10, +0.20, +0.40, +0.60, +1.00); enlarged 3x with nearest-neighbour as a loupe, the plain size is in frames/ and in the compare_ grids. Crops of the game's own frames.",
+      "scene": "cruiser",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        2754,
+        724
+      ]
+    },
+    {
+      "file": "compare_tank_z1.0.png",
+      "option": "all",
+      "title": "all options  ·  Tank on the village road  ·  zoom 1.0",
+      "caption": "The five options as rows and the moments around the shot as columns, Tank on the village road, zoom 1.0, native size.",
+      "scene": "tank",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        1064,
+        758
+      ]
+    },
+    {
+      "file": "compare_tank_z1.0_x3.png",
+      "option": "all",
+      "title": "all options  ·  Tank on the village road  ·  zoom 1.0 (loupe 3x)",
+      "caption": "The five options as rows and the moments around the shot as columns, Tank on the village road, zoom 1.0; enlarged 3x with nearest-neighbour.",
+      "scene": "tank",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        2624,
+        1758
+      ]
+    },
+    {
+      "file": "compare_tank_z0.35.png",
+      "option": "all",
+      "title": "all options  ·  Tank on the village road  ·  zoom 0.35",
+      "caption": "The five options as rows and the moments around the shot as columns, Tank on the village road, zoom 0.35, native size.",
+      "scene": "tank",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        704,
+        528
+      ]
+    },
+    {
+      "file": "compare_tank_z0.35_x4.png",
+      "option": "all",
+      "title": "all options  ·  Tank on the village road  ·  zoom 0.35 (loupe 4x)",
+      "caption": "The five options as rows and the moments around the shot as columns, Tank on the village road, zoom 0.35; enlarged 4x with nearest-neighbour.",
+      "scene": "tank",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "size": [
+        1964,
+        1338
+      ]
+    },
+    {
+      "file": "compare_cruiser_z1.0.png",
+      "option": "all",
+      "title": "all options  ·  Cruiser off the east coast  ·  zoom 1.0",
+      "caption": "The five options as rows and the moments around the shot as columns, Cruiser off the east coast, zoom 1.0, native size.",
+      "scene": "cruiser",
+      "zoom": 1.0,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        2384,
+        3058
+      ]
+    },
+    {
+      "file": "compare_cruiser_z0.35.png",
+      "option": "all",
+      "title": "all options  ·  Cruiser off the east coast  ·  zoom 0.35",
+      "caption": "The five options as rows and the moments around the shot as columns, Cruiser off the east coast, zoom 0.35, native size.",
+      "scene": "cruiser",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        1184,
+        1308
+      ]
+    },
+    {
+      "file": "compare_cruiser_z0.35_x3.png",
+      "option": "all",
+      "title": "all options  ·  Cruiser off the east coast  ·  zoom 0.35 (loupe 3x)",
+      "caption": "The five options as rows and the moments around the shot as columns, Cruiser off the east coast, zoom 0.35; enlarged 3x with nearest-neighbour.",
+      "scene": "cruiser",
+      "zoom": 0.35,
+      "moments_s": [
+        -0.1,
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        1.0
+      ],
+      "size": [
+        2944,
+        3408
+      ]
+    },
+    {
+      "file": "r0_none_strip.png",
+      "option": "R0",
+      "title": "R0  ·  contact strip",
+      "caption": "Today: nothing moves: all scenes and zooms in one picture",
+      "scene": "all",
+      "zoom": 0,
+      "size": [
+        2754,
+        1896
+      ]
+    },
+    {
+      "file": "r1_barrel_strip.png",
+      "option": "R1",
+      "title": "R1  ·  contact strip",
+      "caption": "The barrel alone slides back: all scenes and zooms in one picture",
+      "scene": "all",
+      "zoom": 0,
+      "size": [
+        2754,
+        1896
+      ]
+    },
+    {
+      "file": "r2_turret_strip.png",
+      "option": "R2",
+      "title": "R2  ·  contact strip",
+      "caption": "The whole turret kicks back: all scenes and zooms in one picture",
+      "scene": "all",
+      "zoom": 0,
+      "size": [
+        2754,
+        1896
+      ]
+    },
+    {
+      "file": "r3_hull_strip.png",
+      "option": "R3",
+      "title": "R3  ·  contact strip",
+      "caption": "The whole tank rocks back: all scenes and zooms in one picture",
+      "scene": "all",
+      "zoom": 0,
+      "size": [
+        2754,
+        1896
+      ]
+    },
+    {
+      "file": "r4_turret_hull_strip.png",
+      "option": "R4",
+      "title": "R4  ·  contact strip",
+      "caption": "The turret kicks, the hull rocks a little: all scenes and zooms in one picture",
+      "scene": "all",
+      "zoom": 0,
+      "size": [
+        2754,
+        1896
+      ]
+    },
+    {
+      "file": "context_tank_z1.0_r0.png",
+      "option": "R0",
+      "title": "context: context_tank_z1.0_r0",
+      "caption": "The whole 1280 x 720 frame at the moment of the shot",
+      "scene": "tank",
+      "zoom": 1.0,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "context_tank_z1.0_r4.png",
+      "option": "R4",
+      "title": "context: context_tank_z1.0_r4",
+      "caption": "The whole 1280 x 720 frame at the moment of the shot",
+      "scene": "tank",
+      "zoom": 1.0,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "context_cruiser_z1.0_r0.png",
+      "option": "R0",
+      "title": "context: context_cruiser_z1.0_r0",
+      "caption": "The whole 1280 x 720 frame at the moment of the shot",
+      "scene": "cruiser",
+      "zoom": 1.0,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "context_cruiser_z1.0_r4.png",
+      "option": "R4",
+      "title": "context: context_cruiser_z1.0_r4",
+      "caption": "The whole 1280 x 720 frame at the moment of the shot",
+      "scene": "cruiser",
+      "zoom": 1.0,
+      "size": [
+        1280,
+        720
+      ]
+    }
+  ]
+}

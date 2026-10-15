@@ -62,6 +62,7 @@ const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 const ValueNoise = preload("res://scripts/core/noise.gd")
+const Recoil = preload("res://scripts/ui/unit_marker_recoil.gd")
 
 const MASK32 := 0xFFFFFFFF
 # silhouette id (data/units/<type>.json drawing.silhouette) -> [the sheet's
@@ -123,6 +124,8 @@ class Art:
 	# their drawn bearing (the ghosts, the roster and everything else that is not a marker use it). Empty parts: the art is one sprite.
 	var hull_texture: Texture2D = null
 	var hull_mask: Texture2D = null
+	# A part may also carry `barrel_tex` and `barrel_mask` (builder BR, the recoil board; only while unit_art.recoil.mode moves the barrel on its own): its barrel(s) as a
+	# sprite of their own on the same pivot and size, drawn under the part's `tex`, which is then without them.
 	var turret_parts: Array = []
 
 class Model:
@@ -262,6 +265,8 @@ static func art_for(st: RefCounted, silhouette: String, accent: Color, ppm: floa
 	var variant := _variant_of(st, silhouette)
 	# The pen is part of the art (outlines go through InkCanvas's pen), so it is part of the key.
 	var key := "%s|%d|%s|%.2f|%s" % [silhouette, variant, accent.to_html(), q, InkCanvas.pen_key()]
+	if (is_tank(silhouette) or is_ship(silhouette)) and Recoil.wants_barrel(st):
+		key += "|barrel"   # (builder BR, the recoil board: the barrels are parts of their own in this art)
 	if is_static(silhouette):
 		rot = wrapf(rot, -PI, PI)
 		key += "|%.3f" % snappedf(rot, 0.005)
@@ -1331,17 +1336,25 @@ static func _draw_tank_ground(g, M: Model, V: View, ink: Ink, accent: Color) -> 
 			var cc := _cen(sw)
 			_line(pn, PackedVector2Array([Vector2(cc.x - 0.3, cc.y), Vector2(cc.x + 0.3, cc.y)]), {"alpha": 0.5})
 
-static func _draw_tank_upper(g, M: Model, V: View, ink: Ink) -> void:
+# `part_mode`: 0 the whole upper (turret, mantlet, gun), 1 without the barrel (the gun and its muzzle brake), 2 the barrel alone (builder BR, the recoil board:
+# the barrel as a part of its own, drawn UNDER the turret so that it slides back under the mantlet). Every element takes the same pen seed in every mode (the barrel's
+# alone is drawn after the rest has been drawn on a scratch canvas), so the parts together are the whole picture and the whole upper is untouched.
+static func _draw_tank_upper(g, M: Model, V: View, ink: Ink, part_mode: int = 0) -> void:
 	var G := M.G
 	var p := M.p
-	var pn := Pen.new(g, V, ink, M.seed + 9)
 	var ppm := V.ppm
 	var cream := ink.fill
+	var scratch = null
+	var gg = g
+	if part_mode == 2:
+		scratch = InkCanvas.new(Vector2i(8, 8))   # the turret is drawn here, unseen, so the pen has used the seeds it uses in the whole picture
+		gg = scratch
+	var pn := Pen.new(gg, V, ink, M.seed + 9)
 	var t_o := _path(pn, G.turret, {"fill": cream, "weight": 0.0})
-	shade_side(g, t_o, V.tp(G.tc), ink.sd, ink.fill_shaded)   # shadeDome
-	stipple(g, ink, t_o, {"rng": _rng(pn), "density": 2.6, "away": V.tp(G.tc)})
-	edge_hatch(g, ink, t_o, minf(5.0, p.turret_r * 0.45 * ppm), _rng(pn))
-	stroke_o(g, ink, t_o, 1.2)
+	shade_side(gg, t_o, V.tp(G.tc), ink.sd, ink.fill_shaded)   # shadeDome
+	stipple(gg, ink, t_o, {"rng": _rng(pn), "density": 2.6, "away": V.tp(G.tc)})
+	edge_hatch(gg, ink, t_o, minf(5.0, p.turret_r * 0.45 * ppm), _rng(pn))
+	stroke_o(gg, ink, t_o, 1.2)
 	_path(pn, G.hatch, {"weight": 0.6, "alpha": 0.85})
 	if G.cupola.size() > 0:
 		_path(pn, G.cupola, {"fill": cream, "weight": 0.8})
@@ -1349,13 +1362,18 @@ static func _draw_tank_upper(g, M: Model, V: View, ink: Ink) -> void:
 			var cc := _cen(G.cupola)
 			_path(pn, circ(cc, 0.2, 12), {"weight": 0.5, "alpha": 0.7, "breaks": 0.25})
 	var m_o := _path(pn, G.mantlet, {"fill": cream, "weight": 0.0})
-	shade_side(g, m_o, _cen(m_o), ink.sd, ink.fill_shaded)
-	stroke_o(g, ink, m_o, 0.95)
+	shade_side(gg, m_o, _cen(m_o), ink.sd, ink.fill_shaded)
+	stroke_o(gg, ink, m_o, 0.95)
+	if part_mode == 1:
+		return
+	pn.g = g
 	var g_o := _path(pn, G.gun, {"fill": cream, "weight": 0.0})
 	shade_axis(g, ink, g_o, V, Vector2.ZERO, ink.fill_shaded)
 	stroke_o(g, ink, g_o, 0.9)
 	if G.muzzle.size() > 0:
 		_path(pn, G.muzzle, {"fill": cream, "weight": 0.85})
+	if scratch != null:
+		scratch.discard()
 
 # --- The bake ---------------------------------------------------------------------------
 
@@ -1431,7 +1449,7 @@ static func _bake(st: RefCounted, M: Model, accent: Color, ppm: float, rot: floa
 	# A TANK's turret and gun are a part of their own (builder ORD): the hull without them, its mask, the turret part and its mask.
 	var tank_part: Dictionary = {}
 	if is_tank(M.silhouette):
-		tank_part = _tank_turret_canvases(M, ink, accent, ppm, margin, size, V)
+		tank_part = _tank_turret_canvases(M, ink, accent, ppm, margin, size, V, Recoil.wants_barrel(st))
 		canvases.append_array(tank_part["canvases"])
 	var imgs := InkCanvas.render_all(canvases)
 	var art := Art.new()
@@ -1446,18 +1464,24 @@ static func _bake(st: RefCounted, M: Model, accent: Color, ppm: float, rot: floa
 	if imgs.size() >= 2 and imgs[0] != null and not imgs[0].is_empty():
 		art.texture = ImageTexture.create_from_image(_straight(imgs[0], false))
 		art.mask = ImageTexture.create_from_image(_straight(imgs[1], true))
-		if not tank_part.is_empty() and imgs.size() == 6 and imgs[2] != null and not imgs[2].is_empty() and imgs[4] != null and not imgs[4].is_empty():
+		if not tank_part.is_empty() and imgs.size() >= 6 and imgs[2] != null and not imgs[2].is_empty() and imgs[4] != null and not imgs[4].is_empty():
 			art.hull_texture = ImageTexture.create_from_image(_straight(imgs[2], false))
 			art.hull_mask = ImageTexture.create_from_image(_straight(imgs[3], true))
-			art.turret_parts = [{
+			var tpart := {
 				"tex": ImageTexture.create_from_image(_straight(imgs[4], false)), "mask": ImageTexture.create_from_image(_straight(imgs[5], true)),
-				"origin": tank_part["origin"], "pivot_m": tank_part["pivot_m"], "built_rel": 0.0}]
+				"origin": tank_part["origin"], "pivot_m": tank_part["pivot_m"], "built_rel": 0.0}
+			# THE BARREL AS A PART (builder BR, the recoil board; only when unit_art.recoil.mode moves it): the turret above is then without its gun, and the gun a sprite of
+			# its own on the same pivot, drawn under the turret's
+			if imgs.size() == 8 and imgs[6] != null and not imgs[6].is_empty():
+				tpart["barrel_tex"] = ImageTexture.create_from_image(_straight(imgs[6], false))
+				tpart["barrel_mask"] = ImageTexture.create_from_image(_straight(imgs[7], true))
+			art.turret_parts = [tpart]
 	return art
 
 # THE TANK'S TURRET AS A PART (builder ORD, 2026-10-14): the canvases to bake, in order -- the hull (tracks, hull, deck) alone and its mask, then the turret,
 # mantlet, gun and what stands on the turret, drawn on a square canvas centred on the turret's axis (the pivot), and its mask -- with the pivot in the part's
 # px and in the art's metres. The same drawing code as the whole tank (draw_tank = ground, then upper), so the parts together are the whole picture.
-static func _tank_turret_canvases(M: Model, ink: Ink, accent: Color, ppm: float, margin: float, size: Vector2i, V: View) -> Dictionary:
+static func _tank_turret_canvases(M: Model, ink: Ink, accent: Color, ppm: float, margin: float, size: Vector2i, V: View, split: bool = false) -> Dictionary:
 	var G := M.G
 	var hull_canvas = InkCanvas.new(size)
 	hull_canvas.line_cap = "round"
@@ -1479,14 +1503,28 @@ static func _tank_turret_canvases(M: Model, ink: Ink, accent: Color, ppm: float,
 	var Vp := View.new(float(half_px) - pivot.x * ppm, float(half_px) - pivot.y * ppm, ppm, 0.0)
 	var part = InkCanvas.new(psize)
 	part.line_cap = "round"
-	_draw_tank_upper(part, M, Vp, ink)
+	_draw_tank_upper(part, M, Vp, ink, 1 if split else 0)
 	var part_mask = InkCanvas.new(psize)
 	part_mask.begin_path()
 	add_poly(part_mask, Vp.tps(G.turret), true)
-	add_poly(part_mask, Vp.tps(G.gun), true)
+	if not split:
+		add_poly(part_mask, Vp.tps(G.gun), true)
 	part_mask.fill_color = Color.WHITE
 	part_mask.fill()
-	return {"canvases": [hull_canvas, hull_mask, part, part_mask], "origin": Vector2(half_px, half_px), "pivot_m": pivot}
+	var canvases: Array = [hull_canvas, hull_mask, part, part_mask]
+	if split:
+		# the barrel alone (builder BR): the gun and its muzzle brake on a canvas of the same size and pivot, and its shadow mask
+		var barrel = InkCanvas.new(psize)
+		barrel.line_cap = "round"
+		_draw_tank_upper(barrel, M, Vp, ink, 2)
+		var barrel_mask = InkCanvas.new(psize)
+		barrel_mask.begin_path()
+		add_poly(barrel_mask, Vp.tps(G.gun), true)
+		barrel_mask.fill_color = Color.WHITE
+		barrel_mask.fill()
+		canvases.append(barrel)
+		canvases.append(barrel_mask)
+	return {"canvases": canvases, "origin": Vector2(half_px, half_px), "pivot_m": pivot}
 
 # InkCanvas images are PREMULTIPLIED; a Sprite2D wants straight alpha. A mask
 # keeps only its coverage (white).

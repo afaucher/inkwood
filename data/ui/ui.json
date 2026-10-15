@@ -29,7 +29,36 @@
     "rebake_offscreen_margin_px": 120,
     "min_bake_ppm": 1.0,
     "max_bake_ppm": 30.0,
-    "cache_max": 48
+    "cache_max": 48,
+    "recoil": {
+      "_proposed": true,
+      "_reason": "PROPOSED by builder BR (board 'recoil', 2026-10-14; backlog A5). ALEX (decision tank-fire-feedback): 'The turret or the whole tank should have some visual feedback. Either the whole tank rocks back or just the turret.' and 'The turret feedback should also apply to the ship.' What the drawn tank and ship do at the moment of a shot (the 'fire' event of an ordered tank shot, the 'shell_fire' of the Main Guns; scripts/ui/unit_marker_recoil.gd). `mode` picks the look: none (today, the default: nothing moves), barrel (the barrel alone slides back along its axis, under the mantlet or the gun house, and returns), turret (the whole turret kicks back along the barrel), hull (the whole tank, or the whole ship, shifts against the barrel's direction and settles), turret_hull (the turret kick plus a smaller hull shift). Per kind (tank, ship) and mode a mode record lists its parts: barrel / turret / hull, each {m, attack_s, return_s, settle}: m is the kick in metres OF THE DRAWN UNIT (the unit is drawn at the planes' scale, 4 px per metre at zoom 1, so 0.7 m is 2.8 px), attack_s the time to the full kick, return_s the time back (game seconds of the playback, which marker.playback_speed 1 makes real seconds), settle 0..1 blends in a damped swing past rest (a hull comes back and rocks once). `min_px` is the floor of a kick on screen so that it still reads at zoom 0.35 (0.7 m is 1 px there). The ship's salvo recoils turret by turret at the moment its first shell leaves (the muzzle puffs' own times). EVERY NUMBER IS PROPOSED; nothing here is Alex's.",
+      "mode": "none",
+      "tank": {
+        "min_px": 1.6,
+        "modes": {
+          "barrel": { "barrel": { "m": 0.9, "attack_s": 0.04, "return_s": 0.35, "settle": 0.0 } },
+          "turret": { "turret": { "m": 0.55, "attack_s": 0.05, "return_s": 0.35, "settle": 0.0 } },
+          "hull": { "hull": { "m": 0.45, "attack_s": 0.06, "return_s": 0.5, "settle": 0.6 } },
+          "turret_hull": {
+            "turret": { "m": 0.55, "attack_s": 0.05, "return_s": 0.35, "settle": 0.0 },
+            "hull": { "m": 0.25, "attack_s": 0.06, "return_s": 0.5, "settle": 0.6 }
+          }
+        }
+      },
+      "ship": {
+        "min_px": 1.6,
+        "modes": {
+          "barrel": { "barrel": { "m": 1.2, "attack_s": 0.06, "return_s": 0.7, "settle": 0.0 } },
+          "turret": { "turret": { "m": 0.9, "attack_s": 0.06, "return_s": 0.7, "settle": 0.0 } },
+          "hull": { "hull": { "m": 0.3, "attack_s": 0.1, "return_s": 1.1, "settle": 0.5 } },
+          "turret_hull": {
+            "turret": { "m": 0.9, "attack_s": 0.06, "return_s": 0.7, "settle": 0.0 },
+            "hull": { "m": 0.15, "attack_s": 0.1, "return_s": 1.1, "settle": 0.5 }
+          }
+        }
+      }
+    }
   },
 
   "fonts": {

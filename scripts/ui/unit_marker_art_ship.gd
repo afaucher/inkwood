@@ -30,6 +30,7 @@ const S = preload("res://scripts/ui/unit_marker_art_static.gd")
 const BoatArt = preload("res://scripts/render/boat_art.gd")
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 const InkCanvas = preload("res://scripts/render/ink_canvas.gd")
+const Recoil = preload("res://scripts/ui/unit_marker_recoil.gd")
 
 const WAKE_SEED := 7919
 
@@ -275,11 +276,18 @@ static func _draw_upper(g, M: A.Model, V: A.View, ink: A.Ink, with_turrets: bool
 			_draw_turret(g, M, V, ink, G.turrets[i], i)
 
 # One main turret: its barrels, ears and gun house (builder ORD, 2026-10-14: a part of its own, so the playback can turn it to the sim's turret bearing).
-static func _draw_turret(g, M: A.Model, V: A.View, ink: A.Ink, t: Dictionary, i: int) -> void:
+# `part_mode` (builder BR, the recoil board): 0 the whole turret, 1 without its barrels, 2 the barrels alone. The pen's seeds are the whole turret's in every mode (a skipped
+# barrel still takes its seed), so the parts together are the whole picture and the whole turret is untouched.
+static func _draw_turret(g, M: A.Model, V: A.View, ink: A.Ink, t: Dictionary, i: int, part_mode: int = 0) -> void:
 	var pn := A.Pen.new(g, V, ink, M.seed + 9 + (i + 1) * 31)
 	var cream := ink.fill
 	for b: PackedVector2Array in t.bars:
-		A._path(pn, b, {"fill": cream, "weight": 0.75})
+		if part_mode == 1:
+			pn.next()
+		else:
+			A._path(pn, b, {"fill": cream, "weight": 0.75})
+	if part_mode == 2:
+		return
 	for e: PackedVector2Array in t.ears:
 		A._path(pn, e, {"fill": cream, "weight": 0.6})
 	var o := A._path(pn, t.poly, {"fill": cream, "weight": 0.0})
@@ -348,6 +356,7 @@ static func bake(st: RefCounted, M: A.Model, accent: Color, ppm: float) -> A.Art
 	_draw_ground(hull_canvas, M, V, ink, accent)
 	_draw_upper(hull_canvas, M, V, ink, false)
 	var canvases: Array = [art_canvas, mask_canvas, wake_canvas, hull_canvas]
+	var split: bool = Recoil.wants_barrel(st)   # (the recoil board: the barrels as parts of their own, under the turrets)
 	var part_info: Array = []
 	for i in (M.G.turrets as Array).size():
 		var t: Dictionary = M.G.turrets[i]
@@ -363,9 +372,14 @@ static func bake(st: RefCounted, M: A.Model, accent: Color, ppm: float) -> A.Art
 		var Vp := A.View.new(float(half_px) - pivot.x * ppm, float(half_px) - pivot.y * ppm, ppm, 0.0)
 		var pc = InkCanvas.new(Vector2i(2 * half_px, 2 * half_px))
 		pc.line_cap = "round"
-		_draw_turret(pc, M, Vp, ink, t, i)
+		_draw_turret(pc, M, Vp, ink, t, i, 1 if split else 0)
 		canvases.append(pc)
 		part_info.append({"origin": Vector2(half_px, half_px), "pivot_m": pivot, "built_rel": 0.0 if pivot.y < 0.0 else PI})
+		if split:
+			var bc = InkCanvas.new(Vector2i(2 * half_px, 2 * half_px))
+			bc.line_cap = "round"
+			_draw_turret(bc, M, Vp, ink, t, i, 2)
+			canvases.append(bc)
 	var imgs: Array = InkCanvas.render_all(canvases)
 	var art := A.Art.new()
 	art.ppm = ppm
@@ -386,11 +400,17 @@ static func bake(st: RefCounted, M: A.Model, accent: Color, ppm: float) -> A.Art
 		if imgs[3] != null and not imgs[3].is_empty():
 			art.hull_texture = ImageTexture.create_from_image(A._straight(imgs[3], false))
 			art.hull_mask = art.mask   # (a ship's shadow is its hull: the turrets are not in it)
+			var stride := 2 if split else 1
 			for i in part_info.size():
-				var img: Image = imgs[4 + i]
+				var img: Image = imgs[4 + i * stride]
 				if img == null or img.is_empty():
 					art.turret_parts.clear()
 					break
 				var info: Dictionary = part_info[i]
-				art.turret_parts.append({"tex": ImageTexture.create_from_image(A._straight(img, false)), "mask": null, "origin": info["origin"], "pivot_m": info["pivot_m"], "built_rel": info["built_rel"]})
+				var part := {"tex": ImageTexture.create_from_image(A._straight(img, false)), "mask": null, "origin": info["origin"], "pivot_m": info["pivot_m"], "built_rel": info["built_rel"]}
+				if split:
+					var bimg: Image = imgs[5 + i * stride]
+					if bimg != null and not bimg.is_empty():
+						part["barrel_tex"] = ImageTexture.create_from_image(A._straight(bimg, false))
+				art.turret_parts.append(part)
 	return art
