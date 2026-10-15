@@ -814,19 +814,19 @@ func map_press(p: Vector2) -> bool:
 	# drop at the tower; the target is the aim now.) With no friendly selected an enemy is selected, as before.
 	if hit != "" and is_enemy(hit) and friendly_selected():
 		if grab.is_empty():
-			set_target_unit(hit)
+			toggle_target_unit(hit)   # (builder ORD: a click on the enemy that is already the target lets go of it)
 			return true
 		if str(grab["kind"]) == "aim":
 			# The aim handle sits on this enemy (its target is the enemy): a plain click targets it, a drag moves the aim.
 			_click_enemy = hit
 			return planner.press(p)
-	if hit != "" and hit != selection.unit_id and grab.is_empty():
-		selection.select(hit)
+	if hit != "" and grab.is_empty():
+		selection.toggle(hit)   # (builder ORD, 2026-10-14; Alex, playtest-4: a click on the unit that is already selected lets go of it, a click on another selects it)
 		return true
 	if planner.press(p):
 		return true
 	if hit != "":
-		selection.select(hit)
+		selection.toggle(hit)   # (builder ORD: a click on the unit that is already selected lets go of it)
 		return true
 	return false
 
@@ -841,7 +841,7 @@ func map_release(p: Vector2) -> bool:
 		var enemy := _click_enemy
 		_click_enemy = ""
 		if used and not planner.aim_was_moved():
-			set_target_unit(enemy)   # a click on the handle, not a drag
+			toggle_target_unit(enemy)   # a click on the handle, not a drag
 	return used
 
 # --- The target selection (Track T) ------------------------------------------------------------------------------------
@@ -868,6 +868,20 @@ func set_target_unit(id: String) -> bool:
 	target.set_unit(id, at)
 	return true
 
+# A click on an enemy: the target, or (when it already is) no target (builder ORD, 2026-10-14; Alex, playtest-4). False when it may not be.
+func toggle_target_unit(id: String) -> bool:
+	if input_locked() or not friendly_selected() or not is_enemy(id) or bool(world.units[id].down):
+		return false
+	target.toggle_unit(id, _target_shown_position(id))
+	return true
+
+# A right click on the map: the point, or (when it already is the target) no target. False when it may not be.
+func toggle_target_point(world_pt: Vector2) -> bool:
+	if input_locked() or not friendly_selected() or not world.in_bounds(world_pt.x, world_pt.y):
+		return false
+	target.toggle_point(world_pt)
+	return true
+
 # Makes the map point `world_pt` (metres) the target. False when it may not be.
 func set_target_point(world_pt: Vector2) -> bool:
 	if input_locked() or not friendly_selected() or not world.in_bounds(world_pt.x, world_pt.y):
@@ -882,8 +896,8 @@ func right_click(p: Vector2) -> bool:
 		return false
 	var hit := marker_layer.unit_at(p)
 	if hit != "" and is_enemy(hit):
-		return set_target_unit(hit)
-	return set_target_point(mapping.screen_to_world(p))
+		return toggle_target_unit(hit)
+	return toggle_target_point(mapping.screen_to_world(p))
 
 # Esc: clears the target before it clears anything else. True when there was one.
 func clear_target() -> bool:

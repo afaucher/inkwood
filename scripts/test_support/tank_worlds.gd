@@ -139,3 +139,48 @@ static func nearest_to(w: World, id: String, p: Vector2) -> float:
 		var s: Dictionary = w.sample(id, 0.25 * float(k), "history")
 		best = minf(best, Vector2(float(s["x"]), float(s["y"])).distance_to(p))
 	return best
+
+# --- The tank's gun is an ORDER now (builder ORD, 2026-10-14; data/sim/guns.json tank_gun) ---------------------------------------
+
+# Order the tank's gun at `target` (a unit id) in step `step` of its plan, keeping what the step already says. The step's state ({} if refused).
+static func order_fire(w: World, shooter: String, target: String, step: int = 0) -> Dictionary:
+	var u: Object = w.units[shooter]
+	var req: Dictionary = (u.plan[step] as Dictionary).duplicate(true) if step < u.plan.size() else {}
+	req["fire"] = {"special": "tank_gun", "target": {"unit": target}}
+	return w.plan_step(shooter, step, req)
+
+# A stand-in for a player (the AI does the same in scripts/sim/ai_drive.gd): every tank of the world whose gun can be set orders it at the nearest enemy
+# the sim allows (World.gun_check ok), in the first step that allows it. Returns how many orders were set.
+static func fire_at_nearest(w: World) -> int:
+	var n := 0
+	for id: String in w.units:
+		var u: Object = w.units[id]
+		if u.type != "tank" or u.down or u.def.is_static():
+			continue
+		var best := ""
+		var best_d := INF
+		for tid: String in w.units:
+			var t: Object = w.units[tid]
+			if t.side == u.side or t.down:
+				continue
+			var d := Vector2(u.x, u.y).distance_to(Vector2(t.x, t.y))
+			if d < best_d:
+				best_d = d
+				best = tid
+		if best == "":
+			continue
+		for k in w.steps_per_turn(id):
+			if bool(w.gun_check(id, k, {"unit": best}, "tank_gun").get("ok", false)):
+				if not order_fire(w, id, best, k).is_empty():
+					n += 1
+				break
+	return n
+
+# The "fire" events of a result by a shooter at a target (the aimed shots of the tank's gun).
+static func fires(res: Dictionary, shooter: String, target: String = "") -> Array:
+	return (res.get("events", []) as Array).filter(func(e: Dictionary) -> bool:
+		return e["type"] == "fire" and e["unit"] == shooter and (target == "" or e["target"] == target))
+
+# The "gun_hold" events of a result for a shooter.
+static func holds(res: Dictionary, shooter: String) -> Array:
+	return (res.get("events", []) as Array).filter(func(e: Dictionary) -> bool: return e["type"] == "gun_hold" and e["unit"] == shooter)

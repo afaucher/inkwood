@@ -31,6 +31,14 @@ func select(id: String) -> void:
 func clear() -> void:
 	select("")
 
+# A CLICK on the unit that is already selected lets go of it (builder ORD, 2026-10-14; Alex, playtest-4: "Selecting an already-selected unit or target
+# deselects it"); a click on any other unit selects it. The click paths (the map, the roster) call this; select() stays idempotent for code and tests.
+func toggle(id: String) -> void:
+	if id != "" and id == unit_id:
+		clear()
+	else:
+		select(id)
+
 # Lets go of a selection that is no longer allowed (a unit that went down).
 func prune() -> void:
 	if unit_id != "" and not can_select(unit_id):

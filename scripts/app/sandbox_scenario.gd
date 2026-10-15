@@ -661,6 +661,8 @@ func _unit_spec(u: Dictionary, i: int, pools: Variant, taken: Dictionary, quiet:
 		spec["altitude_band"] = str(u["altitude_band"])
 	if u.has("speed"):
 		spec["speed"] = float(u["speed"])
+	if u.has("turret_deg"):
+		spec["turret_deg"] = float(u["turret_deg"])   # (the turret's bearing at the start, degrees relative to the nose; World.add_unit)
 	if u.has("id"):
 		spec["id"] = str(u["id"])
 	if not sides.has(side):

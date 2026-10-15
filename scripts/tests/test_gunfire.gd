@@ -26,6 +26,7 @@ const FxGunfire = preload("res://scripts/fx/fx_gunfire.gd")
 const CombatFeed = preload("res://scripts/ui/combat_feed.gd")
 const UiStyle = preload("res://scripts/ui/ui_style.gd")
 const Rounds = preload("res://scripts/sim/rounds.gd")
+const TankWorlds = preload("res://scripts/test_support/tank_worlds.gd")
 
 const SEED := 20261009
 const TANK_FWD := 5.2          # the tank's hardpoint 0.4 m ahead of its centre plus the barrel's 4.8 m (data/fx/fx.json gunfire.muzzle.weapons)
@@ -243,6 +244,18 @@ func _muzzle() -> void:
 	near(float(rec["dir"]), 0.0, 1e-6, "2. ...along its hull (a tank's gun is drawn along it)")
 	near(float(rec["fwd_m"]), TANK_FWD, 1e-3, "2. ...at the end of the barrel: %.1f m ahead of the centre (hardpoint 0.4 m + barrel 4.8 m)" % TANK_FWD)
 	near(float(rec["lat_m"]), 0.0, 1e-6, "2. ...on the axis")
+	# AN ORDERED SHOT (builder ORD, 2026-10-14; decision tank-fire-feedback): the event carries the turret's bearing; the smoke starts at the TIP of the barrel along it
+	# (the unit file's turret.barrel_tip_m, 4.8 m), the turret's axis 0.4 m ahead of the hull's centre staying where the hull puts it
+	var ordered := _tank_shot(false, 41)
+	ordered["bearing"] = PI / 2.0
+	ordered["aimed"] = true
+	feed.on_event(ordered)
+	var mz2 := _records(rig, "muzzle")
+	if check(mz2.size() == 2, "2. an ordered shot makes a muzzle too (%d)" % mz2.size()):
+		var rec2: Dictionary = mz2[1]
+		near(float(rec2["dir"]), PI / 2.0, 1e-6, "2. ...along the turret's bearing, not the hull's")
+		near(float(rec2["fwd_m"]), 4.8, 1e-3, "2. ...4.8 m out from the turret's axis along it (the drawn barrel's tip)")
+		near(float(rec2["lat_m"]), -0.4, 1e-3, "2. ...the axis itself 0.4 m off the hull's centre sideways of the new bearing")
 	check(layer.gunfire.parts_of(rec).size() > 0 and _types(layer.gunfire.parts_of(rec)).has("puffs") and _types(layer.gunfire.parts_of(rec)).has("flash"), "2. ...a flash and W1 puffs (the muzzle recipe)")
 	var by_class := {}
 	# each weapon with a muzzle, and the ones without
@@ -494,46 +507,55 @@ func _duel(seed_v: int) -> World:
 	w.units["tank_b"].health = 99
 	return w
 
-func _real_sim() -> void:
-	# a seed with both a hit that did not destroy and a miss (health 99 each: nothing is destroyed)
-	var found := -1
-	var events: Array = []
-	for s in range(1, 60):
-		var w := _duel(s)
+# The duel's events over `turns` turns, each tank ordering its gun when it may (builder ORD, 2026-10-14: the gun is an order now, one aimed shot each, then a turn's
+# reload). When `feed` is given every turn's events go to it as the turn resolves (the feed samples the World's last history).
+func _duel_events(w: World, turns: int, feed: Object = null) -> Array:
+	var all: Array = []
+	for _i in turns:
+		TankWorlds.fire_at_nearest(w)
 		w.commit("local")
 		var res := w.resolve()
 		var evs: Array = res.get("events", [])
-		var hits := 0
-		var misses := 0
-		for e: Dictionary in evs:
+		if feed != null:
+			feed.call("begin_turn", w.turn)
+			for e: Dictionary in evs:
+				feed.call("on_event", e)
+		all.append_array(evs)
+		w.begin_turn()
+	return all
+
+func _real_sim() -> void:
+	# a seed with both a hit that did not destroy and a miss over eight turns (health 99 each: nothing is destroyed)
+	var found := -1
+	for s in range(1, 60):
+		var hits_s := 0
+		var misses_s := 0
+		for e: Dictionary in _duel_events(_duel(s), 8):
 			if str(e["type"]) == "fire" and str(e["weapon"]) == "turret_gun":
 				if bool(e["hit"]):
-					hits += 1
+					hits_s += 1
 				else:
-					misses += 1
-		if hits >= 2 and misses >= 2:
+					misses_s += 1
+		if hits_s >= 2 and misses_s >= 2:
 			found = s
-			events = evs
 			break
 	if not check(found > 0, "8. a seed of the duel has hits and misses (found %d)" % found):
 		return
 	var w2 := _duel(found)
-	w2.commit("local")
-	w2.resolve()
 	var rig := _rig(w2)
+	var events := _duel_events(w2, 8, rig["feed"] as Object)
 	var fires := 0
 	var hits := 0
 	var misses := 0
 	for e: Dictionary in events:
-		(rig["feed"] as CombatFeed).on_event(e)
 		if str(e["type"]) == "fire" and str(e["weapon"]) == "turret_gun":
 			fires += 1
 			if bool(e["hit"]):
 				hits += 1
 			else:
 				misses += 1
-	eq(_records(rig, "muzzle").size(), fires, "8. the duel: one muzzle for every roll of the tanks' guns (%d)" % fires)
-	eq(_records(rig, "impact").size(), hits + misses, "8. ...and one impact for every roll that did not destroy (%d hits, %d misses; nobody went down)" % [hits, misses])
+	eq(_records(rig, "muzzle").size(), fires, "8. the duel: one muzzle for every ordered shot of the tanks' guns (%d)" % fires)
+	eq(_records(rig, "impact").size(), hits + misses, "8. ...and one impact for every shot that did not destroy (%d hits, %d misses; nobody went down)" % [hits, misses])
 	var metal := 0
 	for r: Dictionary in _records(rig, "impact"):
 		check(str(r["mat"]) in ["metal", "earth"], "8. an impact on a tank or on the ground, not on anything else (%s)" % str(r["mat"]))

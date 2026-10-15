@@ -34,7 +34,7 @@ func _initialize() -> void:
 	var w0 := World.new()
 	var spec: GunRules.Spec = GunRules.new().special("main_guns")
 	print("[bridge-tuning] bridge now: %d pips. Tank gun %s. Shell blast %s%s. Bomb blast %s%s." % [
-		w0.unit_def("bridge").health, "1 pip a hit",
+		w0.unit_def("bridge").health, "2 pips a hit, one aimed shell every second turn when ordered (builder ORD, 2026-10-14)",
 		str(spec.blast_distances), str(spec.blast_pips), str(w0.bombs.blast_distances), str(w0.bombs.blast_pips)])
 	print("")
 	_tank_table()
@@ -61,12 +61,13 @@ func _tank_table() -> void:
 			w.rng_seed = sd
 			(w.units["bridge_1"] as Object).health = 100000
 			var at := b + off
-			if TankWorlds.tank(w, "gun", "allies", "player", at, 0.0, 0.0) == "":
+			if TankWorlds.tank(w, "gun", "allies", "player", at, (b - at).angle(), 0.0) == "":   # (facing the bridge: its gun is an order and has an arc)
 				refused = true
 				break
 			var pips := 0
 			var cum: Array[int] = []
 			for _t in TANK_TURNS:
+				TankWorlds.fire_at_nearest(w)   # (the tank's gun is fired only when ordered)
 				var res := TankWorlds.turn(w)
 				for ev: Dictionary in res["events"]:
 					if str(ev["type"]) == "hit" and str(ev["unit"]) == "bridge_1":

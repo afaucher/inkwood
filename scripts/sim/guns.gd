@@ -109,6 +109,22 @@ const WHY_INLAND := "inland"                     # beyond the coastal strip (Ale
 const WHY_ALREADY_PLANNED := "already_planned"   # another step of the plan fires this special: one salvo a turn
 const WHY_NOT_A_GUN := "not_a_gun"               # the unit has no such gun special
 const WHY_UNIT_DOWN := "unit_down"
+# The DIRECT kind's (the tank gun's; builder ORD, 2026-10-14) own reasons:
+const WHY_OUT_OF_ARC := "out_of_arc"             # the target is outside the turret's arc (a tank's 170 degree forward arc) when it would fire
+const WHY_CANNOT_ELEVATE := "cannot_elevate"     # the target is above or below the gun's cone (a plane overhead)
+const WHY_POINT_TARGET := "point_target"         # a direct gun fires at an enemy UNIT, not at a point on the map
+const WHY_OFF_BEARING := "off_bearing"           # the turret could not come on bearing before the turn ended (a gun_hold; at planning a warning, not a refusal)
+const WHY_NO_SHOT := "no_shot"                   # a direct order that never found its moment (the target out of range or arc for the whole turn)
+
+# THE DIRECT KIND (builder ORD, 2026-10-14; data/sim/guns.json "tank_gun", "kind": "direct"). The same request ({"fire": {"special": "tank_gun",
+# "target": {"unit": id}}}), the same activation (World.gun_check: loaded, one a turn, a spotted enemy UNIT in range) and the same card, but the order does not
+# send shells: the unit's weapon named in the record (data/units/tank.json weapons turret_gun, "fires_on_special") makes shots_per_order aimed rolls with its
+# own cone, odds and damage, at the moment the TURRET IS ON BEARING (scripts/sim/turret.gd: it turns toward the target at the unit's traverse_dps from the start
+# of the step, so the turn delays the shot). The result is the ordinary "fire" and "hit" events (plus "aimed": true, "special", "step" and the turret's
+# absolute "bearing" on the fire event), so the tracers, the muzzle smoke and the impacts draw it as they drew the weapon's own rolls. A turn that ends before
+# the turret is on bearing, or with the target never inside the arc and range together, fires nothing and spends no reload: a "gun_hold" with the reason.
+# Also planned by World.gun_check: "traverse_s" (the turret's time to bring the gun round), "bears_in_time" (false: it will not be on bearing before the turn
+# ends, the card says so) and "odds" (the chance of a hit as things stand, shown on the card).
 
 # --- The request ---------------------------------------------------------------------------
 

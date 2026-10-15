@@ -189,9 +189,11 @@ func _check_present(fields: Dictionary, raw: Variant, prefix: String) -> void:
 	if not check(raw is Dictionary, "%s is an object" % prefix):
 		return
 	for key: String in fields:
+		var spec: Dictionary = fields[key]
+		if bool(spec.get("optional", false)) and not (raw as Dictionary).has(key):
+			continue   # (builder ORD, 2026-10-14: a field the schema marks optional -- a weapon's fires_on_special, a unit's turret -- may be left out)
 		if not check((raw as Dictionary).has(key), "%s has '%s'" % [prefix, key]):
 			continue
-		var spec: Dictionary = fields[key]
 		if spec.get("kind", "") == "section":
 			_check_present(spec.get("fields", {}), raw[key], prefix + key + ".")
 		elif spec.get("kind", "") == "list" and raw[key] is Array:

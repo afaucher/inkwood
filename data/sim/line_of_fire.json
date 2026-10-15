@@ -137,12 +137,12 @@
     "weapons": {
       "_about": "The straight rounds: every weapon whose round has the path 'straight' in data/sim/rounds.json (bullets and cannon rounds) is listed here, and no other (test_line_of_fire_combat holds both). spread_mrad: the angular spread (the standard deviation, milliradians) of the round about the aim, SET BY scripts/test_support/lof_calibrate.gd so that the reference case, a still, fully exposed target of the named type at the typical range, seen from eight sides (every 45 degrees) and at the elevation given, takes the old base_hit_chance (reference.odds, held equal to the weapon's own by the test). The typical ranges are PROPOSED (the lead's reading of how each weapon is used; Alex said the tank gun's is about 200 m).",
       "turret_gun": {
-        "spread_mrad": { "value": 17.67, "_proposed": true, "_reason": "CALIBRATED by scripts/test_support/lof_calibrate.gd (builder LOF2, 2026-10-12): at this spread a still, fully exposed target of the reference type at the reference range, seen from eight sides, takes the old base_hit_chance (reference.odds). The spread is PROPOSED; the reference case is the lead's reading of how the weapon is used" },
+        "spread_mrad": { "value": 5.799, "_proposed": true, "_reason": "RE-CALIBRATED by builder ORD (2026-10-14) for the tank gun's ONE AIMED SHELL per order (base_hit_chance 0.12 -> 0.6, data/units/tank.json; was 17.67 mrad for 0.12 a roll): the same calibration (scripts/test_support/lof_calibration.gd solve, a throwaway run of it) now gives the new reference odds. At this spread a tank takes 0.99 at 50 m, 0.93 at 100, 0.60 at 200, 0.30 at 350. Original note: CALIBRATED by scripts/test_support/lof_calibrate.gd (builder LOF2, 2026-10-12): at this spread a still, fully exposed target of the reference type at the reference range, seen from eight sides, takes the old base_hit_chance (reference.odds). The spread is PROPOSED; the reference case is the lead's reading of how the weapon is used" },
         "reference": {
           "target": { "value": "tank", "_proposed": true, "_reason": "a tank against a tank" },
           "range_m": { "value": 200.0, "_proposed": true, "_reason": "about 200 m (the lead's brief; its effective range is 350 m)" },
           "elevation_deg": { "value": 0.0, "_proposed": true, "_reason": "level" },
-          "odds": { "value": 0.12, "_proposed": true, "_reason": "the tank gun's base_hit_chance today (data/units/tank.json), flat to 350 m" }
+          "odds": { "value": 0.6, "_proposed": true, "_reason": "the tank gun's base_hit_chance today (data/units/tank.json): 0.6 since the gun fires one aimed shell per order (builder ORD, 2026-10-14; was 0.12 a roll), flat to 350 m" }
         }
       },
       "wing_guns": {

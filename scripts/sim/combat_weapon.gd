@@ -43,6 +43,9 @@ var falloff_exponent: float = 1.0    # shape of the fall from centre to rim
 var tracking_dps: float = 1000000.0   # the line-of-sight rate (deg/s) at which crossing halves the odds; small = a fixed gun, large = a gunner who tracks
 var damage_pips: int = 1
 var rolls_per_second: float = 1.0
+# The special that fires this weapon ("" for a weapon that fires by the engagement rules; builder ORD, 2026-10-14). A weapon with one NEVER rolls on its own: the
+# special's aimed shot uses its cone, odds and damage (combat_resolver.gd).
+var fires_on_special: String = ""
 # Radians, derived from the degrees above.
 var mount: float = 0.0
 var half_across: float = 0.0
@@ -73,6 +76,7 @@ func _init(v: Dictionary = {}) -> void:
 	tracking_dps = float(v.get("tracking_dps", tracking_dps))
 	damage_pips = int(v.get("damage_pips", damage_pips))
 	rolls_per_second = float(v.get("rolls_per_second", rolls_per_second))
+	fires_on_special = str(v.get("fires_on_special", ""))
 	mount = deg_to_rad(mount_deg)
 	half_across = deg_to_rad(half_across_deg)
 	elevation = deg_to_rad(elevation_deg)
@@ -88,7 +92,7 @@ func values() -> Dictionary:
 		"elevation_deg": elevation_deg, "half_height_deg": half_height_deg,
 		"effective_range_m": effective_range_m, "base_hit_chance": base_hit_chance,
 		"rim_odds_factor": rim_odds_factor, "falloff_exponent": falloff_exponent, "tracking_dps": tracking_dps,
-		"damage_pips": damage_pips, "rolls_per_second": rolls_per_second,
+		"damage_pips": damage_pips, "rolls_per_second": rolls_per_second, "fires_on_special": fires_on_special,
 	}
 
 # The farthest slant distance at which this weapon still rolls: its effective

@@ -228,7 +228,7 @@ static func _draw_ground(g, M: A.Model, V: A.View, ink: A.Ink, accent: Color) ->
 	A.accent_panel(pn, G.panel, accent)
 	A.stroke_o(g, ink, hull_o, 1.2)
 
-static func _draw_upper(g, M: A.Model, V: A.View, ink: A.Ink) -> void:
+static func _draw_upper(g, M: A.Model, V: A.View, ink: A.Ink, with_turrets: bool = true) -> void:
 	var G := M.G
 	var pn := A.Pen.new(g, V, ink, M.seed + 9)
 	var ppm := V.ppm
@@ -270,15 +270,38 @@ static func _draw_upper(g, M: A.Model, V: A.View, ink: A.Ink) -> void:
 	for m: Dictionary in G.masts:
 		A._line(pn, PackedVector2Array([Vector2(-m.yard / 2.0, m.c.y), Vector2(m.yard / 2.0, m.c.y)]), {"weight": 0.75, "alpha": 0.9})
 		A._path(pn, A.circ(m.c, m.r, 10), {"fill": cream, "weight": 0.8})
-	for t: Dictionary in G.turrets:
-		for b: PackedVector2Array in t.bars:
-			A._path(pn, b, {"fill": cream, "weight": 0.75})
-		for e: PackedVector2Array in t.ears:
-			A._path(pn, e, {"fill": cream, "weight": 0.6})
-		var o := A._path(pn, t.poly, {"fill": cream, "weight": 0.0})
-		A.shade_side(g, o, V.tp(t.c), ink.sd, ink.fill_shaded)
-		A.stipple(g, ink, o, {"rng": A._rng(pn), "density": 1.2, "away": V.tp(t.c)})
-		A.stroke_o(g, ink, o, 1.1)
+	if with_turrets:
+		for i in (G.turrets as Array).size():
+			_draw_turret(g, M, V, ink, G.turrets[i], i)
+
+# One main turret: its barrels, ears and gun house (builder ORD, 2026-10-14: a part of its own, so the playback can turn it to the sim's turret bearing).
+static func _draw_turret(g, M: A.Model, V: A.View, ink: A.Ink, t: Dictionary, i: int) -> void:
+	var pn := A.Pen.new(g, V, ink, M.seed + 9 + (i + 1) * 31)
+	var cream := ink.fill
+	for b: PackedVector2Array in t.bars:
+		A._path(pn, b, {"fill": cream, "weight": 0.75})
+	for e: PackedVector2Array in t.ears:
+		A._path(pn, e, {"fill": cream, "weight": 0.6})
+	var o := A._path(pn, t.poly, {"fill": cream, "weight": 0.0})
+	A.shade_side(g, o, V.tp(t.c), ink.sd, ink.fill_shaded)
+	A.stipple(g, ink, o, {"rng": A._rng(pn), "density": 1.2, "away": V.tp(t.c)})
+	A.stroke_o(g, ink, o, 1.1)
+
+# Where the muzzles of the main turrets are when they are trained `rel` radians from the bow (clockwise), from the drawn barrels: [{fwd, lat}] metres ahead of the
+# ship's centre and to starboard, one per barrel, the fore turrets first, the barrels of a turret from port to starboard (builder ORD: the muzzle smoke starts at
+# the tip of the drawn barrel, which turns with the turret). The barrel's tip is the gun house's front (turret_r x 0.85) and the barrel's length from the axis.
+static func muzzles(M: A.Model, rel: float) -> Array:
+	var out: Array = []
+	var reach: float = float(M.p.turret_r) * 0.85 + float(M.p.barrel_len)
+	var n := int(M.p.barrels)
+	var d := Vector2(sin(rel), -cos(rel))     # along the bearing, in the art's frame (x starboard, y astern)
+	var r := Vector2(cos(rel), sin(rel))      # to its right
+	for t: Dictionary in M.G.turrets:
+		for k in n:
+			var off := (float(k) - float(n - 1) / 2.0) * 0.95
+			var tip: Vector2 = (t.c as Vector2) + d * reach + r * off
+			out.append({"fwd": -tip.y, "lat": tip.x})
+	return out
 
 # --- The wake ----------------------------------------------------------------------------------------------------
 
@@ -319,7 +342,31 @@ static func bake(st: RefCounted, M: A.Model, accent: Color, ppm: float) -> A.Art
 		wm.seed = M.seed
 		wm.p = {"length": M.p.length, "beam": M.p.beam, "bow": M.p.bow, "bow_exp": 0.78, "stern": M.p.stern, "stern_len": 0.14, "stern_taper": 0.2, "wake_len": wl}
 		BoatArt.draw_wake(wake_canvas, wm, WV, ink, {}, wake_kind, M.seed + WAKE_SEED)
-	var imgs: Array = InkCanvas.render_all([art_canvas, mask_canvas, wake_canvas])
+	# THE TURRETS AS PARTS (builder ORD): the hull and upper works without them, then each turret on a square canvas centred on its axis
+	var hull_canvas = InkCanvas.new(size)
+	hull_canvas.line_cap = "round"
+	_draw_ground(hull_canvas, M, V, ink, accent)
+	_draw_upper(hull_canvas, M, V, ink, false)
+	var canvases: Array = [art_canvas, mask_canvas, wake_canvas, hull_canvas]
+	var part_info: Array = []
+	for i in (M.G.turrets as Array).size():
+		var t: Dictionary = M.G.turrets[i]
+		var pivot: Vector2 = t.c
+		var r_m := 0.0
+		var polys: Array = [t.poly]
+		polys.append_array(t.bars)
+		polys.append_array(t.ears)
+		for poly: PackedVector2Array in polys:
+			for q in poly:
+				r_m = maxf(r_m, (q - pivot).length())
+		var half_px := ceili(r_m * ppm + margin)
+		var Vp := A.View.new(float(half_px) - pivot.x * ppm, float(half_px) - pivot.y * ppm, ppm, 0.0)
+		var pc = InkCanvas.new(Vector2i(2 * half_px, 2 * half_px))
+		pc.line_cap = "round"
+		_draw_turret(pc, M, Vp, ink, t, i)
+		canvases.append(pc)
+		part_info.append({"origin": Vector2(half_px, half_px), "pivot_m": pivot, "built_rel": 0.0 if pivot.y < 0.0 else PI})
+	var imgs: Array = InkCanvas.render_all(canvases)
 	var art := A.Art.new()
 	art.ppm = ppm
 	art.origin = Vector2(V.x, V.y)
@@ -330,10 +377,20 @@ static func bake(st: RefCounted, M: A.Model, accent: Color, ppm: float) -> A.Art
 			far = maxf(far, q.length())
 	art.extent_m = far
 	art.cast_height_m = float(M.p.freeboard)
-	if imgs.size() == 3 and imgs[0] != null and not imgs[0].is_empty():
+	if imgs.size() == canvases.size() and imgs[0] != null and not imgs[0].is_empty():
 		art.texture = ImageTexture.create_from_image(A._straight(imgs[0], false))
 		art.mask = ImageTexture.create_from_image(A._straight(imgs[1], true))
 		if wake_kind != "none" and imgs[2] != null and not imgs[2].is_empty():
 			art.wake = ImageTexture.create_from_image(A._straight(imgs[2], false))
 			art.wake_origin = Vector2(WV.x, WV.y)
+		if imgs[3] != null and not imgs[3].is_empty():
+			art.hull_texture = ImageTexture.create_from_image(A._straight(imgs[3], false))
+			art.hull_mask = art.mask   # (a ship's shadow is its hull: the turrets are not in it)
+			for i in part_info.size():
+				var img: Image = imgs[4 + i]
+				if img == null or img.is_empty():
+					art.turret_parts.clear()
+					break
+				var info: Dictionary = part_info[i]
+				art.turret_parts.append({"tex": ImageTexture.create_from_image(A._straight(img, false)), "mask": null, "origin": info["origin"], "pivot_m": info["pivot_m"], "built_rel": info["built_rel"]})
 	return art

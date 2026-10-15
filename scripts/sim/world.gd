@@ -161,6 +161,9 @@ const FireRules = preload("res://scripts/sim/fire_rules.gd")
 const FireState = preload("res://scripts/sim/fire.gd")
 const Wind = preload("res://scripts/sim/wind.gd")
 const CombatLines = preload("res://scripts/sim/combat_lines.gd")
+const Turret = preload("res://scripts/sim/turret.gd")
+const DirectFire = preload("res://scripts/sim/direct_fire.gd")
+const Combat = preload("res://scripts/sim/combat.gd")
 const JsMath = preload("res://scripts/core/js_math.gd")
 
 const PHASE_PLANNING := "planning"
@@ -528,6 +531,10 @@ func add_unit(spec: Dictionary) -> String:
 	u.health = def.health
 	u.drops_left = def.bomb_drops
 	u.out_of_bounds = not in_bounds(u.x, u.y)
+	if def.has_turret():
+		# The turret's bearing at the start (degrees relative to the nose, optional; a scenario trains the cruiser's guns on its first target), inside its arc.
+		var half := deg_to_rad(float(def.turret.get("half_arc_deg", 180.0)))
+		u.turret = Turret.goal(Envelope.wrap_angle(deg_to_rad(float(spec.get("turret_deg", 0.0)))), half)
 	units[id] = u
 	if controller == CONTROLLER_AI and not ready.has(AI_PLAYER):
 		ready[AI_PLAYER] = false
@@ -578,6 +585,11 @@ func plan_step(unit_id: String, step_index: int, request: Variant) -> Dictionary
 		var tgt := Envelope.drop_target(req)
 		if tgt.has("unit") and not units.has(str(tgt["unit"])):
 			return _fail_d("plan_step: the drop's target unit '%s' does not exist" % str(tgt["unit"]))
+	if req.has("hold"):
+		if u.def.is_air():
+			return _fail_d("plan_step: a %s cannot hold: a plane keeps flying" % u.type)
+		if req.has("drop"):
+			return _fail_d("plan_step: a hold step cannot drop bombs")
 	if req.has("fire"):
 		var fire_problem := _fire_request_problem(u, step_index, req)
 		if fire_problem != "":
@@ -959,10 +971,16 @@ func _fire_state(u: Unit, k: int, prev: Dictionary, cur: Dictionary, req: Dictio
 	out["spread_m"] = a["spread_m"]
 	out["flight_s"] = a["flight_s"]
 	out["from"] = [(a["from"] as Vector2).x, (a["from"] as Vector2).y]
+	out["traverse_s"] = a["traverse_s"]
+	out["bears_in_time"] = a["bears_in_time"]
+	if bool(a.get("direct", false)):
+		out["odds"] = a["odds"]
 	return out
 
 # The whole answer for a salvo from step `step` (prev -> cur) at `tgt` (a normalised target) as the world stands.
 func _gun_analysis(u: Unit, spec: GunRules.Spec, tgt: Dictionary, step: int, prev: Dictionary, cur: Dictionary) -> Dictionary:
+	if spec.kind == "direct":
+		return _direct_analysis(u, spec, tgt, step, prev, cur)
 	var n := u.def.actions_per_turn
 	var dt := rules.step_dt(n)
 	var fire_t := rules.turn_seconds * float(step) / float(n) + spec.fire_at * dt
@@ -993,6 +1011,15 @@ func _gun_analysis(u: Unit, spec: GunRules.Spec, tgt: Dictionary, step: int, pre
 		tpos = Vector2(float(tp[0]), float(tp[1]))
 	if why == "" and target_problem != "":
 		why = target_problem
+	# THE TURRETS (builder ORD, 2026-10-14; decision tank-fire-feedback, "The turret feedback should also apply to the ship"): the salvo leaves when the main
+	# turrets are on bearing, which takes traverse_s from the bearing they have now; the planned moment is that much into the step if later than fire_at.
+	var traverse := 0.0
+	if u.def.has_turret():
+		var half_arc := deg_to_rad(float(u.def.turret.get("half_arc_deg", 180.0)))
+		var rate := deg_to_rad(float(u.def.turret.get("traverse_dps", 1.0)))
+		var want := Turret.rel_to(from, float(pose["heading"]), tpos)
+		traverse = Turret.traverse_s(u.turret, Turret.goal(want, half_arc), half_arc, rate)
+		fire_t = maxf(fire_t, rules.turn_seconds * float(step) / float(n) + traverse)
 	var range_m := from.distance_to(tpos)
 	var range_why := Guns.reach_error(from, tpos, spec, water_depth)
 	if why == "" and range_why != "":
@@ -1028,6 +1055,92 @@ func _gun_analysis(u: Unit, spec: GunRules.Spec, tgt: Dictionary, step: int, pre
 		"spread_m": spread, "aim_factor": Guns.aim_factor(spotted_s, spec),
 		"flight_s": flight, "impact_t": impact_t, "lands_in_turn": turn + int(floorf(impact_t / rules.turn_seconds + 1e-9)),
 		"reload_left": maxi(0, ready_turn - turn), "ready_turn": ready_turn,
+		"traverse_s": traverse, "bears_in_time": fire_t <= rules.turn_seconds + 1e-9,
+	}
+
+# THE PLANNING ANSWER FOR A DIRECT SPECIAL (builder ORD, 2026-10-14; the tank's gun, guns.gd "THE DIRECT KIND"), for the order in step `step` (prev -> cur) at `tgt`:
+# the same record as _gun_analysis, filled for a gun that fires one aimed shot when its turret is on bearing. The gun is taken at the END of the step (the tank
+# pivots during it, and the shot goes when the turret has turned, not at once), the target where it is now (as for the Main Guns: the card shows where it is seen).
+# Reasons, checked in this order: reloading, already_planned, no_target, own_side, target_down, point_target (a direct gun fires at a unit), too_close,
+# out_of_range, out_of_arc (outside the turret's arc: a tank's 170 degrees forward), cannot_elevate (outside the weapon's cone in height: a plane overhead),
+# unspotted. Besides the common fields: direct (true), traverse_s (the turret's time from its bearing now to the target's), bears_in_time (false: it will not be
+# on bearing before the turn ends -- not a refusal, the card warns; the turret turns as far as it can and fires next turn), odds (the chance of a hit as
+# things stand: the weapon's own factors), desired_rel and turret_rel (radians, relative to the nose).
+func _direct_analysis(u: Unit, spec: GunRules.Spec, tgt: Dictionary, step: int, prev: Dictionary, cur: Dictionary) -> Dictionary:
+	var n := u.def.actions_per_turn
+	var dt := rules.step_dt(n)
+	var t0 := rules.turn_seconds * float(step) / float(n)
+	var from := Vector2(float(cur["x"]), float(cur["y"]))
+	var heading := float(cur["heading"])
+	var why := ""
+	var ready_turn := u.gun_ready_turn(spec.id)
+	if ready_turn > turn:
+		why = Guns.WHY_RELOADING
+	for i in u.plan.size():
+		if why == "" and i != step and (u.plan[i] as Dictionary).has("fire") and Guns.fire_special(u.plan[i]) == spec.id:
+			why = Guns.WHY_ALREADY_PLANNED
+	var tpos := Vector2.ZERO
+	var target_problem := ""
+	var tu: Unit = null
+	if tgt.has("unit"):
+		var tid := str(tgt["unit"])
+		if not units.has(tid):
+			target_problem = Guns.WHY_NO_TARGET
+		else:
+			tu = units[tid]
+			tpos = Vector2(tu.x, tu.y)
+			if tu.side == u.side:
+				target_problem = Guns.WHY_OWN_SIDE
+			elif tu.down:
+				target_problem = Guns.WHY_TARGET_DOWN
+	else:
+		var tp: Array = tgt["point"]
+		tpos = Vector2(float(tp[0]), float(tp[1]))
+		target_problem = Guns.WHY_POINT_TARGET
+	if why == "" and target_problem != "":
+		why = target_problem
+	var range_m := from.distance_to(tpos)
+	var range_why := Guns.range_error(range_m, spec)
+	if why == "" and range_why != "":
+		why = range_why
+	# the turret: how far it must turn, and whether the target is inside its arc
+	var half := deg_to_rad(float(u.def.turret.get("half_arc_deg", 180.0)))
+	var rate := deg_to_rad(float(u.def.turret.get("traverse_dps", 1.0)))
+	var desired := Turret.rel_to(from, heading, tpos)
+	var goal := Turret.goal(desired, half)
+	var traverse := Turret.traverse_s(u.turret, goal, half, rate)
+	var fire_t := t0 + maxf(spec.fire_at * dt, traverse)
+	if why == "" and not Turret.in_arc(desired, half):
+		why = Guns.WHY_OUT_OF_ARC
+	# the odds, from the weapon's own factors, with the turret on the target (and the cone's height: a plane overhead is outside it)
+	var odds := 0.0
+	var weapon := DirectFire.weapon_of(u.def, spec.weapon_id)
+	if weapon != null and tu != null:
+		var hv := Vector2(JsMath.cos(heading), JsMath.sin(heading)) * float(cur["speed"])
+		var th := tu.heading
+		var tv := Vector2(JsMath.cos(th), JsMath.sin(th)) * tu.speed
+		var hull := {"x": from.x, "y": from.y, "heading": heading, "height_m": _state_height(cur), "vx": hv.x, "vy": hv.y}
+		var ts := {"x": tpos.x, "y": tpos.y, "height_m": band_height(tu.altitude_band), "vx": tv.x, "vy": tv.y}
+		var g := DirectFire.evaluate(hull, weapon, DirectFire.all_round(weapon), Turret.absolute(heading, desired), ts, combat.odds_factors, combat.factor_params())
+		odds = float(g["odds"])
+		if why == "" and not bool(g["in_cone"]):
+			why = Guns.WHY_CANNOT_ELEVATE
+	var spotters: Array[String] = []
+	if target_problem == "":
+		spotters = spotting.spotters_now(self, u.side, tgt)
+	var visible := not spotters.is_empty()
+	var in_smoke := visible and tgt.has("unit") and tracking_denied(str(tgt["unit"]))
+	var spotted := visible and not in_smoke
+	if why == "" and not spotted:
+		why = Guns.WHY_UNSPOTTED
+	return {
+		"ok": why == "", "reason": why, "poor_shot": false, "special": spec.id, "step": step, "target": tgt, "target_pos": tpos, "from": from, "fire_t": fire_t,
+		"range_m": range_m, "range_min_m": spec.range_min_m, "range_max_m": spec.range_max_m,
+		"spotted": spotted, "visible": visible, "in_smoke": in_smoke, "by": spotters[0] if visible else "", "spotters": spotters, "spotted_s": 0.0, "salvos": 0,
+		"spotter_ratio": 1.0, "spread_m": 0.0, "aim_factor": 1.0, "flight_s": 0.0, "impact_t": fire_t, "lands_in_turn": turn,
+		"reload_left": maxi(0, ready_turn - turn), "ready_turn": ready_turn,
+		"direct": true, "traverse_s": traverse, "bears_in_time": fire_t <= rules.turn_seconds + 1e-9, "odds": odds,
+		"desired_rel": desired, "turret_rel": u.turret,
 	}
 
 # "" if the request's fire can be planned in this step of this unit, else what is wrong with it. The activation rules (reload, range,
@@ -1228,7 +1341,9 @@ func resolve() -> Dictionary:
 		func(uid: String, t: float) -> Dictionary: return sample(uid, t, "history"),
 		func(band: String) -> float: return band_height(band), bombs_in_flight, shells_in_flight,
 		func(side: String, target: Dictionary, t: float, downs: Dictionary, special_id: String) -> Dictionary: return _spot_result(side, target, t, downs, special_id),
-		func(special_id: String, from: Vector2, to: Vector2) -> String: return Guns.reach_error(from, to, guns.special(special_id), water_depth))
+		func(special_id: String, from: Vector2, to: Vector2) -> String: return Guns.reach_error(from, to, guns.special(special_id), water_depth),
+		func(side: String, target: Dictionary, t: float, downs: Dictionary) -> bool: return spotting.spotted_at(self, side, target, t, downs))
+	_apply_turrets(fight["turrets"], histories)
 	var down_at: Dictionary = fight["down_at"]
 	var fates: Dictionary = fight["fates"]
 	bombs_in_flight = fight["bombs"]
@@ -1471,6 +1586,35 @@ func sample(unit_id: String, t: float, source: String = "history") -> Dictionary
 		p["height_m"] = maxf(float(p["height_m"]), float(b.get("floor_m", a.get("floor_m", 0.0))))   # (the floor: 0 m, or the water's)
 	return p
 
+# The turret's bearing (radians, relative to the hull's nose, clockwise positive) of a unit `t` seconds into the last resolved turn: the combat walk's track
+# (history[0]["turret_track"], keyframes [[t, rel], ...] joined by straight lines). A unit with no turret, or a world not yet resolved, gives the unit's own.
+func turret_at(unit_id: String, t: float) -> float:
+	var u := _unit(unit_id)
+	if u == null or not u.def.has_turret():
+		return 0.0
+	if u.history.size() < 2:
+		return u.turret
+	var start: Dictionary = u.history[0]
+	var track: Variant = start.get("turret_track")
+	if not (track is Array):
+		return u.turret
+	return Turret.rel_at(track, float(start.get("turret", u.turret)), clampf(t, 0.0, rules.turn_seconds), deg_to_rad(float(u.def.turret.get("half_arc_deg", 180.0))))
+
+# What the combat walk did to the turrets (its "turrets" result): the track on each unit's start state, the bearing at the end of every step on the step states,
+# and the bearing the next turn starts from on the unit.
+func _apply_turrets(turrets: Dictionary, histories: Dictionary) -> void:
+	for id: String in turrets:
+		var u: Unit = units[id]
+		var rec: Dictionary = turrets[id]
+		var track: Array = rec["track"]
+		var h: Array = histories[id]
+		var half := deg_to_rad(float(u.def.turret.get("half_arc_deg", 180.0)))
+		var start_rel := float((h[0] as Dictionary).get("turret", u.turret))
+		(h[0] as Dictionary)["turret_track"] = track.duplicate(true)
+		for i in range(1, h.size()):
+			(h[i] as Dictionary)["turret"] = Turret.rel_at(track, start_rel, float((h[i] as Dictionary)["t"]), half)
+		u.turret = float(rec["final"])
+
 # --- Internals ---------------------------------------------------------------
 
 # The plan's states for every step of the turn, from the unit's current state.
@@ -1507,7 +1651,11 @@ func _step(u: Unit, k: int, prev: Dictionary) -> Dictionary:
 		return ws
 	var planned := k < u.plan.size() and not (u.plan[k] as Dictionary).is_empty()
 	var req: Variant = u.plan[k] if k < u.plan.size() else {}
-	var s := u.def.envelope.clamp_step(prev, req, rules.step_dt(n))
+	# A HOLD step (builder ORD, 2026-10-14; Alex, playtest-4: "ships fire without moving"): the unit keeps its point -- no turn, speed 0, as far as its
+	# envelope lets it brake -- and the step counts as planned, so a special can be set on it. Not for a plane: plan_step refuses it.
+	var holding: bool = req is Dictionary and (req as Dictionary).get("hold", false) == true and not u.def.is_air()
+	var move_req: Variant = {"turn": 0.0, "speed": 0.0} if holding else req
+	var s := u.def.envelope.clamp_step(prev, move_req, rules.step_dt(n))
 	if u.def.domain == "sea" and water_depth.is_valid():
 		s = _keep_afloat(u, prev, s, rules.step_dt(n))
 	elif _ground_rule_on(u.def):
@@ -1515,6 +1663,10 @@ func _step(u: Unit, k: int, prev: Dictionary) -> Dictionary:
 	s["step"] = k
 	s["t"] = rules.turn_seconds * float(k + 1) / float(n)
 	s["planned"] = planned
+	if holding:
+		s["hold"] = true
+	if prev.has("turret"):
+		s["turret"] = prev["turret"]   # (a preview keeps the bearing it began with; the combat walk of a resolve sets the real ones)
 	s["out_of_bounds"] = not in_bounds(float(s["x"]), float(s["y"]))
 	if req is Dictionary and (req as Dictionary).has("drop"):
 		s["drop"] = _drop_state(u, k, prev, s, req)
@@ -1691,6 +1843,8 @@ func _start_state(u: Unit) -> Dictionary:
 	s["clamped"] = false
 	s["limits"] = []
 	s["out_of_bounds"] = u.out_of_bounds
+	if u.def.has_turret():
+		s["turret"] = u.turret   # the turret's bearing relative to the nose (Unit.turret; the combat walk turns it)
 	if is_finite(u.fall_height_m):
 		s["fall_height_m"] = u.fall_height_m
 		if u.fall_height_m <= 0.0 and water_depth.is_valid():

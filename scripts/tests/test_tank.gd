@@ -6,14 +6,14 @@ extends "res://scripts/test_support/test_case.gd"
 # STRIKE SEED'S MAP (20261009: its terrain with the water's cap, its river and its road, the bridge where they cross):
 #
 #   1. THE TANK       data/units/tank.json: a ground unit that moves, the unit sheet's size, speed, turning, health, sight, one
-#                     auto-firing turret gun that engages what stands on the ground and never a plane, no bombs, no specials
+#                     turret gun fired only when ordered (the special "Turret Fire") that engages what stands on the ground and never a plane, no bombs
 #   2. THE BRIDGE     a tank drives the road to the bridge and across it, at its road speed, on legal ground all the way
 #   3. NO BRIDGE      a destroyed bridge stops it at the bank, dry, held, turn after turn; a bridge that falls under its approach too
 #   4. THE MAP        off the road, the map's own height steps and river stop a tank short of them (judged by the map's queries, not
 #                     the rule's own); the hull is never over a cliff or the water
 #   5. THE GOING      road speed beats off-road speed; woods slow it and never block it
-#   6. THE GUN        a tank fires at an enemy tank in range and damages it; out of range, at a friend and at a plane overhead it
-#                     does not; it hurts a bridge of the other side; a tank at 0 pips is destroyed, stays, takes no orders
+#   6. THE GUN        a tank fires only when ordered, one aimed shot, then reloads; out of range, at a friend, a point and a plane overhead
+#                     the card refuses it; it hurts a bridge of the other side; a tank at 0 pips is destroyed, stays, takes no orders
 #   7. THE DRIVE ROLE waits out of sight until its start turn, then follows the road to its target and stops there; two waves;
 #                     refuses what it cannot do; never plans a step the rule had to stop
 #   9. THE SCENARIO   a scenario with a tank gives the World the ground (a scenario without one does not: the Strike is as it was), and
@@ -75,7 +75,9 @@ func _data() -> void:
 	eq(d.silhouette, "tank", "1. drawn by the unit sheet's tank")
 	eq(d.bomb_drops, 0, "1. no bombs (drops)")
 	eq(d.bomb_per_drop, 0, "1. no bombs (per drop)")
-	eq(d.specials, [], "1. no specials: the gun fires on its own")
+	eq(d.specials, [{"id": "tank_gun", "name": "Turret", "action": "Fire"}], "1. one special, 'Turret Fire': the gun fires only when ordered (Alex, tank-gun-orders)")
+	check(d.has_turret(), "1. it has a turret that turns")
+	eq(float(d.turret["half_arc_deg"]), 85.0, "1. the turret's arc is the gun's 170 degrees (85 either side)")
 	var env = d.envelope
 	eq(env.speed_max, 10.0, "1. 10 m/s on a road")
 	check(env.speed_cruise <= env.speed_max and env.speed_cruise > 0.0, "1. cruise is under the top speed (%s)" % env.speed_cruise)
@@ -95,7 +97,13 @@ func _data() -> void:
 	eq(g.elevation_deg, 0.0, "1. a level cone")
 	check(g.half_height_deg >= 5.0 and g.half_height_deg < 20.0, "1. a few degrees up and down (%s)" % g.half_height_deg)
 	check(g.effective_range_m < d.sight_range_m, "1. it sees further than it shoots (%s m of %s m)" % [g.effective_range_m, d.sight_range_m])
-	eq(g.damage_pips, 1, "1. one pip a hit")
+	eq(g.damage_pips, 2, "1. two pips a hit (a cannon shell: PROPOSED, data/units/tank.json)")
+	eq(g.fires_on_special, "tank_gun", "1. the gun fires only on its special (never on its own)")
+	var gr := w.guns.special("tank_gun")
+	check(gr != null and gr.kind == "direct", "1. the special is of the direct kind (data/sim/guns.json)")
+	if gr != null:
+		eq(gr.range_max_m, g.effective_range_m, "1. the special's reach is the weapon's effective range")
+		eq(gr.weapon_id, g.id, "1. the special fires that weapon")
 	# every number says it is proposed (the file is read strictly by unit_def.gd, which checks provenance); the decision is quoted
 	var raw: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/units/tank.json"))
 	check(str(raw["_about"]).contains("mixed-warfare"), "1. the file quotes Alex's decision")
@@ -239,6 +247,7 @@ func _destroyed_bridge() -> void:
 		TankWorlds.tank(w3, "gun", "allies", "player", gun_at, (b - gun_at).angle(), 0.0)   # (facing the bridge: its gun covers a forward arc of 170 degrees now)
 		var took := 0
 		for i in 70:
+			TankWorlds.fire_at_nearest(w3)
 			TankWorlds.turn(w3)
 			took += 1
 			if (w3.units["bridge_1"] as Object).down:
@@ -463,48 +472,92 @@ func _find_woods() -> Dictionary:
 func _fires(events: Array, shooter: String, target: String) -> Array:
 	return events.filter(func(e: Dictionary) -> bool: return e["type"] == "fire" and e["unit"] == shooter and e["target"] == target)
 
+# Two tanks on the road facing each other 200 m apart (a at road 140, b at road 160), in a World with no bridge.
+func _duel(seed_v: int, a_heading_off: float = 0.0) -> World:
+	var a_at := TankWorlds.road(140)
+	var b_at := TankWorlds.road(160)
+	var w := TankWorlds.world("allies", false)
+	w.rng_seed = seed_v
+	TankWorlds.tank(w, "a", "allies", "player", a_at, (b_at - a_at).angle() + a_heading_off, 0.0)
+	TankWorlds.tank(w, "b", "axis", "player", b_at, (a_at - b_at).angle(), 0.0)
+	return w
+
+# THE GUN IS AN ORDER (builder ORD, 2026-10-14; Alex, decisions playtest-4 and tank-gun-orders: the gun is the tank's special, fired only when ordered, a
+# 1 turn reload; decision tank-fire-feedback: the turret turns first and the turn delays the shot). The arc and the turret's timing have their own test
+# (test_tank_orders); here the tank's gun as the fight uses it: no order no shot, one aimed shot per order, the reload, range, friends and planes, wrecks.
 func _gun() -> void:
 	var a_at := TankWorlds.road(140)
 	var b_at := TankWorlds.road(160)
 	var gap := a_at.distance_to(b_at)
 	check(gap > 150.0 and gap < 300.0, "6. (the two tanks stand %.0f m apart on the road, inside the gun's 350 m)" % gap)
+	# NO ORDER, NO SHOT: two tanks in range and in each other's arc, ten seeds, three turns: not one fire event, and no pip lost
+	var idle_fires := 0
+	var idle_pips := 0
+	for seed_v in range(1, 11):
+		var wi := _duel(seed_v)
+		for i in 3:
+			var ri := TankWorlds.turn(wi)
+			idle_fires += TankWorlds.fires(ri, "a").size() + TankWorlds.fires(ri, "b").size()
+		idle_pips += 12 - int((wi.units["a"] as Object).health) - int((wi.units["b"] as Object).health)
+	eq(idle_fires, 0, "6. NO ORDER, NO SHOT: two tanks 200 m apart facing each other, 10 seeds x 3 turns: not one shot")
+	eq(idle_pips, 0, "6. ... and not one pip lost")
+	# ORDERED: each tank sets its gun on the other; one aimed shot each, at once (the turret is already on the target), 30 seeds
 	var fires := 0
 	var hits := 0
 	var seeds_with_hits := 0
 	var hurt: Dictionary = {}
 	var ok_cone := true
 	for seed_v in range(1, 31):
-		var w := TankWorlds.world("allies", false)
-		w.rng_seed = seed_v
-		TankWorlds.tank(w, "a", "allies", "player", a_at, (b_at - a_at).angle(), 0.0)
-		TankWorlds.tank(w, "b", "axis", "player", b_at, (a_at - b_at).angle(), 0.0)
+		var w := _duel(seed_v)
+		if TankWorlds.order_fire(w, "a", "b").is_empty() or TankWorlds.order_fire(w, "b", "a").is_empty():
+			ok_cone = false
 		var res := TankWorlds.turn(w)
 		var ev: Array = res["events"]
 		var fa := _fires(ev, "a", "b")
 		var fb := _fires(ev, "b", "a")
 		fires += fa.size() + fb.size()
-		if fa.is_empty() or fb.is_empty():
+		if fa.size() != 1 or fb.size() != 1:
 			ok_cone = false
+		else:
+			if not bool(fa[0].get("aimed", false)) or str(fa[0].get("special", "")) != "tank_gun" or absf(float(fa[0]["t"])) > 1e-6:
+				ok_cone = false
 		var seed_hits := 0
 		for e: Dictionary in ev:
 			if e["type"] == "hit" and e["weapon"] == "turret_gun":
 				seed_hits += 1
 				hits += 1
-				eq(int(e["damage"]), 1, "6. a hit takes one pip")
+				eq(int(e["damage"]), 2, "6. a hit takes two pips (a cannon shell)")
 		if seed_hits > 0:
 			seeds_with_hits += 1
 			hurt[seed_v] = {"a": (w.units["a"] as Object).health, "b": (w.units["b"] as Object).health, "hits": seed_hits}
-	check(ok_cone, "6. both tanks fire at the other, every turn, in range (a tank 200 m off, each turn, every seed)")
-	check(fires >= 30 * 2 * 4, "6. about five rolls a turn each (%d fires in 30 turns of two tanks)" % fires)
-	print("[test_tank] 6. 30 seeds, two tanks %.0f m apart, one turn each: %d shots, %d hits in %d seeds" % [gap, fires, hits, seeds_with_hits])
-	check(hits > 0 and seeds_with_hits > 3, "6. and they hit (%d hits in %d of 30 seeds)" % [hits, seeds_with_hits])
+	check(ok_cone, "6. both tanks fire at the other, once, at the start of the turn (their guns are on bearing), in every one of 30 seeds")
+	eq(fires, 60, "6. ONE AIMED SHOT per order (60 fires in 30 turns of two tanks)")
+	print("[test_tank] 6. 30 seeds, two tanks %.0f m apart, one ordered shot each: %d shots, %d hits in %d seeds" % [gap, fires, hits, seeds_with_hits])
+	check(hits >= 15 and hits <= 45 and seeds_with_hits > 10, "6. and they hit about as the odds say, 0.6 a shell (%d hits in %d of 30 seeds)" % [hits, seeds_with_hits])
 	var sound := true
 	for k: Variant in hurt:
 		var rec: Dictionary = hurt[k]
-		if int(rec["a"]) + int(rec["b"]) != 12 - int(rec["hits"]):
+		if int(rec["a"]) + int(rec["b"]) != 12 - 2 * int(rec["hits"]):
 			sound = false
-	check(sound, "6. the pips lost are the hits taken: health follows the hit events")
-	# OUT OF RANGE: 700 m of road between them: nobody fires
+	check(sound, "6. the pips lost are the hits taken (two a hit): health follows the hit events")
+	# THE RELOAD (about a turn: data/sim/guns.json tank_gun reload_turns 1): fired in turn 1, the gun is not ready in turn 2 and is in turn 3
+	var wr := _duel(3)
+	TankWorlds.order_fire(wr, "a", "b")
+	var r1 := TankWorlds.turn(wr)
+	eq(TankWorlds.fires(r1, "a").size(), 1, "6. RELOAD: turn 1, the ordered shot")
+	var c2 := wr.gun_check("a", 0, {"unit": "b"}, "tank_gun")
+	eq(str(c2["reason"]), "reloading", "6. RELOAD: turn 2, the card says reloading")
+	eq(wr.gun_reload_left("a", "tank_gun"), 1, "6. ... for one more turn")
+	TankWorlds.order_fire(wr, "a", "b")   # (the sim does not refuse the plan: the card does; the resolve holds it)
+	var r2 := TankWorlds.turn(wr)
+	eq(TankWorlds.fires(r2, "a").size(), 0, "6. RELOAD: an order in turn 2 does not fire")
+	var h2 := TankWorlds.holds(r2, "a")
+	check(h2.size() == 1 and h2[0]["reason"] == "reloading", "6. ... it is a gun_hold with the reason 'reloading'")
+	var c3 := wr.gun_check("a", 0, {"unit": "b"}, "tank_gun")
+	check(bool(c3["ok"]), "6. RELOAD: turn 3, loaded again: %s" % str(c3["reason"]))
+	TankWorlds.order_fire(wr, "a", "b")
+	eq(TankWorlds.fires(TankWorlds.turn(wr), "a").size(), 1, "6. RELOAD: turn 3, the shot")
+	# OUT OF RANGE: 500 m of road between them: the card says so, and a forced order holds
 	var far_i := 140
 	var far_j := 140
 	for j in range(141, 233):
@@ -513,78 +566,45 @@ func _gun() -> void:
 			break
 	if check(far_j > far_i, "6. (the road has two points 500 m apart)"):
 		var wf := TankWorlds.world("allies", false)
-		TankWorlds.tank(wf, "a", "allies", "player", TankWorlds.road(far_i), 0.0, 0.0)
+		TankWorlds.tank(wf, "a", "allies", "player", TankWorlds.road(far_i), (TankWorlds.road(far_j) - TankWorlds.road(far_i)).angle(), 0.0)
 		TankWorlds.tank(wf, "b", "axis", "player", TankWorlds.road(far_j), 0.0, 0.0)
-		var quiet_shots := 0
-		for i in 3:
-			quiet_shots += (TankWorlds.turn(wf)["events"] as Array).filter(func(e: Dictionary) -> bool: return e["type"] == "fire").size()
-		eq(quiet_shots, 0, "6. 500 m apart (the gun reaches 350 m, 420 with the overshoot): no shots")
-	# THE ARC (ALEX, decision playtest-3: 'Tanks should have like a forward 170 arc. Not shoot directly behind.'): tank a is 200 m or so from tank b,
-	# which faces it. a is turned so that b lies `off` degrees off its nose. Inside 85 degrees a fires on b, past 85 it does not (and b, facing a, always does).
-	var base := (b_at - a_at).angle()
-	var arc_cases := {0: true, 30: true, 60: true, 80: true, 90: false, 135: false, 180: false}
-	var arc_ok := true
-	for off: int in arc_cases:
-		var fired_any := false
-		var b_fired_all := true
-		for seed_v in range(1, 6):
-			var wa := TankWorlds.world("allies", false)
-			wa.rng_seed = seed_v
-			TankWorlds.tank(wa, "a", "allies", "player", a_at, base + deg_to_rad(float(off)), 0.0)
-			TankWorlds.tank(wa, "b", "axis", "player", b_at, (a_at - b_at).angle(), 0.0)
-			var eva: Array = TankWorlds.turn(wa)["events"]
-			if not _fires(eva, "a", "b").is_empty():
-				fired_any = true
-			if _fires(eva, "b", "a").is_empty():
-				b_fired_all = false
-		if fired_any != bool(arc_cases[off]):
-			arc_ok = false
-		check(fired_any == bool(arc_cases[off]), "6. ARC: b %d degrees off a's nose: a %s (in 5 seeds)" % [off, "fires on it" if bool(arc_cases[off]) else "does NOT fire on it"])
-		check(b_fired_all, "6. ARC: ... and b, which faces a, fires on it every time")
-	check(arc_ok, "6. ARC: the gun fires inside 85 degrees of the nose and not past it")
-	# a target dead BEHIND, close in: never fired on, over many turns (a stationary pair, 30 m apart)
+		eq(str(wf.gun_check("a", 0, {"unit": "b"}, "tank_gun")["reason"]), "out_of_range", "6. 500 m apart (the gun reaches 350 m): the card says out of range")
+		TankWorlds.order_fire(wf, "a", "b")
+		var rf := TankWorlds.turn(wf)
+		eq(TankWorlds.fires(rf, "a").size() + TankWorlds.fires(rf, "b").size(), 0, "6. ... and a forced order fires nothing")
+		var hf := TankWorlds.holds(rf, "a")
+		check(hf.size() == 1 and hf[0]["reason"] == "out_of_range", "6. ... a gun_hold 'out_of_range'")
+		eq(int((wf.units["a"] as Object).gun_ready.get("tank_gun", 0)), 0, "6. ... and no reload was spent")
+	# BACK TO BACK, 30 m apart, 3 turns: the card says out of the arc, an order holds, not one shot
 	var behind_shots := 0
-	var behind_hits := 0
-	for seed_v in range(1, 11):
+	var base := (b_at - a_at).angle()
+	for seed_v in range(1, 6):
 		var wb := TankWorlds.world("allies", false)
 		wb.rng_seed = seed_v
 		TankWorlds.tank(wb, "a", "allies", "player", a_at, base + PI, 0.0)   # a faces AWAY from b
-		TankWorlds.tank(wb, "b", "axis", "player", a_at + Vector2.from_angle(base) * 30.0, base, 0.0)   # b stands 30 m behind a, nose pointing away from it
+		TankWorlds.tank(wb, "b", "axis", "player", a_at + Vector2.from_angle(base) * 30.0, base, 0.0)
+		if seed_v == 1:
+			eq(str(wb.gun_check("a", 0, {"unit": "b"}, "tank_gun")["reason"]), "out_of_arc", "6. ARC: a target dead behind: the card says out of the arc (Alex: 'Not shoot directly behind')")
 		for i in 3:
-			var evb: Array = TankWorlds.turn(wb)["events"]
-			behind_shots += _fires(evb, "a", "b").size() + _fires(evb, "b", "a").size()
-			for e: Dictionary in evb:
-				if e["type"] == "hit" and e["weapon"] == "turret_gun":
-					behind_hits += 1
-	eq(behind_shots, 0, "6. ARC: two tanks back to back, 30 m apart, 10 seeds x 3 turns: not one shot")
-	eq(behind_hits, 0, "6. ARC: ... and not one hit")
-	# A FRIEND, and a PLANE overhead: not shot at
+			TankWorlds.order_fire(wb, "a", "b")
+			var evb: Dictionary = TankWorlds.turn(wb)
+			behind_shots += TankWorlds.fires(evb, "a").size()
+	eq(behind_shots, 0, "6. ARC: back to back, 30 m apart, ordered anyway, 5 seeds x 3 turns: not one shot")
+	# A FRIEND, and a PLANE overhead: the card refuses both
 	var wm := TankWorlds.world("allies", false)
 	wm.rng_seed = 5
 	TankWorlds.tank(wm, "a", "allies", "player", a_at, 0.0, 0.0)
 	TankWorlds.tank(wm, "c", "allies", "player", b_at, 0.0, 0.0)
 	wm.add_unit({"id": "p", "type": "light_fighter", "side": "axis", "controller": "ai", "x": a_at.x + 20.0, "y": a_at.y, "heading": PI, "speed": 100.0, "altitude_band": "low"})
-	var all_events: Array = []
-	for i in 2:
-		for k in 2:
-			wm.plan_step("c", k, {"turn": 0.0, "speed": 0.0})
-		for k in 5:
-			wm.plan_step("p", k, {"turn": 0.0, "speed": 100.0})
-		for pl: String in wm.players.duplicate():
-			wm.commit(pl)
-		wm.commit(World.AI_PLAYER)
-		all_events.append_array(wm.resolve()["events"])
-		wm.begin_turn()
-	eq(_fires(all_events, "a", "c").size() + _fires(all_events, "c", "a").size(), 0, "6. a tank does not shoot a friend")
-	eq(_fires(all_events, "a", "p").size() + _fires(all_events, "c", "p").size(), 0, "6. nor a plane in the low band right over it (its cone is level)")
+	eq(str(wm.gun_check("a", 0, {"unit": "c"}, "tank_gun")["reason"]), "own_side", "6. a tank does not shoot a friend: the card says so")
+	eq(str(wm.gun_check("a", 0, {"unit": "p"}, "tank_gun")["reason"]), "cannot_elevate", "6. nor a plane in the low band right over it (its cone is level): the card says the gun cannot reach it")
+	eq(str(wm.gun_check("a", 0, {"point": [a_at.x + 100.0, a_at.y]}, "tank_gun")["reason"]), "point_target", "6. nor a point on the map: it needs an enemy to aim at")
 	# A DESTROYED TANK: found by seed
 	var killed := false
 	for seed_v in range(1, 40):
-		var w2 := TankWorlds.world("allies", false)
-		w2.rng_seed = seed_v
-		TankWorlds.tank(w2, "a", "allies", "player", a_at, (b_at - a_at).angle(), 0.0)
-		TankWorlds.tank(w2, "b", "axis", "player", b_at, (a_at - b_at).angle(), 0.0)
+		var w2 := _duel(seed_v)
 		for i in 40:
+			TankWorlds.fire_at_nearest(w2)
 			TankWorlds.turn(w2)
 			if (w2.units["a"] as Object).down or (w2.units["b"] as Object).down:
 				break
@@ -600,10 +620,13 @@ func _gun() -> void:
 		w2.quiet = true
 		eq(w2.plan_step(dead, 0, {"turn": 0.3, "speed": 5.0}), {}, "6. a destroyed tank takes no orders")
 		var alive: String = "b" if dead == "a" else "a"
+		(w2.units[alive] as Object).gun_ready = {}   # (loaded: so that the wreck is the only reason)
+		eq(str(w2.gun_check(alive, 0, {"unit": dead}, "tank_gun")["reason"]), "target_down", "6. nobody may fire at a wreck")
 		var shots_at_wreck := 0
 		for i in 2:
-			var ev2: Array = TankWorlds.turn(w2)["events"]
-			shots_at_wreck += _fires(ev2, alive, dead).size() + _fires(ev2, dead, alive).size()
+			TankWorlds.order_fire(w2, alive, dead)   # (forced)
+			var ev2: Dictionary = TankWorlds.turn(w2)
+			shots_at_wreck += TankWorlds.fires(ev2, alive, dead).size() + TankWorlds.fires(ev2, dead, alive).size()
 		eq(shots_at_wreck, 0, "6. nobody fires at a wreck or from one")
 		eq(du.x, x0, "6. it stays where it fell")
 		break

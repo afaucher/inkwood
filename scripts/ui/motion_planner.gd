@@ -528,6 +528,74 @@ func clear() -> void:
 	_set_drag(-1)
 	plan_edited.emit(id)
 
+# --- The hold step (builder ORD, 2026-10-14; Alex, playtest-4: "ships fire without moving") --------------------------------------------
+# A step of a ship or a tank may HOLD: the unit keeps its point (World: no turn, speed 0, as far as its envelope lets it brake) and the step counts as
+# planned, so a special can be set on it. {"hold": true} is the whole request (and its fire, if one is set). A plane has no hold: it keeps flying. Placing a
+# point on a hold step (or dragging its node) turns it back into a move. The Hold button of the orders card acts on the SELECTED step, or, with the next step
+# selected (the strip's dashed mark, nothing placed), on that one, which then becomes the selected step.
+
+# Whether the selected unit may hold at all: it takes orders and is not an aircraft.
+func can_hold(id: String = "") -> bool:
+	if id == "":
+		id = unit_id()
+	return can_plan(id) and not bool(world.units[id].def.is_air())
+
+# The step the Hold button acts on: the selected step, else the next one to place; -1 with neither.
+func hold_step(id: String = "") -> int:
+	if id == "":
+		id = unit_id()
+	var k := focus_step(id)
+	return k if k >= 0 else next_step_index(id)
+
+func step_holds(k: int, id: String = "") -> bool:
+	if id == "":
+		id = unit_id()
+	if world == null or not world.units.has(id):
+		return false
+	var plan: Array = world.units[id].plan
+	return k >= 0 and k < plan.size() and (plan[k] as Dictionary).get("hold", false) == true
+
+# What the Hold control may do: {step, available, on}.
+func hold_options() -> Dictionary:
+	var id := unit_id()
+	var k := hold_step(id)
+	var out := {"step": k, "available": false, "on": false}
+	if not can_hold(id) or k < 0:
+		return out
+	out["available"] = true
+	out["on"] = step_holds(k, id)
+	return out
+
+# The Hold button: the step holds, or (pressed again) moves on as a carry-on step. {} when it may not.
+func toggle_hold() -> Dictionary:
+	var k := hold_step()
+	if k < 0:
+		return {}
+	return set_step_hold(k, not step_holds(k))
+
+# Turn step k's hold on or off. On: the step's motion request is replaced by the hold (its special stays); off: the hold is taken away. Returns the step's state, {} when refused.
+func set_step_hold(k: int, on: bool) -> Dictionary:
+	var id := unit_id()
+	if not can_hold(id) or k < 0 or k >= world.steps_per_turn(id):
+		return {}
+	var plan: Array = world.units[id].plan
+	var req: Dictionary = (plan[k] as Dictionary).duplicate(true) if k < plan.size() else {}
+	if on:
+		for key: String in ["to", "turn", "speed", "altitude_band"]:
+			req.erase(key)
+		req["hold"] = true
+	else:
+		if not req.has("hold"):
+			return {}
+		req.erase("hold")
+	var u = world.units[id]
+	var s := _commit_step(id, k, req, Vector2(float(u.x), float(u.y)))
+	if s.is_empty():
+		return s
+	set_focus_step(k)
+	queue_redraw()
+	return s
+
 # --- The bomb drop ----------------------------------------------------------------------------------
 
 # The drop request of step k of a unit ({} when it has none): {"aim": [x, y]}.
@@ -2047,7 +2115,7 @@ func gun_reason_text(chk: Dictionary, id: String, label: String) -> String:
 			return style.text("guns.text.out_of_range") % [roundi(float(chk.get("range_m", 0.0))), roundi(float(chk.get("range_max_m", 0.0)))]
 		"no_target":
 			return style.text("guns.text.no_target") % label
-		"target_down", "own_side", "inland", "unspotted", "unit_down", "not_a_gun":
+		"target_down", "own_side", "inland", "unspotted", "unit_down", "not_a_gun", "out_of_arc", "cannot_elevate", "point_target", "no_shot":
 			return style.text("guns.text." + why)
 	return why
 
@@ -2094,7 +2162,9 @@ func fire_info(k: int = -2) -> Dictionary:
 		return {}
 	return {"check": chk, "blocked": not bool(chk["ok"]) and not bool(chk.get("poor_shot", false)), "poor_shot": bool(chk.get("poor_shot", false)),
 		"reason": str(chk["reason"]), "range_m": float(chk["range_m"]),
-		"spread_m": float(chk["spread_m"]), "flight_s": float(chk["flight_s"]), "spotted_s": float(chk["spotted_s"]), "salvos": int(chk["salvos"])}
+		"spread_m": float(chk["spread_m"]), "flight_s": float(chk["flight_s"]), "spotted_s": float(chk["spotted_s"]), "salvos": int(chk["salvos"]),
+		"direct": bool(chk.get("direct", false)), "odds": float(chk.get("odds", 0.0)), "traverse_s": float(chk.get("traverse_s", 0.0)),
+		"bears_in_time": bool(chk.get("bears_in_time", true))}
 
 # The line under the target's, for a unit with big guns: what the special does at the SELECTED step, or why it cannot be switched on.
 func gun_caption() -> String:
@@ -2114,6 +2184,13 @@ func gun_caption() -> String:
 			return gun_poor_text(info["check"])
 		if bool(info["blocked"]):
 			return style.text("guns.text.wont_fire") % gun_reason_text(info["check"], id, label)
+		if not bool(info["bears_in_time"]):
+			return style.text("guns.text.bears_late") % float(info["traverse_s"])   # (builder ORD: set, but the turret cannot come round in the turn: it turns toward the target and does not fire)
+		if bool(info["direct"]):
+			# the tank's gun: the chance of a hit, the range, and the turret's time to come round
+			if float(info["traverse_s"]) > 0.05:
+				return style.text("guns.text.on_direct_turning") % [k + 1, label, roundi(float(info["odds"]) * 100.0), float(info["traverse_s"])]
+			return style.text("guns.text.on_direct") % [k + 1, label, roundi(float(info["odds"]) * 100.0), roundi(float(info["range_m"]))]
 		return style.text("guns.text.on") % [k + 1, label, roundi(float(info["spread_m"])), roundi(float(info["range_m"]))]
 	if not bool(opt["available"]):
 		return str(opt["why"])
@@ -2175,8 +2252,9 @@ func _draw_fire_marks(id: String) -> void:
 		var sigma_m := float(info.get("spread_m", 0.0))
 		var r := maxf(sigma_m * style.num("guns.marks.sigma_k") * mapping.px_per_m(at_m), style.num("guns.marks.ring_min_px"))
 		var ring_c := _fade(ink, style.num("guns.marks.ring_alpha") * fade)
-		draw_arc(tp, r + style.num("guns.marks.ring_line_px"), 0.0, TAU, 48, _fade(paper, 0.7 * fade), style.num("guns.marks.ring_line_px") + 1.6, true)
-		draw_arc(tp, r, 0.0, TAU, 48, ring_c, style.num("guns.marks.ring_line_px"), true)
+		if not bool(info.get("direct", false)):   # (a direct shot has no scatter to ring: the tank's gun is one aimed shell)
+			draw_arc(tp, r + style.num("guns.marks.ring_line_px"), 0.0, TAU, 48, _fade(paper, 0.7 * fade), style.num("guns.marks.ring_line_px") + 1.6, true)
+			draw_arc(tp, r, 0.0, TAU, 48, ring_c, style.num("guns.marks.ring_line_px"), true)
 		var cx: float = style.num("guns.marks.target_cross_px")
 		for d: Vector2 in [Vector2(1.0, 1.0), Vector2(1.0, -1.0)]:
 			draw_line(tp - d * cx, tp + d * cx, _fade(paper, 0.8 * fade), w + 1.6, true)

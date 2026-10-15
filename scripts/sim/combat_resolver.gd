@@ -66,9 +66,19 @@ extends RefCounted
 #       (run_s: seconds the target has been spotted without a break; salvos: fired at it before this turn, the bracketing)
 #   reach_fn(special_id: String, from: Vector2, target_pos: Vector2) -> String   "" or why the target is out of reach beyond the range
 #       (the World's coastal strip: Guns.WHY_INLAND)
+#   seen_fn(side: String, target: Dictionary, t: float, down_at: Dictionary) -> bool   whether the side spots the target at t (optional; the turrets
+#       ask it every tick, where spot_fn walks the whole turn: without it spot_fn answers)
 #   fight.shells      the shells still in the air at the end of the turn (records: guns.gd header)
 #   fight.fired       unit id -> the special ids it fired this turn (the World sets their reload)
 
+# TURRETS AND ORDERED SHOTS (builder ORD, 2026-10-14; Alex, decisions tank-gun-orders and tank-fire-feedback: the tank's gun is a special fired only when
+# ordered, and "It should delay the shot in the game so the timing is variable during the turn"; the cruiser's turrets turn too). A gun special's order
+# (the histories' "fire") is a WINDOW now, not a moment: from the start of its step the unit's turret turns toward the target at the unit's traverse_dps
+# (data/units/<id>.json "turret"; scripts/sim/turret.gd), and the salvo (kind "salvo") or the aimed shot (kind "direct", scripts/sim/direct_fire.gd) goes the
+# moment the turret is on bearing and the special's fire_at has passed. A unit without a turret fires at fire_at as it always did. An order whose turret
+# never gets on bearing, or whose direct shot never finds the target inside the arc, the range and its cone before the turn ends, is a gun_hold with the
+# reason and spends no reload. A weapon that "fires_on_special" never rolls on its own (a tank's gun). The turret's bearing through the turn is returned in
+# `turrets` (unit id -> {final, track: [[t, rel], ...]}), which the World stores in the histories (World.turret_at) and in Unit.turret.
 const Combat = preload("res://scripts/sim/combat.gd")
 const CombatRules = preload("res://scripts/sim/combat_rules.gd")
 const CombatWeapon = preload("res://scripts/sim/combat_weapon.gd")
@@ -78,6 +88,8 @@ const Bombs = preload("res://scripts/sim/bombs.gd")
 const BombRules = preload("res://scripts/sim/bomb_rules.gd")
 const Guns = preload("res://scripts/sim/guns.gd")
 const GunRules = preload("res://scripts/sim/gun_rules.gd")
+const Turret = preload("res://scripts/sim/turret.gd")
+const DirectFire = preload("res://scripts/sim/direct_fire.gd")
 
 var rules: CombatRules
 var bomb_rules: BombRules = null
@@ -111,13 +123,18 @@ var _shell_carry: Array = []    # shells still in the air at the end of the turn
 var _fired: Dictionary = {}     # unit id -> [special ids fired this turn]
 var _spot_fn: Callable = Callable()
 var _reach_fn: Callable = Callable()
+var _seen_fn: Callable = Callable()   # (side, target, t, down_at) -> bool: is the target spotted by the side at t (the cheap question the turrets ask each tick)
+var _histories: Dictionary = {}
+var _band_height: Callable = Callable()
+var _turret: Dictionary = {}        # unit id -> the turret's bearing now (radians, relative to the nose)
+var _turret_track: Dictionary = {}  # unit id -> [[t, rel], ...] keyframes of the turn (straight lines between them)
 
 func _init(combat_rules: CombatRules, bombing_rules: BombRules = null, gunnery_rules: GunRules = null) -> void:
 	rules = combat_rules
 	bomb_rules = bombing_rules
 	gun_rules = gunnery_rules
 
-func run(units: Dictionary, histories: Dictionary, turn: int, rng_seed: int, turn_seconds: float, sampler: Callable, band_height: Callable, bombs_in: Array = [], shells_in: Array = [], spot_fn: Callable = Callable(), reach_fn: Callable = Callable()) -> Dictionary:
+func run(units: Dictionary, histories: Dictionary, turn: int, rng_seed: int, turn_seconds: float, sampler: Callable, band_height: Callable, bombs_in: Array = [], shells_in: Array = [], spot_fn: Callable = Callable(), reach_fn: Callable = Callable(), seen_fn: Callable = Callable()) -> Dictionary:
 	_units = units
 	_ids = units.keys()
 	_index = {}
@@ -140,12 +157,19 @@ func run(units: Dictionary, histories: Dictionary, turn: int, rng_seed: int, tur
 	_fired = {}
 	_spot_fn = spot_fn
 	_reach_fn = reach_fn
+	_seen_fn = seen_fn
+	_histories = histories
+	_band_height = band_height
+	_turret = {}
+	_turret_track = {}
 	for i in _ids.size():
 		var id: String = _ids[i]
 		var u: Unit = units[id]
 		_index[id] = i
 		_health[id] = u.health
 		_up[id] = not u.down
+		if u.def.has_turret():
+			_turret[id] = u.turret
 	var n_ticks := maxi(1, roundi(turn_seconds / rules.tick_seconds))
 	if bomb_rules != null:
 		_start_bombs(histories, bombs_in, n_ticks)
@@ -168,6 +192,8 @@ func run(units: Dictionary, histories: Dictionary, turn: int, rng_seed: int, tur
 				var weapons: Array[CombatWeapon] = shooter.def.weapons
 				for w_i in weapons.size():
 					var weapon: CombatWeapon = weapons[w_i]
+					if weapon.fires_on_special != "":
+						continue   # (an order-only weapon: a tank's gun fires when its special is ordered, _order_tick)
 					var n_rolls := Combat.rolls_in_tick(weapon.rolls_per_second, t_prev, t)
 					if n_rolls <= 0:
 						continue
@@ -176,10 +202,15 @@ func run(units: Dictionary, histories: Dictionary, turn: int, rng_seed: int, tur
 		if bomb_rules != null:
 			_bombs_tick(active, tick, n_ticks, sampler)
 		if gun_rules != null:
-			_guns_tick(active, tick, n_ticks, sampler)
+			_guns_tick(active, tick, n_ticks, sampler, t_prev, t)
 		t_prev = t
+	if gun_rules != null:
+		_hold_unsettled()
+	var turrets := {}
+	for tid: String in _turret:
+		turrets[tid] = {"final": float(_turret[tid]), "track": _turret_track.get(tid, [])}
 	return {"events": _sorted_events(), "health": _health, "down_at": _down_at, "fates": _fates,
-		"bombs": _carry, "released": _released, "shells": _shell_carry, "fired": _fired}
+		"bombs": _carry, "released": _released, "shells": _shell_carry, "fired": _fired, "turrets": turrets}
 
 # One hardpoint's rolls in one tick: pick the target (best odds among the enemy
 # units in the cone), then roll n_rolls times at it.
@@ -390,12 +421,20 @@ func _blast_at(by_id: String, weapon_id: String, bx: float, by: float, t: float,
 func _start_guns(histories: Dictionary, shells_in: Array, n_ticks: int) -> void:
 	for id: String in _ids:
 		var h: Array = histories[id]
+		var n := (_units[id] as Unit).def.actions_per_turn
 		for k in range(1, h.size()):
 			var f: Variant = (h[k] as Dictionary).get("fire")
 			if f is Dictionary and (f as Dictionary).has("fire_t") and (f as Dictionary).get("target") is Dictionary and not ((f as Dictionary)["target"] as Dictionary).is_empty() 					and gun_rules.has_special(str((f as Dictionary).get("special", ""))):
-				var ft := float((f as Dictionary)["fire_t"])
-				_fire_plan.append({"unit": id, "special": str((f as Dictionary)["special"]), "step": int((h[k] as Dictionary).get("step", k - 1)),
-					"t": ft, "tick": _tick_of(ft, n_ticks), "target": (f as Dictionary)["target"], "aim": (f as Dictionary).get("aim", [])})
+				var sid := str((f as Dictionary)["special"])
+				var spec: GunRules.Spec = gun_rules.special(sid)
+				var step := int((h[k] as Dictionary).get("step", k - 1))
+				# The WINDOW of the order opens with its step (the turret starts turning then); the earliest the shot may go is fire_at of the step (the plan's
+				# fire_t also holds the turret's estimated traverse, which the walk finds for itself).
+				var t0 := _turn_seconds * float(step) / float(n)
+				var t_min := t0 + spec.fire_at * (_turn_seconds / float(n))
+				_fire_plan.append({"unit": id, "special": sid, "step": step,
+					"t": t_min, "tick": _tick_of(t_min, n_ticks), "target": (f as Dictionary)["target"], "aim": (f as Dictionary).get("aim", []),
+					"t0": t0, "settled": false, "why": Guns.WHY_OFF_BEARING})
 	for s: Dictionary in shells_in:
 		_shell_land_or_carry(s.duplicate(true))
 
@@ -409,14 +448,16 @@ func _shell_land_or_carry(s: Dictionary) -> void:
 		_shell_carry.append(s)
 
 # One tick of gunnery, after the bombs: the salvos that fall in it, then the shells that land in it.
-func _guns_tick(active: Array[String], tick: int, n_ticks: int, sampler: Callable) -> void:
+func _guns_tick(active: Array[String], tick: int, n_ticks: int, sampler: Callable, t_prev: float, t_now: float) -> void:
 	for entry: Dictionary in _fire_plan:
-		if int(entry["tick"]) != tick:
+		if bool(entry["settled"]):
 			continue
 		# Only a unit that was up when the tick began fires (as for the guns and the bombs: simultaneous).
 		if not active.has(str(entry["unit"])):
 			continue
-		_fire_salvo(entry, active, sampler)
+		if t_now <= float(entry["t0"]) + 1e-9:
+			continue   # (the order's step has not begun: its turret has not started turning)
+		_order_tick(entry, active, sampler, tick, t_prev, t_now)
 	var due: Array = []
 	var rest: Array = []
 	for s: Dictionary in _shell_pending:
@@ -441,6 +482,194 @@ func _guns_tick(active: Array[String], tick: int, n_ticks: int, sampler: Callabl
 			"t": t, "x": float(s["x"]), "y": float(s["y"]), "blast_m": spec.blast_radius_m(), "released_turn": int(s["release_turn"]), "released_t": float(s["release_t"]),
 		})
 		_blast_at(str(s["unit"]), str(s["special"]), float(s["x"]), float(s["y"]), t, active, tick, sampler, spec)
+
+# --- Turrets and ordered shots (builder ORD, 2026-10-14; the header) -------------------------------------------------------
+
+# One tick of one order whose window is open: turn the unit's turret toward the target (the part of the tick after the window opened), and fire the moment it
+# is on bearing and the special's earliest moment has passed. A unit with no turret is on bearing at once (it fires at fire_at, as it always did).
+func _order_tick(entry: Dictionary, active: Array[String], sampler: Callable, tick: int, t_prev: float, t: float) -> void:
+	var uid := str(entry["unit"])
+	var u: Unit = _units[uid]
+	var sid := str(entry["special"])
+	var spec: GunRules.Spec = gun_rules.special(sid)
+	if spec == null:
+		entry["settled"] = true
+		return
+	var t_min := float(entry["t"])
+	var reached := true
+	var t_reach := -INF
+	if _turret.has(uid):
+		var hull: Dictionary = sampler.call(uid, t)
+		var half := deg_to_rad(float(u.def.turret["half_arc_deg"]))
+		var rate := deg_to_rad(float(u.def.turret["traverse_dps"]))
+		var t_lo := maxf(t_prev, float(entry["t0"]))
+		var rel := float(_turret[uid])
+		var at: Variant = _bearing_point(entry, u, spec, t, sampler)
+		if at == null:
+			reached = spec.kind != "direct"   # (a salvo with nothing to turn to fires as a poor shot; a direct shot with no target in sight waits)
+			if not reached:
+				entry["why"] = Guns.WHY_UNSPOTTED
+		else:
+			var desired := Turret.rel_to(Vector2(float(hull["x"]), float(hull["y"])), float(hull["heading"]), at as Vector2)
+			var goal := Turret.goal(desired, half)
+			var st := Turret.step_toward(rel, goal, half, rate * (t - t_lo))
+			var moved_to := float(st["rel"])
+			if absf(moved_to - rel) > 1e-12:
+				_note_turret(uid, t_lo, rel, t_lo + float(st["used"]) / rate, moved_to)
+				_turret[uid] = moved_to
+			var in_arc := Turret.in_arc(desired, half)
+			reached = bool(st["reached"]) and in_arc
+			t_reach = t_lo + float(st["used"]) / rate
+			if not reached:
+				entry["why"] = Guns.WHY_OFF_BEARING if in_arc else Guns.WHY_OUT_OF_ARC
+	if not reached:
+		return
+	var tf := maxf(t_reach, t_min)
+	if tf > t + 1e-9:
+		return   # (on bearing before fire_at: it waits for it, inside this tick or a later one)
+	if spec.kind == "direct":
+		if _fire_direct(entry, spec, sampler, tick, tf):
+			entry["settled"] = true
+		return
+	entry["settled"] = true
+	var fire_entry := entry.duplicate()
+	fire_entry["t"] = tf
+	fire_entry["tick"] = tick
+	_fire_salvo(fire_entry, active, sampler)
+
+# The place the unit's turret turns toward for this order at t, or null when it has nothing to turn to: a point target is where it is; a unit target is where it is
+# when the side spots it (a salvo is turned to the place it will be aimed, led by its velocity), else the place it was shown at when the order was set -- the
+# barrel never points at a thing the player's side cannot see.
+func _bearing_point(entry: Dictionary, u: Unit, spec: GunRules.Spec, t: float, sampler: Callable) -> Variant:
+	var target: Dictionary = entry["target"]
+	if target.has("point"):
+		if spec.kind == "direct":
+			return null
+		var p: Variant = target["point"]
+		return (p as Vector2) if p is Vector2 else Vector2(float(p[0]), float(p[1]))
+	var tid := str(target.get("unit", ""))
+	if not _units.has(tid) or not _up.get(tid, false):
+		return null
+	if _seen(u.side, target, t):
+		var ts: Dictionary = sampler.call(tid, t)
+		var tpos := Vector2(float(ts["x"]), float(ts["y"]))
+		if spec.kind == "direct":
+			return tpos
+		var fs: Dictionary = sampler.call(str(entry["unit"]), t)
+		var tvel := Vector2(cos(float(ts["heading"])), sin(float(ts["heading"]))) * float(ts["speed"])
+		return Guns.aim_for(Vector2(float(fs["x"]), float(fs["y"])), tpos, tvel, spec)["aim"]
+	var shown: Variant = entry.get("aim", [])
+	if shown is Array and (shown as Array).size() >= 2:
+		return Vector2(float(shown[0]), float(shown[1]))
+	return null
+
+# Is the target spotted by the side at t? The cheap question if the World gave one, else the full one.
+func _seen(side: String, target: Dictionary, t: float) -> bool:
+	if _seen_fn.is_valid():
+		return bool(_seen_fn.call(side, target, t, _down_at))
+	if _spot_fn.is_valid():
+		return bool((_spot_fn.call(side, target, t, _down_at, "") as Dictionary).get("spotted", true))
+	return true
+
+# The turret's bearing went from `rel_a` at t_a to `rel_b` at t_b: a keyframe at each end (a straight line between them is what the playback draws).
+func _note_turret(uid: String, t_a: float, rel_a: float, t_b: float, rel_b: float) -> void:
+	var track: Array = _turret_track.get(uid, [])
+	if track.is_empty() or float((track[track.size() - 1] as Array)[0]) < t_a - 1e-9:
+		track.append([t_a, rel_a])
+	track.append([t_b, rel_b])
+	_turret_track[uid] = track
+
+# A DIRECT shot (the tank's gun): the unit's weapon makes shots_per_order aimed rolls at the target at the moment tf, from the turret's bearing, with the
+# weapon's own cone, range and crossing odds. Returns true when the order is settled (fired, or held for good), false to wait for the target to be in arc,
+# in range, spotted and in the cone while the turn lasts (the reason is kept in entry["why"] for the gun_hold at the turn's end).
+func _fire_direct(entry: Dictionary, spec: GunRules.Spec, sampler: Callable, tick: int, tf: float) -> bool:
+	var uid := str(entry["unit"])
+	var sid := str(entry["special"])
+	var u: Unit = _units[uid]
+	var target: Dictionary = entry["target"]
+	var fired: Array = _fired.get(uid, [])
+	if fired.has(sid) or u.gun_ready_turn(sid) > _turn:
+		_hold(_held_at(entry, tf), Guns.WHY_RELOADING)
+		return true
+	var weapon := DirectFire.weapon_of(u.def, spec.weapon_id)
+	if weapon == null:
+		_hold(_held_at(entry, tf), Guns.WHY_NOT_A_GUN)
+		return true
+	if not target.has("unit"):
+		_hold(_held_at(entry, tf), Guns.WHY_POINT_TARGET)
+		return true
+	var tid := str(target["unit"])
+	if not _units.has(tid):
+		_hold(_held_at(entry, tf), Guns.WHY_NO_TARGET)
+		return true
+	var tu: Unit = _units[tid]
+	if tu.side == u.side:
+		_hold(_held_at(entry, tf), Guns.WHY_OWN_SIDE)
+		return true
+	if not _up.get(tid, false):
+		_hold(_held_at(entry, tf), Guns.WHY_TARGET_DOWN)
+		return true
+	var hull := _state_at(uid, tf, _histories[uid], sampler, _band_height)
+	var ts := _state_at(tid, tf, _histories[tid], sampler, _band_height)
+	var range_m := Vector2(float(hull["x"]), float(hull["y"])).distance_to(Vector2(float(ts["x"]), float(ts["y"])))
+	var why := Guns.range_error(range_m, spec)
+	if why == "" and not _seen(u.side, target, tf):
+		why = Guns.WHY_UNSPOTTED
+	var abs_b := Turret.absolute(float(hull["heading"]), float(_turret.get(uid, 0.0)))
+	var aimed := DirectFire.all_round(weapon)
+	var g := DirectFire.evaluate(hull, weapon, aimed, abs_b, ts, rules.odds_factors, _params)
+	if why == "" and not bool(g["in_cone"]):
+		why = Guns.WHY_CANNOT_ELEVATE
+	var w_i := DirectFire.weapon_index(u.def, spec.weapon_id)
+	var p := DirectFire.aimed_pose(hull, weapon.hardpoints[0], abs_b)
+	var roll_seed := Combat.roll_seed(_seed, _turn, int(_index[uid]), w_i, 0, tick)
+	var odds := float(g["odds"])
+	if why == "" and lines != null and lines.applies(weapon):
+		# the lines of fire (stage 2): a target nothing of which is in view is not shot at; a visible one has its odds from the share on view
+		var la: Dictionary = lines.assess(u, hull, p, weapon, g, tu, ts, roll_seed)
+		if not bool(la["visible"]):
+			why = Guns.WHY_NO_SHOT
+		else:
+			odds = float(la["odds"])
+			g["lines"] = la
+	if why != "":
+		entry["why"] = why
+		return false
+	var rng := Mulberry32.new(roll_seed)
+	for j in spec.shots_per_order:
+		var hit := rng.next() < odds
+		var ev := {
+			"type": "fire", "turn": _turn, "tick": tick, "unit": uid, "weapon": weapon.id,
+			"hardpoint": 0, "target": tid, "t": tf, "hit": hit, "odds": odds,
+			"r": g["r"], "distance": g["distance"], "crossing_dps": g["crossing_dps"],
+			"x": p["x"], "y": p["y"], "height_m": p["z"],
+			"tx": ts["x"], "ty": ts["y"], "theight_m": ts["height_m"],
+			"aimed": true, "special": sid, "step": int(entry["step"]), "bearing": abs_b,
+		}
+		if g.has("lines"):
+			ev.merge(lines.landing(g["lines"], hit, roll_seed, j))
+		_events.append(ev)
+		if hit:
+			_hurt(tid, uid, weapon.id, weapon.damage_pips, tf, tick, ts)
+	fired.append(sid)
+	_fired[uid] = fired
+	return true
+
+# The entry as a gun_hold event wants it: the moment it is held at.
+func _held_at(entry: Dictionary, t: float) -> Dictionary:
+	var e := entry.duplicate()
+	e["t"] = t
+	return e
+
+# The turn is over: every order whose unit is still up and that never found its moment is a gun_hold with the reason it was waiting on.
+func _hold_unsettled() -> void:
+	for entry: Dictionary in _fire_plan:
+		if bool(entry["settled"]) or not _up.get(str(entry["unit"]), false):
+			continue
+		if not (_units[str(entry["unit"])] as Unit).def.has_turret() and str(entry["why"]) == Guns.WHY_OFF_BEARING:
+			continue   # (a unit with no turret that did not fire: it was down for its tick, as before)
+		entry["settled"] = true
+		_hold(_held_at(entry, _turn_seconds), str(entry["why"]))
 
 # A unit fires the salvo it planned, if it can: loaded, its target there, in range and spotted at this moment. Its target out of sight
 # or out of reach is a poor shot (_fire_poor) unless the mode is "hold"; for the other reasons a gun_hold event says why and nothing is spent.
@@ -554,6 +783,8 @@ func _launch_salvo(entry: Dictionary, spec: GunRules.Spec, target: Dictionary, f
 		"spotter_ratio": float(spot.get("spotter_ratio", 0.0)), "followed": followed,
 	}
 	ev.merge(extra)
+	if _turret.has(uid):
+		ev["turret_rel"] = float(_turret[uid])   # (the turrets' bearing from the bow when the salvo leaves: the muzzle smoke starts at the tips of the barrels as they point)
 	_events.append(ev)
 	for sh: Dictionary in shells:
 		_shell_land_or_carry(Bombs.schedule(sh, _turn_seconds))

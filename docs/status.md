@@ -9,8 +9,6 @@ Decisions and open questions live in the Decision Ledger
 
 | Track | Owner | Folders | Since |
 | --- | --- | --- | --- |
-| IF: interface polish (backlog A6, A7, A2 labels, Space to ready, A10, A11, A12) | lead + Sonnet builder IF | scripts/ui (not motion_planner*, ui_selection, ui_target, unit_marker_art*, gunfire_feed), scripts/fx, scripts/world/sun.gd, data/fx, data/sim/rounds.json, data/params/sun.json; data/ui/ui.json by targeted edits | 2026-10-14 |
-| ORD: orders and the tank (backlog A4 hold step, gun as special, Dive/Climb hidden, deselect, A5 sim turret turn and drawn turret, A9, Hold the bridge start) | lead + Sonnet builder ORD | scripts/sim, scripts/ui/motion_planner*.gd, ui_selection.gd, ui_target.gd, unit_marker_art*.gd, gunfire_feed.gd, data/units, data/sim (not rounds.json), data/scenarios, scripts/test_support; data/ui/ui.json by targeted edits | 2026-10-14 |
 
 ## Next, free to take
 

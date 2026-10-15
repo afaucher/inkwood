@@ -5,10 +5,11 @@ extends RefCounted
 # a host or locally, and ways of playing the players' side without a human, so that a test and the shot script can show the mission can be won,
 # lost and played to a result (the shape of scripts/test_support/suppress_play.gd):
 #
-#   "idle"    nobody plans anything: the two tanks hold their ground and fire on their own, the cruiser lies at rest (the waves, unopposed by
-#             the guns, get across: the game is lost, sooner or later by the dice)
-#   "defend"  the CRUISER's Main Guns fire whenever they are loaded at a SPOTTED enemy tank (plan_players): the tanks only look and shoot on
-#             their own. It is omniscient only in the way the interface is not: it asks the World's own gun_check, so it can fire exactly
+#   "idle"    nobody plans anything: the two tanks hold their ground and (their gun being an ORDER now: builder ORD, 2026-10-14, Alex's tank-gun-orders)
+#             do not fire, the cruiser lies at rest (the waves, unopposed, get across: the game is lost, sooner or later)
+#   "defend"  the CRUISER's Main Guns fire whenever they are loaded at a SPOTTED enemy tank (plan_players), and each TANK orders its gun at the
+#             nearest enemy the card would let it fire at (plan_tanks), as a player would. It is omniscient only in the way the interface is not:
+#             it asks the World's own gun_check, so it can fire exactly
 #             what a player could switch on (spotted, in reach, loaded), never the unspotted. It keeps to its target while that is up and
 #             in reach (each salvo at the same spotted target is better aimed than the last: bracketing, ranging in), else takes the enemy
 #             tank farthest down the road (nearest the bridge) that is at least SAFE_M from the bridge's middle: a salvo near the span
@@ -28,8 +29,14 @@ const SandboxScenario = preload("res://scripts/app/sandbox_scenario.gd")
 const CRUISER := "cruiser_1"
 const BRIDGE := "bridge_1"
 const TANKS: Array[String] = ["tank_1", "tank_2"]
-const ENEMIES: Array[String] = ["tank_e1", "tank_e2", "tank_e3", "tank_e4", "tank_e5", "tank_e6"]
+const ENEMIES: Array[String] = ["tank_e1", "tank_e2", "tank_e3", "tank_e4"]
 const SPECIAL := "main_guns"
+const TANK_SPECIAL := "tank_gun"
+# Where the defence puts its tanks (metres along the road from the bridge's middle toward the enemy; negative is the village's side): FORWARD, at and just beyond
+# the bridge's far end. With the tanks' guns an order (builder ORD, 2026-10-14) and the waves starting outside the player's sight, the tanks on the village side
+# (the scenario's start, 45 and 80 m short) are not the nearest target of a wave coming down the road: the bridge is, and it falls to their guns in about twelve
+# turns while the tanks have hardly begun (0 wins in 20 dice seeds). Forward, the wave meets the tanks first, inside the cruiser's reach, and the bridge is spared.
+const STATIONS := {"tank_1": -45.0, "tank_2": -80.0}
 # Never fire at an enemy nearer the bridge's middle than this: a shell's blast reaches 20 m and its scatter at this range is tens of metres.
 const SAFE_M := 110.0
 
@@ -175,8 +182,9 @@ func choose_target() -> String:
 	return best
 
 # Plan this turn for the living player units: the cruiser fires at choose_target() (step 0: the shells are in the air for the rest of the
-# turn and land in the next). The tanks are left alone: they hold the road and fire on their own.
+# turn and land in the next). The tanks hold the road and order their guns (plan_tanks).
 func plan_players() -> void:
+	plan_tanks()
 	var ship: Unit = world.units.get(CRUISER)
 	if ship == null or ship.down:
 		return
@@ -192,3 +200,40 @@ func plan_players() -> void:
 		var st := world.plan_step(CRUISER, k, req)
 		if k == 0 and id != "" and not st.is_empty():
 			salvos += 1
+
+# Each living player tank with its gun loaded orders it at the nearest enemy unit the World's own gun_check lets it fire at, in the first step
+# that allows it (the tank holds its place: its steps are left as they are, a hold). The tank's gun is an order since 2026-10-14.
+func plan_tanks() -> void:
+	for tid: String in TANKS:
+		var t: Unit = world.units.get(tid)
+		if t == null or t.down or world.gun_reload_left(tid, TANK_SPECIAL) > 0:
+			continue
+		var foes: Array = []
+		for eid: String in world.units:
+			var e: Unit = world.units[eid]
+			if e.side != t.side and not e.down:
+				foes.append([pos_of(tid).distance_to(pos_of(eid)), eid])
+		foes.sort_custom(func(a: Array, b: Array) -> bool:
+			if float(a[0]) != float(b[0]):
+				return float(a[0]) < float(b[0])
+			return str(a[1]) < str(b[1]))
+		# drive to the station, then hold it
+		var bu: Unit = world.units[BRIDGE]
+		var station := bridge_pos() + Vector2.from_angle(bu.heading) * float(STATIONS.get(tid, 0.0))
+		var arrived := pos_of(tid).distance_to(station) < 8.0
+		for k in world.steps_per_turn(tid):
+			if arrived:
+				world.plan_step(tid, k, {"hold": true})
+			else:
+				world.plan_step(tid, k, station)
+		var done := false
+		for foe: Array in foes:
+			if done or float(foe[0]) > 450.0:
+				break
+			for k in world.steps_per_turn(tid):
+				if bool(world.gun_check(tid, k, {"unit": str(foe[1])}, TANK_SPECIAL).get("ok", false)):
+					var req: Dictionary = (t.plan[k] as Dictionary).duplicate(true) if k < t.plan.size() else {"hold": true}
+					req["fire"] = {"special": TANK_SPECIAL, "target": {"unit": str(foe[1])}}
+					world.plan_step(tid, k, req)
+					done = true
+					break

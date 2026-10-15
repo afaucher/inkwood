@@ -69,6 +69,9 @@ var damage_smoke: Dictionary = {}
 # {part, material, kind ("box" | "ring"), stamp, standable, forward_m, right_m, length_m, width_m, bottom_m, top_m}, lowest layer first
 # (a tank: hull, turret; scripts/sim/line_of_fire_shapes.gd turns them into world boxes). Empty when the file is not ok().
 var shape_boxes: Array = []
+# The unit's turret (data/units/_schema.json "turret"; builder ORD, 2026-10-14, PROPOSED): {traverse_dps, half_arc_deg, barrel_tip_m} as plain values, EMPTY for a
+# unit without one. The turret bearing is Unit.turret; scripts/sim/turret.gd turns it.
+var turret: Dictionary = {}
 var errors: Array[String] = []
 
 static func path_for(type_id: String, units_dir: String = UNITS_DIR) -> String:
@@ -118,6 +121,7 @@ func _init(unit_source: Variant, band_order: Array, quiet: bool = false, label: 
 		specials = v.get("specials", [])
 		damage_smoke = v.get("damage_smoke", {})
 		shape_boxes = (v.get("shape", {}) as Dictionary).get("boxes", [])
+		turret = v.get("turret", {})
 		_check(r, stem)
 	errors = r.errors
 	if errors.is_empty():
@@ -132,6 +136,14 @@ func ok() -> bool:
 # wait for it in the ready-up).
 func is_static() -> bool:
 	return mobility == "static"
+
+# Does the unit have a turret that turns (a tank, the cruiser's main guns)?
+func has_turret() -> bool:
+	return not turret.is_empty()
+
+# Does the unit move by a flight envelope through the air? (A plane cannot hold: a step that keeps its point.)
+func is_air() -> bool:
+	return domain == "air"
 
 # Does the unit carry bombs (a bomb_load with drops)?
 func carries_bombs() -> bool:
@@ -159,6 +171,8 @@ static func _walk(r: Records, fields: Dictionary, data: Dictionary, prefix: Stri
 		var spec: Dictionary = fields[key]
 		var label := prefix + key
 		var kind := str(spec.get("kind", ""))
+		if bool(spec.get("optional", false)) and not data.has(key):
+			continue   # (an optional field a file may leave out: the weapon's fires_on_special, a unit's turret)
 		match kind:
 			"section":
 				if data.get(key) is Dictionary:

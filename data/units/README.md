@@ -96,3 +96,12 @@ the bridge and the military complex; wood: the barge; earth: the AA battery (its
 and the bomb drop are specials, so their rounds are named in `rounds.json` `specials`. All of it is proposed except where a record names
 Alex's decision; `test_rounds` holds the tables, `test_unit_defs` refuses a unit with no material or a weapon with no round.
 
+
+## The tank's gun is an order, the turret turns, a step may hold (builder ORD, 2026-10-14)
+
+Alex's decisions playtest-4, tank-gun-orders and tank-fire-feedback. The tank's gun (`turret_gun`) has `fires_on_special: "tank_gun"` and never fires on its own: the tank's
+special is "Turret Fire" (`data/sim/guns.json` `tank_gun`, a special of the `direct` kind: one aimed shell per order, the weapon's own cone, odds and damage, a reload of
+about a turn). The unit file's optional `turret` section (`traverse_dps`, `half_arc_deg`, `barrel_tip_m`; the cruiser has one too) gives the unit a turret bearing, an angle
+relative to the nose that is sim state (`Unit.turret`): an ordered shot turns the turret to the target at the traverse rate and fires when it is on bearing, so the turn
+delays the shot (`scripts/sim/turret.gd`, `combat_resolver.gd`); a turn too short for the swing fires nothing and the turret goes on from where it got next turn. A plan step
+`{"hold": true}` keeps a ship's or a tank's point and takes a special. Every number is PROPOSED in its record.

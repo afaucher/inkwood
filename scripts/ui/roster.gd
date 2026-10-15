@@ -500,7 +500,7 @@ func select_row(i: int) -> bool:
 	if not selection.can_select(id):
 		down_unit_picked.emit(id)
 		return false
-	selection.select(id)
+	selection.toggle(id)   # (builder ORD, 2026-10-14: a click on the row of the unit that is already selected lets go of it)
 	unit_selected.emit(id)
 	return true
 

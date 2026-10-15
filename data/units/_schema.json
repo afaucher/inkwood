@@ -112,7 +112,8 @@
         "falloff_exponent": { "kind": "number", "min": 0.1, "about": "The centre factor is 1 - (1 - rim_odds_factor) x r^falloff_exponent, r the normalized offset (0 centre, 1 rim). 1 falls in a straight line, 2 stays near the top longer. Unused when rim_odds_factor is 1." },
         "tracking_dps": { "kind": "number", "min": 0.1, "unit": "deg/s", "about": "The \"crossing_rate\" odds factor (Alex 2026-10-10: relative velocity affects accuracy) is 1 / (1 + (rate / tracking_dps)^crossing_exponent), rate being the turn rate of the line of sight from the hardpoint to the target in degrees a second (the target's velocity relative to the shooter, across the line of fire, over the distance). So tracking_dps is the rate at which crossing halves the odds: small for a fixed gun (the pilot swings the whole plane), larger for a flexible gun or a turret (a gunner tracks). Closing speed costs nothing." },
         "damage_pips": { "kind": "integer", "min": 1, "about": "Health pips one hit takes." },
-        "rolls_per_second": { "kind": "number", "min": 0.01, "unit": "1/s", "about": "How often each hardpoint rolls while it has a target in the cone, on the turn's clock (data/sim/combat.json tick_seconds is the finest it can be resolved)." }
+        "rolls_per_second": { "kind": "number", "min": 0.01, "unit": "1/s", "about": "How often each hardpoint rolls while it has a target in the cone, on the turn's clock (data/sim/combat.json tick_seconds is the finest it can be resolved)." },
+        "fires_on_special": { "kind": "text", "optional": true, "about": "ORDER-ONLY WEAPONS (builder ORD, 2026-10-14; Alex, decisions playtest-4 and tank-gun-orders: the tank's gun is its special, fired only when ordered). The id of the unit's special (a gun special of data/sim/guns.json, kind 'direct') that fires this weapon; the weapon NEVER fires on its own, its cone, odds and damage are used by that special's aimed shot. Leave it out for a weapon that fires by the engagement rules." }
       }
     },
     "bomb_load": {
@@ -130,6 +131,16 @@
         "id": { "kind": "text", "about": "The special's id, unique within the unit." },
         "name": { "kind": "text", "about": "The name the player reads, capitalised ('Bomb')." },
         "action": { "kind": "text", "about": "The action the player reads after the name, capitalised ('Drop')." }
+      }
+    },
+    "turret": {
+      "kind": "section",
+      "optional": true,
+      "about": "THE TURRET (builder ORD, 2026-10-14; Alex, decision tank-fire-feedback: 'It should delay the shot in the game so the timing is variable during the turn' and 'The turret feedback should also apply to the ship'). A unit with a turret (a tank, the cruiser's main guns) has a turret BEARING, an angle relative to the hull's nose that is sim state (Unit.turret): it persists between turns and crosses the wire. A gun special fired by an order turns the turret toward the target at traverse_dps and fires when it is on bearing, so the shot is delayed by the turn (scripts/sim/turret.gd, combat_resolver.gd). Absent for a unit without one. EVERY VALUE IS PROPOSED.",
+      "fields": {
+        "traverse_dps": { "kind": "number", "min": 0.1, "unit": "deg/s", "about": "How fast the turret turns, degrees a second." },
+        "half_arc_deg": { "kind": "number", "min": 1, "max": 180, "unit": "deg", "about": "How far the turret may turn either side of the hull's nose. 180 is all round (the turret takes the short way to a bearing); less is a fixed arc (a tank's 170 degree forward arc is 85): a target outside it is out of the arc." },
+        "barrel_tip_m": { "kind": "number", "min": 0, "unit": "m", "about": "From the turret's axis (the weapon's first hardpoint, or for the cruiser the middle of its main turrets) to the muzzle, along the bearing: where a shot's smoke starts, in the unit's own metres." }
       }
     }
   }

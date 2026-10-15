@@ -51,8 +51,8 @@ const TANK2 := "tank_2"
 const SHIP := "cruiser_1"
 const BRIDGE := "bridge_1"
 const WAVE1: Array[String] = ["tank_e1", "tank_e2"]
-const WAVE2: Array[String] = ["tank_e3", "tank_e4"]
-const WAVE3: Array[String] = ["tank_e5", "tank_e6"]
+const WAVE2: Array[String] = ["tank_e3"]
+const WAVE3: Array[String] = ["tank_e4"]
 const RELIEF := 26
 
 var _main: Node = null
@@ -158,7 +158,7 @@ func _scenario() -> void:
 		return
 	eq(sc.ai_kind, SandboxScenario.AI_PILOT, "2. it asks for the pilot AI")
 	check(sc.water_on, "2. with the water on")
-	eq(sc.units.size(), 10, "2. ten units: two tanks, the cruiser, six enemy tanks, the bridge")
+	eq(sc.units.size(), 8, "2. eight units: two tanks, the cruiser, four enemy tanks, the bridge")
 	eq(sc.turn_limit(), RELIEF, "2. the clock counts to relief: turn %d" % RELIEF)
 	check(sc.briefing.contains("turn %d" % RELIEF), "2. and the briefing says it: %s" % sc.briefing)
 	var w := World.new()
@@ -194,10 +194,14 @@ func _scenario() -> void:
 	var d_ship := _pos(w, SHIP).distance_to(bridge)
 	check(d_ship >= 2400.0 and d_ship <= 3000.0, "2. %.0f m from the bridge: the far end of its 3,000 m" % d_ship)
 	eq(s.speed, 0.0, "2. at rest")
-	check(Vector2.from_angle(s.heading).dot((bridge - _pos(w, SHIP)).normalized()) > 0.99, "2. facing the bridge (a ship has no turn rate at rest)")
+	# PLAYTEST-4 (Alex, 2026-10-14; builder ORD): "the cruiser starts pointing east-west, along the coast" -- west, with the main turrets already trained on the bridge
+	var to_bridge := (bridge - _pos(w, SHIP))
+	check(absf(sin(s.heading)) < 0.01, "2. pointing east-west, along the coast (heading %.4f)" % s.heading)
+	check(absf(Vector2.from_angle(s.heading).dot(to_bridge.normalized())) < 0.35, "2. so the bridge is abeam, not ahead (%.2f)" % Vector2.from_angle(s.heading).dot(to_bridge.normalized()))
+	near(float(s.turret), wrapf(to_bridge.angle() - s.heading, -PI, PI), 0.01, "2. and its main turrets are trained on the bridge road (%.1f degrees off the bow)" % rad_to_deg(s.turret))
 	eq(s.callsign, "Old Smoky", "2. named from Alex's small-cruiser pool")
 	var starts: Array[int] = []
-	var expected := {"tank_e1": [300.0, 2], "tank_e2": [315.0, 2], "tank_e3": [350.0, 7], "tank_e4": [365.0, 7], "tank_e5": [400.0, 12], "tank_e6": [415.0, 12]}
+	var expected := {"tank_e1": [570.0, 1], "tank_e2": [585.0, 1], "tank_e3": [620.0, 6], "tank_e4": [670.0, 11]}
 	for id: String in expected:
 		var u := w.units[id] as Unit
 		eq(u.side, "axis", "2. %s is the enemy's" % id)
@@ -214,7 +218,13 @@ func _scenario() -> void:
 		var past := Vector2(float(to[0]), float(to[1]))
 		check((past - bridge).dot(dir_far) < -60.0 and past.distance_to(BridgeSeedSearch.road_point(road, idx, -90.0)) < 0.01, "2. %s drives to the road 90 m past the bridge on the player's side" % id)
 		starts.append(int(orders["start_turn"]))
-	eq(starts, [2, 2, 7, 7, 12, 12] as Array[int], "2. three waves of two, five turns apart")
+	eq(starts, [1, 1, 6, 11] as Array[int], "2. three waves (2, 1 and 1 tanks), five turns apart")
+	# PLAYTEST-4 (Alex: "the enemy tanks start OUTSIDE the player's sight"): from turn 1 nobody on the player's side sees an enemy tank
+	for id: String in expected:
+		check(not w.spotted_now("allies", {"unit": id}), "2. %s starts outside the player's sight" % id)
+		for pid: String in [TANK1, TANK2, SHIP]:
+			var pu := w.units[pid] as Unit
+			check(_pos(w, id).distance_to(_pos(w, pid)) > float(pu.def.sight_range_m), "2. %s is %.0f m from %s, whose sight is %.0f m" % [id, _pos(w, id).distance_to(_pos(w, pid)), pid, float(pu.def.sight_range_m)])
 	# the mission and the ring
 	var m := sc.make_mission(w)
 	check(m != null and m.ok(), "2. the mission builds: %s" % str(m.errors if m != null else "null"))
@@ -385,7 +395,7 @@ func _waves() -> void:
 	var first_move: Dictionary = {}
 	var crossed_turn := -1
 	var moved_before: Array[String] = []
-	for t in 12:
+	for t in 24:
 		var res := g.turn("idle")
 		var turn_no := int(res["turn"])
 		for id: String in WAVE1 + WAVE2 + WAVE3:
@@ -396,14 +406,13 @@ func _waves() -> void:
 		if g.mission.state != Mission.PLAYING and crossed_turn < 0:
 			crossed_turn = turn_no
 			break
-	eq(int(first_move.get("tank_e1", -1)), 2, "4. wave 1 sits at rest through turn 1 and drives in turn 2")
-	eq(int(first_move.get("tank_e2", -1)), 2, "4. (both tanks of it)")
-	eq(int(first_move.get("tank_e3", -1)), 7, "4. wave 2 sits still through turn 6 and drives in turn 7")
-	eq(int(first_move.get("tank_e4", -1)), 7, "4. (both)")
-	check(not first_move.has("tank_e5"), "4. wave 3 has not moved by the time wave 1 is across")
-	check(crossed_turn >= 8 and crossed_turn <= 10, "4. unopposed by the guns, wave 1 is across at turn %d (the game is over)" % crossed_turn)
+	eq(int(first_move.get("tank_e1", -1)), 1, "4. wave 1 drives from turn 1")
+	eq(int(first_move.get("tank_e2", -1)), 1, "4. (both tanks of it)")
+	eq(int(first_move.get("tank_e3", -1)), 6, "4. wave 2 sits still through turn 5 and drives in turn 6")
+	check(not first_move.has("tank_e4") or int(first_move["tank_e4"]) == 11, "4. wave 3 drives in turn 11 (or the game is over before)")
+	check(crossed_turn >= 11 and crossed_turn <= 17, "4. unopposed by the guns, wave 1 is across at turn %d (the game is over)" % crossed_turn)
 	eq(g.mission.state, Mission.LOST, "4. ... and it is a loss")
-	check(g.mission.reason.ends_with("got past the bridge"), "4. in those words: %s" % g.mission.reason)
+	check(g.mission.reason.ends_with("got past the bridge") or g.mission.reason == "bridge_1 is down", "4. in those words (an enemy across, or, with the enemy's guns an order they use on the nearest thing, the bridge shot down): %s" % g.mission.reason)
 	# the waves keep their order and their spacing on the road: nobody drove off it
 	var gm := GroundMap.shared(int(g.scenario.seed_value), g.scenario.water())
 	for id: String in WAVE1:
@@ -420,15 +429,24 @@ func _spotting() -> void:
 	var w := g.world
 	var ship := w.units[SHIP] as Unit
 	check(float(ship.def.sight_range_m) < _pos(w, SHIP).distance_to(_pos(w, "tank_e1")) - 1000.0, "5. the cruiser's own sight (%.0f m) is nowhere near its targets (%.0f m)" % [float(ship.def.sight_range_m), _pos(w, SHIP).distance_to(_pos(w, "tank_e1"))])
+	# at the start the waves are outside the tanks' sight (playtest-4): nobody sees them and the guns cannot be switched on at them
+	check(w.spotters_now("allies", {"unit": "tank_e1"}).is_empty(), "5. at the start nobody sees the first wave")
+	eq(str(w.gun_check(SHIP, 0, {"unit": "tank_e1"})["reason"]), Guns.WHY_OUT_OF_RANGE, "5. and it is out of the guns' reach as well")
+	# the first wave driven in to 300 and 315 m along the road beyond the bridge (the old starts): the tanks see it, and the guns' far end reaches it
+	for pair: Array in [["tank_e1", 300.0], ["tank_e2", 315.0]]:
+		var q := g.scenario.site_point("water.bridge", 0, 0.0, 0.0, true, float(pair[1]))
+		(w.units[str(pair[0])] as Unit).x = q.x
+		(w.units[str(pair[0])] as Unit).y = q.y
+	w.spotting.forget()
 	var spotters := w.spotters_now("allies", {"unit": "tank_e1"})
-	check(spotters.has(TANK1) and spotters.has(TANK2) and not spotters.has(SHIP), "5. the tanks are the ones who see the first wave: %s" % str(spotters))
+	check(spotters.has(TANK1) and spotters.has(TANK2) and not spotters.has(SHIP), "5. the tanks are the ones who see the first wave once it is in their sight: %s" % str(spotters))
 	var chk := w.gun_check(SHIP, 0, {"unit": "tank_e1"})
 	check(bool(chk["ok"]), "5. so the guns can be switched on at it (%s)" % str(chk.get("reason")))
 	check(float(chk["range_m"]) > 2900.0 and float(chk["range_m"]) <= 3000.0, "5. at %.0f m: the far end of the 3,000" % float(chk["range_m"]))
 	# the second tank of the wave starts 15 m farther: past the guns' reach until it has driven a little
 	var far := w.gun_check(SHIP, 0, {"unit": "tank_e2"})
 	check(not bool(far["ok"]) and str(far["reason"]) == Guns.WHY_OUT_OF_RANGE, "5. %s: the next tank, 15 m farther, is out of reach (%.0f m)" % [str(far["reason"]), float(far["range_m"])])
-	var third := w.gun_check(SHIP, 0, {"unit": "tank_e5"})
+	var third := w.gun_check(SHIP, 0, {"unit": "tank_e4"})
 	check(not bool(third["ok"]) and str(third["reason"]) == Guns.WHY_OUT_OF_RANGE, "5. and the last wave is out of reach at its start (%s)" % str(third["reason"]))
 	# without the tanks the guns are blind (the cruiser's 1,000 m of sight sees nothing at 2.7 km)
 	_down(w.units[TANK1] as Unit, 0.0)
@@ -441,7 +459,7 @@ func _spotting() -> void:
 	var spec := g2.world.guns.special("main_guns")
 	var depth := g2.world.water_depth
 	var bridge := g2.bridge_pos()
-	var road_far: Vector2 = g2.pos_of("tank_e1")
+	var road_far: Vector2 = g2.scenario.site_point("water.bridge", 0, 0.0, 0.0, true, 300.0)   # (where the first wave comes into the guns' reach; it starts farther out)
 	eq(Guns.reach_error(g2.pos_of(SHIP), road_far, spec, depth), "", "5. the first wave's road is on the coastal strip (the river is the water within 600 m)")
 	check(Guns.reach_error(g2.pos_of(SHIP), g2.pos_of(TANK1), spec, depth) == Guns.WHY_INLAND, "5. while the player's own bank is 'inland' to the guns (an enemy there has crossed)")
 	# every salvo of the scripted defence is aimed at a spotted target, not a poor shot: see section 6
@@ -662,7 +680,7 @@ func _local() -> bool:
 	if not check(playable, "10. the sandbox becomes playable"):
 		return false
 	var w: World = sb.world
-	eq(w.units.size(), 10, "10. ten units")
+	eq(w.units.size(), 8, "10. eight units")
 	check(sb.ai is AiPilot, "10. Local attaches the pilot")
 	check(sb.mission != null and sb.mission.state == Mission.PLAYING, "10. and the mission, playing")
 	check(sb.objective != null and sb.objective.label == "BRIDGE", "10. the ring is on the map, with its word")
@@ -674,7 +692,14 @@ func _local() -> bool:
 	sb.ui.marker_layer.update_poses()
 	for id in [TANK1, TANK2, SHIP]:
 		check(sb.ui.marker_layer.marker(id).visible, "10. %s is shown" % id)
-	check(sb.ui.marker_layer.marker("tank_e1").visible, "10. the first wave is shown: the tanks see it at 345 m")
+	check(not sb.ui.marker_layer.marker("tank_e1").visible, "10. the first wave is NOT shown: it starts outside the tanks' sight (playtest-4)")
+	# the first wave driven in to 300 m beyond the bridge: the tanks see it, and it is shown
+	var q: Vector2 = sb.scenario.site_point("water.bridge", 0, 0.0, 0.0, true, 300.0)
+	(w.units["tank_e1"] as Unit).x = q.x
+	(w.units["tank_e1"] as Unit).y = q.y
+	w.spotting.forget()
+	sb.ui.marker_layer.update_poses()
+	check(sb.ui.marker_layer.marker("tank_e1").visible, "10. the first wave is shown once it is in the tanks' sight (345 m)")
 	# the cruiser's guns are on its card: it can be told to fire at the first wave
 	sb.ui.select(SHIP)
 	var chk := w.gun_check(SHIP, 0, {"unit": "tank_e1"})
@@ -683,6 +708,11 @@ func _local() -> bool:
 	var planner: RefCounted = BridgePlay.for_world(w)
 	w.rng_seed = _won_seed if _won_seed >= 0 else 5
 	var last_turn := 0
+	var salvos_fired: Array[int] = [0]
+	w.turn_resolved.connect(func(_t: int, _h: Dictionary, evs: Array) -> void:
+		for ev: Variant in evs:
+			if (ev as Dictionary).get("type", "") == "shell_fire" and (ev as Dictionary).get("unit", "") == SHIP:
+				salvos_fired[0] += 1)
 	for n in 3:
 		var ready := await _until(func() -> bool: return sb.result_decided() or (w.phase == World.PHASE_PLANNING and not sb.ui.is_playing() and w.turn > last_turn))
 		if not ready or sb.result_decided():
@@ -691,7 +721,7 @@ func _local() -> bool:
 		planner.plan_players()
 		sb.ui.press_ready()
 	check(last_turn >= 2, "10. three turns were played through the interface (to turn %d)" % w.turn)
-	check(not w.shells_in_flight.is_empty() or not w.gun_memory.is_empty(), "10. and the cruiser fired")
+	check(salvos_fired[0] >= 1 or not w.shells_in_flight.is_empty() or not w.gun_memory.is_empty(), "10. and the cruiser fired (%d salvos)" % salvos_fired[0])
 	_main.stop_sandbox()
 	check(_main.menu.visible, "10. Esc brings the menu back")
 	return true

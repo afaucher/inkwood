@@ -116,6 +116,14 @@ class Art:
 	# drawn by the marker as stepped copies of itself at those heights in metres (the layer's cast rule lifts each one), so the house and the mast
 	# throw their longer shadows at any heading. The art's own `mask` is the top copy of the low class, at cast_height_m.
 	var shadow_parts: Array = []
+	# THE TURNING TURRETS (builder ORD, 2026-10-14; Alex, decision tank-fire-feedback: "The turret feedback should also apply to the ship"): a tank's turret and
+	# gun, a cruiser's turrets are separate sprites that the marker turns to the sim's turret bearing during the playback. `hull_texture` is the art without them
+	# and `hull_mask` its shadow; `turret_parts` is [{tex, mask, origin (the pivot in the part's px), pivot_m (the pivot from the art's centre, art metres, nose -y),
+	# built_rel (the bearing from the nose the part is drawn at: 0 forward, PI for an after turret)}]. `texture` stays the whole picture with the parts at
+	# their drawn bearing (the ghosts, the roster and everything else that is not a marker use it). Empty parts: the art is one sprite.
+	var hull_texture: Texture2D = null
+	var hull_mask: Texture2D = null
+	var turret_parts: Array = []
 
 class Model:
 	var silhouette: String
@@ -280,6 +288,13 @@ static func _trim(limit: int) -> void:
 
 static func cache_size() -> int:
 	return _art.size()
+
+# Where the muzzles of a ship's main turrets are when trained `rel` radians from the bow, from the drawn barrels ([{fwd, lat}] metres from the ship's centre; builder
+# ORD, 2026-10-14). [] for a silhouette with no such turrets.
+static func ship_muzzles(st: RefCounted, silhouette: String, rel: float) -> Array:
+	if not is_ship(silhouette):
+		return []
+	return _ships().muzzles(model_for(st, silhouette), rel)
 
 # The sheet's model for a silhouette and variant: parameters and geometry, metres.
 static func model_for(st: RefCounted, silhouette: String, variant: int = -1) -> Model:
@@ -1412,7 +1427,13 @@ static func _bake(st: RefCounted, M: Model, accent: Color, ppm: float, rot: floa
 		add_poly(mask_canvas, V.tps(poly), true)
 	mask_canvas.fill_color = Color.WHITE  # a mask, not a drawn colour: the shadow role tints it
 	mask_canvas.fill()
-	var imgs := InkCanvas.render_all([art_canvas, mask_canvas])
+	var canvases: Array = [art_canvas, mask_canvas]
+	# A TANK's turret and gun are a part of their own (builder ORD): the hull without them, its mask, the turret part and its mask.
+	var tank_part: Dictionary = {}
+	if is_tank(M.silhouette):
+		tank_part = _tank_turret_canvases(M, ink, accent, ppm, margin, size, V)
+		canvases.append_array(tank_part["canvases"])
+	var imgs := InkCanvas.render_all(canvases)
 	var art := Art.new()
 	art.ppm = ppm
 	art.origin = Vector2(V.x, V.y)
@@ -1422,10 +1443,50 @@ static func _bake(st: RefCounted, M: Model, accent: Color, ppm: float, rot: floa
 		for q in poly:
 			far = maxf(far, q.length())
 	art.extent_m = far
-	if imgs.size() == 2 and imgs[0] != null and not imgs[0].is_empty():
+	if imgs.size() >= 2 and imgs[0] != null and not imgs[0].is_empty():
 		art.texture = ImageTexture.create_from_image(_straight(imgs[0], false))
 		art.mask = ImageTexture.create_from_image(_straight(imgs[1], true))
+		if not tank_part.is_empty() and imgs.size() == 6 and imgs[2] != null and not imgs[2].is_empty() and imgs[4] != null and not imgs[4].is_empty():
+			art.hull_texture = ImageTexture.create_from_image(_straight(imgs[2], false))
+			art.hull_mask = ImageTexture.create_from_image(_straight(imgs[3], true))
+			art.turret_parts = [{
+				"tex": ImageTexture.create_from_image(_straight(imgs[4], false)), "mask": ImageTexture.create_from_image(_straight(imgs[5], true)),
+				"origin": tank_part["origin"], "pivot_m": tank_part["pivot_m"], "built_rel": 0.0}]
 	return art
+
+# THE TANK'S TURRET AS A PART (builder ORD, 2026-10-14): the canvases to bake, in order -- the hull (tracks, hull, deck) alone and its mask, then the turret,
+# mantlet, gun and what stands on the turret, drawn on a square canvas centred on the turret's axis (the pivot), and its mask -- with the pivot in the part's
+# px and in the art's metres. The same drawing code as the whole tank (draw_tank = ground, then upper), so the parts together are the whole picture.
+static func _tank_turret_canvases(M: Model, ink: Ink, accent: Color, ppm: float, margin: float, size: Vector2i, V: View) -> Dictionary:
+	var G := M.G
+	var hull_canvas = InkCanvas.new(size)
+	hull_canvas.line_cap = "round"
+	_draw_tank_ground(hull_canvas, M, V, ink, accent)
+	var hull_mask = InkCanvas.new(size)
+	hull_mask.begin_path()
+	add_poly(hull_mask, V.tps(G.tracks[0]), true)
+	add_poly(hull_mask, V.tps(G.tracks[1]), true)
+	add_poly(hull_mask, V.tps(G.hull), true)
+	hull_mask.fill_color = Color.WHITE
+	hull_mask.fill()
+	var pivot: Vector2 = G.tc
+	var r_m := 0.0
+	for poly: PackedVector2Array in [G.turret, G.gun, G.mantlet, G.muzzle]:
+		for q in poly:
+			r_m = maxf(r_m, (q - pivot).length())
+	var half_px := ceili(r_m * ppm + margin)
+	var psize := Vector2i(2 * half_px, 2 * half_px)
+	var Vp := View.new(float(half_px) - pivot.x * ppm, float(half_px) - pivot.y * ppm, ppm, 0.0)
+	var part = InkCanvas.new(psize)
+	part.line_cap = "round"
+	_draw_tank_upper(part, M, Vp, ink)
+	var part_mask = InkCanvas.new(psize)
+	part_mask.begin_path()
+	add_poly(part_mask, Vp.tps(G.turret), true)
+	add_poly(part_mask, Vp.tps(G.gun), true)
+	part_mask.fill_color = Color.WHITE
+	part_mask.fill()
+	return {"canvases": [hull_canvas, hull_mask, part, part_mask], "origin": Vector2(half_px, half_px), "pivot_m": pivot}
 
 # InkCanvas images are PREMULTIPLIED; a Sprite2D wants straight alpha. A mask
 # keeps only its coverage (white).

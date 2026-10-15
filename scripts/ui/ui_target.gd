@@ -112,6 +112,21 @@ func in_sight() -> bool:
 		return kind == "point"
 	return not sight.is_valid() or bool(sight.call(unit_id))
 
+# A CLICK on the enemy that is already the target lets go of it (builder ORD, 2026-10-14; Alex, playtest-4: "Selecting an already-selected unit or target
+# deselects it"); on any other enemy it sets it. The click paths call these two; set_unit and set_point stay plain for code and tests.
+func toggle_unit(id: String, at_m: Vector2) -> void:
+	if kind == "unit" and unit_id == id:
+		clear()
+	else:
+		set_unit(id, at_m)
+
+# The same for a point on the map: the point that is already the target is let go.
+func toggle_point(p: Vector2) -> void:
+	if kind == "point" and point_m == p:
+		clear()
+	else:
+		set_point(p)
+
 # A unit target whose unit is gone or down has nothing to aim at: cleared. Returns whether it was.
 func prune(world: Object) -> bool:
 	if kind != "unit":

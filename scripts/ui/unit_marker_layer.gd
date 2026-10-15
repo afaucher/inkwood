@@ -244,6 +244,14 @@ func fall_wobble(id: String) -> float:
 	var w := amp * sin(TAU * style.num("combat.fall.wobble_hz") * game_t + phase)
 	return w + deg_to_rad(style.num("combat.fall.spin_dps")) * maxf(playback_t - UiFate.falls_from(u), 0.0)
 
+# The unit's turret bearing now, radians from its nose (builder ORD, 2026-10-14): the playback's, World.turret_at, while a turn plays; the unit's own at rest.
+func turret_of(id: String, u: Object) -> float:
+	if not u.def.has_turret():
+		return 0.0
+	if is_playing():
+		return world.turret_at(id, playback_t)
+	return float(u.turret)
+
 # The height a surface unit's shadow is lifted by, metres (0: the layer's old rule, the altitude cue). A ship's art carries its own
 # (Art.cast_height_m); a vehicle is listed by silhouette in ui.json marker.cast_height_m; a plane, the tower and the battery are in neither
 # (the planes' gap is the altitude cue, the static units' shadows are baked into their art). Off when marker.cast_shadow_on is false.
@@ -292,6 +300,7 @@ func update_poses() -> void:
 			# sun's length, away from the sun, at the drawn scale -- not the planes' altitude cue, which is 0 at the surface (Track SH for a
 			# ship's art height; Track M2U for the tank's and the mobile gun's, ui.json marker.cast_height_m, behind marker.cast_shadow_on).
 			off = style.shadow_dir() * style.sun_len() * cast_h * mapping.px_per_m(wp) * style.num("marker.true_scale") * m.draw_scale
+		m.set_turret(turret_of(id, u), bool(u.def.has_turret()))   # (builder ORD: the sim's turret bearing, turned by the marker)
 		m.set_pose(sp, mapping.screen_angle(wp, float(pose["heading"])), mapping.px_per_m(wp), off, fall_wobble(id))
 	_marks.queue_redraw()
 	if not (_standout["ring"] as Dictionary).is_empty() or _ring_drawn:

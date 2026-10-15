@@ -21,6 +21,8 @@ extends RefCounted
 #            no band = stay; an empty request is "carry on" (inertia, not a stop)
 #        or  {to: Vector2 | [x, y], altitude_band}    steer for a point
 #        or  a bare Vector2                           the same as {to: point}
+#        or  {hold: true}                             a HOLD step (builder ORD, 2026-10-14): the unit keeps its point -- no turn, speed 0, as
+#            far as its decel lets it brake; the World applies it (not the envelope: clamp_step is given {turn: 0, speed: 0}); not for planes
 #   any of them may also carry  drop: {aim: [x, y], target?: {unit: id} | {point: [x, y]}}   a bomb drop
 #            in this step (a special, not a manoeuvre: clamp_step ignores it; scripts/sim/bombs.gd and the
 #            World use it; the target is the one the special was activated with, Track T)
@@ -378,6 +380,8 @@ static func request_error(request: Variant) -> String:
 			return "'%s' must be a finite number, got %s" % [k, str(r[k])]
 	if r.has("altitude_band") and not (r["altitude_band"] is String):
 		return "'altitude_band' must be a band id string, got %s" % str(r["altitude_band"])
+	if r.has("hold") and not (r["hold"] is bool):
+		return "'hold' must be true or false, got %s" % str(r["hold"])
 	if r.has("drop"):
 		var dr: Variant = r["drop"]
 		if not (dr is Dictionary) or not (dr as Dictionary).has("aim"):

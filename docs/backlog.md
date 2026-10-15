@@ -158,6 +158,10 @@ What is in flight right now lives in `docs/status.md`; what is decided lives in 
    ring's gap are not modelled.
 5. **Board images in git's history** (about 520 MB before they were untracked). Removing them means
    rewriting history and a force-push over every session's work: only on Alex's word.
+7. **Hold the bridge's enemy count** (builder ORD, 2026-10-14, PROPOSED): with the tank gun fired only when
+   ordered and the enemy starting out of sight, the scripted defence won 0 of 60 seeds against six tanks, so ORD
+   cut the waves to four tanks (2/1/1; about 5 of 16 seeds won by the script). Alex's bridge-mission said about
+   three waves of two. A data edit either way (`data/scenarios/bridge.json`); decide after playing it.
 
 ## D. Looks still open (boards)
 

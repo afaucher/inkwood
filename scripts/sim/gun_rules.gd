@@ -24,6 +24,11 @@ const PATH := "res://data/sim/guns.json"
 # One gun special's numbers.
 class Spec:
 	var id: String = ""
+	# "salvo" (the cruiser's main guns: shells in the air, scattered) or "direct" (builder ORD, 2026-10-14, the tank's gun: one aimed shot a unit weapon's own
+	# cone and odds decide; the shell-only fields below stay NAN/0 and are never read). See the header of guns.gd, "THE DIRECT KIND".
+	var kind: String = "salvo"
+	var weapon_id: String = ""           # direct: the unit weapon (its id in data/units/<id>.json) whose cone, odds and damage the shot uses
+	var shots_per_order: int = 1         # direct: rolls of that weapon an order makes when it fires
 	var range_max_m: float = NAN
 	var range_min_m: float = NAN
 	var inland_max_m: float = NAN        # a target farther than this from the shore (along the line of fire) is inland: out of reach
@@ -74,10 +79,12 @@ var specials: Dictionary = {}        # special id -> Spec
 var errors: Array[String] = []
 
 const UNSPOTTED_MODES := ["hold", "poor_shot"]
+const KINDS := ["salvo", "direct"]
+const DIRECT_KEYS := ["kind", "weapon", "shots_per_order", "range_max_m", "range_min_m", "reload_turns", "fire_at"]
 const SPEC_KEYS := ["range_max_m", "range_min_m", "inland_max_m", "inland_step_m", "shells", "salvo_interval_s", "reload_turns", "fire_at", "shell_speed_mps", "min_flight_s",
 	"apex_per_range", "lead_target", "spread_base_m", "spread_per_range", "unranged_factor", "ranged_factor", "ranging_s", "salvo_error_fraction",
 	"spotter_far_factor", "bracket_factor", "bracket_floor", "bracket_turns", "bracket_point_m", "poor_shot_factor", "poor_shot_min_sigma_m",
-	"blast_pips_by_distance", "blast_height_m", "blast_hits_own_side"]
+	"blast_pips_by_distance", "blast_height_m", "blast_hits_own_side", "kind"]
 
 func _init(source: Variant = PATH, quiet: bool = false) -> void:
 	var label := str(source) if source is String else "<guns dictionary>"
@@ -115,6 +122,12 @@ func _read_spec(r: Records, sid: String, d: Dictionary) -> Spec:
 	var s := Spec.new()
 	var p := "specials.%s." % sid
 	s.id = sid
+	var kind_v: Variant = d.get("kind", "salvo")
+	if not (kind_v is String) or not KINDS.has(str(kind_v)):
+		r.err("%skind must be one of %s, got %s" % [p, str(KINDS), str(kind_v)])
+	s.kind = str(kind_v)
+	if s.kind == "direct":
+		return _read_direct(r, sid, d, s)
 	s.range_max_m = r.number(d, "range_max_m", p + "range_max_m", 1.0)
 	s.range_min_m = r.number(d, "range_min_m", p + "range_min_m", 0.0)
 	if is_finite(s.range_max_m) and is_finite(s.range_min_m) and s.range_min_m >= s.range_max_m:
@@ -151,6 +164,24 @@ func _read_spec(r: Records, sid: String, d: Dictionary) -> Spec:
 		var k := str(key)
 		if not k.begins_with("_") and not SPEC_KEYS.has(k):
 			r.err("unknown field '%s%s' (misspelt?)" % [p, k])
+	return s
+
+# The direct kind's (the tank gun's) record: a range, a reload, the earliest moment of the step, the weapon whose odds it uses and the rolls of an order.
+func _read_direct(r: Records, sid: String, d: Dictionary, s: Spec) -> Spec:
+	var p := "specials.%s." % sid
+	s.weapon_id = r.text(d, "weapon", p + "weapon")
+	s.shots_per_order = r.integer(d, "shots_per_order", p + "shots_per_order", 1)
+	s.range_max_m = r.number(d, "range_max_m", p + "range_max_m", 1.0)
+	s.range_min_m = r.number(d, "range_min_m", p + "range_min_m", 0.0)
+	if is_finite(s.range_max_m) and is_finite(s.range_min_m) and s.range_min_m >= s.range_max_m:
+		r.err("%srange_min_m (%s) must be below range_max_m (%s)" % [p, str(s.range_min_m), str(s.range_max_m)])
+	s.reload_turns = r.integer(d, "reload_turns", p + "reload_turns", 0)
+	s.fire_at = r.number(d, "fire_at", p + "fire_at", 0.0, 1.0)
+	s.bracket_turns = 1   # (the bracketing memory is for shells: a direct shot leaves none, and one turn is the least a record may say)
+	for key: Variant in d:
+		var k := str(key)
+		if not k.begins_with("_") and not DIRECT_KEYS.has(k):
+			r.err("unknown field '%s%s' for a direct special (misspelt?)" % [p, k])
 	return s
 
 func ok() -> bool:

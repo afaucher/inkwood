@@ -162,16 +162,22 @@ func _screen() -> void:
 	eq(pl.planned_count(), 2, "5. both steps planned")
 	check(pl.next_step_index() < 0, "5. a tank has two steps, so the plan is full")
 	# THE TANK'S CARD (decision playtest-3; Alex: 'I tried to use the special but there is no indication that it is engaged or why it won't
-	# engage'). A tank has NO special (its light gun fires on its own), so the Special button is dead; the card says so, and why, in words.
+	# engage'; decisions playtest-4 and tank-gun-orders, builder ORD 2026-10-14): the tank's gun IS its special now, 'Turret Fire', fired only when
+	# ordered; with no target the card says it needs one. A tank has no Dive, Level or Climb (one altitude): it has Hold.
 	var card = ui.orders
 	var tank_state: Dictionary = card.special_state()
-	eq(tank_state["has"], false, "5. [card] the tank has no special")
-	eq(tank_state["engaged"], false, "5. [card] so none is engaged")
-	eq(tank_state["reason"], _st.text("orders.text.no_special"), "5. [card] and the reason is given: '%s'" % str(tank_state["reason"]))
-	eq(card.buttons()["drop"]["enabled"], false, "5. [card] the Special button is off")
+	eq(tank_state["has"], true, "5. [card] the tank has a special")
+	eq(tank_state["kind"], "gun", "5. [card] a gun's")
+	eq(tank_state["label"], "Turret Fire", "5. [card] worded 'Turret Fire'")
+	eq(tank_state["engaged"], false, "5. [card] none is engaged yet")
+	eq(tank_state["reason"], _st.text("guns.text.no_target") % "Turret Fire", "5. [card] and the reason is given: '%s'" % str(tank_state["reason"]))
+	eq(card.buttons()["drop"]["enabled"], false, "5. [card] the Special button is off (no target)")
 	eq(card.buttons()["drop"]["on"], false, "5. [card] and not pressed")
-	eq(card.special_caption(), _st.text("orders.text.no_special"), "5. [card] the line under the target line says why")
-	eq(card.target_caption(), "", "5. [card] and there is no target line (no special to aim)")
+	eq(card.special_caption(), _st.text("guns.text.no_target") % "Turret Fire", "5. [card] the line under the target line says why")
+	check(card.target_caption() != "", "5. [card] and there is a target line (the special aims): '%s'" % card.target_caption())
+	var bt: Dictionary = card.buttons()
+	check(not bt.has("dive") and not bt.has("level") and not bt.has("climb"), "5. [card] no Dive, Level or Climb for a tank (builder ORD: only the actions that apply)")
+	check(bt.has("hold"), "5. [card] a Hold button instead")
 	eq(card.step_marks().size(), 2, "5. [card] the strip has the tank's two marks")
 	UiInk.logging = true
 	UiInk.drawn.clear()
@@ -179,7 +185,8 @@ func _screen() -> void:
 	await _frames(3)
 	UiInk.logging = false
 	var card_texts: Array = (UiInk.drawn as Array).filter(func(e: Dictionary) -> bool: return e["node"] == card).map(func(e: Dictionary) -> String: return str(e["text"]))
-	check(card_texts.has(_st.text("orders.text.no_special")), "5. [card] and the card DRAWS it: %s" % str(card_texts))
+	check(card_texts.has(_st.text("guns.text.no_target") % "Turret Fire"), "5. [card] and the card DRAWS it: %s" % str(card_texts))
+	check(card_texts.has("Hold") and not card_texts.has("Dive") and not card_texts.has("Climb"), "5. [card] and draws Hold, not Dive or Climb")
 	check(not card_texts.any(func(t: String) -> bool: return t.begins_with("step ") and t.contains(" of ")), "5. [card] with no 'step 2 of 2' header")
 	# THE VIEWS (a card of their own): the tank's cone is a FORWARD arc, so the side picture has a forward slice and none behind.
 	var views: Object = ui.get_meta("side_view", null)

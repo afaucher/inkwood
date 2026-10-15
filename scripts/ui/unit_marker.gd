@@ -55,6 +55,14 @@ var _shapes: Array = []        # UnitStandout.Shape nodes, in the layer's under 
 var _under_parent: Node = null
 
 var art: UnitMarkerArt.Art = null
+# THE TURNING TURRETS (builder ORD, 2026-10-14; Alex, decision tank-fire-feedback): `turret_rel` is the sim's turret bearing, radians relative to the nose (the layer
+# gives it each pose from World.turret_at while a turn plays, else Unit.turret); `has_turret` says the unit has one. When the art carries its turrets as parts
+# (Art.turret_parts) the plane sprite is the hull alone and each part is a sprite of its own, turned to the bearing about its pivot, above the plane; the parts'
+# shadows are sprites in the layer's shadow group. Art without parts, or a unit with no turret, is one sprite as it always was.
+var turret_rel: float = 0.0
+var has_turret: bool = false
+var _turret_sprites: Array = []
+var _turret_shadows: Array = []
 var plane: Sprite2D
 # A SHIP's ink V wake (Track SH, the warship): a sprite under the plane's, made when the art carries one and shown while the ship is
 # under way (`underway`, set by the layer from the unit's speed: data unit_art.ship.underway_mps).
@@ -103,6 +111,10 @@ func setup(style: RefCounted, id: String, silhouette_id: String, size: float, si
 	shadow_parent.add_child(shadow)
 
 func _exit_tree() -> void:
+	for s: Variant in _turret_shadows:
+		if is_instance_valid(s):
+			(s as Node).queue_free()
+	_turret_shadows.clear()
 	if is_instance_valid(shadow):
 		shadow.queue_free()
 	for s: Variant in _part_sprites:
@@ -146,7 +158,8 @@ func _pose_shapes() -> void:
 		var shape := n as UnitStandout.Shape
 		shape.visible = show
 		if show:
-			shape.pose(position, rot, sc.x, art.mask, art.origin, art.extent_m * art.ppm)
+			# (builder ORD: the halo of a unit whose turret turns follows its hull, not the gun drawn at the nose in the neutral picture)
+			shape.pose(position, rot, sc.x, art.hull_mask if (has_turret and not art.turret_parts.is_empty() and art.hull_mask != null) else art.mask, art.origin, art.extent_m * art.ppm)
 
 # Pose the marker: screen position of the unit, the screen angle of its
 # heading, the host's px per metre there, and the shadow's screen offset. `wobble_rad`
@@ -179,12 +192,14 @@ func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_off
 	if art != null and art.texture != null:
 		var sc := Vector2.ONE * (screen_ppm * k / art.ppm)
 		var sprite_rot := 0.0 if art.screen_aligned else rot   # (a static unit is baked turned)
-		plane.texture = art.texture
+		var use_parts: bool = has_turret and not art.turret_parts.is_empty() and art.hull_texture != null
+		plane.texture = art.hull_texture if use_parts else art.texture
 		plane.offset = -art.origin
 		plane.rotation = sprite_rot
 		plane.scale = sc
 		UnitSunk.apply(plane, sunk_color, sunk_amount)
-		shadow.texture = art.mask
+		_pose_turret_parts(use_parts, sc, sprite_rot, screen_pos, shadow_offset_px)
+		shadow.texture = art.hull_mask if use_parts and art.hull_mask != null else art.mask
 		shadow.offset = -art.origin
 		shadow.rotation = sprite_rot
 		shadow.scale = sc
@@ -195,10 +210,61 @@ func set_pose(screen_pos: Vector2, heading_screen: float, ppm: float, shadow_off
 	else:
 		shadow.visible = false
 		_pose_shadow_parts(Vector2.ONE, 0.0, screen_pos, shadow_offset_px)
+		_pose_turret_parts(false, Vector2.ONE, 0.0, screen_pos, shadow_offset_px)
 		if wake != null:
 			wake.visible = false
 	_pose_shapes()
 	queue_redraw()
+
+# The layer tells the marker the sim's turret bearing (radians from the nose, clockwise) and that the unit has a turret at all.
+func set_turret(rel: float, present: bool) -> void:
+	turret_rel = rel
+	has_turret = present
+
+# The turrets as sprites of their own (Art.turret_parts): each turned to the bearing about its pivot, which stands at its place on the hull (turned with the hull).
+# A part is drawn at its built bearing (0 forward, PI an after turret), so it turns by the difference. With `on` false (no parts, no turret) they are hidden.
+func _pose_turret_parts(on: bool, sc: Vector2, sprite_rot: float, screen_pos: Vector2, off: Vector2) -> void:
+	var parts: Array = art.turret_parts if (on and art != null) else []
+	while _turret_sprites.size() < parts.size():
+		var spr := Sprite2D.new()
+		spr.centered = false
+		spr.name = "Turret_%d" % _turret_sprites.size()
+		add_child(spr)
+		_turret_sprites.append(spr)
+	while _turret_shadows.size() < parts.size() and _shadow_parent != null:
+		var ss := Sprite2D.new()
+		ss.centered = false
+		ss.name = "ShadowTurret_%s_%d" % [unit_id, _turret_shadows.size()]
+		ss.modulate = shadow.modulate
+		_shadow_parent.add_child(ss)
+		_turret_shadows.append(ss)
+	for i in _turret_sprites.size():
+		var spr := _turret_sprites[i] as Sprite2D
+		if i >= parts.size():
+			spr.visible = false
+			if i < _turret_shadows.size():
+				(_turret_shadows[i] as Sprite2D).visible = false
+			continue
+		var part: Dictionary = parts[i]
+		var local := (part["pivot_m"] as Vector2) * art.ppm * sc.x
+		var rot := sprite_rot + (turret_rel - float(part["built_rel"]))
+		spr.texture = part["tex"]
+		spr.offset = -(part["origin"] as Vector2)
+		spr.position = local.rotated(sprite_rot)
+		spr.rotation = rot
+		spr.scale = sc
+		spr.visible = true
+		UnitSunk.apply(spr, sunk_color, sunk_amount)
+		if i < _turret_shadows.size():
+			var ss2 := _turret_shadows[i] as Sprite2D
+			var has_mask: bool = part.get("mask") != null
+			ss2.visible = has_mask and visible and sunk_amount <= 0.0
+			if has_mask:
+				ss2.texture = part["mask"]
+				ss2.offset = -(part["origin"] as Vector2)
+				ss2.rotation = rot
+				ss2.scale = sc
+				ss2.position = screen_pos + spr.position + off
 
 # The layer tells the marker how far under the water it lies: `amount` of the way to the water's `color` (UnitSunk.wash), 0 at or above the surface.
 func set_sunk(color: Color, amount: float) -> void:

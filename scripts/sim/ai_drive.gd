@@ -22,7 +22,10 @@ extends RefCounted
 # cliff or a river with no bridge, simply holds the tank there, turn after turn (a destroyed bridge stops it; it does not turn back).
 #
 # States (reported through ai_pilot.gd's transitions): `wait` before the start turn, `drive` along the course, `arrived` at its end.
-# It fires on its own by the engagement rules (combat.gd): the role never aims or chooses a target, and has no other tactics.
+# THE GUN (builder ORD, 2026-10-14; Alex, decisions playtest-4 and tank-gun-orders: the tank's gun is its special, fired only when ordered): the role orders
+# it the way a player does -- once its course is planned, if the gun is loaded it sets the special (data/sim/guns.json tank_gun) in the first step the sim
+# allows (World.gun_check: the nearest enemy it, or a friend of its side, can see, inside the turret's arc and the gun's range at the end of that step). It reads
+# the world's state and the sight rules only, never a player's plan, and chooses no tactics: the nearest foe the card would let a player fire at.
 
 const World = preload("res://scripts/sim/world.gd")
 const Unit = preload("res://scripts/sim/unit.gd")
@@ -128,6 +131,10 @@ static func _point(v: Variant) -> Array:
 
 # Plan the unit's turn. `m` is its memory (state, since ...; "s": the progress along the course, metres), changed in place.
 func plan(id: String, a: Dictionary, m: Dictionary) -> void:
+	_plan_course(id, a, m)
+	_order_fire(id)
+
+func _plan_course(id: String, a: Dictionary, m: Dictionary) -> void:
 	var u: Unit = world.units[id]
 	if not courses.has(id):
 		# (orders without a course: an assignment from before the world had a road, say) hold
@@ -181,6 +188,40 @@ func plan(id: String, a: Dictionary, m: Dictionary) -> void:
 			enter.call(id, m, S_ARRIVED, R_ARRIVED, "within %.0f m of the end of its course" % cap)
 	elif state != S_DRIVE:
 		enter.call(id, m, S_DRIVE, R_START if state == S_WAIT else "off_course", "the wave starts" if state == S_WAIT else "pushed off the end of its course")
+
+# Order the unit's gun special at the nearest enemy the sim lets it fire at (the header, THE GUN). The step's request keeps its motion.
+func _order_fire(id: String) -> void:
+	var u: Unit = world.units[id]
+	if u.down:
+		return
+	var specials := world.gun_specials(id)
+	if specials.is_empty():
+		return
+	var sid := specials[0]
+	if world.gun_reload_left(id, sid) > 0:
+		return
+	var foes: Array = []
+	for tid: String in world.units:
+		var t: Unit = world.units[tid]
+		if t.side == u.side or t.down:
+			continue
+		foes.append([Vector2(u.x, u.y).distance_to(Vector2(t.x, t.y)), tid])   # (the nearest, as the engagement rules took it before; target priority is not designed: Alex)
+	foes.sort_custom(func(x: Array, y: Array) -> bool:
+		if float(x[0]) != float(y[0]):
+			return float(x[0]) < float(y[0])
+		return str(x[1]) < str(y[1]))
+	var reach := world.guns.special(sid).range_max_m + float(u.def.envelope.speed_max) * world.rules.turn_seconds   # (what a turn of driving could close)
+	for foe: Array in foes:
+		if float(foe[0]) > reach:
+			break
+		for k in world.steps_per_turn(id):
+			var chk := world.gun_check(id, k, {"unit": str(foe[1])}, sid)
+			if not bool(chk.get("ok", false)):
+				continue
+			var req: Dictionary = (u.plan[k] as Dictionary).duplicate(true) if k < u.plan.size() else {}
+			req["fire"] = {"special": sid, "target": {"unit": str(foe[1])}}
+			world.plan_step(id, k, req)
+			return
 
 func _hold() -> Callable:
 	return func(_i: int, _at: Dictionary, _t: float) -> Dictionary:

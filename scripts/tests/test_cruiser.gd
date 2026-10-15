@@ -459,6 +459,7 @@ func _salvo_for_a_tank_and_a_plane() -> void:
 		w.add_unit({"id": "aa_far", "type": "anti_aircraft_battery", "side": "axis", "controller": "ai", "x": 1900.0, "y": 3300.0, "heading": 0.0})
 		w.spot_memory = {"allies": {"aa_far": 20.0}}
 		w.gun_memory = [{"side": "allies", "unit": "aa_far", "point": [], "salvos": 2, "turn": 0}]
+		(w.units["cruiser"] as Object).turret = (Vector2(1900.0, 3300.0) - GunWorlds.SHIP).angle()   # (the turrets are trained on the battery: no traverse delays the salvo, which this part times)
 		if kind == "tank":
 			check(w.add_unit({"id": "eyes", "type": "tank", "side": "allies", "controller": "player", "x": 1900.0, "y": 3000.0, "heading": 0.0, "speed": 0.0}) != "", "a friendly tank: %s" % w.last_error)
 		else:

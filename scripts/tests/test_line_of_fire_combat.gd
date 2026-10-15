@@ -91,10 +91,15 @@ func _world(dist: float, seed_v: int = 3, type_b: String = "tank", lines_on: boo
 		w.set_line_of_fire(CombatLines.new(grid, rules))
 	return w
 
-# Play `turns` turns, putting every unit back on full health after each (so a long exchange is not ended by a kill); returns every event, each with its turn.
+# Play `turns` turns, putting every unit back on full health after each (so a long exchange is not ended by a kill) and every gun loaded (the tank's gun is an
+# order since 2026-10-14, builder ORD: each turn every tank orders it at the nearest enemy, one aimed shell each, TURNS of them are as many shots as 15 turns of rolls
+# were); returns every event, each with its turn.
+const TURNS := 15
+
 func _play(w: World, turns: int) -> Array:
 	var out: Array = []
 	for _t in turns:
+		TankWorlds.fire_at_nearest(w)
 		for p: String in w.players.duplicate():
 			w.commit(p)
 		var res := w.resolve()
@@ -108,6 +113,7 @@ func _play(w: World, turns: int) -> Array:
 			u.health = u.def.health
 			u.down = false
 			u.fate = ""
+			u.gun_ready = {}
 		w.begin_turn()
 	return out
 
@@ -195,10 +201,10 @@ func _data() -> void:
 func _off() -> void:
 	_sections += 1
 	# (a) never given, and given then taken away: the same events, to the byte, and no new key on a fire event
-	var plain := _play(_world(150.0, 5, "tank", false), 3)
+	var plain := _play(_world(150.0, 5, "tank", false), TURNS)
 	var w2 := _world(150.0, 5, "tank", true)
 	w2.set_line_of_fire(null)
-	var taken := _play(w2, 3)
+	var taken := _play(w2, TURNS)
 	eq(JSON.stringify(taken), JSON.stringify(plain), "lines given and taken away: the events are those of a World that never had them, to the byte")
 	var fires := _fires(plain)
 	check(fires.size() > 20, "the exchange has fire events to compare (%d)" % fires.size())
@@ -246,7 +252,7 @@ func _odds() -> void:
 	print(line)
 	for pair in [[50.0, 100.0], [100.0, 150.0], [150.0, 200.0], [200.0, 300.0], [300.0, 350.0]]:
 		check(p[pair[0]] > p[pair[1]], "the chance falls with range: %.0f m %.3f > %.0f m %.3f" % [pair[0], p[pair[0]], pair[1], p[pair[1]]])
-	check(p[350.0] < p[100.0] * 0.2, "... a long way: at 350 m it is under a fifth of its chance at 100 m")
+	check(p[350.0] < p[100.0] * 0.4, "... a long way: at 350 m it is under two fifths of its chance at 100 m (the aimed shell's spread, 0.6 at 200 m; was a fifth for the 0.12 roll)")
 	# size: at 200 m the bigger the target the better the odds
 	var sizes := {}
 	for type_b in ["light_fighter", "tank", "supply_boat", "military_complex"]:
@@ -290,15 +296,15 @@ func _rules_with(changes: Dictionary) -> Rules:
 func _held() -> void:
 	_sections += 1
 	# a wall that hides the whole tank: it is not fired on, by either side, in a whole turn; the same turn without the wall has fire
-	var open := _fires(_play(_world(150.0, 4), 3))
-	check(open.size() >= 25, "in the open both tanks fire (%d fire events in three turns, 5 rolls a turn each)" % open.size())
+	var open := _fires(_play(_world(150.0, 4), TURNS))
+	check(open.size() >= 25, "in the open both tanks fire (%d fire events in %d turns, one ordered shell each a turn)" % [open.size(), TURNS])
 	grid.stamp("test_wall", [_wall(BAY.x + 100.0, BAY.y, 1.0, 14.0, 2.6)])
-	var behind := _fires(_play(_world(150.0, 4), 3))
+	var behind := _fires(_play(_world(150.0, 4), TURNS))
 	grid.unstamp("test_wall")
-	eq(behind.size(), 0, "behind a 2.6 m wall nothing shows and the guns hold: no fire event in three turns")
+	eq(behind.size(), 0, "behind a 2.6 m wall nothing shows and the guns hold: no fire event in %d turns" % TURNS)
 	# a wall that leaves the turret: they fire, and every shot says how much was in view
 	grid.stamp("test_wall", [_wall(BAY.x + 100.0, BAY.y, 1.0, 14.0, 1.6)])
-	var part := _fires(_play(_world(150.0, 4), 3))
+	var part := _fires(_play(_world(150.0, 4), TURNS))
 	grid.unstamp("test_wall")
 	check(part.size() > 0, "a wall of 1.6 m leaves the turrets in view: the guns fire (%d)" % part.size())
 	var share_ok := true
@@ -438,7 +444,7 @@ func _landings() -> void:
 	grid.unstamp("test_wall")
 	eq(parts2.keys(), ["turret"], "behind 1.6 m a hit can only strike the turret")
 	# in a whole turn of the exchange the fire events carry it all
-	var ev := _fires(_play(_world(120.0, 8), 3))
+	var ev := _fires(_play(_world(250.0, 8), TURNS))
 	var hits := 0
 	var misses := 0
 	var fields_ok := true
@@ -461,8 +467,8 @@ func _landings() -> void:
 func _dice() -> void:
 	_sections += 1
 	# the hit rolls are the combat stream's own: recomputed from the seed they equal the events'. The landing draws (own stream) shift nothing.
-	var w := _world(130.0, 21)
-	var ev := _fires(_play(w, 4))
+	var w := _world(250.0, 21)
+	var ev := _fires(_play(w, 20))
 	var mismatches := 0
 	var checked := 0
 	var idx := {"a": 0, "b": 1}
@@ -476,9 +482,9 @@ func _dice() -> void:
 	eq(mismatches, 0, "every hit roll is the combat stream's draw against the event's odds (%d checked)" % checked)
 	# the same World with a different landing salt: the same hits and misses (the landing stream is separate), different landing places
 	var alt := _rules_with({"odds": {"landing_salt": 99}})
-	var w2 := _world(130.0, 21, "tank", false)
+	var w2 := _world(250.0, 21, "tank", false)
 	w2.set_line_of_fire(CombatLines.new(grid, alt))
-	var ev2 := _fires(_play(w2, 4))
+	var ev2 := _fires(_play(w2, 20))
 	eq(ev2.size(), ev.size(), "another landing salt: the same number of rolls")
 	var same_hits := true
 	var moved := 0
@@ -498,11 +504,11 @@ func _determinism() -> void:
 	var runs: Array[String] = []
 	for k in 2:
 		grid.stamp("test_wall", [_wall(wall_x, BAY.y, 1.0, 12.0, 1.15)])
-		var ev := _play(_world(200.0, 13), 3)
+		var ev := _play(_world(200.0, 13), TURNS)
 		grid.unstamp("test_wall")
 		runs.append(JSON.stringify(ev))
 	check(runs[0].length() > 2000, "the runs have events (%d bytes)" % runs[0].length())
 	eq(runs[0], runs[1], "the same World twice (fresh World, fresh glue, the wall laid in again): the same events, to the byte")
 	# and a different seed is a different game
-	var ev3 := _play(_world(200.0, 14), 3)
+	var ev3 := _play(_world(200.0, 14), TURNS)
 	check(JSON.stringify(ev3) != runs[0], "another combat seed gives other events")

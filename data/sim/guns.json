@@ -159,6 +159,36 @@
         "_proposed": true,
         "_reason": "as the bombs': a shell does not know whose side a unit is on. A spotter close to the target is in danger from its own ship's guns"
       }
+    },
+    "tank_gun": {
+      "_about": "THE TANK'S GUN, a special of the DIRECT kind (builder ORD, 2026-10-14). ALEX (decisions playtest-4 and tank-gun-orders): the tank's gun is its special, 'quick to fire again (about a 1 turn reload)', fired ONLY when the player (or the AI) orders it on a step, at the chosen target; a tank with no special set does not shoot. The playtest's complaint was 'no indication that it is engaged or why it won't engage': this special has a card line and reasons like the Main Guns'. NOT a shell in the air: the order makes ONE aimed shot (the unit weapon's own cone, odds and damage: data/units/tank.json weapons turret_gun, via scripts/sim/combat.gd) when the turret is on bearing (decision tank-fire-feedback: the turret turns first and the turn DELAYS the shot, data/units/tank.json turret traverse_dps). It can be ordered while the target is a spotted enemy UNIT (shared spotting, as the Main Guns') inside the weapon's 170 degree forward arc and the range at the moment it fires; else the card says why (out_of_arc, out_of_range, cannot_elevate ...). The shell-only fields of the Main Guns (spread, flight, blast) do not apply and are not here. EVERY NUMBER IS PROPOSED.",
+      "kind": "direct",
+      "weapon": "turret_gun",
+      "shots_per_order": {
+        "value": 1,
+        "_proposed": true,
+        "_reason": "the lead's brief: one aimed shot per order (a tank's gun is a single shell, the old machine-gun rhythm of a roll a second is gone with the auto-fire)"
+      },
+      "range_max_m": {
+        "value": 350,
+        "_proposed": true,
+        "_reason": "the weapon's own effective range (data/units/tank.json turret_gun effective_range_m 350), unchanged by the move to orders: the card can say 'out of range' before the odds fall. A test holds the two numbers equal"
+      },
+      "range_min_m": {
+        "value": 10,
+        "_proposed": true,
+        "_reason": "the gun cannot lay on a target alongside: a hull's length and a bit. The weapon's level cone (half height 10 degrees from a 2.3 m barrel) is the other limit, 13 m"
+      },
+      "reload_turns": {
+        "value": 1,
+        "_proposed": true,
+        "_reason": "ALEX: 'quick to fire again (about a 1 turn reload)'. Read as the Main Guns' number is: fired in turn N the gun is ready again in turn N + reload_turns + 1 = N + 2, a shot every second turn (10 s); the cruiser's 2 is 'a long reload'. 0 would be a shot every turn. The exact number is the lead's reading of 'about'"
+      },
+      "fire_at": {
+        "value": 0.0,
+        "_proposed": true,
+        "_reason": "the earliest moment of the step the shot may leave, as a fraction of the step: the start. The turret's traverse is what delays it (the Main Guns' 0.5 is the middle of the step); a gun already on bearing fires at the start of the step"
+      }
     }
   }
 }

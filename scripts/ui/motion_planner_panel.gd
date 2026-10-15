@@ -111,9 +111,15 @@ func buttons() -> Dictionary:
 	var has_sel: bool = can and planner.focus_step(id) >= 0   # (placing the next step: no placed step is selected, no band button is pressed)
 	var dopt: Dictionary = planner.drop_options() if can else {"available": false, "on": false}
 	var drop_label: String = planner.special_label(id) if planner != null else st.text("bombs.text.label")
-	out["dive"] = {"rect": Rect2(pad, y, bw, bh), "label": "Dive", "enabled": bool(opts[-1]), "on": has_sel and cur < 0}
-	out["level"] = {"rect": Rect2(pad + bw + gap, y, bw, bh), "label": "Level", "enabled": bool(opts[0]), "on": has_sel and cur == 0}
-	out["climb"] = {"rect": Rect2(pad + 2.0 * (bw + gap), y, bw, bh), "label": "Climb", "enabled": bool(opts[1]), "on": has_sel and cur > 0}
+	if _takes_hold(id):
+		# THE ACTIONS THAT APPLY (builder ORD, 2026-10-14; Alex, playtest-4: 'ships fire without moving', and the card shows only what applies): a ship or a tank has
+		# one altitude, so no Dive, Level or Climb; it has Hold, a step that keeps its point so that a special can be set on it. A plane has the three and no Hold.
+		var hopt: Dictionary = planner.hold_options() if can else {"available": false, "on": false}
+		out["hold"] = {"rect": Rect2(pad, y, 3.0 * bw + 2.0 * gap, bh), "label": st.text("orders.text.hold"), "enabled": can and bool(hopt["available"]), "on": can and bool(hopt["on"])}
+	else:
+		out["dive"] = {"rect": Rect2(pad, y, bw, bh), "label": "Dive", "enabled": bool(opts[-1]), "on": has_sel and cur < 0}
+		out["level"] = {"rect": Rect2(pad + bw + gap, y, bw, bh), "label": "Level", "enabled": bool(opts[0]), "on": has_sel and cur == 0}
+		out["climb"] = {"rect": Rect2(pad + 2.0 * (bw + gap), y, bw, bh), "label": "Climb", "enabled": bool(opts[1]), "on": has_sel and cur > 0}
 	out["drop"] = {"rect": Rect2(pad + 3.0 * (bw + gap), y, dw, bh), "label": drop_label, "enabled": can and bool(dopt["available"]), "on": can and bool(dopt["on"])}
 	y += bh + gap + st.num("orders.drop_line_px")
 	var hw := (w - gap) / 2.0
@@ -129,6 +135,10 @@ func buttons() -> Dictionary:
 		for key: String in out:
 			out[key]["enabled"] = false
 	return out
+
+# Does the unit have the Hold action in place of Dive / Level / Climb: a unit that is not an aircraft (a ship, a tank)?
+func _takes_hold(id: String) -> bool:
+	return id != "" and world != null and world.units.has(id) and not bool(world.units[id].def.is_air())
 
 # The band change the last placed step makes: -1 dive, 0 level, +1 climb.
 func _last_step_band_delta() -> int:
@@ -162,6 +172,8 @@ func press_button(name: String) -> bool:
 	if not b.has(name) or not bool(b[name]["enabled"]):
 		return false
 	match name:
+		"hold":
+			planner.toggle_hold()
 		"dive":
 			planner.change_band(-1)
 		"level":
@@ -565,6 +577,10 @@ func _altitude_caption() -> String:
 	var id: String = selection.unit_id if selection != null else ""
 	if planner == null or id == "" or not planner.can_plan(id):
 		return style.text("orders.text.altitude_idle")
+	if _takes_hold(id):
+		# no altitude for a ship or a tank (builder ORD): the line says whether the selected step holds its place
+		var hk: int = planner.focus_step()
+		return style.text("orders.text.holds") % (hk + 1) if hk >= 0 and planner.step_holds(hk, id) else ""
 	var k: int = planner.focus_step()
 	if k < 0:
 		return style.text("orders.text.altitude_none")

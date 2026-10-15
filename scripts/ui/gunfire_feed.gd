@@ -27,6 +27,7 @@ extends RefCounted
 const Rounds = preload("res://scripts/sim/rounds.gd")
 const Mulberry32 = preload("res://scripts/core/mulberry32.gd")
 const FxBake = preload("res://scripts/fx/fx_bake.gd")
+const UnitMarkerArt = preload("res://scripts/ui/unit_marker_art.gd")
 
 var host: Variant = null             # the CombatFeed: world, fx, marker_layer, _may_show(id), _draw_scale(id)
 var rounds: Rounds = null
@@ -132,7 +133,12 @@ func _muzzle(fx: Object, ev: Dictionary, game_t: float, sid: String, wid: String
 	var wcfg: Dictionary = (mz.get("weapons", {}) as Dictionary).get(wid, {})
 	var tip := float(wcfg.get("tip_m", 0.0))
 	var dir := float(s.get("heading", 0.0))
-	if str(wcfg.get("aim", "target")) == "target":
+	if ev.has("bearing") and host.world.units.has(sid) and not (host.world.units[sid].def.turret as Dictionary).is_empty():
+		# AN ORDERED SHOT (builder ORD, 2026-10-14; Alex, decision tank-fire-feedback): the smoke starts at the TIP of the barrel, along the turret's bearing -- the
+		# direction the event says the gun pointed and the barrel's length from the unit's own data (turret.barrel_tip_m), not the hull's nose and a number in the fx data.
+		dir = float(ev["bearing"])
+		tip = float((host.world.units[sid].def.turret as Dictionary).get("barrel_tip_m", tip))
+	elif str(wcfg.get("aim", "target")) == "target":
 		var to_t := Vector2(float(ev.get("tx", hp.x)), float(ev.get("ty", hp.y))) - hp
 		dir = to_t.angle() if to_t.length() > 1e-6 else dir
 	var dv := Vector2.from_angle(dir)
@@ -227,13 +233,23 @@ func on_shell_fire(ev: Dictionary, turn_no: int, game_t: float) -> void:
 	var hs := Vector2(-hv.y, hv.x)
 	var barrels: Dictionary = mz.get("shell_barrels", {})
 	var end: Array = barrels.get("fore" if hv.dot(dv) >= 0.0 else "aft", [])
-	if end.is_empty():
+	# THE TURRETS TURN (builder ORD): with the turrets' bearing in the event, a shell leaves a barrel of the DRAWN turrets as they point at the target (the cruiser's art,
+	# UnitMarkerArt.ship_muzzles), every turret fore and aft; without it the fx data's fixed barrels, as before.
+	var drawn: Array = []
+	if ev.has("turret_rel") and host.style != null:
+		drawn = UnitMarkerArt.ship_muzzles(host.style, str(host.world.units[sid].def.silhouette), float(ev["turret_rel"]))
+	if end.is_empty() and drawn.is_empty():
 		return
 	var up := float(barrels.get("up_m", 8.0))
 	var h: float = maxf(host.marker_layer.height_above_ground(s), 0.0) + up
 	var n := int(ev.get("shells", 1))
 	for k in n:
-		var b: Dictionary = end[k % end.size()]
-		var off: Vector2 = hv * float(b["fwd_m"]) + hs * float(b["lat_m"])
+		var off: Vector2
+		if not drawn.is_empty():
+			var bd: Dictionary = drawn[k % drawn.size()]
+			off = hv * float(bd["fwd"]) + hs * float(bd["lat"])
+		else:
+			var b: Dictionary = end[k % end.size()]
+			off = hv * float(b["fwd_m"]) + hs * float(b["lat_m"])
 		var shot := "%s/%s/%d/%d/%d" % [sid, special, turn_no, int(ev.get("step", 0)), k]
 		fx.call("gunfire_muzzle", shot, rounds.muzzle_class(rid), centre, dir, off.dot(dv), game_t + float(k) * interval, h, off.dot(nrm))

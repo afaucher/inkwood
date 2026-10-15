@@ -78,5 +78,10 @@
   },
   "specials": [
     { "id": "main_guns", "name": "Main Guns", "action": "Fire" }
-  ]
+  ],
+  "turret": {
+    "traverse_dps": { "value": 10, "_proposed": true, "_reason": "PROPOSED by builder ORD (2026-10-14; Alex, decision tank-fire-feedback: 'The turret feedback should also apply to the ship'): the main turrets turn together at 10 degrees a second (the lead's example; a heavy turret is slower than a tank's 25), so 90 degrees takes 9 s, nearly two turns, and the salvo leaves when they are on bearing. A scenario trains them on the first target at the start (add_unit's turret_deg); an order whose turrets cannot come round within the turn turns them as far as it can and fires next turn" },
+    "half_arc_deg": { "value": 180, "_proposed": true, "_reason": "all round: the cruiser has turrets fore and aft and trains either end, so the guns bear on any side (the turrets take the short way to a bearing). A narrower arc would be a blind sector; nothing in the design doc asks for one" },
+    "barrel_tip_m": { "value": 13.5, "_proposed": true, "_reason": "from a turret's axis to its barrels' tips along the bearing: the drawn gun house's front (turret_r 3.4 to 4.2 x 0.85) and the barrel (8.5 to 11.5 m), 13.46 m on the game's own cruiser model (the scene seed's generated small cruiser; the muzzle smoke itself takes the DRAWN barrels, UnitMarkerArt.ship_muzzles, so this number is the data's statement of it and a test holds the two near each other). Where a shell's muzzle smoke starts" }
+  }
 }

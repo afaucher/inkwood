@@ -83,6 +83,10 @@ var drops_left: int = 0
 # guns may be fired again. A special with no entry is loaded. Set by World.resolve() for each salvo fired (turn + reload_turns + 1) and
 # carried in the net state, so a client's planning agrees with the host's.
 var gun_ready: Dictionary = {}
+# The turret's BEARING (builder ORD, 2026-10-14; data/units/<id>.json "turret"): radians relative to the hull's nose, positive clockwise on screen, 0 =
+# straight ahead. Sim state: it persists between turns, a hull turn carries it round, an ordered shot turns it toward its target (scripts/sim/turret.gd).
+# Only a unit whose def has a turret uses it; it crosses the wire in net_state.
+var turret: float = 0.0
 
 # The first turn this unit's gun special may be fired in (1 or less: loaded now).
 func gun_ready_turn(special_id: String) -> int:
@@ -122,6 +126,7 @@ func to_dict() -> Dictionary:
 		"fall_dir": fall_dir,
 		"drops_left": drops_left,
 		"gun_ready": gun_ready.duplicate(),
+		"turret": turret,
 	}
 
 # Everything a resolve changes, for sending a resolved turn over the network
@@ -133,7 +138,7 @@ func net_state() -> Dictionary:
 	var s := {
 		"x": x, "y": y, "heading": heading, "speed": speed, "altitude_band": altitude_band,
 		"out_of_bounds": out_of_bounds, "health": health, "down": down, "down_at": down_at,
-		"fate": fate, "fall_dir": fall_dir, "drops_left": drops_left, "gun_ready": gun_ready.duplicate(),
+		"fate": fate, "fall_dir": fall_dir, "drops_left": drops_left, "gun_ready": gun_ready.duplicate(), "turret": turret,
 	}
 	if is_finite(fall_height_m):
 		s["fall_height_m"] = fall_height_m
@@ -149,4 +154,5 @@ func apply_net_state(s: Dictionary) -> void:
 	fall_dir = int(s.get("fall_dir", 0))
 	drops_left = int(s.get("drops_left", drops_left))
 	gun_ready = (s.get("gun_ready", {}) as Dictionary).duplicate()
+	turret = float(s.get("turret", 0.0))
 	fall_height_m = float(s.get("fall_height_m", NAN))
