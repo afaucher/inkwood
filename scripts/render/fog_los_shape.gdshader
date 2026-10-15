@@ -30,6 +30,22 @@ uniform float range_m = 800.0;
 uniform vec2 ax = vec2(1.0, 0.0);   // metres per mask px along x
 uniform vec2 ay = vec2(0.0, 1.0);   // metres per mask px along y
 uniform vec2 base_m = vec2(0.0);     // metres at mask px (0, 0)
+// FOG-EDGE BOARD (builder BF, 2026-10-14; data/view/fog.json viewshed.interp): false = the nearest ray (today).
+// true = the two rays either side of the pixel's bearing, blended by their signed distance (metres, positive
+// inside) to the nearest edge of a visible run, limited to +/- interp_spread ray spacings; inside where the blend
+// is not negative. The edge is then straight between rays instead of a step per sector. Same pass, same texture.
+uniform bool interp = false;
+uniform float interp_spread = 2.0;
+
+float ray_margin(int r, float dist) {
+	float m = -1.0e9;
+	for (int row = 0; row < 3; row++) {
+		vec4 q = texelFetch(runs, ivec2(r, row), 0);
+		m = max(m, min(dist - q.x, q.y - dist));
+		m = max(m, min(dist - q.z, q.w - dist));
+	}
+	return m;
+}
 
 void fragment() {
 	vec2 w = ax * FRAGCOORD.x + ay * FRAGCOORD.y + base_m;
@@ -42,19 +58,39 @@ void fragment() {
 	if (a < 0.0) {
 		a += 6.28318530718;
 	}
-	int r = int(floor(a / dtheta + 0.5));
-	if (r >= rays) {
-		r -= rays;
-	}
-	bool inside = false;
-	for (int row = 0; row < 3; row++) {
-		vec4 q = texelFetch(runs, ivec2(r, row), 0);
-		if ((dist >= q.x && dist < q.y) || (dist >= q.z && dist < q.w)) {
-			inside = true;
+	if (interp) {
+		float t = a / dtheta;
+		int r0 = int(floor(t));
+		float f = t - float(r0);
+		if (r0 >= rays) {
+			r0 -= rays;
 		}
+		int r1 = r0 + 1;
+		if (r1 >= rays) {
+			r1 -= rays;
+		}
+		float lim = max(dist * dtheta * interp_spread, 1.0);
+		float m0 = clamp(ray_margin(r0, dist), -lim, lim);
+		float m1 = clamp(ray_margin(r1, dist), -lim, lim);
+		if (mix(m0, m1, f) < 0.0) {
+			discard;
+		}
+		COLOR = vec4(1.0);
+	} else {
+		int r = int(floor(a / dtheta + 0.5));
+		if (r >= rays) {
+			r -= rays;
+		}
+		bool inside = false;
+		for (int row = 0; row < 3; row++) {
+			vec4 q = texelFetch(runs, ivec2(r, row), 0);
+			if ((dist >= q.x && dist < q.y) || (dist >= q.z && dist < q.w)) {
+				inside = true;
+			}
+		}
+		if (!inside) {
+			discard;
+		}
+		COLOR = vec4(1.0);
 	}
-	if (!inside) {
-		discard;
-	}
-	COLOR = vec4(1.0);
 }

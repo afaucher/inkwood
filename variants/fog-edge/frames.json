@@ -1,0 +1,450 @@
+{
+  "id": "fog-edge",
+  "about": "Every frame of the fog-edge board as its own PNG at native size: <option>_<scene>.png are 1:1 crops (800 x 420) of the game's frames, the same pixels for every option; <scene> is open_z1.0 / open_z0.35 / forest_z1.0 / forest_z0.35 (the edge of the light fighter's 800 m sight circle across open ground and across forest) or los (the tank's line-of-sight shape in a valley, zoom 1.0: e0_los is today, eN_los_interp has viewshed.interp true); context_* are whole 1280 x 720 frames; palette_fog.png is the swatch row.",
+  "frames": [
+    {
+      "file": "e0_open_z1.0.png",
+      "option": "e0",
+      "title": "Today: open, zoom 1.0",
+      "caption": "Today: open, zoom 1.0, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "open",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e1_open_z1.0.png",
+      "option": "e1",
+      "title": "Gradient noise: open, zoom 1.0",
+      "caption": "Gradient noise: open, zoom 1.0, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "open",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e2_open_z1.0.png",
+      "option": "e2",
+      "title": "Gradient noise and a soft cut: open, zoom 1.0",
+      "caption": "Gradient noise and a soft cut: open, zoom 1.0, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "open",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e3_open_z1.0.png",
+      "option": "e3",
+      "title": "Two octaves: open, zoom 1.0",
+      "caption": "Two octaves: open, zoom 1.0, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "open",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e4_open_z1.0.png",
+      "option": "e4",
+      "title": "Smooth hatch: open, zoom 1.0",
+      "caption": "Smooth hatch: open, zoom 1.0, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "open",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e5_open_z1.0.png",
+      "option": "e5",
+      "title": "Two octaves and smooth hatch: open, zoom 1.0",
+      "caption": "Two octaves and smooth hatch: open, zoom 1.0, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "open",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e0_open_z0.35.png",
+      "option": "e0",
+      "title": "Today: open, zoom 0.35",
+      "caption": "Today: open, zoom 0.35, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "open",
+      "zoom": 0.35,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e1_open_z0.35.png",
+      "option": "e1",
+      "title": "Gradient noise: open, zoom 0.35",
+      "caption": "Gradient noise: open, zoom 0.35, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "open",
+      "zoom": 0.35,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e2_open_z0.35.png",
+      "option": "e2",
+      "title": "Gradient noise and a soft cut: open, zoom 0.35",
+      "caption": "Gradient noise and a soft cut: open, zoom 0.35, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "open",
+      "zoom": 0.35,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e3_open_z0.35.png",
+      "option": "e3",
+      "title": "Two octaves: open, zoom 0.35",
+      "caption": "Two octaves: open, zoom 0.35, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "open",
+      "zoom": 0.35,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e4_open_z0.35.png",
+      "option": "e4",
+      "title": "Smooth hatch: open, zoom 0.35",
+      "caption": "Smooth hatch: open, zoom 0.35, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "open",
+      "zoom": 0.35,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e5_open_z0.35.png",
+      "option": "e5",
+      "title": "Two octaves and smooth hatch: open, zoom 0.35",
+      "caption": "Two octaves and smooth hatch: open, zoom 0.35, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "open",
+      "zoom": 0.35,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e0_forest_z1.0.png",
+      "option": "e0",
+      "title": "Today: forest, zoom 1.0",
+      "caption": "Today: forest, zoom 1.0, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "forest",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e1_forest_z1.0.png",
+      "option": "e1",
+      "title": "Gradient noise: forest, zoom 1.0",
+      "caption": "Gradient noise: forest, zoom 1.0, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "forest",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e2_forest_z1.0.png",
+      "option": "e2",
+      "title": "Gradient noise and a soft cut: forest, zoom 1.0",
+      "caption": "Gradient noise and a soft cut: forest, zoom 1.0, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "forest",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e3_forest_z1.0.png",
+      "option": "e3",
+      "title": "Two octaves: forest, zoom 1.0",
+      "caption": "Two octaves: forest, zoom 1.0, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "forest",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e4_forest_z1.0.png",
+      "option": "e4",
+      "title": "Smooth hatch: forest, zoom 1.0",
+      "caption": "Smooth hatch: forest, zoom 1.0, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "forest",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e5_forest_z1.0.png",
+      "option": "e5",
+      "title": "Two octaves and smooth hatch: forest, zoom 1.0",
+      "caption": "Two octaves and smooth hatch: forest, zoom 1.0, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "forest",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e0_forest_z0.35.png",
+      "option": "e0",
+      "title": "Today: forest, zoom 0.35",
+      "caption": "Today: forest, zoom 0.35, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "forest",
+      "zoom": 0.35,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e1_forest_z0.35.png",
+      "option": "e1",
+      "title": "Gradient noise: forest, zoom 0.35",
+      "caption": "Gradient noise: forest, zoom 0.35, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "forest",
+      "zoom": 0.35,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e2_forest_z0.35.png",
+      "option": "e2",
+      "title": "Gradient noise and a soft cut: forest, zoom 0.35",
+      "caption": "Gradient noise and a soft cut: forest, zoom 0.35, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "forest",
+      "zoom": 0.35,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e3_forest_z0.35.png",
+      "option": "e3",
+      "title": "Two octaves: forest, zoom 0.35",
+      "caption": "Two octaves: forest, zoom 0.35, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "forest",
+      "zoom": 0.35,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e4_forest_z0.35.png",
+      "option": "e4",
+      "title": "Smooth hatch: forest, zoom 0.35",
+      "caption": "Smooth hatch: forest, zoom 0.35, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "forest",
+      "zoom": 0.35,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e5_forest_z0.35.png",
+      "option": "e5",
+      "title": "Two octaves and smooth hatch: forest, zoom 0.35",
+      "caption": "Two octaves and smooth hatch: forest, zoom 0.35, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "forest",
+      "zoom": 0.35,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e0_los.png",
+      "option": "e0",
+      "title": "Today: line of sight terrain_trees, the nearest ray (viewshed.interp false), E0 edge",
+      "caption": "Today: line of sight terrain_trees, the nearest ray (viewshed.interp false), E0 edge, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "los",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e0_los_interp.png",
+      "option": "e0",
+      "title": "Today: line of sight terrain_trees with viewshed.interp true",
+      "caption": "Today: line of sight terrain_trees with viewshed.interp true, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "los",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e1_los_interp.png",
+      "option": "e1",
+      "title": "Gradient noise: line of sight terrain_trees with viewshed.interp true",
+      "caption": "Gradient noise: line of sight terrain_trees with viewshed.interp true, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "los",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e2_los_interp.png",
+      "option": "e2",
+      "title": "Gradient noise and a soft cut: line of sight terrain_trees with viewshed.interp true",
+      "caption": "Gradient noise and a soft cut: line of sight terrain_trees with viewshed.interp true, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "los",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e3_los_interp.png",
+      "option": "e3",
+      "title": "Two octaves: line of sight terrain_trees with viewshed.interp true",
+      "caption": "Two octaves: line of sight terrain_trees with viewshed.interp true, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "los",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e4_los_interp.png",
+      "option": "e4",
+      "title": "Smooth hatch: line of sight terrain_trees with viewshed.interp true",
+      "caption": "Smooth hatch: line of sight terrain_trees with viewshed.interp true, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "los",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "e5_los_interp.png",
+      "option": "e5",
+      "title": "Two octaves and smooth hatch: line of sight terrain_trees with viewshed.interp true",
+      "caption": "Two octaves and smooth hatch: line of sight terrain_trees with viewshed.interp true, 1:1 crop of the game's own frame (800x420 from (240, 150)); the edge point is at the crop's centre-ish",
+      "scene": "los",
+      "zoom": 1.0,
+      "size": [
+        800,
+        420
+      ]
+    },
+    {
+      "file": "context_open_z1.0.png",
+      "option": "e0",
+      "title": "context: today's edge, the whole 1280 x 720 frame",
+      "caption": "The whole frame the crops are cut from (today's look), so the edge can be seen against the map and the fog's outside",
+      "scene": "open_z1.0",
+      "zoom": 0.0,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "context_open_z0.35.png",
+      "option": "e0",
+      "title": "context: today's edge, the whole 1280 x 720 frame",
+      "caption": "The whole frame the crops are cut from (today's look), so the edge can be seen against the map and the fog's outside",
+      "scene": "open_z0.35",
+      "zoom": 0.0,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "context_forest_z1.0.png",
+      "option": "e0",
+      "title": "context: today's edge, the whole 1280 x 720 frame",
+      "caption": "The whole frame the crops are cut from (today's look), so the edge can be seen against the map and the fog's outside",
+      "scene": "forest_z1.0",
+      "zoom": 0.0,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "context_forest_z0.35.png",
+      "option": "e0",
+      "title": "context: today's edge, the whole 1280 x 720 frame",
+      "caption": "The whole frame the crops are cut from (today's look), so the edge can be seen against the map and the fog's outside",
+      "scene": "forest_z0.35",
+      "zoom": 0.0,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "context_los.png",
+      "option": "e0",
+      "title": "context: today's edge, the whole 1280 x 720 frame",
+      "caption": "The whole frame the crops are cut from (today's look), so the edge can be seen against the map and the fog's outside",
+      "scene": "los",
+      "zoom": 0.0,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    {
+      "file": "palette_fog.png",
+      "option": "all",
+      "title": "the palette the fog edge spends",
+      "caption": "Left to right: the topographic sheet at the three height levels (the paper lifted), then the inked line (ink 90%) and the hatch (ink 55%) over the lowest level. No option adds a colour: every look is the same ink roles, only the shape of the edge differs",
+      "scene": "palette",
+      "zoom": 0.0,
+      "size": [
+        600,
+        70
+      ]
+    }
+  ]
+}

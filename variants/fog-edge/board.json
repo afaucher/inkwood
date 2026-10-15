@@ -1,0 +1,189 @@
+{
+  "id": "fog-edge",
+  "date": "2026-10-14",
+  "area": "render",
+  "question": "How expensive would it be to smooth the edge of the fog of war? Alex: 'How expensive would it be to smooth the edge of the fog of war? It currently looks pretty blocky.' (backlog B15)",
+  "source": "scripts/render/boards/fog_edge_board_shot.gd: the running sandbox (scripts/app/sandbox.gd) over the real map, scenario variants/fog-edge/scenario.json (seed 20261009, water on, fog ON), the game's own fog (scripts/render/fog_layer.gd, fog_composite.gdshader, fog_los_shape.gdshader), photographed once per option with ONLY data/view/fog.json edge.inked.look (and viewshed.interp for the line-of-sight frames) changed",
+  "seed": 20261009,
+  "held_constant": {
+    "units": "a light fighter (800 m sight circle) and a tank (600 m), one side; the one not shown is parked in a far corner",
+    "scenes": {
+      "open_z1.0 / open_z0.35": "the edge of the light fighter's sight circle across open ground (found by tree cover along 600 m of the arc: tree cover along the arc 0.00 to 0.35 (mean 0.15), 0.32 within 120 m), at zoom 1.0 (2 px/m) and 0.35; the edge point at the frame's centre, bearing -35 degrees from the plane, line_of_sight none",
+      "forest_z1.0 / forest_z0.35": "the same circle edge across forest (tree cover along the arc 0.30 to 0.89 (mean 0.70), 0.62 within 120 m)",
+      "los": "the tank in a valley (higher ground on 13 of 16 sides (6 of them the top level); canopy 0% within 60 m, 11% within 150 m, 23% within 250 m; FogSites.find_valley) with line_of_sight terrain_trees, zoom 1.0, looking 380 m east of the tank where the viewshed's edge is a run of long, thin dead-ground shadows. e0_los is today (the nearest ray, viewshed.interp false); eN_los_interp is look eN with viewshed.interp true. trees_block is false (decision trees-do-not-block), so terrain_trees draws as terrain"
+    },
+    "crops": "800 x 420 px, 1:1 from the game's 1280 x 720 frame at (240, 150); the same pixels for every option of a scene",
+    "fog_range": "mask.range_px (72) still covers the widest effect of every look (FogLayer checks it on set_look)",
+    "decisions_in_force": "edge.mode inked (fog-first-option); trees_block false; the palette: every look uses the same two ink roles (edge.inked.line_role, hatch_role) over the same topographic sheet"
+  },
+  "measured": {
+    "sites": {
+      "open": "(2400.0, 2600.0)",
+      "forest": "(1900.0, 2900.0)",
+      "valley": "(2860.0, 3400.0)"
+    },
+    "cost": {
+      "open_1.0_e0": {
+        "view_gpu_ms": 0.366,
+        "mask_gpu_ms": 0.0,
+        "fog_cpu_ms": 0.046
+      },
+      "open_1.0_e3": {
+        "view_gpu_ms": 0.292,
+        "mask_gpu_ms": 0.0,
+        "fog_cpu_ms": 0.052
+      },
+      "open_1.0_e5": {
+        "view_gpu_ms": 0.442,
+        "mask_gpu_ms": 0.0,
+        "fog_cpu_ms": 0.063
+      },
+      "open_0.35_e0": {
+        "view_gpu_ms": 0.197,
+        "mask_gpu_ms": 0.0,
+        "fog_cpu_ms": 0.152
+      },
+      "open_0.35_e3": {
+        "view_gpu_ms": 0.511,
+        "mask_gpu_ms": 0.0,
+        "fog_cpu_ms": 0.228
+      },
+      "open_0.35_e5": {
+        "view_gpu_ms": 0.19,
+        "mask_gpu_ms": 0.0,
+        "fog_cpu_ms": 0.13
+      },
+      "forest_1.0_e0": {
+        "view_gpu_ms": 0.111,
+        "mask_gpu_ms": 0.0,
+        "fog_cpu_ms": 0.067
+      },
+      "forest_1.0_e3": {
+        "view_gpu_ms": 0.238,
+        "mask_gpu_ms": 0.0,
+        "fog_cpu_ms": 0.061
+      },
+      "forest_1.0_e5": {
+        "view_gpu_ms": 0.076,
+        "mask_gpu_ms": 0.0,
+        "fog_cpu_ms": 0.059
+      },
+      "forest_0.35_e0": {
+        "view_gpu_ms": 0.762,
+        "mask_gpu_ms": 0.0,
+        "fog_cpu_ms": 0.145
+      },
+      "forest_0.35_e3": {
+        "view_gpu_ms": 1.347,
+        "mask_gpu_ms": 0.0,
+        "fog_cpu_ms": 0.139
+      },
+      "forest_0.35_e5": {
+        "view_gpu_ms": 1.67,
+        "mask_gpu_ms": 0.0,
+        "fog_cpu_ms": 0.147
+      },
+      "los_interp_false": {
+        "view_gpu_ms": 0.137,
+        "mask_gpu_ms": 0.079,
+        "fog_cpu_ms": 0.069
+      },
+      "los_interp_true": {
+        "view_gpu_ms": 0.12,
+        "mask_gpu_ms": 0.084,
+        "fog_cpu_ms": 0.069
+      }
+    },
+    "cost_note": "mean over 60 frames, RTX 3080, windowed 1280 x 720: view_gpu_ms is the WHOLE frame's GPU time (map, markers and fog), mask_gpu_ms the mask viewport's three line-of-sight passes (0 in analytic mode), fog_cpu_ms the layer's own CPU. No option adds a pass, a texture or a viewport; the differences are inside the frame-to-frame noise (a first pass read 1.07, 1.13 and 1.15 ms for e0, e3 and e5 at forest zoom 0.35 and this one 0.76, 1.35 and 1.67: the GPU's clock moves between runs, so these numbers cannot rank the looks, only bound the cost)"
+  },
+  "parameter": "data/view/fog.json#edge.inked.look (e0 | e1 | e2 | e3 | e4 | e5: a row of edge.inked.looks, which overrides edge.inked.wobble_noise, cut_soft_px, wobble_px, wobble_per_px, wobble2_px, wobble2_per_px, hatch_length, hatch_length_min, hatch_length_per_tick) and data/view/fog.json#viewshed.interp (line of sight only: false = the nearest ray, true = the two rays either side blended; viewshed.interp_spread 2.0)",
+  "options": [
+    {
+      "name": "E0",
+      "title": "Today",
+      "description": "Value noise, a hard 1 px cut, random tick lengths. Nothing changed.",
+      "edge.inked.look": "e0",
+      "overrides": {},
+      "file": "e0_open_z1.0.png",
+      "proposed": true
+    },
+    {
+      "name": "E1",
+      "title": "Gradient noise",
+      "description": "Perlin gradient noise in place of value noise, the same 2.5 px peak wobble and the same wave length: the edge has a slope everywhere, so no straight runs and kinks.",
+      "edge.inked.look": "e1",
+      "overrides": {
+        "wobble_noise": "gradient"
+      },
+      "file": "e1_open_z1.0.png",
+      "proposed": true
+    },
+    {
+      "name": "E2",
+      "title": "Gradient noise and a soft cut",
+      "description": "E1, and the cut between the full render and the map is cross-faded over 2.5 px instead of 1 px: no stair-stepped coverage.",
+      "edge.inked.look": "e2",
+      "overrides": {
+        "wobble_noise": "gradient",
+        "cut_soft_px": 2.5
+      },
+      "file": "e2_open_z1.0.png",
+      "proposed": true
+    },
+    {
+      "name": "E3",
+      "title": "Two octaves",
+      "description": "E2 with a slow 2.5 px swell (a wave every ~110 px) and a small 0.8 px tremor (every ~22 px): a hand-drawn edge.",
+      "edge.inked.look": "e3",
+      "overrides": {
+        "wobble_noise": "gradient",
+        "cut_soft_px": 2.5,
+        "wobble_px": 2.5,
+        "wobble_per_px": 0.009,
+        "wobble2_px": 0.8,
+        "wobble2_per_px": 0.045
+      },
+      "file": "e3_open_z1.0.png",
+      "proposed": true
+    },
+    {
+      "name": "E4",
+      "title": "Smooth hatch",
+      "description": "E2 with the hatch ticks' lengths varying smoothly along the edge (0.55 to 1.0 of the band, a wave every ~17 ticks) instead of at random: one continuous band.",
+      "edge.inked.look": "e4",
+      "overrides": {
+        "wobble_noise": "gradient",
+        "cut_soft_px": 2.5,
+        "hatch_length": "smooth"
+      },
+      "file": "e4_open_z1.0.png",
+      "proposed": true
+    },
+    {
+      "name": "E5",
+      "title": "Two octaves and smooth hatch",
+      "description": "E3 and E4 together.",
+      "edge.inked.look": "e5",
+      "overrides": {
+        "wobble_noise": "gradient",
+        "cut_soft_px": 2.5,
+        "wobble_px": 2.5,
+        "wobble_per_px": 0.009,
+        "wobble2_px": 0.8,
+        "wobble2_per_px": 0.045,
+        "hatch_length": "smooth"
+      },
+      "file": "e5_open_z1.0.png",
+      "proposed": true
+    }
+  ],
+  "palette_check": {
+    "hue": "No option adds a hue: every mark is the fog's existing ink roles (line ink 90%, hatch ink 55%) over the topographic sheet (paper lifted, desaturated); only the SHAPE of the edge changes.",
+    "lightness": "unchanged: a ramp off the paper, the sheet at three levels, the line and hatch at their existing alphas (palette_fog.png)",
+    "material": "linework: the inked line and the hatch ticks; the soft cut is a 2.5 px cross-fade between the full render and the sheet, not a new tone"
+  },
+  "recommendation_proposed": "PROPOSED by builder BF (Alex decides): E3, two octaves of gradient noise with the 2.5 px cut, WITH viewshed.interp true. The blockiness of the circle is value noise's flat runs and kinks (E1 removes them at no cost); the soft cut (E2) removes the stair-stepped coverage of the cut itself; two octaves (E3) keep the hand-drawn wander a printed map's edge has and a pure gradient edge would lose. E4 and E5 smooth the hatch's lengths: they read tidier, but the ragged random fringe is part of the inked look Alex accepted (fog-first-option), so they are offered as the alternative, not the recommendation. Line of sight is the other half: with it on the sector steps are the blockiest edge in the game, and viewshed.interp true removes them in the same pass at no measurable cost.",
+  "how_to_switch": "set data/view/fog.json edge.inked.look to the option's id (e0..e5), and viewshed.interp to true for line of sight; nothing else changes. FogLayer.set_look(id) / set_los_interp(on) do the same at run time.",
+  "chosen": null,
+  "chosen_by": null
+}

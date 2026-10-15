@@ -1,0 +1,105 @@
+{
+  "_about": "THE FOG-EDGE BOARD'S SCENE (builder BF, 2026-10-14, PROPOSED; a board rig, never a menu entry and never shipped: variants/ is excluded from the export). Seed 20261009, water on, FOG ON, two player units of one side: a light fighter (800 m sight circle, the circle-edge scenes) and a tank (600 m, the line-of-sight scenes in a valley). scripts/render/boards/fog_edge_board_shot.gd moves them to where each frame wants them (the other is parked in a far corner). Loaded by Sandbox.new('../../variants/fog-edge/scenario').",
+  "id": "fog-edge",
+  "seed": 20261009,
+  "rng_seed": 7,
+  "local_player": "local",
+  "sides": {
+    "_about": "Scenario side -> the World's side name (the interface's accent table in data/ui/ui.json knows allies and axis) and the callsign pool (data/names/callsigns.json). side_a is brick red, side_b slate blue (Alex). The players are side_a; the village and its defenders are side_b.",
+    "side_a": {
+      "world_side": "allies",
+      "callsign_pool": "side_a"
+    },
+    "side_b": {
+      "world_side": "axis",
+      "callsign_pool": "side_b"
+    }
+  },
+  "units": [
+    {
+      "id": "light_fighter_1",
+      "type": "light_fighter",
+      "side": "side_a",
+      "controller": "player",
+      "callsign": "pool",
+      "x": 3000.0,
+      "y": 3000.0,
+      "heading": -2.4,
+      "altitude_band": "medium"
+    },
+    {
+      "id": "tank_1",
+      "type": "tank",
+      "side": "side_a",
+      "controller": "player",
+      "callsign": "pool",
+      "heading": 0.0,
+      "speed": 8.0,
+      "x": 900.0,
+      "y": 900.0
+    }
+  ],
+  "water": true,
+  "water_units": [],
+  "ai": {
+    "kind": "dumb"
+  },
+  "view": {
+    "_about": "How the sandbox shows this scenario. Each can be flipped at run time from the knob panel (F2) or INKWOOD_<KEY> (scripts/debug/debug_settings.gd); these are the values the knobs call \"data\".",
+    "fog": {
+      "value": true,
+      "_proposed": true,
+      "_reason": "Board rig: the fog is what the board is about"
+    },
+    "plane_px": {
+      "value": 36,
+      "_proposed": true,
+      "_reason": "Planes are drawn at their own scale, a light fighter about 36 px across at zoom 1 whatever the map scale (decision demo-baseline: planes_drawn_at_own_scale)"
+    },
+    "plane_min_px": {
+      "value": 14,
+      "_proposed": true,
+      "_reason": "A light fighter never draws smaller than this on screen, so the planes stay findable when the view is zoomed out"
+    },
+    "start_zoom_max": {
+      "value": 0.9,
+      "_proposed": true,
+      "_reason": "The opening view frames the players' planes, the first turn's carry-on flight and the village; it does not zoom in past this (the players are 2,000 m from the village, so the zoom is far lower than this anyway)"
+    },
+    "start_pad_m": {
+      "value": 110,
+      "_proposed": true,
+      "_reason": "A margin round every plane and its carry-on end in the opening view, so none sits on the edge of the free area"
+    },
+    "start_look_ahead_turns": {
+      "value": 1,
+      "_proposed": true,
+      "_reason": "The opening view frames this many turns of carry-on flight beyond each PLAYER plane (the enemy's plan is never framed: it would leak it)"
+    },
+    "start_frame_objective": {
+      "value": true,
+      "_proposed": true,
+      "_reason": "The opening view also frames the target ring and the village round it, so the first screen shows where the strike is going"
+    },
+    "track_sample_s": {
+      "value": 0.25,
+      "_proposed": true,
+      "_reason": "Tracks (the flown path of each plane, drawn for the whole game) are sampled from each turn's history this often"
+    },
+    "track_line_px": {
+      "value": 1.6,
+      "_proposed": true,
+      "_reason": "Track line width on screen; ink in the unit's side colour"
+    },
+    "bake_pause_overview": {
+      "value": 0.5,
+      "_proposed": true,
+      "_reason": "The map view stops drawing new chunks once the topographic overview covers this much of the full render (see sandbox.json)"
+    },
+    "result_card_delay_s": {
+      "value": 1.5,
+      "_proposed": true,
+      "_reason": "The result card appears this long after the playback of the deciding turn ends, so the last of the smoke and the ruin are seen before the card covers them"
+    }
+  }
+}

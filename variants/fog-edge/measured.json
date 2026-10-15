@@ -1,0 +1,97 @@
+{
+  "sites": {
+    "open": {
+      "point": [
+        2400.0,
+        2600.0
+      ],
+      "note": "tree cover along the arc 0.00 to 0.35 (mean 0.15), 0.32 within 120 m"
+    },
+    "forest": {
+      "point": [
+        1900.0,
+        2900.0
+      ],
+      "note": "tree cover along the arc 0.30 to 0.89 (mean 0.70), 0.62 within 120 m"
+    },
+    "valley": {
+      "point": [
+        2860.0,
+        3400.0
+      ],
+      "note": "higher ground on 13 of 16 sides (6 of them the top level); canopy 0% within 60 m, 11% within 150 m, 23% within 250 m"
+    }
+  },
+  "cost": {
+    "open_1.0_e0": {
+      "view_gpu_ms": 0.366,
+      "mask_gpu_ms": 0.0,
+      "fog_cpu_ms": 0.046
+    },
+    "open_1.0_e3": {
+      "view_gpu_ms": 0.292,
+      "mask_gpu_ms": 0.0,
+      "fog_cpu_ms": 0.052
+    },
+    "open_1.0_e5": {
+      "view_gpu_ms": 0.442,
+      "mask_gpu_ms": 0.0,
+      "fog_cpu_ms": 0.063
+    },
+    "open_0.35_e0": {
+      "view_gpu_ms": 0.197,
+      "mask_gpu_ms": 0.0,
+      "fog_cpu_ms": 0.152
+    },
+    "open_0.35_e3": {
+      "view_gpu_ms": 0.511,
+      "mask_gpu_ms": 0.0,
+      "fog_cpu_ms": 0.228
+    },
+    "open_0.35_e5": {
+      "view_gpu_ms": 0.19,
+      "mask_gpu_ms": 0.0,
+      "fog_cpu_ms": 0.13
+    },
+    "forest_1.0_e0": {
+      "view_gpu_ms": 0.111,
+      "mask_gpu_ms": 0.0,
+      "fog_cpu_ms": 0.067
+    },
+    "forest_1.0_e3": {
+      "view_gpu_ms": 0.238,
+      "mask_gpu_ms": 0.0,
+      "fog_cpu_ms": 0.061
+    },
+    "forest_1.0_e5": {
+      "view_gpu_ms": 0.076,
+      "mask_gpu_ms": 0.0,
+      "fog_cpu_ms": 0.059
+    },
+    "forest_0.35_e0": {
+      "view_gpu_ms": 0.762,
+      "mask_gpu_ms": 0.0,
+      "fog_cpu_ms": 0.145
+    },
+    "forest_0.35_e3": {
+      "view_gpu_ms": 1.347,
+      "mask_gpu_ms": 0.0,
+      "fog_cpu_ms": 0.139
+    },
+    "forest_0.35_e5": {
+      "view_gpu_ms": 1.67,
+      "mask_gpu_ms": 0.0,
+      "fog_cpu_ms": 0.147
+    },
+    "los_interp_false": {
+      "view_gpu_ms": 0.137,
+      "mask_gpu_ms": 0.079,
+      "fog_cpu_ms": 0.069
+    },
+    "los_interp_true": {
+      "view_gpu_ms": 0.12,
+      "mask_gpu_ms": 0.084,
+      "fog_cpu_ms": 0.069
+    }
+  }
+}

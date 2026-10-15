@@ -56,6 +56,15 @@ uniform float hatch_spacing = 4.0;
 uniform float hatch_width = 0.9;
 uniform vec2 hatch_dir = vec2(0.7071, 0.7071);
 
+// FOG-EDGE BOARD (builder BF, 2026-10-14; data/view/fog.json edge.inked.look): every default below is TODAY's edge.
+uniform int wobble_noise = 0; // 0 value noise (today), 1 gradient noise
+uniform float cut_soft = 0.0; // screen px the cut is cross-faded over; 0 = the hard 1 px cut
+uniform float wobble2_px = 0.0; // a second octave of wobble, screen px (0 = off)
+uniform float wobble2_freq = 0.045;
+uniform int hatch_len_mode = 0; // 0 hash per tick (today), 1 smooth along the ticks
+uniform float hatch_len_min = 0.55;
+uniform float hatch_len_freq = 0.06;
+
 uniform float feather_px = 80.0;
 uniform float soft_wobble_px = 16.0;
 uniform float soft_wobble_freq = 0.012;
@@ -74,6 +83,38 @@ float vnoise(vec2 p) {
 	vec2 u = f * f * (3.0 - 2.0 * f);
 	return mix(mix(hash12(i), hash12(i + vec2(1.0, 0.0)), u.x),
 		mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+// Gradient (Perlin) noise, about -1..1, nonzero slope at every lattice point; quintic fade.
+float gnoise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+	float a0 = hash12(i) * 6.2831853;
+	float a1 = hash12(i + vec2(1.0, 0.0)) * 6.2831853;
+	float a2 = hash12(i + vec2(0.0, 1.0)) * 6.2831853;
+	float a3 = hash12(i + vec2(1.0, 1.0)) * 6.2831853;
+	float n00 = dot(vec2(cos(a0), sin(a0)), f);
+	float n10 = dot(vec2(cos(a1), sin(a1)), f - vec2(1.0, 0.0));
+	float n01 = dot(vec2(cos(a2), sin(a2)), f - vec2(0.0, 1.0));
+	float n11 = dot(vec2(cos(a3), sin(a3)), f - vec2(1.0, 1.0));
+	return clamp(mix(mix(n00, n10, u.x), mix(n01, n11, u.x), u.y) * 1.4142, -1.0, 1.0);
+}
+
+// The inked edge's wobble in screen px at screen-scaled world position s.
+float edge_wobble(vec2 s) {
+	if (wobble_noise == 1) {
+		float w = gnoise(s * wobble_freq) * wobble_px;
+		if (wobble2_px > 0.0) {
+			w += gnoise(s * wobble2_freq + 31.7) * wobble2_px;
+		}
+		return w;
+	}
+	float w = (vnoise(s * wobble_freq) - 0.5) * 2.0 * wobble_px;
+	if (wobble2_px > 0.0) {
+		w += (vnoise(s * wobble2_freq + 31.7) - 0.5) * 2.0 * wobble2_px;
+	}
+	return w;
 }
 
 // Coverage of a line `width` px wide at distance d px from its centre: a 1 px
@@ -108,13 +149,16 @@ void fragment() {
 	float line = 0.0;
 	float hatch = 0.0;
 	if (edge_mode == 0) {
-		float e = sdf + (vnoise(s * wobble_freq) - 0.5) * 2.0 * wobble_px;
-		vis = clamp(e + 0.5, 0.0, 1.0);
+		float e = sdf + edge_wobble(s);
+		vis = cut_soft > 0.0 ? smoothstep(-0.5 * cut_soft, 0.5 * cut_soft, e) : clamp(e + 0.5, 0.0, 1.0);
 		line = line_cov(e, line_px);
 		if (e < 0.0) {
 			float h = dot(s, hatch_dir) / hatch_spacing;
 			float idx = floor(h + 0.5);
 			float reach = band_px * (0.45 + 0.55 * hash12(vec2(idx, 7.0)));
+			if (hatch_len_mode == 1) {
+				reach = band_px * mix(hatch_len_min, 1.0, vnoise(vec2(idx * hatch_len_freq, 3.0)));
+			}
 			hatch = line_cov((h - idx) * hatch_spacing, hatch_width) * (1.0 - smoothstep(reach - 2.0, reach, -e));
 		}
 	} else {

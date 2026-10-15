@@ -145,6 +145,15 @@ var map_serial: Callable = Callable()
 # The sandbox sets this while its loading card is up: the pipeline then spends main_budget_loading_ms of
 # main-thread time a frame instead of main_budget_ms (nobody is playing, so a long frame costs nothing).
 var bake_boost := false
+# THE FOG-EDGE BOARD (builder BF, 2026-10-14; PROPOSED, Alex has not picked): the inked edge's look is a row of
+# data/view/fog.json edge.inked.looks (edge.inked.look, "e0" = today) laid over the keys it names. look_override: a
+# look id set at run time (set_look) in place of the data's. los_interp: viewshed.interp, the line-of-sight shapes
+# blend the two nearest rays (set_los_interp).
+var look_override := ""
+var edge_look := "e0"
+var los_interp := false
+var los_interp_spread := 2.0
+var _look_over: Dictionary = {}
 
 # Timings and counts for the report: mask_us (last mask update, CPU side),
 # draw_us (last _draw, CPU side), record_ms / record_ms_max (chunk recording,
@@ -224,6 +233,8 @@ func setup(t: Terrain, params: RenderParams = null, fog: CameraData = null, cam:
 	_mask_mat.shader = MASK_SHADER
 	_mat = ShaderMaterial.new()
 	_mat.shader = COMPOSITE_SHADER
+	los_interp = fog_data.flag("viewshed.interp")
+	los_interp_spread = fog_data.num("viewshed.interp_spread")
 	_apply_style()
 	set_edge_mode(fog_data.text("edge.mode"))
 
@@ -320,8 +331,24 @@ func _apply_style() -> void:
 	m.set_shader_parameter("outside_color", topo.outside)
 	m.set_shader_parameter("line_color", FogStyle.resolve(d.value("edge.inked.line_role"), P, errors))
 	m.set_shader_parameter("line_px", d.num("edge.inked.line_px"))
-	m.set_shader_parameter("wobble_px", d.num("edge.inked.wobble_px"))
-	m.set_shader_parameter("wobble_freq", d.num("edge.inked.wobble_per_px"))
+	_resolve_look()
+	m.set_shader_parameter("wobble_px", _ink_num("wobble_px"))
+	m.set_shader_parameter("wobble_freq", _ink_num("wobble_per_px"))
+	var noise := _ink_text("wobble_noise")
+	if noise != "value" and noise != "gradient":
+		_err("edge.inked.wobble_noise must be 'value' or 'gradient', not '%s'" % noise)
+		noise = "value"
+	m.set_shader_parameter("wobble_noise", 1 if noise == "gradient" else 0)
+	m.set_shader_parameter("cut_soft", _ink_num("cut_soft_px"))
+	m.set_shader_parameter("wobble2_px", _ink_num("wobble2_px"))
+	m.set_shader_parameter("wobble2_freq", _ink_num("wobble2_per_px"))
+	var hatch_len := _ink_text("hatch_length")
+	if hatch_len != "random" and hatch_len != "smooth":
+		_err("edge.inked.hatch_length must be 'random' or 'smooth', not '%s'" % hatch_len)
+		hatch_len = "random"
+	m.set_shader_parameter("hatch_len_mode", 1 if hatch_len == "smooth" else 0)
+	m.set_shader_parameter("hatch_len_min", _ink_num("hatch_length_min"))
+	m.set_shader_parameter("hatch_len_freq", _ink_num("hatch_length_per_tick"))
 	m.set_shader_parameter("band_px", d.num("edge.inked.band_px"))
 	m.set_shader_parameter("hatch_color", FogStyle.resolve(d.value("edge.inked.hatch_role"), P, errors))
 	m.set_shader_parameter("hatch_spacing", d.num("edge.inked.hatch_spacing_px"))
@@ -332,10 +359,60 @@ func _apply_style() -> void:
 	m.set_shader_parameter("soft_wobble_px", d.num("edge.soft.wobble_px"))
 	m.set_shader_parameter("soft_wobble_freq", d.num("edge.soft.wobble_per_px"))
 	# The mask must hold every edge effect: past range_px it is saturated.
-	var inked := d.num("edge.inked.band_px") + d.num("edge.inked.wobble_px") + d.num("edge.inked.line_px")
+	var inked := d.num("edge.inked.band_px") + _ink_num("wobble_px") + _ink_num("wobble2_px") + d.num("edge.inked.line_px") + 0.5 * _ink_num("cut_soft_px")
 	var soft := d.num("edge.soft.feather_px") * 0.5 + 1.5 * d.num("edge.soft.wobble_px")
 	if range_px < maxf(inked, soft):
 		_err("mask.range_px (%s) must cover the widest edge effect (%s screen px)" % [range_px, maxf(inked, soft)])
+
+# The look row in force: look_override, else the data's edge.inked.look. Its keys must name keys of edge.inked.
+const LOOK_KEYS := ["wobble_px", "wobble_per_px", "wobble_noise", "cut_soft_px", "wobble2_px", "wobble2_per_px", "hatch_length", "hatch_length_min", "hatch_length_per_tick"]
+
+func _resolve_look() -> void:
+	edge_look = look_override if look_override != "" else fog_data.text("edge.inked.look")
+	var looks: Dictionary = fog_data.dict("edge.inked.looks")
+	_look_over = {}
+	if not looks.has(edge_look):
+		_err("edge.inked.look '%s' is not a row of edge.inked.looks (%s)" % [edge_look, looks.keys()])
+		return
+	var row: Variant = looks[edge_look]
+	if not (row is Dictionary):
+		_err("edge.inked.looks.%s is not an object" % edge_look)
+		return
+	for k: String in (row as Dictionary):
+		if not LOOK_KEYS.has(k):
+			_err("edge.inked.looks.%s names '%s', which is not one of %s" % [edge_look, k, LOOK_KEYS])
+	_look_over = row
+
+# An edge.inked number: the look row's, else the data's (always read, so the data file carries nothing unread).
+func _ink_num(key: String) -> float:
+	var base: float = fog_data.num("edge.inked." + key)
+	var ov: Variant = _look_over.get(key)
+	return float(ov) if (ov is float or ov is int) else base
+
+func _ink_text(key: String) -> String:
+	var base: String = fog_data.text("edge.inked." + key)
+	var ov: Variant = _look_over.get(key)
+	return str(ov) if ov is String else base
+
+# Switch the inked edge's look at run time (a row of edge.inked.looks); "" returns to the data's. False for an unknown row.
+func set_look(id: String) -> bool:
+	var looks: Dictionary = fog_data.dict("edge.inked.looks")
+	if id != "" and not looks.has(id):
+		return false
+	look_override = id
+	_apply_style()
+	queue_redraw()
+	return true
+
+# viewshed.interp at run time: the line-of-sight shapes blend the two rays either side of a pixel (fog_los_shape.gdshader).
+func set_los_interp(on: bool) -> void:
+	los_interp = on
+	for item: Dictionary in _los_items.values():
+		_apply_interp(item.mat)
+
+func _apply_interp(mat: ShaderMaterial) -> void:
+	mat.set_shader_parameter("interp", los_interp)
+	mat.set_shader_parameter("interp_spread", los_interp_spread)
 
 func set_edge_mode(mode: String) -> void:
 	if mode != EDGE_INKED and mode != EDGE_SOFT:
@@ -581,6 +658,7 @@ func _update_los(msize: Vector2i, k: float) -> void:
 			new_rect.material = new_mat
 			_los_vp.add_child(new_rect)
 			item = {"rect": new_rect, "mat": new_mat, "tex": null, "serial": -1}
+			_apply_interp(new_mat)
 			_los_items[key] = item
 		var rect: ColorRect = item.rect
 		var mat: ShaderMaterial = item.mat
